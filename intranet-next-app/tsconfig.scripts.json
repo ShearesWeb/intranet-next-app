@@ -1,0 +1,12 @@
+{
+    "compilerOptions": {
+      "target": "ES2017",
+      "module": "CommonJS",
+      "esModuleInterop": true,
+      "strict": true,
+      "resolveJsonModule": true,
+      "moduleResolution": "Node"
+    },
+    "include": ["scripts/**/*"],
+    "exclude": ["node_modules"]
+  }

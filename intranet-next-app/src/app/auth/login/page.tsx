@@ -8,6 +8,8 @@ import Image from "next/image";
 import { StyleSheet, css } from "aphrodite";
 import toast from "react-hot-toast";
 
+
+
 export default function Home() {
   const { user, loading } = useAuth();
 
@@ -21,6 +23,7 @@ export default function Home() {
         console.error("Sign-in error:", error);
         toast.error("Sign in failed!");
       });
+    
   };
   
   const handleSignOut = async () => {
