@@ -3,8 +3,25 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { CSSProperties } from 'react';
+import { signOut } from "firebase/auth";
+import { auth } from "../../../../lib/firebase";
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
+
 
 export default function MyCCA() {
+  const router = useRouter();
+  const { user } = useAuth();
+  
+  const handleLogout = async () => {
+    try {
+        await signOut(auth);
+        router.push("/auth/login");
+    } catch (e ) {
+        console.error("Sign-out error:", e);
+    }
+  };
   return (
     <div style={styles.container}>
       {/* Sidebar Navigation */}
@@ -19,10 +36,10 @@ export default function MyCCA() {
           />
         </div>
         <nav style={styles.nav}>
-          <Link href="/" style={styles.navItem}>🏠 Home</Link>
-          <Link href="/mycca" style={{ ...styles.navItem, ...styles.active }}>📋 My CCAs</Link>
-          <Link href="/rank" style={styles.navItem}>📊 Rank CCA</Link>
-          <Link href="/" style={styles.navItem}>🚪 Log out</Link>
+          <Link href="/dashboard/home" style={styles.navItem}>🏠 Home</Link>
+          <Link href="/dashboard/mycca" style={{ ...styles.navItem, ...styles.active }}>📋 My CCAs</Link>
+          <Link href="/dashboard/rank" style={styles.navItem}>📊 Rank CCA</Link>
+          <button onClick={handleLogout} style={styles.navItem}>🚪 Log out</button>
         </nav>
       </div>
 
@@ -55,14 +72,13 @@ export default function MyCCA() {
           </tbody>
         </table>
         <div style={styles.footer}>
-          <strong>Total Points:</strong> {calculateTotalPoints()}
+          <strong>Total Points: {user?.displayName}</strong> {calculateTotalPoints()}
         </div>
       </div>
     </div>
   );
 }
 
-// Sample Data
 const ccaData = [
   { name: 'Block Committee', role: 'Member', points: 47 },
   { name: 'Sports Management Board', role: 'Publicity Main Comm', points: 42 },
@@ -79,8 +95,9 @@ function calculateTotalPoints() {
   return ccaData.reduce((total, cca) => total + cca.points, 0);
 }
 
-// Styles
-const styles = {
+
+
+const styles: { [key: string]: CSSProperties } = {
   container: {
     display: 'flex',
     height: '100vh',

@@ -8,6 +8,7 @@ import { useState } from "react";
 
 
 
+
 export default function Home() {
     const { user, loading } = useAuth();
     const [error, setError] = useState<string | null>(null);
