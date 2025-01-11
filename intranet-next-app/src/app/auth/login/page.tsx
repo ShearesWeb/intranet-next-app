@@ -9,6 +9,8 @@ import { StyleSheet, css } from "aphrodite";
 import toast from "react-hot-toast";
 import { useRouter } from 'next/navigation';
 
+
+
 export default function Home() {
   const router = useRouter();
   const { user, loading } = useAuth();
@@ -25,6 +27,7 @@ export default function Home() {
         console.error("Sign-in error:", error);
         toast.error("Sign in failed!");
       });
+    
   };
   
   const handleSignOut = async () => {
