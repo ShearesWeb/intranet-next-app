@@ -22,7 +22,8 @@ export const useAuth = () => {
     }
     return context;
   };
-
+  
+//This ensures that the component always has the latest authentication state and cleans up properly when it is no longer needed.
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
