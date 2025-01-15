@@ -8,28 +8,34 @@
 
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import "./Dashboard.css";
 import { signOut } from "firebase/auth";
 import { auth } from "../../../../lib/firebase";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 
 export default function Dashboard() {
     const { user } = useAuth();
-    const router = useRouter(); // Initialize the router
+    const router = useRouter();
+    const [counter, setCounter] = useState(0);
 
     const handleSignOut = async () => {
         try {
-            await signOut(auth); // Sign the user out
+            await signOut(auth);
             toast.success("Sign out successful!");
-            router.push("/auth/login"); // Redirect to the login page
+            router.push("/auth/login");
         } catch (e) {
             console.error("Sign-out error:", e);
             toast.error("Sign out failed!");
         }
     };
+
+    // useEffect(() => {
+    //     controls.start({ count: 128 });
+    // }, [controls]);
 
     return (
         <div className="dashboard">
@@ -43,7 +49,7 @@ export default function Dashboard() {
             {/* Welcome Section */}
             <div className="welcome-section">
                 <h2 className="welcome-text">Welcome back,</h2>
-                <p className="username">{user?.displayName || "Shearite"}</p>
+                <p className="username">{user?.displayName || "Shearite"}!</p>
             </div>
 
             {/* Content Section */}
@@ -55,7 +61,22 @@ export default function Dashboard() {
                         <div className="circle circle-2"></div>
                         <div className="circle circle-3"></div>
                         <div className="circle circle-4">
-                            <span className="points-text">128</span>
+                            <span className="points-text">
+                                <motion.span
+                                    className="points-text"
+                                    initial={{ count: 0 }}
+                                    animate={{ count: 128 }}
+                                    transition={{
+                                        duration: 1.5,
+                                        ease: "easeInOut",
+                                    }}
+                                    onUpdate={(latest) =>
+                                        setCounter(Math.round(latest.count))
+                                    } // Update counter value
+                                >
+                                    {counter}
+                                </motion.span>
+                            </span>
                         </div>
                     </div>
                 </div>

@@ -77,22 +77,31 @@
     align-items: center;
 }
 
+@keyframes expandShrink {
+    0%,
+    100% {
+        transform: scale(1); /* Default size */
+    }
+    50% {
+        transform: scale(1.2); /* Expanded size */
+    }
+}
+
+/* General Circle Styles */
 .circle {
     position: absolute;
     border-radius: 50%;
+    transform: scale(1);
+    transition: transform 0.3s ease-in-out; /* Smooth fallback */
 }
 
-.circle-4:hover {
-    transform: scale(1.2);
-    transition: all 0.3s ease;
-}
-
-/* Circle Layers */
+/* Circle Layers with Initial Animation */
 .circle-1 {
     width: 300px;
     height: 300px;
     background: #fff7e8;
     z-index: 1;
+    animation: expandShrink 1.5s ease-in-out 0.6s; /* Starts on load */
 }
 
 .circle-2 {
@@ -101,6 +110,7 @@
     background: #ffebaf;
     z-index: 2;
     box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+    animation: expandShrink 1.5s ease-in-out 0.4s; /* Starts on load */
 }
 
 .circle-3 {
@@ -109,17 +119,19 @@
     background: #ffc354;
     z-index: 3;
     box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+    animation: expandShrink 1.5s ease-in-out 0.2s; /* Starts on load */
 }
 
 .circle-4 {
     width: 150px;
     height: 150px;
     background: #fc8b19;
+    z-index: 4;
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 4;
     box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+    animation: expandShrink 1.5s ease-in-out 0s; /* Starts on load */
 }
 
 /* Points Text */
@@ -211,7 +223,7 @@
 
     /* Points Section */
     .points-section {
-        margin-bottom: 20px;
+        margin-bottom: 50px;
     }
 
     .points-wrapper {
@@ -262,12 +274,16 @@
     .activity-button {
         background: white;
         color: #ff6f00;
-        width: 50%;
+        width: 55%;
         border-radius: 15px;
         max-width: 300px;
         padding: 12px 0;
         font-size: 16px;
         box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+    }
+
+    .activity-button:hover {
+        background: #fff7e7;
     }
 
     .button-description {
