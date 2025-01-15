@@ -9,16 +9,22 @@
 "use client";
 
 import React from "react";
-import { useAuth } from "@/context/AuthContext"; // Import the AuthContext to access user data
+import { useAuth } from "@/context/AuthContext";
 import "./Dashboard.css";
+import { signOut } from "firebase/auth";
+import { auth } from "../../../../lib/firebase";
+import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
 
 export default function Dashboard() {
     const { user } = useAuth();
+    const router = useRouter(); // Initialize the router
 
     const handleSignOut = async () => {
         try {
-            await signOut(auth);
+            await signOut(auth); // Sign the user out
             toast.success("Sign out successful!");
+            router.push("/auth/login"); // Redirect to the login page
         } catch (e) {
             console.error("Sign-out error:", e);
             toast.error("Sign out failed!");
@@ -37,9 +43,7 @@ export default function Dashboard() {
             {/* Welcome Section */}
             <div className="welcome-section">
                 <h2 className="welcome-text">Welcome back,</h2>
-                <p className="username">
-                    {user?.displayName || "Shearite"}
-                </p>{" "}
+                <p className="username">{user?.displayName || "Shearite"}</p>
             </div>
 
             {/* Content Section */}

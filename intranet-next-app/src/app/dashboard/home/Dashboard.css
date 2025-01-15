@@ -82,6 +82,11 @@
     border-radius: 50%;
 }
 
+.circle-4:hover {
+    transform: scale(1.2);
+    transition: all 0.3s ease;
+}
+
 /* Circle Layers */
 .circle-1 {
     width: 300px;
@@ -129,6 +134,7 @@
 .activity-section {
     flex: 1.5;
     text-align: center;
+    margin-right: 50px;
 }
 
 .activity-title {
@@ -241,6 +247,7 @@
     /* Activity Section */
     .activity-section {
         width: 100%;
+        margin-right: 0;
     }
 
     .activity-title {
