@@ -1,47 +1,56 @@
 'use client';
 
-import React from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import { CSSProperties } from 'react';
-import { signOut } from "firebase/auth";
-import { auth } from "../../../../lib/firebase";
-import { useRouter } from 'next/navigation';
+import React, { useEffect, useState } from 'react';
+import Sidebar from '@/components/Sidebar'; // Import Sidebar
 import { useAuth } from '@/context/AuthContext';
-
+import toast from 'react-hot-toast';
 
 export default function MyCCA() {
-  const router = useRouter();
   const { user } = useAuth();
-  
-  const handleLogout = async () => {
-    try {
-        await signOut(auth);
-        router.push("/auth/login");
-    } catch (e ) {
-        console.error("Sign-out error:", e);
-    }
-  };
+  const [points, setPoints] = useState<number>(0);
+  const [ccas, setCCAs] = useState<{ name: string; role: string; points: number }[]>([]);
+
+  useEffect(() => {
+    if (!user?.email) return;
+
+    fetch(`/api/user/getPoints/${user.email}`)
+      .then(async (res) => {
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || "Failed to fetch user points");
+        }
+        return res.json();
+      })
+      .then((data) => {
+        setPoints(data.userPoints);
+      })
+      .catch((error) => {
+        console.error("Error fetching points:", error.message);
+        toast.error(error.message); // Show a toast notification for the error
+      });
+}, [user?.email]);
+
+  useEffect(() => {
+    if (!user?.email) return;
+    fetch('/api/user/getCCAs/' + user?.email)
+      .then(async (res) => {
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || "Failed to fetch user CCA data");
+        }
+        return res.json();
+      })
+      .then((data) => {setCCAs(data.data)})
+      .catch((error) => {
+        console.error("Error fetching CCAs:", error.message);
+        toast.error(error.message); // Show a toast notification for the error
+      });
+      
+  }, [user?.email]);
+
   return (
     <div style={styles.container}>
-      {/* Sidebar Navigation */}
-      <div style={styles.sidebar}>
-        <div style={styles.logoContainer}>
-          <Image
-            src="/images/lion_logo.png"
-            alt="Lion Logo"
-            width={80}
-            height={80}
-            style={styles.logo}
-          />
-        </div>
-        <nav style={styles.nav}>
-          <Link href="/dashboard/home" style={styles.navItem}>🏠 Home</Link>
-          <Link href="/dashboard/mycca" style={{ ...styles.navItem, ...styles.active }}>📋 My CCAs</Link>
-          <Link href="/dashboard/rank" style={styles.navItem}>📊 Rank CCA</Link>
-          <button onClick={handleLogout} style={styles.navItem}>🚪 Log out</button>
-        </nav>
-      </div>
+      <Sidebar /> 
 
       {/* Main Content */}
       <div style={styles.content}>
@@ -55,15 +64,8 @@ export default function MyCCA() {
             </tr>
           </thead>
           <tbody>
-            {ccaData.map((cca, index) => (
-              <tr
-                key={index}
-                style={{
-                  backgroundColor: index % 2 === 0
-                    ? styles.rowEven.backgroundColor
-                    : styles.rowOdd.backgroundColor,
-                }}
-              >
+            {ccas.map((cca, index) => (
+              <tr key={index} style={{ backgroundColor: index % 2 === 0 ? styles.rowEven.backgroundColor : styles.rowOdd.backgroundColor }}>
                 <td style={styles.td}>{cca.name}</td>
                 <td style={styles.td}>{cca.role}</td>
                 <td style={styles.td}>{cca.points}</td>
@@ -72,68 +74,18 @@ export default function MyCCA() {
           </tbody>
         </table>
         <div style={styles.footer}>
-          <strong>Total Points: {user?.displayName}</strong> {calculateTotalPoints()}
+          <strong>Total Points: </strong> {points ? points : 0}
         </div>
       </div>
     </div>
   );
 }
 
-const ccaData = [
-  { name: 'Block Committee', role: 'Member', points: 47 },
-  { name: 'Sports Management Board', role: 'Publicity Main Comm', points: 42 },
-  { name: 'Sheares Production', role: 'Sets Sub Comm', points: 38 },
-  { name: 'Floorball F', role: 'Member', points: 27 },
-  { name: 'Volleyball F', role: 'Captain', points: 20 },
-  { name: 'Handball F', role: 'Member', points: 17 },
-  { name: 'SWCC 23/24 Elections', role: 'Attendance', points: 11 },
-  { name: '44th Elections & ADM', role: 'Attendance', points: 1 }
-];
-
-// Calculate Total Points
-function calculateTotalPoints() {
-  return ccaData.reduce((total, cca) => total + cca.points, 0);
-}
-
-
-
-const styles: { [key: string]: CSSProperties } = {
+const styles = {
   container: {
     display: 'flex',
     height: '100vh',
     fontFamily: 'Arial, sans-serif'
-  },
-  sidebar: {
-    width: '250px',
-    background: '#FF8C1A',
-    color: 'white',
-    display: 'flex',
-    flexDirection: 'column' as const,
-    alignItems: 'center',
-    padding: '20px'
-  },
-  logoContainer: {
-    marginBottom: '20px'
-  },
-  logo: {
-    borderRadius: '50%'
-  },
-  nav: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: '15px',
-    marginTop: '20px'
-  },
-  navItem: {
-    textDecoration: 'none',
-    color: 'white',
-    fontSize: '16px',
-    padding: '10px 15px',
-    borderRadius: '5px',
-    cursor: 'pointer'
-  },
-  active: {
-    backgroundColor: '#FC7A00'
   },
   content: {
     flex: 1,
@@ -149,29 +101,29 @@ const styles: { [key: string]: CSSProperties } = {
   },
   table: {
     width: '100%',
-    borderCollapse: 'collapse',
+    borderCollapse: 'collapse' as const,
     marginTop: '10px'
   },
   th: {
     textAlign: 'left' as const,
     borderBottom: '2px solid #DDD',
     padding: '12px 10px',
-    backgroundColor: '#FFFFFF', // White background
+    backgroundColor: '#FFFFFF',
     fontSize: '16px',
     fontWeight: 'bold',
-    color: '#7A7A7A' // Lighter grey text
+    color: '#7A7A7A'
   },
   td: {
     borderBottom: '1px solid #DDD',
     padding: '10px',
     fontSize: '14px',
-    color: '#000000' // Black text
+    color: '#000000'
   },
   rowEven: {
-    backgroundColor: '#F5F5F5' // Light grey for even rows
+    backgroundColor: '#F5F5F5'
   },
   rowOdd: {
-    backgroundColor: '#FFFFFF' // White for odd rows
+    backgroundColor: '#FFFFFF'
   },
   footer: {
     marginTop: '20px',

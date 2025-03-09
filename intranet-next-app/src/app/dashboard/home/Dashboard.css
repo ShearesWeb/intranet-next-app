@@ -1,0 +1,293 @@
+/* General styles */
+.dashboard {
+    /* min-height: 100vh; */
+    height: 100vh;
+    background: linear-gradient(to bottom, #ffcd9d, #fc8b1a, #ff6f00);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* ===== Header ===== */
+.header {
+    width: 100%;
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.logout-button {
+    border: 1px solid black;
+    padding: 10px 20px;
+    border-radius: 10px;
+    color: black;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.logout-button:hover {
+    background: #ff6f00;
+    color: white;
+}
+
+/* ===== Welcome Section ===== */
+.welcome-section {
+    text-align: center;
+    margin: 75px 0;
+    color: #fff7e7;
+}
+
+.welcome-text {
+    font-size: 50px;
+    font-weight: bolder;
+    color: #82674d
+}
+
+.username {
+    font-size: 30px;
+    font-weight: bold;
+    color: #82674d;
+}
+
+/* ===== Content Section ===== */
+.content-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fff7e8;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    width: 100%;
+}
+
+/* Points Section */
+.points-section {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.points-wrapper {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+@keyframes expandShrink {
+    0%,
+    100% {
+        transform: scale(1); /* Default size */
+    }
+    50% {
+        transform: scale(1.2); /* Expanded size */
+    }
+}
+
+/* General Circle Styles */
+.circle {
+    position: absolute;
+    border-radius: 50%;
+    transform: scale(1);
+    transition: transform 0.3s ease-in-out; /* Smooth fallback */
+}
+
+/* Circle Layers with Initial Animation */
+.circle-1 {
+    width: 300px;
+    height: 300px;
+    background: #fff7e8;
+    z-index: 1;
+    animation: expandShrink 1.5s ease-in-out 0.6s; /* Starts on load */
+}
+
+.circle-2 {
+    width: 240px;
+    height: 240px;
+    background: #ffebaf;
+    z-index: 2;
+    box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+    animation: expandShrink 1.5s ease-in-out 0.4s; /* Starts on load */
+}
+
+.circle-3 {
+    width: 180px;
+    height: 180px;
+    background: #ffc354;
+    z-index: 3;
+    box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+    animation: expandShrink 1.5s ease-in-out 0.2s; /* Starts on load */
+}
+
+.circle-4 {
+    width: 150px;
+    height: 150px;
+    background: #fc8b19;
+    z-index: 4;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+    animation: expandShrink 1.5s ease-in-out 0s; /* Starts on load */
+}
+
+/* Points Text */
+.points-text {
+    font-size: 65px;
+    font-weight: bold;
+    color: white;
+    z-index: 5;
+}
+
+/* Activity Section */
+.activity-section {
+    flex: 1.5;
+    text-align: center;
+    margin-right: 50px;
+}
+
+.activity-title {
+    font-size: 30px;
+    font-weight: bold;
+    color: #fc8b19;
+}
+
+.buttons {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+    gap: 20px;
+}
+
+.button-group {
+    text-align: center;
+}
+
+.activity-button {
+    background: #fc8b1a;
+    color: white;
+    padding: 10px 50px;
+    border-radius: 5px;
+    font-size: 16px;
+    font-weight: bold;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.activity-button:hover {
+    background: #ff6f00;
+}
+
+.button-description {
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 8px;
+}
+
+/* ===== Mobile Styles ===== */
+@media (max-width: 768px) {
+    .dashboard {
+        padding: 0 20px;
+    }
+
+    /* Welcome Section */
+    .welcome-section {
+        margin: 75px 0;
+    }
+
+    .welcome-text {
+        font-size: 32px; /* Reduce font size */
+    }
+
+    .username {
+        font-size: 25px; /* Reduce font size */
+    }
+
+    .logout-button {
+        padding: 8px 16px; /* Reduce padding */
+        font-size: 12px;
+    }
+
+    /* Content Section */
+    .content-section {
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        background: none;
+        box-shadow: none;
+    }
+
+    /* Points Section */
+    .points-section {
+        margin-bottom: 50px;
+    }
+
+    .points-wrapper {
+        width: 250px;
+        height: 250px;
+    }
+
+    .circle-1 {
+        width: 250px;
+        height: 250px;
+        box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+    }
+
+    .circle-2 {
+        width: 190px;
+        height: 190px;
+    }
+
+    .circle-3 {
+        width: 130px;
+        height: 130px;
+    }
+
+    .circle-4 {
+        width: 100px;
+        height: 100px;
+    }
+
+    .points-text {
+        font-size: 50px;
+    }
+
+    /* Activity Section */
+    .activity-section {
+        width: 100%;
+        margin-right: 0;
+    }
+
+    .activity-title {
+        display: none;
+    }
+
+    .buttons {
+        flex-direction: column;
+        gap: 25px;
+    }
+
+    .activity-button {
+        background: white;
+        color: #ff6f00;
+        width: 55%;
+        border-radius: 15px;
+        max-width: 300px;
+        padding: 12px 0;
+        font-size: 16px;
+        box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+    }
+
+    .activity-button:hover {
+        background: #fff7e7;
+    }
+
+    .button-description {
+        display: none;
+    }
+}
