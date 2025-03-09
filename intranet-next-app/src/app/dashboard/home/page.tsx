@@ -1,11 +1,3 @@
-// 'use client';
-
-// export default function HelloWorld() {
-//   return (
-//       <h1>Hello, World</h1>
-//   );
-// }
-
 "use client";
 
 import React, { useState } from "react";
@@ -16,11 +8,44 @@ import { auth } from "../../../../lib/firebase";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { useEffect } from "react";
 
 export default function Dashboard() {
     const { user } = useAuth();
+    const [points , setPoints] = useState<number>(0);
     const router = useRouter();
     const [counter, setCounter] = useState(0);
+
+    
+    // fetch user specific points
+    useEffect(() => {
+        if (!user?.email) return;
+
+        fetch(`/api/user/getPoints/${user.email}`)
+          .then(async (res) => {
+            if (!res.ok) {
+              const errorData = await res.json();
+              throw new Error(errorData.error || "Failed to fetch user points");
+            }
+            return res.json();
+          })
+          .then((data) => {
+            setPoints(data.userPoints);
+          })
+          .catch((error) => {
+            console.error("Error fetching points:", error.message);
+            toast.error(error.message); // Show a toast notification for the error
+          });
+    }, [user?.email]);
+    
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setCounter((prev) => (prev < points ? prev + 1 : points));
+        }, 20); 
+
+        return () => clearInterval(interval);
+    }, [points]);
 
     const handleSignOut = async () => {
         try {
@@ -33,9 +58,6 @@ export default function Dashboard() {
         }
     };
 
-    // useEffect(() => {
-    //     controls.start({ count: 128 });
-    // }, [controls]);
 
     return (
         <div className="dashboard">
@@ -48,8 +70,8 @@ export default function Dashboard() {
 
             {/* Welcome Section */}
             <div className="welcome-section">
-                <h2 className="welcome-text">Welcome back,</h2>
-                <p className="username">{user?.displayName || "Shearite"}!</p>
+                <h2 className="welcome-text">Welcome Back,</h2>
+                <p className="username">{user?.displayName}</p>
             </div>
 
             {/* Content Section */}
@@ -64,18 +86,16 @@ export default function Dashboard() {
                             <span className="points-text">
                                 <motion.span
                                     className="points-text"
-                                    initial={{ count: 0 }}
-                                    animate={{ count: 128 }}
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
                                     transition={{
                                         duration: 1.5,
                                         ease: "easeInOut",
                                     }}
-                                    onUpdate={(latest) =>
-                                        setCounter(Math.round(latest.count))
-                                    } // Update counter value
                                 >
                                     {counter}
                                 </motion.span>
+
                             </span>
                         </div>
                     </div>
@@ -86,14 +106,14 @@ export default function Dashboard() {
                     <h3 className="activity-title">My Activity</h3>
                     <div className="buttons">
                         <div className="button-group">
-                            <button className="activity-button">My CCAs</button>
+                            <button className="activity-button" onClick={() => router.push("/dashboard/mycca")}>My CCAs</button>
                             <p className="button-description">
                                 Tap to view your CCAs and their respective
                                 points
                             </p>
                         </div>
                         <div className="button-group">
-                            <button className="activity-button">
+                            <button disabled className="activity-button">
                                 Rank CCA
                             </button>
                             <p className="button-description">

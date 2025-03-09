@@ -36,18 +36,19 @@
 .welcome-section {
     text-align: center;
     margin: 75px 0;
+    color: #fff7e7;
 }
 
 .welcome-text {
     font-size: 50px;
     font-weight: bolder;
-    color: #29241f;
+    color: #82674d
 }
 
 .username {
     font-size: 30px;
     font-weight: bold;
-    color: #29241f;
+    color: #82674d;
 }
 
 /* ===== Content Section ===== */
@@ -152,7 +153,7 @@
 .activity-title {
     font-size: 30px;
     font-weight: bold;
-    color: black;
+    color: #fc8b19;
 }
 
 .buttons {
