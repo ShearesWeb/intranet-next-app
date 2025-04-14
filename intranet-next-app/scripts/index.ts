@@ -66,7 +66,7 @@ async function validateUserOnboardingData(
   filePath: string
 ): Promise<ValidationResult> {
   const validRows: User[] = [];
-  const invalidRows: { name: string; errors: string[] }[] = [];
+  const invalidRows: { name: string; email: string; errors: string[] }[] = [];
 
   const entries = await readCSVFile(filePath, {
     columns: ["name", "email", "room", "is_admin"],
@@ -79,6 +79,7 @@ async function validateUserOnboardingData(
     if (!is_email_valid) {
       invalidRows.push({
         name: entry.name,
+        email: entry.email,
         errors: ["Email must be a valid gmail account"],
       });
       continue;
@@ -90,9 +91,10 @@ async function validateUserOnboardingData(
   return { validRows, invalidRows };
 }
 
+// NOTE: CHANGE PATH, for some reason it fails when using relative path
 (async () => {
   const { validRows, invalidRows } = await validateUserOnboardingData(
-    "/Users/hrishikeshsathyian/Documents/GitHub/intranet-next-app/intranet-next-app/scripts/users.csv"
+    "/Users/hrishikeshsathyian/Documents/GitHub/Shweb/intranet-next-app/intranet-next-app/scripts/users.csv"
   );
   // add valid users to the database
   validRows.map(async (row) => {
@@ -120,7 +122,15 @@ async function validateUserOnboardingData(
     }
   });
 
-  invalidRows.map((row) => {
-    console.log("Invalid Row Error: ", row.errors);
-  });
+  fs.writeFile(
+    "/Users/hrishikeshsathyian/Documents/GitHub/Shweb/intranet-next-app/intranet-next-app/scripts/errors.txt",
+    JSON.stringify(invalidRows, null, 2),
+    (err) => {
+      if (err) {
+        console.error(err);
+      } else {
+        console.log("Invalid rows written to file successfully.");
+      }
+    }
+  );
 })();

@@ -1,0 +1,9 @@
+[
+  {
+    "name": "LEOW, RACHEL",
+    "email": "tinghui.rl@BOMBOCLAAT.com",
+    "errors": [
+      "Email must be a valid gmail account"
+    ]
+  }
+]
