@@ -5,9 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import toast from 'react-hot-toast';
 
-
-const withAuth = (WrappedComponent: ComponentType) => {
-  const AuthenticatedComponent = (props: any) => {
+const withAuth = <P extends object>(WrappedComponent: ComponentType<P>) => {
+  const AuthenticatedComponent = (props: P) => {
     const { user, loading } = useAuth();
     const router = useRouter();
 
