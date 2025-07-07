@@ -50,5 +50,5 @@ jobs:
         run: ${{ steps.detect-pm.outputs.manager }} ${{ steps.detect-pm.outputs.command }}
 
       - name: 6. 🚧 Build with Next.js
-        run: ${{ steps.detect-pm.outputs.manager }} next build
+        run: ${{ steps.detect-pm.outputs.manager }} run build
         
