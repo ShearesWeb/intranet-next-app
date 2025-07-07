@@ -68,13 +68,13 @@ jobs:
       - name: 5. 📦 Install Dependencies
         run: ${{ steps.detect-pm.outputs.manager }} ${{ steps.detect-pm.outputs.command }}
 
-      - name: 6. 🚧 Build with Next.js
-        run: ${{ steps.detect-pm.outputs.manager }} run build
-
-      - name: 7. 🔍 Debug Environment Variables
+      - name: 6. 🔍 Debug Environment Variables
         run: |
           echo "FIREBASE_PROJECT_ID length: ${#FIREBASE_PROJECT_ID}"
           echo "FIREBASE_CLIENT_EMAIL length: ${#FIREBASE_CLIENT_EMAIL}"
           echo "FIREBASE_PRIVATE_KEY length: ${#FIREBASE_PRIVATE_KEY}"
           echo "FIREBASE_PROJECT_ID value: $FIREBASE_PROJECT_ID"
           echo "FIREBASE_CLIENT_EMAIL value: $FIREBASE_CLIENT_EMAIL"
+
+      - name: 7. 🚧 Build with Next.js
+        run: ${{ steps.detect-pm.outputs.manager }} run build
