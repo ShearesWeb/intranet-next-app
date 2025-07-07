@@ -4,6 +4,9 @@ name: Merge Request CI
 # Trigger:
 # - Runs when a pull request targets the `main` branch
 on:
+  push:
+    branches:
+      - merge/cleanup-and-infrastructure
   pull_request:
     branches:
       - main
