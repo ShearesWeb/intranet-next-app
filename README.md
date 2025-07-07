@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Intranet Next App - Project Documentation
 
 ## Project Overview
@@ -254,3 +255,4 @@ npm start
 - **Protected API routes** with authentication checks
 - **Email validation** for user registration
 - **Firebase security rules** (not shown in files)
+=======
