@@ -1,33 +1,36 @@
 import { NextResponse } from "next/server";
-import { supabase } from "../../../../../../lib/supabase";
-
-const USER_CCA_ROLES_TABLE_NAME = "user_cca_roles";
+import { cookies } from 'next/headers';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 
 export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ email: string }> }
+	request: Request,
+	{ params }: { params: Promise<{ email: string }> }
 ) {
-  const { email } = await params;
-  const { data, error } = await supabase
-    .from(USER_CCA_ROLES_TABLE_NAME)
-    .select("points")
-    .eq("email", email);
+	try {
+		const { email } = await params;
+		const supabase = createRouteHandlerClient({ cookies });
 
-  if (error) {
-    console.error("Error fetching user data:", error);
-    return NextResponse.json(
-      { error: "Error fetching user data" },
-      { status: 500 }
-    );
-  }
+		// Get user by email to get their ID
+		const { data: user, error: userError } = await supabase
+			.from('users')
+			.select('id, points')
+			.eq('email', email)
+			.single();
 
-  let userPoints = 0;
+		// Handle user not found gracefully
+		if (userError || !user) {
+			console.log("User not found in database:", email);
+			return NextResponse.json({ userPoints: 0 }); // Return 0 points instead of error
+		}
 
-  data.forEach(({ points }) => {
-    userPoints += points;
-  });
-  console.log(userPoints);
-  return new Response(JSON.stringify({ userPoints }), {
-    headers: { "content-type": "application/json" },
-  });
+		// Return the points from the users table
+		const userPoints = user.points || 0;	
+
+		console.log("User points:", userPoints);
+		return NextResponse.json({ userPoints });
+
+	} catch (error) {
+		console.error("Error fetching user points:", error);
+		return NextResponse.json({ userPoints: 0 }); // Return 0 points on error
+	}
 }

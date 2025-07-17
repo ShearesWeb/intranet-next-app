@@ -3,53 +3,51 @@
 import React, { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import "./Dashboard.css";
-import { signOut } from "firebase/auth";
-import { auth } from "../../../../lib/firebase";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useEffect } from "react";
 
 export default function Dashboard() {
-    const { user } = useAuth();
-    const [points , setPoints] = useState<number>(0);
+    const { user, signOut } = useAuth();
+    const [points, setPoints] = useState<number>(0);
     const router = useRouter();
     const [counter, setCounter] = useState(0);
 
-    
+
     // fetch user specific points
     useEffect(() => {
         if (!user?.email) return;
 
         fetch(`/api/user/getPoints/${user.email}`)
-          .then(async (res) => {
-            if (!res.ok) {
-              const errorData = await res.json();
-              throw new Error(errorData.error || "Failed to fetch user points");
-            }
-            return res.json();
-          })
-          .then((data) => {
-            setPoints(data.userPoints);
-          })
-          .catch((error) => {
-            console.error("Error fetching points:", error.message);
-            toast.error(error.message); // Show a toast notification for the error
-          });
+            .then(async (res) => {
+                if (!res.ok) {
+                    const errorData = await res.json();
+                    throw new Error(errorData.error || "Failed to fetch user points");
+                }
+                return res.json();
+            })
+            .then((data) => {
+                setPoints(data.userPoints);
+            })
+            .catch((error) => {
+                console.error("Error fetching points:", error.message);
+                toast.error(error.message);
+            });
     }, [user?.email]);
-    
+
 
     useEffect(() => {
         const interval = setInterval(() => {
             setCounter((prev) => (prev < points ? prev + 1 : points));
-        }, 20); 
+        }, 20);
 
         return () => clearInterval(interval);
     }, [points]);
 
     const handleSignOut = async () => {
         try {
-            await signOut(auth);
+            await signOut();
             toast.success("Sign out successful!");
             router.push("/auth/login");
         } catch (e) {
@@ -71,7 +69,7 @@ export default function Dashboard() {
             {/* Welcome Section */}
             <div className="welcome-section">
                 <h2 className="welcome-text">Welcome Back,</h2>
-                <p className="username">{user?.displayName}</p>
+                <p className="username">{user?.user_metadata?.full_name || user?.email}</p>
             </div>
 
             {/* Content Section */}
@@ -113,7 +111,7 @@ export default function Dashboard() {
                             </p>
                         </div>
                         <div className="button-group">
-                            <button disabled className="activity-button">
+                            <button className="activity-button" onClick={() => router.push("/dashboard/rank")}>
                                 Rank CCA
                             </button>
                             <p className="button-description">
