@@ -1,8 +1,9 @@
+// src/app/api/auth/getUserByEmail/route.ts
 import { NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 
-const USER_TABLE_NAME = 'Users';
+const USER_TABLE_NAME = 'public_users';
 
 export async function POST(request: Request) {
   try {

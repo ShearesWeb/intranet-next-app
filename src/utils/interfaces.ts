@@ -1,3 +1,5 @@
+// C:\Ron\intranet-next-app\src\utils\interfaces.ts
+
 export interface DBUser {
   id: string;
   created_at: string;

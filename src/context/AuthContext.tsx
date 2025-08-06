@@ -1,3 +1,5 @@
+// C:\Ron\intranet-next-app\src\context\AuthContext.tsx
+
 "use client";
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';

@@ -1,11 +1,14 @@
+// C:\Ron\intranet-next-app\src\components\Sidebar.tsx
 'use client';
 
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-
+import { useRoleAuth } from '@/hooks/useRoleAuth';
 
 export default function Sidebar() {
+  const { isAuthorized, loading: roleLoading } = useRoleAuth();
+
   return (
     <div style={styles.sidebar}>
       <div style={styles.logoContainer}>
@@ -21,6 +24,11 @@ export default function Sidebar() {
         <Link href="/dashboard/home" style={styles.navItem}>❤️ Home</Link>
         <Link href="/dashboard/mycca" style={{ ...styles.navItem }}>📋 My CCAs</Link>
         <Link href="/dashboard/rank" style={styles.navItem}>📊 Rank CCA</Link>
+        {!roleLoading && isAuthorized && (
+          <Link href="/dashboard/rankApplicants" style={styles.navItem}>
+            👥 Rank Applicants
+          </Link>
+        )}
       </nav>
     </div>
   );

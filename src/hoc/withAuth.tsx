@@ -1,3 +1,5 @@
+// C:\Ron\intranet-next-app\src\hoc\withAuth.tsx
+
 "use client"
 
 import React, { ComponentType, useEffect } from 'react';

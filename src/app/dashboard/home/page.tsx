@@ -1,3 +1,4 @@
+// C:\Ron\intranet-next-app\src\app\dashboard\home\page.tsx
 "use client";
 
 import React, { useState } from "react";
@@ -7,9 +8,11 @@ import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useEffect } from "react";
+import { useRoleAuth } from "@/hooks/useRoleAuth";
 
 export default function Dashboard() {
     const { user, signOut } = useAuth();
+    const { isAuthorized, loading: roleLoading } = useRoleAuth();
     const [points, setPoints] = useState<number>(0);
     const router = useRouter();
     const [counter, setCounter] = useState(0);
@@ -106,18 +109,25 @@ export default function Dashboard() {
                         <div className="button-group">
                             <button className="activity-button" onClick={() => router.push("/dashboard/mycca")}>My CCAs</button>
                             <p className="button-description">
-                                Tap to view your CCAs and their respective
-                                points
+                                View your CCAs and Points
                             </p>
                         </div>
                         <div className="button-group">
-                            <button className="activity-button" onClick={() => router.push("/dashboard/rank")}>
-                                Rank CCA
-                            </button>
+                            <button className="activity-button" onClick={() => router.push("/dashboard/rank")}>Rank CCA</button>
                             <p className="button-description">
-                                Tap to rank your Committee CCA preference
+                                Rank your CCA preferences
                             </p>
                         </div>
+                        {!roleLoading && isAuthorized && (
+                            <div className="button-group">
+                                <button className="activity-button" onClick={() => router.push("/dashboard/rankApplicants")}>
+                                    Rank Applicants
+                                </button>
+                                <p className="button-description">
+                                    Rank applicants for your CCA
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

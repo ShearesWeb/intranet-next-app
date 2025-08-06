@@ -1,3 +1,4 @@
+// C:\Ron\intranet-next-app\src\app\auth\callback\route.ts
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
