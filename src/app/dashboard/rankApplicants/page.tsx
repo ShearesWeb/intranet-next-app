@@ -4,6 +4,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { useAuth } from '@/context/AuthContext';
+import { usePhaseInfo } from '@/hooks/usePhaseInfo';
 import toast from 'react-hot-toast';
 
 // Types (unchanged)
@@ -36,7 +37,7 @@ interface PositionSearchBoxProps {
     onAddApplicant: (userId: number) => void;
 }
 
-// NEW: Loading Overlay Component
+// Loading Overlay Component
 function LoadingOverlay({ visible }: { visible: boolean }) {
     if (!visible) return null;
 
@@ -125,7 +126,7 @@ function PositionSearchBox({ positionId, onAddApplicant }: PositionSearchBoxProp
                 ref={inputRef}
                 style={styles.searchInput}
                 type="text"
-                placeholder="Search user by name/email/room..."
+                placeholder="Search user by intranet gmail..."
                 onChange={handleInputChange}
                 onFocus={handleFocus}
                 onBlur={handleBlur}
@@ -269,10 +270,11 @@ function PositionCard(props: {
 
 export default function RankApplicants() {
     const { user } = useAuth();
+    const { phaseInfo, loading: phaseLoading } = usePhaseInfo(); // ✅ ADD: Phase functionality
     const [positions, setPositions] = useState<Position[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [saving, setSaving] = useState<number | null>(null);
-    const [isLoading, setIsLoading] = useState<boolean>(false); // NEW: Global loading state
+    const [isLoading, setIsLoading] = useState<boolean>(false);
     const [originalOrders, setOriginalOrders] = useState<{ [positionId: number]: number[] }>({});
     const [hasChanges, setHasChanges] = useState<{ [positionId: number]: boolean }>({});
 
@@ -317,7 +319,6 @@ export default function RankApplicants() {
         }));
     }, [originalOrders]);
 
-    // Helper function to save rankings for a specific position
     const saveRankingsForPosition = useCallback(async (position: Position): Promise<boolean> => {
         const rankings = position.applicants.map((a, i) => ({
             user_id: a.id,
@@ -344,17 +345,14 @@ export default function RankApplicants() {
         }
     }, []);
 
-    // Modified handleAddApplicant with loading overlay
     const handleAddApplicant = useCallback(async (positionId: number, userId: number) => {
         if (!user?.email) return;
 
-        setIsLoading(true); // NEW: Show loading overlay
+        setIsLoading(true);
 
         try {
-            // Find the position that's being modified
             const targetPosition = positions.find(p => p.id === positionId);
 
-            // If there are unsaved changes, save them first
             if (targetPosition && hasChanges[positionId]) {
                 const saveSuccess = await saveRankingsForPosition(targetPosition);
                 if (!saveSuccess) {
@@ -371,13 +369,11 @@ export default function RankApplicants() {
 
             if (!res.ok) throw new Error('Failed to add applicant');
 
-            // Refresh positions and reset change tracking
             const refreshRes = await fetch(`/api/chair/positions/forChair/${user.email}`);
             const refreshData = await refreshRes.json();
 
             setPositions(refreshData.positions || []);
 
-            // Update original orders and reset changes for all positions
             const originalOrderMap: { [positionId: number]: number[] } = {};
             const changesMap: { [positionId: number]: boolean } = {};
 
@@ -393,21 +389,18 @@ export default function RankApplicants() {
         } catch (error) {
             toast.error('Could not add applicant');
         } finally {
-            setIsLoading(false); // NEW: Hide loading overlay
+            setIsLoading(false);
         }
     }, [user?.email, positions, hasChanges, saveRankingsForPosition]);
 
-    // Modified handleRemoveApplicant with loading overlay
     const handleRemoveApplicant = useCallback(async (positionId: number, userId: number) => {
         if (!user?.email) return;
 
-        setIsLoading(true); // NEW: Show loading overlay
+        setIsLoading(true);
 
         try {
-            // Find the position that's being modified
             const targetPosition = positions.find(p => p.id === positionId);
 
-            // If there are unsaved changes, save them first
             if (targetPosition && hasChanges[positionId]) {
                 const saveSuccess = await saveRankingsForPosition(targetPosition);
                 if (!saveSuccess) {
@@ -424,13 +417,11 @@ export default function RankApplicants() {
 
             if (!res.ok) throw new Error('Failed to remove applicant');
 
-            // Refresh positions and reset change tracking
             const refreshRes = await fetch(`/api/chair/positions/forChair/${user.email}`);
             const refreshData = await refreshRes.json();
 
             setPositions(refreshData.positions || []);
 
-            // Update original orders and reset changes for all positions
             const originalOrderMap: { [positionId: number]: number[] } = {};
             const changesMap: { [positionId: number]: boolean } = {};
 
@@ -446,7 +437,7 @@ export default function RankApplicants() {
         } catch (error) {
             toast.error('Could not remove applicant');
         } finally {
-            setIsLoading(false); // NEW: Hide loading overlay
+            setIsLoading(false);
         }
     }, [user?.email, positions, hasChanges, saveRankingsForPosition]);
 
@@ -469,10 +460,9 @@ export default function RankApplicants() {
         });
     }, [checkForChanges]);
 
-    // Modified handleSaveRankings with loading overlay
     const handleSaveRankings = useCallback(async (position: Position) => {
         setSaving(position.id);
-        setIsLoading(true); // NEW: Show loading overlay
+        setIsLoading(true);
 
         const success = await saveRankingsForPosition(position);
 
@@ -489,15 +479,60 @@ export default function RankApplicants() {
         }
 
         setSaving(null);
-        setIsLoading(false); // NEW: Hide loading overlay
+        setIsLoading(false);
     }, [saveRankingsForPosition]);
 
-    if (loading) {
+    // ✅ NEW: Show loading state
+    if (loading || phaseLoading) {
         return (
             <div style={styles.container}>
                 <Sidebar />
                 <div style={styles.content}>
                     <div style={styles.loading}>Loading CCA positions and applicants...</div>
+                </div>
+            </div>
+        );
+    }
+
+    if (!phaseInfo.allowChairRanking) {
+        const getStatusMessage = () => {
+            switch (phaseInfo.phase) {
+                case 'maincomm_interviews':
+                    return "Maincomm interviews are in progress. Chair ranking opens after interviews complete.";
+                case 'applicant_ranking_maincomm':
+                    return "Applicants are currently ranking maincomm positions. Maincomm results processing will begin soon.";
+                case 'maincomm_results_processing':
+                    return "Maincomm results are currently being processed. Results will be available soon."
+                case 'maincomm_results_available':
+                    return "Maincomm results have been released. Subcomm interviews will begin soon.";
+                case 'subcomm_interviews':
+                    return "Subcomm interviews are in progress. Chair ranking opens after interviews complete.";
+                case 'applicant_ranking_subcomm':
+                    return "Applicants are currently ranking subcomm positions. Chair ranking has ended.";
+                case 'subcomm_results_processing':
+                    return "Subcomm results are currently being processed. Results will be available soon."
+                case 'full_results_available':
+                    return "Subcomm results have been released. Chair ranking is not currently active.";
+                default:
+                    return "Chair ranking is not currently active.";
+            }
+        };
+
+        return (
+            <div style={styles.container}>
+                <Sidebar />
+                <div style={styles.content}>
+                    <div style={styles.header}>
+                        <h1 style={styles.title}>Rank Applicants for Your CCA</h1>
+                        <p style={styles.subtitle}>Manage and rank applicants for your CCA positions.</p>
+                    </div>
+
+                    <div style={styles.emptyState}>
+                        <p>{getStatusMessage()}</p>
+                        {phaseInfo.nextPhaseDate && (
+                            <p><strong>Next Update:</strong> {phaseInfo.nextPhaseDate}</p>
+                        )}
+                    </div>
                 </div>
             </div>
         );
@@ -541,7 +576,6 @@ export default function RankApplicants() {
                 )}
             </div>
 
-            {/* NEW: Loading Overlay */}
             <LoadingOverlay visible={isLoading} />
         </div>
     );
@@ -771,7 +805,6 @@ const styles = {
         fontSize: 13,
         color: '#555'
     },
-    // NEW: Loading overlay styles
     loadingOverlay: {
         position: 'fixed' as const,
         top: 0,

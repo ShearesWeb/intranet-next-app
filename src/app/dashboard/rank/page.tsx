@@ -1,9 +1,10 @@
-// C:\Ron\intranet-next-app\src\app\dashboard\rankCCAs\page.tsx
+// src/app/dashboard/rank/page.tsx
 'use client';
 
 import React, { useEffect, useState } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { useAuth } from '@/context/AuthContext';
+import { usePhaseInfo } from '@/hooks/usePhaseInfo';
 import toast from 'react-hot-toast';
 
 interface RankablePosition {
@@ -19,6 +20,7 @@ interface RankablePosition {
 
 export default function RankCCA() {
 	const { user } = useAuth();
+	const { phaseInfo, loading: phaseLoading } = usePhaseInfo();
 	const [allPositions, setAllPositions] = useState<RankablePosition[]>([]);
 	const [selectedPositions, setSelectedPositions] = useState<RankablePosition[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -26,27 +28,22 @@ export default function RankCCA() {
 	const [currentStep, setCurrentStep] = useState<'selection' | 'ranking'>('selection');
 	const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
-	// NEW: State for tracking changes
+	// State for tracking changes
 	const [initialSelectedIds, setInitialSelectedIds] = useState<Set<number>>(new Set());
 	const [initialRankingOrder, setInitialRankingOrder] = useState<number[]>([]);
 	const [hasChanges, setHasChanges] = useState(false);
 
-	// NEW: Function to detect changes
+	// Function to detect changes
 	const detectChanges = () => {
-		// Check if selected IDs changed
 		const selectedIdsChanged = selectedIds.size !== initialSelectedIds.size ||
 			[...selectedIds].some(id => !initialSelectedIds.has(id));
-
-		// Check if ranking order changed
 		const currentOrder = selectedPositions.map(p => p.id);
 		const rankingOrderChanged = JSON.stringify(currentOrder) !== JSON.stringify(initialRankingOrder);
-
 		const changes = selectedIdsChanged || rankingOrderChanged;
 		setHasChanges(changes);
 		return changes;
 	};
 
-	// NEW: Update hasChanges when selectedIds or selectedPositions change
 	useEffect(() => {
 		detectChanges();
 	}, [selectedIds, selectedPositions, initialSelectedIds, initialRankingOrder]);
@@ -63,19 +60,18 @@ export default function RankCCA() {
 					throw new Error(errorData.error || "Failed to fetch rankable positions");
 				}
 				const data = await response.json();
+
+				// ✅ NEW: Always set positions, regardless of phase
 				setAllPositions(data.positions || []);
 
-				// Pre-select previously ranked positions
 				const preSelected = new Set<number>(
 					data.positions?.filter((p: RankablePosition) => p.is_selected).map((p: RankablePosition) => p.id) || []
 				);
 				setSelectedIds(preSelected);
-				setInitialSelectedIds(new Set(preSelected)); // NEW: Store initial state
+				setInitialSelectedIds(new Set(preSelected));
 
-				// If user has already ranked some positions, show ranking step
 				if (preSelected.size > 0) {
 					const selected = data.positions?.filter((p: RankablePosition) => preSelected.has(p.id)) || [];
-					// Sort by existing user ranking
 					selected.sort((a: RankablePosition, b: RankablePosition) => (a.user_ranking || 999) - (b.user_ranking || 999));
 					setSelectedPositions(selected);
 					setInitialRankingOrder(selected.map((p: RankablePosition) => p.id));
@@ -84,7 +80,7 @@ export default function RankCCA() {
 					setInitialRankingOrder([]);
 				}
 
-				setHasChanges(false); // Reset changes on load
+				setHasChanges(false);
 			} catch (error) {
 				const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
 				console.error("Error fetching rankable positions:", errorMessage);
@@ -97,7 +93,61 @@ export default function RankCCA() {
 		fetchRankablePositions();
 	}, [user?.email]);
 
-	// Handle position selection
+	if (loading || phaseLoading) {
+		return (
+			<div style={styles.container}>
+				<Sidebar />
+				<div style={styles.content}>
+					<div style={styles.loading}>Loading your CCA rankings...</div>
+				</div>
+			</div>
+		);
+	}
+
+	if (!phaseInfo.allowApplicantRanking) {
+		const getStatusMessage = () => {
+			switch (phaseInfo.phase) {
+				case 'maincomm_interviews':
+					return "Maincomm interviews are in progress. Ranking will open after interviews complete.";
+				case 'chair_ranking_maincomm':
+					return "Maincomm ranking is not available. Chairs are currently ranking applicants. Student ranking will open when chair ranking completes.";
+				case 'maincomm_results_processing':
+					return "Maincomm results are being processed. Please wait for results to be released.";
+				case 'maincomm_results_available':
+					return "Maincomm results are available. Subcomm interviews will begin soon.";
+				case 'subcomm_interviews':
+					return "Subcomm interviews are in progress. Ranking will open after interviews complete.";
+				case 'chair_ranking_subcomm':
+					return "Subcomm ranking is not available. Chairs are currently ranking applicants. Student ranking will open when chair ranking completes.";
+				case 'subcomm_results_processing':
+					return "Subcomm results are being processed. Please wait for final results.";
+				case 'full_results_available':
+					return "Complete CCA allocation results are now available!";
+				default:
+					return "CCA ranking is not currently active.";
+			}
+		};
+
+		return (
+			<div style={styles.container}>
+				<Sidebar />
+				<div style={styles.content}>
+					<div style={styles.header}>
+						<h1 style={styles.title}>CCA Ranking</h1>
+						<p style={styles.subtitle}>Rank your preferred CCA positions by priority.</p>
+					</div>
+
+					<div style={styles.emptyState}>
+						<p>{getStatusMessage()}</p>
+						{phaseInfo.nextPhaseDate && (
+							<p><strong>Next Update:</strong> {phaseInfo.nextPhaseDate}</p>
+						)}
+					</div>
+				</div>
+			</div>
+		);
+	}
+
 	const togglePositionSelection = (positionId: number) => {
 		setSelectedIds(prev => {
 			const newSet = new Set(prev);
@@ -110,22 +160,17 @@ export default function RankCCA() {
 		});
 	};
 
-	// Proceed to ranking step - UPDATED to allow 0 selections
 	const proceedToRanking = () => {
 		const selected = allPositions.filter(p => selectedIds.has(p.id));
-
-		// Sort selected positions alphabetically
 		selected.sort((a, b) => a.name.localeCompare(b.name));
 		setSelectedPositions(selected);
 		setCurrentStep('ranking');
 	};
 
-	// Back to selection
 	const backToSelection = () => {
 		setCurrentStep('selection');
 	};
 
-	// Move item up in ranking
 	const moveUp = (index: number) => {
 		if (index === 0) return;
 		const newPositions = [...selectedPositions];
@@ -133,7 +178,6 @@ export default function RankCCA() {
 		setSelectedPositions(newPositions);
 	};
 
-	// Move item down in ranking
 	const moveDown = (index: number) => {
 		if (index === selectedPositions.length - 1) return;
 		const newPositions = [...selectedPositions];
@@ -141,7 +185,6 @@ export default function RankCCA() {
 		setSelectedPositions(newPositions);
 	};
 
-	// Save rankings to database - UPDATED to allow empty rankings
 	const saveRankings = async () => {
 		if (!user?.email) return;
 
@@ -170,13 +213,11 @@ export default function RankCCA() {
 
 			toast.success("Rankings saved successfully!");
 
-			// ✅ NEW: Refresh data from server to ensure UI is in sync
 			const refreshResponse = await fetch(`/api/user/getRankablePositions/${user.email}`);
 			if (refreshResponse.ok) {
 				const refreshData = await refreshResponse.json();
 				setAllPositions(refreshData.positions || []);
 
-				// Update the selected positions with fresh user_ranking data
 				const updatedSelected = selectedPositions.map(pos => {
 					const freshData = refreshData.positions.find((p: RankablePosition) => p.id === pos.id);
 					return freshData ? { ...pos, user_ranking: freshData.user_ranking } : pos;
@@ -184,7 +225,6 @@ export default function RankCCA() {
 				setSelectedPositions(updatedSelected);
 			}
 
-			// Update initial state after successful save
 			setInitialSelectedIds(new Set(selectedIds));
 			setInitialRankingOrder(selectedPositions.map(p => p.id));
 			setHasChanges(false);
@@ -197,18 +237,7 @@ export default function RankCCA() {
 		}
 	};
 
-	if (loading) {
-		return (
-			<div style={styles.container}>
-				<Sidebar />
-				<div style={styles.content}>
-					<div style={styles.loading}>Loading available positions...</div>
-				</div>
-			</div>
-		);
-	}
-
-	// SELECTION STEP
+	// Your existing JSX for selection and ranking steps
 	if (currentStep === 'selection') {
 		return (
 			<div style={styles.container}>
@@ -223,8 +252,7 @@ export default function RankCCA() {
 
 					{allPositions.length === 0 ? (
 						<div style={styles.emptyState}>
-							<p>No positions available for ranking at this time.</p>
-							<p>Positions will appear here after CCA chairs complete their rankings.</p>
+							<p>No positions available for ranking.</p>
 						</div>
 					) : (
 						<>
@@ -233,7 +261,7 @@ export default function RankCCA() {
 									{selectedIds.size} of {allPositions.length} positions selected
 								</span>
 								<button
-									style={styles.proceedButton} // UPDATED: Always enabled
+									style={styles.proceedButton}
 									onClick={proceedToRanking}
 								>
 									Proceed to Ranking →

@@ -1,3 +1,4 @@
+// src/app/api/user/search/route.ts
 import { NextResponse } from "next/server";
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
@@ -13,7 +14,7 @@ export async function GET(request: Request) {
 
         if (authError || !user) {
             console.log("No authenticated user for request:", authError);
-            return NextResponse.json({ userPoints: 0 });
+            return NextResponse.json({ users: [] });
         }
 
         const { searchParams } = new URL(request.url);
@@ -23,12 +24,11 @@ export async function GET(request: Request) {
             return NextResponse.json({ users: [] });
         }
 
+        // Only search by email field
         const { data, error } = await supabase
             .from('public_users')
             .select('id, name, email, room')
-            .or(
-                `name.ilike.%${query}%,email.ilike.%${query}%,room.ilike.%${query}%`
-            )
+            .ilike('email', `%${query}%`)
             .limit(10);
 
         if (error) {
@@ -44,6 +44,7 @@ export async function GET(request: Request) {
         }));
 
         return NextResponse.json({ users });
+
     } catch (error) {
         console.error("User search API error:", error);
         return NextResponse.json({ users: [] }, { status: 500 });

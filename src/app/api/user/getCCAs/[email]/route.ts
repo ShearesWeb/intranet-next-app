@@ -1,4 +1,4 @@
-// src\app\api\user\getCCAs\[email]\route.ts
+// src/app/api/user/getCCAs/[email]/route.ts
 import { NextResponse } from "next/server";
 import { cookies } from 'next/headers';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
@@ -9,46 +9,67 @@ export async function GET(
 ) {
 	try {
 		const { email } = await params;
-		const supabase = createRouteHandlerClient({ cookies });
 
-		// Get user's CCA appointments with CCA details
-		const { data: userData, error } = await supabase
-			.from('users')
+		const getCookies = () => cookies();
+		const supabase = createRouteHandlerClient({
+			cookies: getCookies
+		});
+
+		// Authentication check
+		const { data: { user }, error: authError } = await supabase.auth.getUser();
+		if (authError || !user) {
+			console.log("No authenticated user for request:", authError);
+			return NextResponse.json({ data: [] });
+		}
+
+		const { data: userData, error: userError } = await supabase
+			.from('public_users')
 			.select(`
-        id,
-        cca_appointments (
-          appointment_type,
-          points,
-          ccas (
-            name,
-            cca_type,
-            description,
-            image_url
-          )
-        )
-      `)
+                id,
+                email,
+                cca_appointments (
+                    points,
+                    cca_positions (
+                        name,
+                        position_type,
+                        ccas (
+                            name,
+                            cca_type,
+                            description,
+                            image_url
+                        )
+                    )
+                )
+            `)
 			.eq('email', email)
 			.single();
 
 		// Handle user not found gracefully
-		if (error || !userData) {
-			console.log("User not found in database:", email);
+		if (userError || !userData) {
+			console.log("User not found in database:", email, userError);
 			return NextResponse.json({ data: [] }); // Return empty array instead of error
 		}
 
-		// Transform data to match expected frontend format
-		const transformedData = userData.cca_appointments.map((appointment: any) => ({
-			name: appointment.ccas.name,
-			role: appointment.appointment_type,
-			cca_type: appointment.ccas.cca_type,
-			description: appointment.ccas.description,
+		// ✅ FIXED: Transform data to match expected frontend format
+		const transformedData = userData.cca_appointments?.map((appointment: any) => ({
+			name: appointment.cca_positions?.ccas?.name || 'Unknown CCA',
+			role: appointment.cca_positions?.name || 'Unknown Role',
+			cca_type: appointment.cca_positions?.ccas?.cca_type || 'Unknown Type',
+			description: appointment.cca_positions?.ccas?.description || 'No description available',
 			points: appointment.points || 0
-		}));
+		})) || [];
 
-		return NextResponse.json({ data: transformedData });
+		return NextResponse.json({
+			data: transformedData,
+			debug: {
+				userFound: !!userData,
+				appointmentsCount: userData.cca_appointments?.length || 0,
+				email: email
+			}
+		});
 
 	} catch (error) {
 		console.error("Error fetching user CCAs:", error);
-		return NextResponse.json({ data: [] }); // Return empty array on error
+		return NextResponse.json({ data: [] });
 	}
 }

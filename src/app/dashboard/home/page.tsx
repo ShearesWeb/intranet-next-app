@@ -9,10 +9,12 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useEffect } from "react";
 import { useRoleAuth } from "@/hooks/useRoleAuth";
+import { usePhaseInfo } from "@/hooks/usePhaseInfo";
 
 export default function Dashboard() {
     const { user, signOut } = useAuth();
     const { isAuthorized, loading: roleLoading } = useRoleAuth();
+    const { phaseInfo, loading: phaseLoading } = usePhaseInfo();
     const [points, setPoints] = useState<number>(0);
     const router = useRouter();
     const [counter, setCounter] = useState(0);
@@ -59,6 +61,16 @@ export default function Dashboard() {
         }
     };
 
+    const getRankCCAButtonText = () => {
+        switch (phaseInfo.phase) {
+            case 'applicant_ranking_maincomm':
+                return 'Rank Maincomm';
+            case 'applicant_ranking_subcomm':
+                return 'Rank Subcomm';
+            default:
+                return 'CCA Ranking';
+        }
+    };
 
     return (
         <div className="dashboard">
@@ -113,7 +125,7 @@ export default function Dashboard() {
                             </p>
                         </div>
                         <div className="button-group">
-                            <button className="activity-button" onClick={() => router.push("/dashboard/rank")}>Rank CCA</button>
+                            <button className="activity-button" onClick={() => router.push("/dashboard/rank")}>{getRankCCAButtonText()}</button>
                             <p className="button-description">
                                 Rank your CCA preferences
                             </p>
