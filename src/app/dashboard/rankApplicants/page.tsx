@@ -256,7 +256,7 @@ function PositionCard(props: {
                         ? styles.saveButtonDisabled
                         : hasChanges
                             ? styles.saveButtonChanged
-                            : styles.saveButton
+                            : styles.saveButtonDisabled
                     }
                     onClick={onSaveRankings}
                     disabled={position.applicants.length === 0 || saving || !hasChanges}

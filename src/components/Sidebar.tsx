@@ -1,17 +1,18 @@
 // C:\Ron\intranet-next-app\src\components\Sidebar.tsx
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRoleAuth } from '@/hooks/useRoleAuth';
 import { usePhaseInfo } from "@/hooks/usePhaseInfo";
 
-export default function Sidebar() {
+function Sidebar() {
 	const { isAuthorized, loading: roleLoading } = useRoleAuth();
 	const { phaseInfo, loading: phaseLoading } = usePhaseInfo();
 
-	const getRankCCAButtonText = () => {
+	// ✅ OPTIMIZED: Memoize button text computation to prevent unnecessary recalculations
+	const getRankCCAButtonText = useMemo(() => {
 		switch (phaseInfo.phase) {
 			case 'applicant_ranking_maincomm':
 				return 'Rank Maincomm';
@@ -20,7 +21,7 @@ export default function Sidebar() {
 			default:
 				return 'CCA Ranking';
 		}
-	};
+	}, [phaseInfo.phase]);
 
 	return (
 		<div style={styles.sidebar}>
@@ -36,7 +37,7 @@ export default function Sidebar() {
 			<nav style={styles.nav}>
 				<Link href="/dashboard/home" style={styles.navItem}>❤️ Home</Link>
 				<Link href="/dashboard/mycca" style={{ ...styles.navItem }}>📋 My CCAs</Link>
-				<Link href="/dashboard/rank" style={styles.navItem}>📊 {getRankCCAButtonText()}</Link>
+				<Link href="/dashboard/rank" style={styles.navItem}>📊 {getRankCCAButtonText}</Link>
 				{!roleLoading && isAuthorized && (
 					<Link href="/dashboard/rankApplicants" style={styles.navItem}>
 						👥 Rank Applicants
@@ -46,6 +47,8 @@ export default function Sidebar() {
 		</div>
 	);
 }
+
+export default React.memo(Sidebar);
 
 const styles = {
 	sidebar: {

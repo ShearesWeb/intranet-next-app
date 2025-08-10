@@ -39,7 +39,7 @@ export class PhaseService {
         // return 'inactive';
         // return 'maincomm_interviews_test';
         // return 'chair_ranking_maincomm_test';
-        return 'applicant_ranking_maincomm_test';
+        // return 'applicant_ranking_maincomm_test';
         // return 'maincomm_results_processing_test';
         // return 'maincomm_results_available_test';
         // return 'subcomm_interviews_test';
