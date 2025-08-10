@@ -38,7 +38,6 @@ export default function RankCCA() {
 	const [selectedPositions, setSelectedPositions] = useState<RankablePosition[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [isSaving, setIsSaving] = useState<boolean>(false);
-	const [saving, setSaving] = useState(false);
 	const [currentStep, setCurrentStep] = useState<'selection' | 'ranking'>('selection');
 	const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
@@ -352,16 +351,16 @@ export default function RankCCA() {
 					</span>
 					<button
 						style={
-							saving
+							isSaving
 								? styles.saveButtonDisabled
 								: hasChanges
 									? styles.saveButton
 									: styles.saveButtonDisabled
 						}
 						onClick={saveRankings}
-						disabled={saving || !hasChanges}
+						disabled={isSaving || !hasChanges}
 					>
-						{saving ? 'Saving...' : 'Save Rankings'}
+						{isSaving ? 'Saving...' : 'Save Rankings'}
 					</button>
 				</div>
 

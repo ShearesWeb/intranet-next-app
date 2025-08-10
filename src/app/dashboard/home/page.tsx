@@ -14,7 +14,7 @@ import { usePhaseInfo } from "@/hooks/usePhaseInfo";
 export default function Dashboard() {
     const { user, signOut } = useAuth();
     const { isAuthorized, loading: roleLoading } = useRoleAuth();
-    const { phaseInfo, loading: phaseLoading } = usePhaseInfo();
+    const { phaseInfo } = usePhaseInfo();
     const [points, setPoints] = useState<number>(0);
     const router = useRouter();
     const [counter, setCounter] = useState(0);

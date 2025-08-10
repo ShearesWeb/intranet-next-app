@@ -7,7 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { usePhaseInfo } from '@/hooks/usePhaseInfo';
 import toast from 'react-hot-toast';
 
-// Types (unchanged)
+// Types
 interface Applicant {
     id: number;
     name: string;
@@ -32,11 +32,6 @@ interface UserSearchResult {
     room?: string | null;
 }
 
-interface PositionSearchBoxProps {
-    positionId: number;
-    onAddApplicant: (userId: number) => void;
-}
-
 // Loading Overlay Component
 function LoadingOverlay({ visible }: { visible: boolean }) {
     if (!visible) return null;
@@ -51,13 +46,18 @@ function LoadingOverlay({ visible }: { visible: boolean }) {
     );
 }
 
-// PositionSearchBox component (unchanged)
-function PositionSearchBox({ positionId, onAddApplicant }: PositionSearchBoxProps) {
+// ✅ FIXED: PositionSearchBox with loading state and proper user data handling
+function PositionSearchBox({
+    onAddApplicant
+}: {
+    onAddApplicant: (userData: UserSearchResult) => void;
+}) {
     const inputRef = useRef<HTMLInputElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
     const [isUserFocused, setIsUserFocused] = useState(false);
-    const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [isSearching, setIsSearching] = useState(false); // ✅ NEW: Loading state
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -84,37 +84,43 @@ function PositionSearchBox({ positionId, onAddApplicant }: PositionSearchBoxProp
         }
     }, [isUserFocused]);
 
-    const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        const query = e.target.value;
-
-        if (searchTimeoutRef.current) {
-            clearTimeout(searchTimeoutRef.current);
-        }
-
-        if (query.length < 2) {
+    // ✅ FIXED: Search with loading state
+    const handleSearch = useCallback(async () => {
+        if (searchTerm.length < 2) {
             setSearchResults([]);
             return;
         }
 
-        searchTimeoutRef.current = setTimeout(async () => {
-            try {
-                const res = await fetch(`/api/user/search?query=${encodeURIComponent(query)}`);
-                if (!res.ok) {
-                    throw new Error(`HTTP error: ${res.status}`);
-                }
-                const data = await res.json();
-                setSearchResults(data.users || []);
-            } catch (error) {
-                console.error('Search error:', error);
-                setSearchResults([]);
+        setIsSearching(true); // ✅ Show loading state
+        try {
+            const res = await fetch(`/api/user/search?query=${encodeURIComponent(searchTerm)}`);
+            if (!res.ok) {
+                throw new Error(`HTTP error: ${res.status}`);
             }
-        }, 300);
+            const data = await res.json();
+            setSearchResults(data.users || []);
+        } catch (error) {
+            console.error('Search error:', error);
+            setSearchResults([]);
+            toast.error('Search failed. Please try again.');
+        } finally {
+            setIsSearching(false); // ✅ Hide loading state
+        }
+    }, [searchTerm]);
+
+    const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchTerm(e.target.value);
+        if (e.target.value.length < 2) {
+            setSearchResults([]);
+        }
     }, []);
 
-    const handleResultClick = useCallback((userId: number) => {
-        onAddApplicant(userId);
+    // ✅ FIXED: Pass complete user data instead of just ID
+    const handleResultClick = useCallback((userData: UserSearchResult) => {
+        onAddApplicant(userData); // Pass full user data
         if (inputRef.current) {
             inputRef.current.value = '';
+            setSearchTerm('');
             inputRef.current.focus();
         }
         setSearchResults([]);
@@ -122,16 +128,29 @@ function PositionSearchBox({ positionId, onAddApplicant }: PositionSearchBoxProp
 
     return (
         <div ref={containerRef} style={styles.searchContainer}>
-            <input
-                ref={inputRef}
-                style={styles.searchInput}
-                type="text"
-                placeholder="Search user by intranet gmail..."
-                onChange={handleInputChange}
-                onFocus={handleFocus}
-                onBlur={handleBlur}
-                autoComplete="off"
-            />
+            <div style={styles.searchInputContainer}>
+                <input
+                    ref={inputRef}
+                    style={styles.searchInput}
+                    type="text"
+                    placeholder="Search user by intranet gmail..."
+                    value={searchTerm}
+                    onChange={handleInputChange}
+                    onFocus={handleFocus}
+                    onBlur={handleBlur}
+                    onKeyPress={(e) => e.key === 'Enter' && !isSearching && handleSearch()}
+                    autoComplete="off"
+                    disabled={isSearching} // ✅ Disable during search
+                />
+                {/* ✅ FIXED: Search button with loading state */}
+                <button
+                    style={isSearching ? styles.searchButtonLoading : styles.searchButton}
+                    onClick={handleSearch}
+                    disabled={searchTerm.length < 2 || isSearching}
+                >
+                    {isSearching ? 'Loading...' : 'Search'}
+                </button>
+            </div>
 
             {searchResults.length > 0 && (
                 <div
@@ -143,7 +162,7 @@ function PositionSearchBox({ positionId, onAddApplicant }: PositionSearchBoxProp
                             key={user.id}
                             style={styles.searchResultItem}
                             onMouseDown={(e) => e.preventDefault()}
-                            onClick={() => handleResultClick(user.id)}
+                            onClick={() => handleResultClick(user)}
                         >
                             {user.name} ({user.email}{user.room ? `, Room ${user.room}` : ''})
                         </div>
@@ -154,20 +173,19 @@ function PositionSearchBox({ positionId, onAddApplicant }: PositionSearchBoxProp
     );
 }
 
-// PositionCard component (unchanged)
+// PositionCard component
 function PositionCard(props: {
     position: Position;
     positionIndex: number;
     saving: boolean;
     hasChanges: boolean;
-    onAddApplicant: (userId: number) => void;
+    onAddApplicant: (userData: UserSearchResult) => void;
     onRemoveApplicant: (userId: number) => void;
     onMoveApplicant: (applicantIndex: number, direction: number) => void;
     onSaveRankings: () => void;
 }) {
     const {
         position,
-        positionIndex,
         saving,
         hasChanges,
         onAddApplicant,
@@ -197,11 +215,11 @@ function PositionCard(props: {
                 </div>
             </div>
             <div style={styles.searchAndApplicantsContainer}>
-                <PositionSearchBox positionId={position.id} onAddApplicant={onAddApplicant} />
+                <PositionSearchBox onAddApplicant={onAddApplicant} />
 
                 {position.applicants.length === 0 ? (
                     <div style={styles.noApplicants}>
-                        <p>No applicants added for this position. Search and add freshmen above first.</p>
+                        <p>No applicants added for this position. Use the search above to find and add applicants.</p>
                     </div>
                 ) : (
                     <>
@@ -270,7 +288,7 @@ function PositionCard(props: {
 
 export default function RankApplicants() {
     const { user } = useAuth();
-    const { phaseInfo, loading: phaseLoading } = usePhaseInfo(); // ✅ ADD: Phase functionality
+    const { phaseInfo, loading: phaseLoading } = usePhaseInfo();
     const [positions, setPositions] = useState<Position[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [saving, setSaving] = useState<number | null>(null);
@@ -278,34 +296,47 @@ export default function RankApplicants() {
     const [originalOrders, setOriginalOrders] = useState<{ [positionId: number]: number[] }>({});
     const [hasChanges, setHasChanges] = useState<{ [positionId: number]: boolean }>({});
 
+    // ✅ FIXED: Fetch positions with cache-busting for fresh data
+    const fetchPositions = useCallback(async (bustCache = false) => {
+        if (!user?.email) return;
+
+        try {
+            const url = `/api/chair/positions/forChair/${user.email}`;
+            const headers: HeadersInit = {};
+
+            // ✅ Cache busting when needed (after saves)
+            if (bustCache) {
+                headers['Cache-Control'] = 'no-cache';
+                headers['Pragma'] = 'no-cache';
+            }
+
+            const response = await fetch(url, { headers });
+            const data = await response.json();
+
+            setPositions(data.positions || []);
+
+            const originalOrderMap: { [positionId: number]: number[] } = {};
+            const changesMap: { [positionId: number]: boolean } = {};
+
+            (data.positions || []).forEach((position: Position) => {
+                originalOrderMap[position.id] = position.applicants.map(app => app.id);
+                changesMap[position.id] = false;
+            });
+
+            setOriginalOrders(originalOrderMap);
+            setHasChanges(changesMap);
+        } catch (error) {
+            console.error('Error fetching positions:', error);
+            toast.error('Error loading positions');
+        }
+    }, [user?.email]);
+
     useEffect(() => {
         if (!user?.email) return;
 
         setLoading(true);
-
-        fetch(`/api/chair/positions/forChair/${user.email}`)
-            .then((res) => res.json())
-            .then((data) => {
-                setPositions(data.positions || []);
-
-                const originalOrderMap: { [positionId: number]: number[] } = {};
-                const changesMap: { [positionId: number]: boolean } = {};
-
-                (data.positions || []).forEach((position: Position) => {
-                    originalOrderMap[position.id] = position.applicants.map(app => app.id);
-                    changesMap[position.id] = false;
-                });
-
-                setOriginalOrders(originalOrderMap);
-                setHasChanges(changesMap);
-            })
-            .catch((error) => {
-                toast.error('Error loading positions');
-            })
-            .finally(() => {
-                setLoading(false);
-            });
-    }, [user?.email]);
+        fetchPositions().finally(() => setLoading(false));
+    }, [user?.email, fetchPositions]);
 
     const checkForChanges = useCallback((positionId: number, currentApplicants: Applicant[]) => {
         const originalOrder = originalOrders[positionId] || [];
@@ -319,127 +350,62 @@ export default function RankApplicants() {
         }));
     }, [originalOrders]);
 
-    const saveRankingsForPosition = useCallback(async (position: Position): Promise<boolean> => {
-        const rankings = position.applicants.map((a, i) => ({
-            user_id: a.id,
-            ranking: i + 1,
-        }));
+    // ✅ FIXED: Add applicant with proper user data (no more "Loading...")
+    const handleAddApplicant = useCallback((positionId: number, userData: UserSearchResult) => {
+        setPositions(prevPositions => {
+            const newPositions = prevPositions.map(pos => {
+                if (pos.id === positionId) {
+                    // Check if user already exists
+                    if (pos.applicants.some(app => app.id === userData.id)) {
+                        toast.error('Applicant already added to this position');
+                        return pos;
+                    }
 
-        try {
-            const response = await fetch(`/api/chair/positions/${position.id}/rank`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ rankings }),
-            });
+                    const newApplicant: Applicant = {
+                        id: userData.id,
+                        name: userData.name,
+                        email: userData.email,
+                        room: userData.room || 'N/A', // ✅ Proper room handling
+                        ranking: null
+                    };
 
-            const data = await response.json();
+                    const updatedApplicants = [...pos.applicants, newApplicant];
 
-            if (!response.ok) {
-                throw new Error(data.error || 'Failed to save rankings');
-            }
+                    setTimeout(() => checkForChanges(positionId, updatedApplicants), 0);
 
-            return true;
-        } catch (error: any) {
-            console.error('Error saving rankings:', error);
-            return false;
-        }
-    }, []);
-
-    const handleAddApplicant = useCallback(async (positionId: number, userId: number) => {
-        if (!user?.email) return;
-
-        setIsLoading(true);
-
-        try {
-            const targetPosition = positions.find(p => p.id === positionId);
-
-            if (targetPosition && hasChanges[positionId]) {
-                const saveSuccess = await saveRankingsForPosition(targetPosition);
-                if (!saveSuccess) {
-                    toast.error('Failed to save current rankings before adding applicant');
-                    return;
+                    return {
+                        ...pos,
+                        applicants: updatedApplicants
+                    };
                 }
-            }
-
-            const res = await fetch(`/api/chair/positions/${positionId}/addApplicant`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: userId }),
+                return pos;
             });
 
-            if (!res.ok) throw new Error('Failed to add applicant');
+            return newPositions;
+        });
 
-            const refreshRes = await fetch(`/api/chair/positions/forChair/${user.email}`);
-            const refreshData = await refreshRes.json();
+    }, [checkForChanges]);
 
-            setPositions(refreshData.positions || []);
+    const handleRemoveApplicant = useCallback((positionId: number, userId: number) => {
+        setPositions(prevPositions => {
+            const newPositions = prevPositions.map(pos => {
+                if (pos.id === positionId) {
+                    const updatedApplicants = pos.applicants.filter(app => app.id !== userId);
 
-            const originalOrderMap: { [positionId: number]: number[] } = {};
-            const changesMap: { [positionId: number]: boolean } = {};
+                    setTimeout(() => checkForChanges(positionId, updatedApplicants), 0);
 
-            (refreshData.positions || []).forEach((position: Position) => {
-                originalOrderMap[position.id] = position.applicants.map(app => app.id);
-                changesMap[position.id] = false;
-            });
-
-            setOriginalOrders(originalOrderMap);
-            setHasChanges(changesMap);
-
-            toast.success('Applicant added and rankings saved');
-        } catch (error) {
-            toast.error('Could not add applicant');
-        } finally {
-            setIsLoading(false);
-        }
-    }, [user?.email, positions, hasChanges, saveRankingsForPosition]);
-
-    const handleRemoveApplicant = useCallback(async (positionId: number, userId: number) => {
-        if (!user?.email) return;
-
-        setIsLoading(true);
-
-        try {
-            const targetPosition = positions.find(p => p.id === positionId);
-
-            if (targetPosition && hasChanges[positionId]) {
-                const saveSuccess = await saveRankingsForPosition(targetPosition);
-                if (!saveSuccess) {
-                    toast.error('Failed to save current rankings before removing applicant');
-                    return;
+                    return {
+                        ...pos,
+                        applicants: updatedApplicants
+                    };
                 }
-            }
-
-            const res = await fetch(`/api/chair/positions/${positionId}/removeApplicant`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: userId }),
+                return pos;
             });
 
-            if (!res.ok) throw new Error('Failed to remove applicant');
+            return newPositions;
+        });
 
-            const refreshRes = await fetch(`/api/chair/positions/forChair/${user.email}`);
-            const refreshData = await refreshRes.json();
-
-            setPositions(refreshData.positions || []);
-
-            const originalOrderMap: { [positionId: number]: number[] } = {};
-            const changesMap: { [positionId: number]: boolean } = {};
-
-            (refreshData.positions || []).forEach((position: Position) => {
-                originalOrderMap[position.id] = position.applicants.map(app => app.id);
-                changesMap[position.id] = false;
-            });
-
-            setOriginalOrders(originalOrderMap);
-            setHasChanges(changesMap);
-
-            toast.success('Applicant removed and rankings saved');
-        } catch (error) {
-            toast.error('Could not remove applicant');
-        } finally {
-            setIsLoading(false);
-        }
-    }, [user?.email, positions, hasChanges, saveRankingsForPosition]);
+    }, [checkForChanges]);
 
     const handleMoveApplicant = useCallback((positionIndex: number, applicantIndex: number, delta: number) => {
         setPositions((prevPositions) => {
@@ -460,29 +426,80 @@ export default function RankApplicants() {
         });
     }, [checkForChanges]);
 
+    const saveRankingsForPosition = useCallback(async (position: Position): Promise<boolean> => {
+        try {
+            const originalApplicantIds = originalOrders[position.id] || [];
+            const currentApplicantIds = position.applicants.map(app => app.id);
+
+            const toAdd = currentApplicantIds.filter(id => !originalApplicantIds.includes(id));
+            const toRemove = originalApplicantIds.filter(id => !currentApplicantIds.includes(id));
+
+            // Add new applicants to backend
+            for (const userId of toAdd) {
+                await fetch(`/api/chair/positions/${position.id}/addApplicant`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId }),
+                });
+            }
+
+            // Remove applicants from backend
+            for (const userId of toRemove) {
+                await fetch(`/api/chair/positions/${position.id}/removeApplicant`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId }),
+                });
+            }
+
+            // Save the current ranking order
+            const rankings = position.applicants.map((a, i) => ({
+                user_id: a.id,
+                ranking: i + 1,
+            }));
+
+            const response = await fetch(`/api/chair/positions/${position.id}/rank`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rankings }),
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || 'Failed to save rankings');
+            }
+
+            return true;
+        } catch (error) {
+            console.error('Error saving rankings:', error);
+            return false;
+        }
+    }, [originalOrders]);
+
+    // ✅ FIXED: Refresh data after save with cache busting
     const handleSaveRankings = useCallback(async (position: Position) => {
         setSaving(position.id);
         setIsLoading(true);
 
-        const success = await saveRankingsForPosition(position);
+        try {
+            const success = await saveRankingsForPosition(position);
 
-        if (success) {
-            setHasChanges(prev => ({ ...prev, [position.id]: false }));
-            setOriginalOrders(prev => ({
-                ...prev,
-                [position.id]: position.applicants.map(app => app.id)
-            }));
+            if (success) {
+                // ✅ FIXED: Refresh positions with cache busting after save
+                await fetchPositions(true);
 
-            toast.success(`Rankings saved for ${position.name}!`);
-        } else {
+                toast.success(`Rankings saved for ${position.name}!`);
+            } else {
+                toast.error('Failed to save rankings');
+            }
+        } catch {
             toast.error('Failed to save rankings');
+        } finally {
+            setSaving(null);
+            setIsLoading(false);
         }
+    }, [saveRankingsForPosition, fetchPositions]);
 
-        setSaving(null);
-        setIsLoading(false);
-    }, [saveRankingsForPosition]);
-
-    // ✅ NEW: Show loading state
     if (loading || phaseLoading) {
         return (
             <div style={styles.container}>
@@ -547,8 +564,8 @@ export default function RankApplicants() {
                         Rank Applicants for Your CCA
                     </h1>
                     <p style={styles.subtitle}>
-                        For each position you manage, add/select applicants to consider and arrange them in order of preference.
-                        Adding or removing applicants will automatically save any pending ranking changes.
+                        Search and add applicants, then arrange them in order of preference.
+                        Changes are saved only when you click the "Save Rankings" button.
                     </p>
                 </div>
 
@@ -755,22 +772,52 @@ const styles = {
         fontWeight: 'bold',
         marginTop: 16
     },
+    searchInputContainer: {
+        display: 'flex',
+        gap: '8px',
+        marginBottom: '8px',
+        alignItems: 'center'
+    },
     searchInput: {
         width: '60%',
         padding: '8px',
         border: '1px solid #D1D5DB',
-        borderRadius: 6,
-        fontSize: 14
+        borderRadius: '6px',
+        fontSize: '14px'
+    },
+    // ✅ FIXED: Normal search button state
+    searchButton: {
+        backgroundColor: '#3B82F6',
+        color: 'white',
+        padding: '8px 16px',
+        borderRadius: '6px',
+        border: 'none',
+        cursor: 'pointer',
+        fontSize: '14px',
+        fontWeight: 'bold',
+        transition: 'all 0.2s ease'
+    },
+    // ✅ NEW: Loading search button state
+    searchButtonLoading: {
+        backgroundColor: '#9CA3AF', // Gray color
+        color: 'white',
+        padding: '8px 16px',
+        borderRadius: '6px',
+        border: 'none',
+        cursor: 'not-allowed',
+        fontSize: '14px',
+        fontWeight: 'bold',
+        transition: 'all 0.2s ease'
     },
     searchContainer: {
-        marginBottom: 8,
+        marginBottom: '8px',
         position: 'relative' as const
     },
     searchResultsContainer: {
         position: 'absolute' as const,
         background: '#fff',
         border: '1px solid #DDD',
-        borderRadius: 4,
+        borderRadius: '4px',
         boxShadow: '0 2px 4px rgba(0,0,0,0.10)',
         zIndex: 10,
         width: '350px',
@@ -778,31 +825,31 @@ const styles = {
         overflowY: 'auto' as const
     },
     searchResultItem: {
-        padding: 8,
+        padding: '8px',
         cursor: 'pointer' as const,
         borderBottom: '1px solid #f0f0f0'
     },
     searchAndApplicantsContainer: {
         flex: 2,
-        marginLeft: 12
+        marginLeft: '12px'
     },
     applicantsHeader: {
-        marginBottom: 6,
-        fontWeight: 500
+        marginBottom: '6px',
+        fontWeight: '500'
     },
     warningText: {
         color: '#FF8A24',
-        marginLeft: 10
+        marginLeft: '10px'
     },
     applicantInfo: {
         flex: 1
     },
     applicantName: {
-        fontWeight: 500,
+        fontWeight: '500',
         color: '#1F2937'
     },
     applicantDetails: {
-        fontSize: 13,
+        fontSize: '13px',
         color: '#555'
     },
     loadingOverlay: {

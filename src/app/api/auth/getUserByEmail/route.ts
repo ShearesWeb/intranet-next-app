@@ -5,7 +5,7 @@ import { cookies } from 'next/headers';
 
 const USER_TABLE_NAME = 'public_users';
 
-export async function POST(request: Request) {
+export async function POST() {
   try {
     const supabase = createRouteHandlerClient({ cookies });
     const { data: { user }, error: authError } = await supabase.auth.getUser();

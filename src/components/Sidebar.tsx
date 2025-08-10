@@ -9,9 +9,9 @@ import { usePhaseInfo } from "@/hooks/usePhaseInfo";
 
 function Sidebar() {
 	const { isAuthorized, loading: roleLoading } = useRoleAuth();
-	const { phaseInfo, loading: phaseLoading } = usePhaseInfo();
+	const { phaseInfo } = usePhaseInfo();
 
-	// ✅ OPTIMIZED: Memoize button text computation to prevent unnecessary recalculations
+	// Memoize button text computation to prevent unnecessary recalculations
 	const getRankCCAButtonText = useMemo(() => {
 		switch (phaseInfo.phase) {
 			case 'applicant_ranking_maincomm':
