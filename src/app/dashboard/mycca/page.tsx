@@ -130,7 +130,7 @@ export default function MyCCA() {
             <div style={styles.emptyState}>
               <p>📋 No CCA appointments found.</p>
               <p style={styles.emptySubtext}>
-                You haven't been assigned to any CCAs yet. Check back later or contact your CCA coordinators.
+                You have not been assigned to any CCAs yet. Check back later or contact your CCA chairs/ICs.
               </p>
             </div>
           ) : (

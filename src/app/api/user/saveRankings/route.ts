@@ -20,7 +20,7 @@ export async function POST(request: Request) {
         }
 
         // Save rankings to cca_user_ranking table
-        const preferences = rankings.map((rank: any) => ({
+        const preferences = rankings.map((rank: { position_id: number; ranking: number }) => ({
             user_id: user.id,
             position_id: rank.position_id,
             ranking: rank.ranking

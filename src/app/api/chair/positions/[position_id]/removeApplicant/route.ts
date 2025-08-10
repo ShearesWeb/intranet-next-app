@@ -79,7 +79,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pos
         }
 
         return NextResponse.json({ success: true });
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Unexpected error:", error);
         return NextResponse.json({ error: 'Server error' }, { status: 500 });
     }

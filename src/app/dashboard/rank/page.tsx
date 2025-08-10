@@ -59,7 +59,7 @@ export default function RankCCA() {
 
 	useEffect(() => {
 		detectChanges();
-	}, [selectedIds, selectedPositions, initialSelectedIds, initialRankingOrder]);
+	}, [selectedIds, selectedPositions, initialSelectedIds, initialRankingOrder, detectChanges]);
 
 	// Fetch available positions for ranking
 	useEffect(() => {
@@ -259,7 +259,7 @@ export default function RankCCA() {
 					<div style={styles.header}>
 						<h1 style={styles.title}>Select CCA Positions to Rank</h1>
 						<p style={styles.subtitle}>
-							You were considered for the following positions. Select which ones you're interested in, then rank them.
+							You were considered for the following positions. Select which ones you are interested in, then rank them.
 						</p>
 					</div>
 

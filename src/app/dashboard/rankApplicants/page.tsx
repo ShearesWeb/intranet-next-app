@@ -565,13 +565,13 @@ export default function RankApplicants() {
                     </h1>
                     <p style={styles.subtitle}>
                         Search and add applicants, then arrange them in order of preference.
-                        Changes are saved only when you click the "Save Rankings" button.
+                        Changes are saved only when you click the &quot;Save Rankings&quot; button.
                     </p>
                 </div>
 
                 {positions.length === 0 ? (
                     <div style={styles.emptyState}>
-                        <p>You don't have any CCA positions to manage as chair/head/vice.</p>
+                        <p>You do not have any CCA positions to manage as chair/head/vice.</p>
                         <p>Check your database chair appointments or try switching users.</p>
                     </div>
                 ) : (

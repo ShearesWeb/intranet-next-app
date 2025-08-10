@@ -35,7 +35,7 @@ export async function POST(request: Request) {
         }
 
         // Update rankings in user_cca_applications table
-        const updates = rankings.map(async (ranking: any) => {
+        const updates = rankings.map(async (ranking: { user_id: number; ranking: number; position_id: number }) => {
             const { error } = await supabase
                 .from('user_cca_applications')
                 .update({ ranking: ranking.ranking })

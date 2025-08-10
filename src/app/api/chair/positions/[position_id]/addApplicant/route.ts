@@ -116,7 +116,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pos
             ranking: nextRanking,
             message: `Applicant added with ranking ${nextRanking}`
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Unexpected error:", error);
         return NextResponse.json({ error: 'Server error' }, { status: 500 });
     }
