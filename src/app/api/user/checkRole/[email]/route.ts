@@ -4,8 +4,10 @@ import { cookies } from 'next/headers';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cache } from 'react';
 
-// ✅ Cache role check for 10 minutes (roles change infrequently)
-const getCachedUserRole = cache(async (email: string, supabase: any) => {
+type RouteHandlerSupabaseClient = ReturnType<typeof createRouteHandlerClient>;
+
+// Cache role check for 10 minutes (roles change infrequently)
+const getCachedUserRole = cache(async (email: string, supabase: RouteHandlerSupabaseClient) => {
     const { data: user, error: userError } = await supabase
         .from('public_users')
         .select('id')
@@ -34,20 +36,20 @@ const getCachedUserRole = cache(async (email: string, supabase: any) => {
         return { isAuthorized: false, positions: [] };
     }
 
-    const authorizedRoles = ['lead', 'vice'];
-    const userPositions = appointments?.map((app: any) => ({
+    const authorizedRoles = ['lead', 'vice']; ``
+    const userPositions = appointments?.map((app: Record<string, any>) => ({
         position: app.cca_positions.name,
         position_type: app.cca_positions.position_type,
         cca: app.cca_positions.ccas.name
     })) || [];
 
-    const isAuthorized = userPositions.some((pos: any) =>
+    const isAuthorized = userPositions.some((pos: Record<string, any>) =>
         authorizedRoles.includes(pos.position_type.toLowerCase())
     );
 
     return {
         isAuthorized,
-        positions: userPositions.map((pos: any) =>
+        positions: userPositions.map((pos: Record<string, any>) =>
             `${pos.position} (${pos.position_type}) - ${pos.cca}`
         )
     };

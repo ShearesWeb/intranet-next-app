@@ -50,8 +50,7 @@ export async function GET(
 			return NextResponse.json({ data: [] }); // Return empty array instead of error
 		}
 
-		// ✅ FIXED: Transform data to match expected frontend format
-		const transformedData = userData.cca_appointments?.map((appointment: any) => ({
+		const transformedData = userData.cca_appointments?.map((appointment: Record<string, any>) => ({
 			name: appointment.cca_positions?.ccas?.name || 'Unknown CCA',
 			role: appointment.cca_positions?.name || 'Unknown Role',
 			cca_type: appointment.cca_positions?.ccas?.cca_type || 'Unknown Type',

@@ -5,8 +5,9 @@ import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { phaseService } from '@/lib/phaseService';
 import { cache } from 'react';
 
-// ✅ Cache chair authorization for 5 minutes (chair roles rarely change)
-const getCachedChairAuthorization = cache(async (email: string, supabase: any) => {
+type RouteHandlerSupabaseClient = ReturnType<typeof createRouteHandlerClient>;
+
+const getCachedChairAuthorization = cache(async (email: string, supabase: RouteHandlerSupabaseClient) => {
     const { data: userData, error: userError } = await supabase
         .from("public_users")
         .select("id, email")
@@ -35,7 +36,7 @@ const getCachedChairAuthorization = cache(async (email: string, supabase: any) =
     const authorizedRoles = ["lead", "vice"];
     const ccasSet = new Set<number>();
 
-    (chairAppointments || []).forEach((appointment: any) => {
+    (chairAppointments || []).forEach((appointment: Record<string, any>) => {
         if (appointment.cca_positions) {
             const positionType = (appointment.cca_positions.position_type || "").toLowerCase();
             if (authorizedRoles.includes(positionType)) {
@@ -51,8 +52,7 @@ const getCachedChairAuthorization = cache(async (email: string, supabase: any) =
     };
 });
 
-// ✅ Cache positions for current phase (changes only when phase changes)
-const getCachedPositionsForPhase = cache(async (ccaIds: number[], currentRound: string, supabase: any) => {
+const getCachedPositionsForPhase = cache(async (ccaIds: number[], currentRound: string, supabase: RouteHandlerSupabaseClient) => {
     const { data: allPositions, error: posError } = await supabase
         .from("cca_positions")
         .select("id, name, capacity, position_type, cca_id, ccas(id, name)")
@@ -137,7 +137,7 @@ export async function GET(
         // ✅ Group applicants by position
         const applicantsByPosition = new Map();
 
-        (applicationsWithUsers || []).forEach((app: any) => {
+        (applicationsWithUsers || []).forEach((app: Record<string, any>) => {
             if (!applicantsByPosition.has(app.position_id)) {
                 applicantsByPosition.set(app.position_id, []);
             }
@@ -151,14 +151,13 @@ export async function GET(
             });
         });
 
-        // ✅ Build final result
-        const result = allPositions.map((position: any) => ({
+        const result = allPositions.map((position: Record<string, any>) => ({
             id: position.id,
             name: position.name,
             cca_name: position.ccas?.name ?? "Unknown",
             capacity: position.capacity,
             position_type: position.position_type,
-            applicants: applicantsByPosition.get(position.id) || [],
+            applicants: applicantsByPosition.get(position.id) || [] as any[],
         }));
 
         return NextResponse.json({

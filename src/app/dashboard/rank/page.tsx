@@ -1,7 +1,7 @@
 // src/app/dashboard/rank/page.tsx
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { useAuth } from '@/context/AuthContext';
 import { usePhaseInfo } from '@/hooks/usePhaseInfo';
@@ -47,7 +47,7 @@ export default function RankCCA() {
 	const [hasChanges, setHasChanges] = useState(false);
 
 	// Function to detect changes
-	const detectChanges = () => {
+	const detectChanges = useCallback(() => {
 		const selectedIdsChanged = selectedIds.size !== initialSelectedIds.size ||
 			[...selectedIds].some(id => !initialSelectedIds.has(id));
 		const currentOrder = selectedPositions.map(p => p.id);
@@ -55,7 +55,7 @@ export default function RankCCA() {
 		const changes = selectedIdsChanged || rankingOrderChanged;
 		setHasChanges(changes);
 		return changes;
-	};
+	}, [selectedIds, initialSelectedIds, selectedPositions, initialRankingOrder]);
 
 	useEffect(() => {
 		detectChanges();

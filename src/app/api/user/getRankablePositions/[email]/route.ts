@@ -71,7 +71,7 @@ export async function GET(
             userRankings?.map(r => [r.position_id, r.ranking]) || []
         );
 
-        const transformedPositions = applications?.map((app: any) => {
+        const transformedPositions = applications?.map((app: Record<string, any>) => {
             const position = app.cca_positions;
             const cca = position.ccas;
 
