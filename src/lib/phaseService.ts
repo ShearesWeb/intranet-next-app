@@ -3,10 +3,10 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 
 export interface PhaseInfo {
-    phase: 'inactive' | 'maincomm_interviews' | 'chair_ranking_maincomm' | 'applicant_ranking_maincomm' |
-    'maincomm_results_processing' | 'maincomm_results_available' | 'subcomm_interviews' |
-    'chair_ranking_subcomm' | 'applicant_ranking_subcomm' | 'subcomm_results_processing' |
-    'full_results_available';
+    phase: 'inactive' | 'maincomm_interviews' | 'maincomm_concurrent_ranking' |
+    'maincomm_results_processing' | 'maincomm_results_available' |
+    'subcomm_interviews' | 'subcomm_concurrent_ranking' |
+    'subcomm_results_processing' | 'full_results_available';
     round: 'maincomm' | 'subcomm' | 'complete' | 'inactive';
     allowChairRanking: boolean;
     allowApplicantRanking: boolean;
@@ -19,7 +19,6 @@ export interface PhaseInfo {
     activeFlags: string[];
 }
 
-// ✅ ADD: Interface for database flag
 interface DatabaseFlag {
     name: string;
     expires_at: string;
@@ -33,18 +32,16 @@ export class PhaseService {
         });
     }
 
-    // ✅ SIMPLE TESTING OVERRIDE - Just change this line to test different phases
+    // ✅ TESTING OVERRIDE - Change this line to test different phases
     private getTestingPhaseOverride(): string | null {
         // 🧪 TESTING: Uncomment one line below to test different phases
         // return 'inactive';
         // return 'maincomm_interviews_test';
-        // return 'chair_ranking_maincomm_test';
-        // return 'applicant_ranking_maincomm_test';
+        return 'maincomm_concurrent_ranking_test';
         // return 'maincomm_results_processing_test';
         // return 'maincomm_results_available_test';
         // return 'subcomm_interviews_test';
-        // return 'chair_ranking_subcomm_test';
-        // return 'applicant_ranking_subcomm_test';
+        // return 'subcomm_concurrent_ranking_test';
         // return 'subcomm_results_processing_test';
         // return 'full_results_available_test';
         return null; // ✅ Default: no override (uses real database phases)
@@ -54,7 +51,6 @@ export class PhaseService {
         return new Date();
     }
 
-    // ✅ FIXED: Get next phase information with proper supabase usage
     private async getNextPhaseInfo(): Promise<{ nextPhase: string; nextPhaseDate: string } | null> {
         try {
             const supabase = this.createSupabaseClient();
@@ -71,8 +67,6 @@ export class PhaseService {
 
             const nextFlag = flags[0];
             const nextPhaseDate = new Date(nextFlag.expires_at);
-
-            // Format as readable date/time
             const formattedDate = nextPhaseDate.toLocaleDateString('en-US', {
                 weekday: 'long',
                 year: 'numeric',
@@ -105,7 +99,7 @@ export class PhaseService {
 
             if (testingOverride) {
                 activeFlags = [testingOverride];
-                // console.log(`🧪 Testing Mode: Using phase override: ${testingOverride}`);
+                console.log(`🧪 Testing Mode: Using phase override: ${testingOverride}`);
             } else {
                 // Get real active phases from database
                 const { data: flags, error } = await supabase
@@ -120,7 +114,7 @@ export class PhaseService {
                 }
             }
 
-            // All your existing phase logic remains the same...
+            // ✅ NEW: MainComm Interviews
             if (activeFlags.includes('maincomm_interviews_test') || activeFlags.includes('maincomm_interviews')) {
                 return {
                     phase: 'maincomm_interviews',
@@ -128,41 +122,29 @@ export class PhaseService {
                     allowChairRanking: false,
                     allowApplicantRanking: false,
                     showResults: false,
-                    userMessage: 'Maincomm interviews are currently in progress.',
+                    userMessage: 'MainComm interviews are currently in progress.',
                     nextPhaseDate: nextPhaseInfo?.nextPhaseDate,
                     serverTime: serverTime.toISOString(),
                     activeFlags
                 };
             }
 
-            if (activeFlags.includes('chair_ranking_maincomm_test') || activeFlags.includes('chair_ranking_maincomm')) {
+            // ✅ NEW: MainComm Concurrent Ranking (Both students and chairs can rank)
+            if (activeFlags.includes('maincomm_concurrent_ranking_test') || activeFlags.includes('maincomm_concurrent_ranking')) {
                 return {
-                    phase: 'chair_ranking_maincomm',
+                    phase: 'maincomm_concurrent_ranking',
                     round: 'maincomm',
-                    allowChairRanking: true,
-                    allowApplicantRanking: false,
+                    allowChairRanking: true,  // ✅ Chairs can rank applicants
+                    allowApplicantRanking: true,  // ✅ Students can apply and rank positions
                     showResults: false,
-                    userMessage: 'Chairs are currently ranking maincomm applicants.',
+                    userMessage: 'MainComm applications are open! Students can apply to positions while chairs rank applicants.',
                     nextPhaseDate: nextPhaseInfo?.nextPhaseDate,
                     serverTime: serverTime.toISOString(),
                     activeFlags
                 };
             }
 
-            if (activeFlags.includes('applicant_ranking_maincomm_test') || activeFlags.includes('applicant_ranking_maincomm')) {
-                return {
-                    phase: 'applicant_ranking_maincomm',
-                    round: 'maincomm',
-                    allowChairRanking: false,
-                    allowApplicantRanking: true,
-                    showResults: false,
-                    userMessage: 'Rank your preferred maincomm positions now!',
-                    nextPhaseDate: nextPhaseInfo?.nextPhaseDate,
-                    serverTime: serverTime.toISOString(),
-                    activeFlags
-                };
-            }
-
+            // ✅ MainComm Results Processing
             if (activeFlags.includes('maincomm_results_processing_test') || activeFlags.includes('maincomm_results_processing')) {
                 return {
                     phase: 'maincomm_results_processing',
@@ -170,13 +152,14 @@ export class PhaseService {
                     allowChairRanking: false,
                     allowApplicantRanking: false,
                     showResults: false,
-                    userMessage: 'Maincomm results are being processed. Please wait.',
+                    userMessage: 'MainComm results are being processed. Please wait.',
                     nextPhaseDate: nextPhaseInfo?.nextPhaseDate,
                     serverTime: serverTime.toISOString(),
                     activeFlags
                 };
             }
 
+            // ✅ MainComm Results Available
             if (activeFlags.includes('maincomm_results_available_test') || activeFlags.includes('maincomm_results_available')) {
                 return {
                     phase: 'maincomm_results_available',
@@ -186,13 +169,14 @@ export class PhaseService {
                     showResults: true,
                     showMaincommResults: true,
                     showSubcommResults: false,
-                    userMessage: 'Maincomm allocation results are now available! Subcomm phase starts soon.',
+                    userMessage: 'MainComm results are available! SubComm interviews starting soon.',
                     nextPhaseDate: nextPhaseInfo?.nextPhaseDate,
                     serverTime: serverTime.toISOString(),
                     activeFlags
                 };
             }
 
+            // ✅ NEW: SubComm Interviews
             if (activeFlags.includes('subcomm_interviews_test') || activeFlags.includes('subcomm_interviews')) {
                 return {
                     phase: 'subcomm_interviews',
@@ -202,41 +186,31 @@ export class PhaseService {
                     showResults: true,
                     showMaincommResults: true,
                     showSubcommResults: false,
-                    userMessage: 'Subcomm interviews are currently in progress. Maincomm results remain available.',
+                    userMessage: 'SubComm interviews are in progress. MainComm results remain available.',
                     nextPhaseDate: nextPhaseInfo?.nextPhaseDate,
                     serverTime: serverTime.toISOString(),
                     activeFlags
                 };
             }
 
-            if (activeFlags.includes('chair_ranking_subcomm_test') || activeFlags.includes('chair_ranking_subcomm')) {
+            // ✅ NEW: SubComm Concurrent Ranking (Both students and chairs can rank)
+            if (activeFlags.includes('subcomm_concurrent_ranking_test') || activeFlags.includes('subcomm_concurrent_ranking')) {
                 return {
-                    phase: 'chair_ranking_subcomm',
+                    phase: 'subcomm_concurrent_ranking',
                     round: 'subcomm',
-                    allowChairRanking: true,
-                    allowApplicantRanking: false,
-                    showResults: false,
-                    userMessage: 'Chairs are currently ranking subcomm applicants.',
+                    allowChairRanking: true,  // ✅ Chairs can rank applicants
+                    allowApplicantRanking: true,  // ✅ Students can apply and rank positions
+                    showResults: true,
+                    showMaincommResults: true,
+                    showSubcommResults: false,
+                    userMessage: 'SubComm applications are open! Students can apply to positions while chairs rank applicants.',
                     nextPhaseDate: nextPhaseInfo?.nextPhaseDate,
                     serverTime: serverTime.toISOString(),
                     activeFlags
                 };
             }
 
-            if (activeFlags.includes('applicant_ranking_subcomm_test') || activeFlags.includes('applicant_ranking_subcomm')) {
-                return {
-                    phase: 'applicant_ranking_subcomm',
-                    round: 'subcomm',
-                    allowChairRanking: false,
-                    allowApplicantRanking: true,
-                    showResults: false,
-                    userMessage: 'Rank your preferred subcomm positions now!',
-                    nextPhaseDate: nextPhaseInfo?.nextPhaseDate,
-                    serverTime: serverTime.toISOString(),
-                    activeFlags
-                };
-            }
-
+            // ✅ SubComm Results Processing
             if (activeFlags.includes('subcomm_results_processing_test') || activeFlags.includes('subcomm_results_processing')) {
                 return {
                     phase: 'subcomm_results_processing',
@@ -246,13 +220,14 @@ export class PhaseService {
                     showResults: true,
                     showMaincommResults: true,
                     showSubcommResults: false,
-                    userMessage: 'Subcomm results are being processed. Maincomm results remain available.',
+                    userMessage: 'SubComm results are being processed. MainComm results remain available.',
                     nextPhaseDate: nextPhaseInfo?.nextPhaseDate,
                     serverTime: serverTime.toISOString(),
                     activeFlags
                 };
             }
 
+            // ✅ Full Results Available
             if (activeFlags.includes('full_results_available_test') || activeFlags.includes('full_results_available')) {
                 return {
                     phase: 'full_results_available',
@@ -262,13 +237,14 @@ export class PhaseService {
                     showResults: true,
                     showMaincommResults: true,
                     showSubcommResults: true,
-                    userMessage: 'Final CCA allocation results are now available!',
+                    userMessage: 'All CCA allocation results are now available!',
                     nextPhaseDate: nextPhaseInfo?.nextPhaseDate,
                     serverTime: serverTime.toISOString(),
                     activeFlags
                 };
             }
 
+            // Default: Inactive
             return {
                 phase: 'inactive',
                 round: 'inactive',
@@ -280,7 +256,6 @@ export class PhaseService {
                 serverTime: serverTime.toISOString(),
                 activeFlags
             };
-
         } catch (error) {
             console.error('Error getting current phase info:', error);
             return {

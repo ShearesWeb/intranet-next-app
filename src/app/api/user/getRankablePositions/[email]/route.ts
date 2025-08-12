@@ -3,7 +3,6 @@ import { cookies } from 'next/headers';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { phaseService } from '@/lib/phaseService';
 
-// ✅ FIXED: Correct interfaces to match actual Supabase return types
 interface CCAData {
     name: string;
     cca_type: string;
@@ -19,14 +18,7 @@ interface PositionData {
     available_capacity: number;
     applied_count: number;
     description: string | null;
-    ccas: CCAData[];  // This stays as array
-}
-
-// ✅ FIXED: Based on TypeScript errors, cca_position_info is actually an array
-interface SupabaseUserRankingData {
-    position_id: number;
-    ranking: number;
-    cca_position_info: PositionData[];  // Array as TypeScript infers
+    ccas: CCAData[];  // Keep as array for consistency
 }
 
 export async function GET(
@@ -62,42 +54,36 @@ export async function GET(
             return NextResponse.json({ positions: [] });
         }
 
-        // ✅ Query using correct view name
-        const { data: userRankings, error: rankingsError } = await supabase
-            .from('cca_user_ranking')
+        // ✅ Get ALL available positions for the current phase
+        const { data: availablePositions, error: positionsError } = await supabase
+            .from('cca_position_info')
             .select(`
-                position_id,
-                ranking,
-                cca_position_info!inner (
-                    id,
-                    name,
-                    position_type,
-                    capacity,
-                    available_capacity,
-                    applied_count,
-                    description,
-                    ccas!inner (name, cca_type, description, image_url)
-                )
+                id,
+                name,
+                position_type,
+                capacity,
+                available_capacity,
+                applied_count,
+                description,
+                ccas!inner (name, cca_type, description, image_url)
             `)
-            .eq('user_id', user.id)
-            .eq('cca_position_info.position_type', phaseInfo.round);
+            .eq('position_type', phaseInfo.round)
+            .gt('capacity', 0)
+            .not('position_type', 'in', '("lead","vice")'); // Exclude leadership positions
 
-        if (rankingsError) {
-            console.error('Error fetching user rankings:', rankingsError);
+        if (positionsError) {
+            console.error('Error fetching available positions:', positionsError);
             return NextResponse.json({ positions: [] });
         }
 
-        // console.log("✅ User rankings found:", userRankings);
+        // console.log("✅ Available positions found:", availablePositions?.length || 0);
 
-        // ✅ ENHANCED DEBUG: Log the actual ccas structure
-        if (userRankings && userRankings.length > 0) {
-            // ✅ FIXED: Handle both array and single object cases
-            const positionInfo = userRankings[0].cca_position_info;
-            const firstPosition = Array.isArray(positionInfo) ? positionInfo[0] : positionInfo;
-            // console.log("🔍 DEBUG: First position ccas structure:", JSON.stringify(firstPosition?.ccas, null, 2));
-            // console.log("🔍 DEBUG: ccas is array?", Array.isArray(firstPosition?.ccas));
-            // console.log("🔍 DEBUG: ccas length:", firstPosition?.ccas?.length);
-        }
+        // ✅ ENHANCED DEBUG: Log the actual ccas structure for first position
+        // if (availablePositions && availablePositions.length > 0) {
+        //     console.log("🔍 DEBUG: First position ccas structure:", JSON.stringify(availablePositions[0].ccas, null, 2));
+        //     console.log("🔍 DEBUG: ccas is array?", Array.isArray(availablePositions[0].ccas));
+        //     console.log("🔍 DEBUG: ccas length:", availablePositions[0].ccas?.length);
+        // }
 
         // ✅ Get user's current applications from user_cca_applications
         const { data: userApplications, error: appError } = await supabase
@@ -114,13 +100,9 @@ export async function GET(
             userApplications?.map(app => [app.position_id, app.ranking]) || []
         );
 
-        // ✅ FIXED: Handle both array and single object cases
-        const transformedPositions = userRankings?.map((ranking: SupabaseUserRankingData) => {
-            // ✅ FIXED: Handle both array and single object cases for position info
-            const positionInfo = ranking.cca_position_info;
-            const position = Array.isArray(positionInfo) ? positionInfo[0] : positionInfo;
-
-            // ✅ ENHANCED: Bulletproof CCA name extraction with detailed logging
+        // ✅ BULLETPROOF: Transform ALL available positions with robust CCA extraction
+        const transformedPositions = availablePositions?.map(position => {
+            // ✅ ENHANCED: Bulletproof CCA name extraction (copied from working code)
             let ccaName = 'Unknown';
             let ccaDescription = 'No description available';
 
@@ -154,16 +136,10 @@ export async function GET(
                 console.error("🔍 DEBUG: Error extracting CCA name:", error);
             }
 
-            // ✅ FIXED: Add null check for position
-            if (!position) {
-                console.error("🔍 DEBUG: Position is null/undefined");
-                return null;
-            }
-
             return {
                 id: position.id,
                 name: position.name,
-                cca_name: ccaName,  // ✅ Should now work properly
+                cca_name: ccaName,
                 position_type: position.position_type,
                 capacity: position.capacity,
                 available_capacity: position.available_capacity,
@@ -172,9 +148,10 @@ export async function GET(
                 user_ranking: userApplicationMap.get(position.id) || null,
                 is_selected: userApplicationMap.has(position.id)
             };
-        }).filter(Boolean) || []; // ✅ FIXED: Filter out null values
+        }) || [];
 
-        // console.log("✅ Final transformed positions:", transformedPositions);
+        // console.log("✅ Final transformed positions:", transformedPositions.length);
+        // console.log("✅ Sample position with CCA name:", transformedPositions[0]);
 
         return NextResponse.json({
             positions: transformedPositions,
