@@ -64,7 +64,7 @@ export async function GET(
 			return NextResponse.json({ data: [] });
 		}
 
-		console.log("User found with ID:", userData.id);
+		// console.log("User found with ID:", userData.id);
 
 		// Step 2: Get appointments for this user
 		const { data: appointments, error: appointmentError } = await supabase
@@ -77,7 +77,7 @@ export async function GET(
 			return NextResponse.json({ data: [] });
 		}
 
-		console.log("Appointments found:", appointments);
+		// console.log("Appointments found:", appointments);
 
 		if (!appointments || appointments.length === 0) {
 			return NextResponse.json({ data: [] });
@@ -102,7 +102,7 @@ export async function GET(
 			return NextResponse.json({ data: [] });
 		}
 
-		console.log("Positions found:", positions);
+		// console.log("Positions found:", positions);
 
 		// Step 4: Combine the data - ✅ Type-safe transformation
 		const transformedData = appointments
@@ -123,7 +123,7 @@ export async function GET(
 			})
 			.filter((item): item is NonNullable<typeof item> => item !== null); // ✅ Type-safe filter
 
-		console.log("Final transformed data:", transformedData);
+		// console.log("Final transformed data:", transformedData);
 
 		return NextResponse.json({
 			data: transformedData,

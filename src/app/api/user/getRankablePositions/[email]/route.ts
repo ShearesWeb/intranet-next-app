@@ -87,16 +87,16 @@ export async function GET(
             return NextResponse.json({ positions: [] });
         }
 
-        console.log("✅ User rankings found:", userRankings);
+        // console.log("✅ User rankings found:", userRankings);
 
         // ✅ ENHANCED DEBUG: Log the actual ccas structure
         if (userRankings && userRankings.length > 0) {
             // ✅ FIXED: Handle both array and single object cases
             const positionInfo = userRankings[0].cca_position_info;
             const firstPosition = Array.isArray(positionInfo) ? positionInfo[0] : positionInfo;
-            console.log("🔍 DEBUG: First position ccas structure:", JSON.stringify(firstPosition?.ccas, null, 2));
-            console.log("🔍 DEBUG: ccas is array?", Array.isArray(firstPosition?.ccas));
-            console.log("🔍 DEBUG: ccas length:", firstPosition?.ccas?.length);
+            // console.log("🔍 DEBUG: First position ccas structure:", JSON.stringify(firstPosition?.ccas, null, 2));
+            // console.log("🔍 DEBUG: ccas is array?", Array.isArray(firstPosition?.ccas));
+            // console.log("🔍 DEBUG: ccas length:", firstPosition?.ccas?.length);
         }
 
         // ✅ Get user's current applications from user_cca_applications
@@ -124,31 +124,31 @@ export async function GET(
             let ccaName = 'Unknown';
             let ccaDescription = 'No description available';
 
-            console.log("🔍 DEBUG: Processing position:", position?.name);
-            console.log("🔍 DEBUG: Raw ccas data:", JSON.stringify(position?.ccas, null, 2));
+            // console.log("🔍 DEBUG: Processing position:", position?.name);
+            // console.log("🔍 DEBUG: Raw ccas data:", JSON.stringify(position?.ccas, null, 2));
 
             try {
                 if (position?.ccas) {
                     if (Array.isArray(position.ccas)) {
-                        console.log("🔍 DEBUG: ccas is array with length:", position.ccas.length);
+                        // console.log("🔍 DEBUG: ccas is array with length:", position.ccas.length);
                         if (position.ccas.length > 0) {
-                            console.log("🔍 DEBUG: First ccas element:", JSON.stringify(position.ccas[0], null, 2));
+                            // console.log("🔍 DEBUG: First ccas element:", JSON.stringify(position.ccas[0], null, 2));
                             ccaName = position.ccas[0]?.name || 'Unknown';
                             ccaDescription = position.ccas[0]?.description || 'No description available';
-                            console.log("🔍 DEBUG: Extracted ccaName:", ccaName);
+                            // console.log("🔍 DEBUG: Extracted ccaName:", ccaName);
                         } else {
-                            console.log("🔍 DEBUG: ccas array is empty");
+                            // console.log("🔍 DEBUG: ccas array is empty");
                         }
                     } else if (typeof position.ccas === 'object') {
-                        console.log("🔍 DEBUG: ccas is object:", JSON.stringify(position.ccas, null, 2));
+                        // console.log("🔍 DEBUG: ccas is object:", JSON.stringify(position.ccas, null, 2));
                         ccaName = (position.ccas as any).name || 'Unknown';
                         ccaDescription = (position.ccas as any).description || 'No description available';
-                        console.log("🔍 DEBUG: Extracted ccaName from object:", ccaName);
+                        // console.log("🔍 DEBUG: Extracted ccaName from object:", ccaName);
                     } else {
-                        console.log("🔍 DEBUG: ccas is neither array nor object:", typeof position.ccas);
+                        // console.log("🔍 DEBUG: ccas is neither array nor object:", typeof position.ccas);
                     }
                 } else {
-                    console.log("🔍 DEBUG: ccas is null/undefined");
+                    // console.log("🔍 DEBUG: ccas is null/undefined");
                 }
             } catch (error) {
                 console.error("🔍 DEBUG: Error extracting CCA name:", error);
@@ -174,7 +174,7 @@ export async function GET(
             };
         }).filter(Boolean) || []; // ✅ FIXED: Filter out null values
 
-        console.log("✅ Final transformed positions:", transformedPositions);
+        // console.log("✅ Final transformed positions:", transformedPositions);
 
         return NextResponse.json({
             positions: transformedPositions,

@@ -315,7 +315,7 @@ export default function RankApplicants() {
             const response = await fetch(url, { headers });
             const data = await response.json();
 
-            console.log("DATA DATA DATA: ", data)
+            // console.log("DATA DATA DATA: ", data)
 
             setPositions(data.positions || []);
 
@@ -438,11 +438,11 @@ export default function RankApplicants() {
             const toAdd = currentApplicantIds.filter(id => !originalApplicantIds.includes(id));
             const toRemove = originalApplicantIds.filter(id => !currentApplicantIds.includes(id));
 
-            console.log(`Saving for position ${position.id}:`, { toAdd, toRemove });
+            // console.log(`Saving for position ${position.id}:`, { toAdd, toRemove });
 
             // Add new applicants to backend
             for (const userId of toAdd) {
-                console.log(`Adding user ${userId} to position ${position.id}`);
+                // console.log(`Adding user ${userId} to position ${position.id}`);
                 const response = await fetch(`/api/chair/positions/${position.id}/addApplicant`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -456,12 +456,12 @@ export default function RankApplicants() {
                 }
 
                 const result = await response.json();
-                console.log(`Successfully added user ${userId}:`, result);
+                // console.log(`Successfully added user ${userId}:`, result);
             }
 
             // Remove applicants from backend
             for (const userId of toRemove) {
-                console.log(`Removing user ${userId} from position ${position.id}`);
+                // console.log(`Removing user ${userId} from position ${position.id}`);
                 const response = await fetch(`/api/chair/positions/${position.id}/removeApplicant`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -475,7 +475,7 @@ export default function RankApplicants() {
                 }
 
                 const result = await response.json();
-                console.log(`Successfully removed user ${userId}:`, result);
+                // console.log(`Successfully removed user ${userId}:`, result);
             }
 
             // Save the current ranking order
@@ -485,7 +485,7 @@ export default function RankApplicants() {
                     ranking: i + 1,
                 }));
 
-                console.log(`Updating rankings for position ${position.id}:`, rankings);
+                // console.log(`Updating rankings for position ${position.id}:`, rankings);
 
                 const response = await fetch(`/api/chair/positions/${position.id}/rank`, {
                     method: 'POST',
@@ -500,7 +500,7 @@ export default function RankApplicants() {
                 }
 
                 const result = await response.json();
-                console.log(`Successfully updated rankings:`, result);
+                // console.log(`Successfully updated rankings:`, result);
             }
 
             return true;

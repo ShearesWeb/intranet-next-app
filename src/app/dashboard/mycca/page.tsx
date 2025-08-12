@@ -67,11 +67,11 @@ export default function MyCCA() {
         return res.json();
       })
       .then((data) => {
-        console.log("CCA Data received:", data);
+        // console.log("CCA Data received:", data);
         setCCAs(data.data);
 
         if (process.env.NODE_ENV === 'development') {
-          console.log("Debug info:", data.debug);
+          // console.log("Debug info:", data.debug);
         }
       })
       .catch((error) => {

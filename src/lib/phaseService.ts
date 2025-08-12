@@ -38,7 +38,7 @@ export class PhaseService {
         // 🧪 TESTING: Uncomment one line below to test different phases
         // return 'inactive';
         // return 'maincomm_interviews_test';
-        return 'chair_ranking_maincomm_test';
+        // return 'chair_ranking_maincomm_test';
         // return 'applicant_ranking_maincomm_test';
         // return 'maincomm_results_processing_test';
         // return 'maincomm_results_available_test';
@@ -47,7 +47,7 @@ export class PhaseService {
         // return 'applicant_ranking_subcomm_test';
         // return 'subcomm_results_processing_test';
         // return 'full_results_available_test';
-        // return null; // ✅ Default: no override (uses real database phases)
+        return null; // ✅ Default: no override (uses real database phases)
     }
 
     private getServerTime(): Date {
@@ -105,7 +105,7 @@ export class PhaseService {
 
             if (testingOverride) {
                 activeFlags = [testingOverride];
-                console.log(`🧪 Testing Mode: Using phase override: ${testingOverride}`);
+                // console.log(`🧪 Testing Mode: Using phase override: ${testingOverride}`);
             } else {
                 // Get real active phases from database
                 const { data: flags, error } = await supabase

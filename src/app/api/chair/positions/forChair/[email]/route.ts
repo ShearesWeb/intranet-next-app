@@ -136,8 +136,8 @@ export async function GET(
         // Extract IDs safely
         const positionIds = allPositions.map((p: any) => p.id);
 
-        console.log("✅ Position IDs being queried:", positionIds);
-        console.log("✅ Querying cca_user_ranking for these position IDs...");
+        // console.log("✅ Position IDs being queried:", positionIds);
+        // console.log("✅ Querying cca_user_ranking for these position IDs...");
 
         const { data: applicationsWithUsers, error: appError } = await supabase
             .from("cca_user_ranking")
@@ -148,23 +148,23 @@ export async function GET(
             .in("position_id", positionIds)
             .order('ranking', { ascending: true });
 
-        console.log("✅ Raw cca_user_ranking query result:", applicationsWithUsers);
-        console.log("✅ Error from cca_user_ranking query:", appError);
-        console.log("✅ Number of applicants found:", applicationsWithUsers?.length || 0);
+        // console.log("✅ Raw cca_user_ranking query result:", applicationsWithUsers);
+        // console.log("✅ Error from cca_user_ranking query:", appError);
+        // console.log("✅ Number of applicants found:", applicationsWithUsers?.length || 0);
 
-        if (applicationsWithUsers && applicationsWithUsers.length > 0) {
-            console.log("✅ Sample applicant data:", applicationsWithUsers[0]);
-        } else {
-            console.log("❌ No applicants found - checking why...");
+        // if (applicationsWithUsers && applicationsWithUsers.length > 0) {
+        //     console.log("✅ Sample applicant data:", applicationsWithUsers[0]);
+        // } else {
+        //     console.log("❌ No applicants found - checking why...");
 
-            // Test direct query
-            const { data: testQuery } = await supabase
-                .from("cca_user_ranking")
-                .select("*")
-                .in("position_id", positionIds);
+        //     // Test direct query
+        //     const { data: testQuery } = await supabase
+        //         .from("cca_user_ranking")
+        //         .select("*")
+        //         .in("position_id", positionIds);
 
-            console.log("✅ Direct cca_user_ranking query (no joins):", testQuery);
-        }
+        //     console.log("✅ Direct cca_user_ranking query (no joins):", testQuery);
+        // }
 
         if (appError) {
             console.error("Error fetching applications:", appError);
@@ -208,7 +208,7 @@ export async function GET(
             }
         });
 
-        console.log(allPositions);
+        // console.log(allPositions);
 
         // Map the results using the safe helper function
         const result = allPositions.map((position: any) => ({
