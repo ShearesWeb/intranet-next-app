@@ -20,7 +20,9 @@ interface Position {
     id: number;
     name: string;
     cca_name: string;
-    capacity: number;
+    total_capacity: number;
+    available_capacity: number;
+    applied_count: number;
     position_type: string;
     applicants: Applicant[];
 }
@@ -211,7 +213,7 @@ function PositionCard(props: {
                                 : position.position_type
                         }
                     </span>
-                    <span style={styles.capacity}>Capacity: {position.capacity}</span>
+                    <span style={styles.capacity}>Available Capacity: {position.available_capacity}</span>
                 </div>
             </div>
             <div style={styles.searchAndApplicantsContainer}>
@@ -225,7 +227,7 @@ function PositionCard(props: {
                     <>
                         <div style={styles.applicantsHeader}>
                             Applicants ({position.applicants.length})
-                            {position.applicants.length < position.capacity && (
+                            {position.applicants.length < position.available_capacity && (
                                 <span style={styles.warningText}>
                                     Warning: Fewer applicants than available slots.
                                 </span>
@@ -312,6 +314,8 @@ export default function RankApplicants() {
 
             const response = await fetch(url, { headers });
             const data = await response.json();
+
+            console.log("DATA DATA DATA: ", data)
 
             setPositions(data.positions || []);
 
@@ -434,47 +438,79 @@ export default function RankApplicants() {
             const toAdd = currentApplicantIds.filter(id => !originalApplicantIds.includes(id));
             const toRemove = originalApplicantIds.filter(id => !currentApplicantIds.includes(id));
 
+            console.log(`Saving for position ${position.id}:`, { toAdd, toRemove });
+
             // Add new applicants to backend
             for (const userId of toAdd) {
-                await fetch(`/api/chair/positions/${position.id}/addApplicant`, {
+                console.log(`Adding user ${userId} to position ${position.id}`);
+                const response = await fetch(`/api/chair/positions/${position.id}/addApplicant`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ user_id: userId }),
                 });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error(`Failed to add user ${userId}:`, errorData);
+                    throw new Error(`Failed to add applicant: ${errorData.error}`);
+                }
+
+                const result = await response.json();
+                console.log(`Successfully added user ${userId}:`, result);
             }
 
             // Remove applicants from backend
             for (const userId of toRemove) {
-                await fetch(`/api/chair/positions/${position.id}/removeApplicant`, {
+                console.log(`Removing user ${userId} from position ${position.id}`);
+                const response = await fetch(`/api/chair/positions/${position.id}/removeApplicant`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ user_id: userId }),
                 });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error(`Failed to remove user ${userId}:`, errorData);
+                    throw new Error(`Failed to remove applicant: ${errorData.error}`);
+                }
+
+                const result = await response.json();
+                console.log(`Successfully removed user ${userId}:`, result);
             }
 
             // Save the current ranking order
-            const rankings = position.applicants.map((a, i) => ({
-                user_id: a.id,
-                ranking: i + 1,
-            }));
+            if (position.applicants.length > 0) {
+                const rankings = position.applicants.map((a, i) => ({
+                    user_id: a.id,
+                    ranking: i + 1,
+                }));
 
-            const response = await fetch(`/api/chair/positions/${position.id}/rank`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ rankings }),
-            });
+                console.log(`Updating rankings for position ${position.id}:`, rankings);
 
-            if (!response.ok) {
-                const data = await response.json();
-                throw new Error(data.error || 'Failed to save rankings');
+                const response = await fetch(`/api/chair/positions/${position.id}/rank`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ rankings }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error(`Failed to update rankings:`, errorData);
+                    throw new Error(`Failed to save rankings: ${errorData.error}`);
+                }
+
+                const result = await response.json();
+                console.log(`Successfully updated rankings:`, result);
             }
 
             return true;
         } catch (error) {
             console.error('Error saving rankings:', error);
+            toast.error(error instanceof Error ? error.message : 'Failed to save rankings');
             return false;
         }
     }, [originalOrders]);
+
 
     // ✅ FIXED: Refresh data after save with cache busting
     const handleSaveRankings = useCallback(async (position: Position) => {

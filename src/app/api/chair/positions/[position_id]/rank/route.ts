@@ -72,7 +72,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pos
         // Update rankings for all applicants
         const updatePromises = rankings.map(async (ranking: { user_id: number; ranking: number }) => {
             const { error } = await supabase
-                .from('user_cca_applications')
+                .from('cca_user_ranking')
                 .update({ ranking: ranking.ranking })
                 .eq('user_id', ranking.user_id)
                 .eq('position_id', positionId);

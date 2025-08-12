@@ -68,7 +68,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pos
         }
 
         const { error } = await supabase
-            .from('user_cca_applications')
+            .from('cca_user_ranking')
             .delete()
             .eq('user_id', user_id)
             .eq('position_id', positionId);

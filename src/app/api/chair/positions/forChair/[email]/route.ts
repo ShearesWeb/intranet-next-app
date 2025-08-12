@@ -36,11 +36,12 @@ const getCachedChairAuthorization = cache(async (email: string, supabase: RouteH
     const authorizedRoles = ["lead", "vice"];
     const ccasSet = new Set<number>();
 
-    (chairAppointments || []).forEach((appointment: Record<string, any>) => {
+    (chairAppointments || []).forEach((appointment: any) => {
         if (appointment.cca_positions) {
-            const positionType = (appointment.cca_positions.position_type || "").toLowerCase();
+            const position = appointment.cca_positions;
+            const positionType = (position.position_type || "").toLowerCase();
             if (authorizedRoles.includes(positionType)) {
-                ccasSet.add(appointment.cca_positions.cca_id);
+                ccasSet.add(position.cca_id);
             }
         }
     });
@@ -54,10 +55,10 @@ const getCachedChairAuthorization = cache(async (email: string, supabase: RouteH
 
 const getCachedPositionsForPhase = cache(async (ccaIds: number[], currentRound: string, supabase: RouteHandlerSupabaseClient) => {
     const { data: allPositions, error: posError } = await supabase
-        .from("cca_positions")
-        .select("id, name, capacity, position_type, cca_id, ccas(id, name)")
+        .from("cca_position_info")
+        .select("id, name, capacity, available_capacity, applied_count, position_type, cca_id, ccas(id, name)")
         .in("cca_id", ccaIds)
-        .gt("capacity", 0)
+        .gt("available_capacity", 0)
         .not('position_type', 'in', '("lead","vice")')
         .eq('position_type', currentRound);
 
@@ -68,6 +69,24 @@ const getCachedPositionsForPhase = cache(async (ccaIds: number[], currentRound: 
     return allPositions;
 });
 
+// Helper function to safely extract CCA name
+function getCcaName(ccas: any): string {
+    // Handle both object and array cases defensively
+    if (!ccas) return "Unknown";
+
+    // If it's an array (what TS thinks), take first element
+    if (Array.isArray(ccas) && ccas.length > 0) {
+        return ccas[0]?.name || "Unknown";
+    }
+
+    // If it's an object (what runtime shows), access directly
+    if (typeof ccas === 'object' && ccas.name) {
+        return ccas.name;
+    }
+
+    return "Unknown";
+}
+
 export async function GET(
     request: Request,
     { params }: { params: Promise<{ email: string }> }
@@ -75,16 +94,14 @@ export async function GET(
     try {
         const { email } = await params;
 
-        // ✅ Set aggressive caching headers for chair authorization
         const headers = {
-            'Cache-Control': 'private, s-maxage=300, stale-while-revalidate=600', // 5min cache, 10min stale
+            'Cache-Control': 'private, s-maxage=300, stale-while-revalidate=600',
             'Content-Type': 'application/json',
         };
 
         const getCookies = () => cookies();
         const supabase = createRouteHandlerClient({ cookies: getCookies });
 
-        // ✅ Check phase info (already optimized in your phaseService)
         const phaseInfo = await phaseService.getCurrentPhaseInfo();
 
         if (!phaseInfo.allowChairRanking) {
@@ -99,14 +116,13 @@ export async function GET(
             }, { headers });
         }
 
-        // ✅ Use cached chair authorization
         const authResult = await getCachedChairAuthorization(email, supabase);
 
         if (!authResult.authorized) {
             return NextResponse.json({ positions: [] }, { headers });
         }
 
-        // ✅ Use cached positions for current phase
+        // Get raw data without forcing types
         const allPositions = await getCachedPositionsForPhase(
             authResult.ccaIds,
             phaseInfo.round,
@@ -117,11 +133,14 @@ export async function GET(
             return NextResponse.json({ positions: [] }, { headers });
         }
 
-        // ✅ OPTIMIZED: Single query to get all applicants with user data
+        // Extract IDs safely
         const positionIds = allPositions.map((p: any) => p.id);
 
+        console.log("✅ Position IDs being queried:", positionIds);
+        console.log("✅ Querying cca_user_ranking for these position IDs...");
+
         const { data: applicationsWithUsers, error: appError } = await supabase
-            .from("user_cca_applications")
+            .from("cca_user_ranking")
             .select(`
                 position_id, user_id, ranking,
                 public_users!inner(id, name, email, room)
@@ -129,35 +148,79 @@ export async function GET(
             .in("position_id", positionIds)
             .order('ranking', { ascending: true });
 
+        console.log("✅ Raw cca_user_ranking query result:", applicationsWithUsers);
+        console.log("✅ Error from cca_user_ranking query:", appError);
+        console.log("✅ Number of applicants found:", applicationsWithUsers?.length || 0);
+
+        if (applicationsWithUsers && applicationsWithUsers.length > 0) {
+            console.log("✅ Sample applicant data:", applicationsWithUsers[0]);
+        } else {
+            console.log("❌ No applicants found - checking why...");
+
+            // Test direct query
+            const { data: testQuery } = await supabase
+                .from("cca_user_ranking")
+                .select("*")
+                .in("position_id", positionIds);
+
+            console.log("✅ Direct cca_user_ranking query (no joins):", testQuery);
+        }
+
         if (appError) {
             console.error("Error fetching applications:", appError);
             return NextResponse.json({ positions: [] }, { headers });
         }
 
-        // ✅ Group applicants by position
-        const applicantsByPosition = new Map();
+        const applicantsByPosition = new Map<number, Array<{
+            id: number;
+            name: string;
+            email: string;
+            room: string;
+            ranking: number;
+        }>>();
 
-        (applicationsWithUsers || []).forEach((app: Record<string, any>) => {
+        (applicationsWithUsers || []).forEach((app: any) => {
             if (!applicantsByPosition.has(app.position_id)) {
                 applicantsByPosition.set(app.position_id, []);
             }
 
-            applicantsByPosition.get(app.position_id).push({
-                id: app.public_users.id,
-                name: app.public_users.name,
-                email: app.public_users.email,
-                room: app.public_users.room,
-                ranking: app.ranking,
-            });
+            // ✅ BULLETPROOF: Handle both array and object cases
+            let userData: any = null;
+
+            if (app.public_users) {
+                // If it's an array, take the first element
+                if (Array.isArray(app.public_users)) {
+                    userData = app.public_users[0];
+                } else {
+                    // If it's an object, use it directly
+                    userData = app.public_users;
+                }
+
+                if (userData) {
+                    applicantsByPosition.get(app.position_id)?.push({
+                        id: userData.id,
+                        name: userData.name,
+                        email: userData.email,
+                        room: userData.room,
+                        ranking: app.ranking,
+                    });
+                }
+            }
         });
 
-        const result = allPositions.map((position: Record<string, any>) => ({
+        console.log(allPositions);
+
+        // Map the results using the safe helper function
+        const result = allPositions.map((position: any) => ({
             id: position.id,
             name: position.name,
-            cca_name: position.ccas?.name ?? "Unknown",
-            capacity: position.capacity,
+            cca_name: getCcaName(position.ccas), // Use helper function
+            total_capacity: position.capacity,
+            available_capacity: position.available_capacity,
+            applied_count: position.applied_count,
+            filled_positions: position.capacity - position.available_capacity,
             position_type: position.position_type,
-            applicants: applicantsByPosition.get(position.id) || [] as any[],
+            applicants: applicantsByPosition.get(position.id) || [],
         }));
 
         return NextResponse.json({
@@ -174,7 +237,7 @@ export async function GET(
         return NextResponse.json({ positions: [] }, {
             status: 500,
             headers: {
-                'Cache-Control': 'no-cache', // Don't cache errors
+                'Cache-Control': 'no-cache',
                 'Content-Type': 'application/json',
             }
         });

@@ -13,6 +13,8 @@ interface RankablePosition {
 	cca_name: string;
 	position_type: 'maincomm' | 'subcomm';
 	capacity: number;
+	available_capacity: number;
+	applied_count: number;
 	description?: string;
 	user_ranking?: number | null;
 	is_selected?: boolean;
@@ -308,7 +310,7 @@ export default function RankCCA() {
 													{position.position_type === 'maincomm' ? 'Main Committee' : 'Sub Committee'}
 												</span>
 												<span style={styles.capacity}>
-													Capacity: {position.capacity}
+													Available Capacity: {position.available_capacity}
 												</span>
 											</div>
 											{position.description && (
@@ -383,7 +385,7 @@ export default function RankCCA() {
 											{position.position_type === 'maincomm' ? 'Main Committee' : 'Sub Committee'}
 										</span>
 										<span style={styles.capacity}>
-											Capacity: {position.capacity}
+											Available Capacity: {position.available_capacity}
 										</span>
 									</div>
 									{position.description && (

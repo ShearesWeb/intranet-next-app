@@ -1,4 +1,3 @@
-// src/app/api/user/checkRole/[email]/route.ts
 import { NextResponse } from "next/server";
 import { cookies } from 'next/headers';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
@@ -6,7 +5,6 @@ import { cache } from 'react';
 
 type RouteHandlerSupabaseClient = ReturnType<typeof createRouteHandlerClient>;
 
-// Cache role check for 10 minutes (roles change infrequently)
 const getCachedUserRole = cache(async (email: string, supabase: RouteHandlerSupabaseClient) => {
     const { data: user, error: userError } = await supabase
         .from('public_users')
@@ -18,38 +16,47 @@ const getCachedUserRole = cache(async (email: string, supabase: RouteHandlerSupa
         return { isAuthorized: false, positions: [] };
     }
 
-    const { data: appointments, error } = await supabase
+    const { data: appointments, error: appointmentError } = await supabase
         .from('cca_appointments')
-        .select(`
-            cca_positions!inner (
-                name,
-                position_type,
-                ccas (
-                    name
-                )
-            )
-        `)
+        .select('position_id')
         .eq('user_id', user.id);
 
-    if (error) {
-        console.error('Error fetching appointments:', error);
+    if (appointmentError || !appointments || appointments.length === 0) {
         return { isAuthorized: false, positions: [] };
     }
 
-    const authorizedRoles = ['lead', 'vice']; ``
-    const userPositions = appointments?.map((app: Record<string, any>) => ({
-        position: app.cca_positions.name,
-        position_type: app.cca_positions.position_type,
-        cca: app.cca_positions.ccas.name
-    })) || [];
+    const positionIds = appointments.map(app => app.position_id);
 
-    const isAuthorized = userPositions.some((pos: Record<string, any>) =>
+    const { data: positions, error: positionError } = await supabase
+        .from('cca_positions')
+        .select(`
+            name,
+            position_type,
+            cca_id,
+            ccas!inner(name)
+        `)
+        .in('id', positionIds);
+
+    if (positionError || !positions) {
+        return { isAuthorized: false, positions: [] };
+    }
+
+    const authorizedRoles = ['lead', 'vice'];
+
+    // ✅ FIXED: Handle ccas as array
+    const userPositions = positions.map(pos => ({
+        position: pos.name,
+        position_type: pos.position_type,
+        cca: pos.ccas?.[0]?.name || 'Unknown' // ✅ Array access
+    }));
+
+    const isAuthorized = userPositions.some(pos =>
         authorizedRoles.includes(pos.position_type.toLowerCase())
     );
 
     return {
         isAuthorized,
-        positions: userPositions.map((pos: Record<string, any>) =>
+        positions: userPositions.map(pos =>
             `${pos.position} (${pos.position_type}) - ${pos.cca}`
         )
     };
@@ -62,22 +69,19 @@ export async function GET(
     try {
         const { email } = await params;
 
-        // ✅ Set cache headers for role authorization (10 minutes)
         const headers = {
-            'Cache-Control': 'private, s-maxage=600, stale-while-revalidate=1200', // 10min cache, 20min stale
+            'Cache-Control': 'private, s-maxage=600, stale-while-revalidate=1200',
             'Content-Type': 'application/json',
         };
 
         const getCookies = () => cookies();
         const supabase = createRouteHandlerClient({ cookies: getCookies });
 
-        // Authentication check
         const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
         if (authError || !authUser) {
             return NextResponse.json({ isAuthorized: false, positions: [] }, { headers });
         }
 
-        // ✅ Use cached role check
         const roleResult = await getCachedUserRole(email, supabase);
 
         return NextResponse.json(roleResult, { headers });

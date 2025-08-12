@@ -19,16 +19,17 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
 
-        // Save rankings to cca_user_ranking table
+        // Save rankings
         const preferences = rankings.map((rank: { position_id: number; ranking: number }) => ({
             user_id: user.id,
             position_id: rank.position_id,
-            ranking: rank.ranking
+            ranking: rank.ranking,
+            application_status: 'pending'
         }));
 
         // Delete existing preferences and insert new ones
         const { error: deleteError } = await supabase
-            .from('cca_user_ranking')
+            .from('user_cca_applications')
             .delete()
             .eq('user_id', user.id);
 
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
         }
 
         const { error: insertError } = await supabase
-            .from('cca_user_ranking')
+            .from('user_cca_applications')
             .insert(preferences);
 
         if (insertError) {

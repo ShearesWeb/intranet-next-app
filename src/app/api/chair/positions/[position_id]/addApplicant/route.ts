@@ -69,7 +69,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pos
 
         // Check if applicant already exists
         const { data: existingApplicant } = await supabase
-            .from('user_cca_applications')
+            .from('cca_user_ranking')
             .select('id')
             .eq('user_id', user_id)
             .eq('position_id', positionId)
@@ -81,7 +81,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pos
 
         // Get current number of applicants to determine next rank
         const { data: currentApplicants, error: countError } = await supabase
-            .from('user_cca_applications')
+            .from('cca_user_ranking')
             .select('ranking')
             .eq('position_id', positionId)
             .order('ranking', { ascending: false })
@@ -99,7 +99,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pos
 
         // Insert new applicant with calculated ranking
         const { error } = await supabase
-            .from('user_cca_applications')
+            .from('cca_user_ranking')
             .insert({
                 user_id: user_id,
                 position_id: positionId,
