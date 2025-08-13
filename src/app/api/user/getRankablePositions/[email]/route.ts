@@ -123,8 +123,8 @@ export async function GET(
                         }
                     } else if (typeof position.ccas === 'object') {
                         // console.log("🔍 DEBUG: ccas is object:", JSON.stringify(position.ccas, null, 2));
-                        ccaName = (position.ccas as any).name || 'Unknown';
-                        ccaDescription = (position.ccas as any).description || 'No description available';
+                        ccaName = (position.ccas as PositionData).name || 'Unknown';
+                        ccaDescription = (position.ccas as PositionData).description || 'No description available';
                         // console.log("🔍 DEBUG: Extracted ccaName from object:", ccaName);
                     } else {
                         // console.log("🔍 DEBUG: ccas is neither array nor object:", typeof position.ccas);

@@ -455,7 +455,7 @@ export default function RankApplicants() {
                     throw new Error(`Failed to add applicant: ${errorData.error}`);
                 }
 
-                const result = await response.json();
+                await response.json();
                 // console.log(`Successfully added user ${userId}:`, result);
             }
 
@@ -474,7 +474,7 @@ export default function RankApplicants() {
                     throw new Error(`Failed to remove applicant: ${errorData.error}`);
                 }
 
-                const result = await response.json();
+                await response.json();
                 // console.log(`Successfully removed user ${userId}:`, result);
             }
 
@@ -499,7 +499,7 @@ export default function RankApplicants() {
                     throw new Error(`Failed to save rankings: ${errorData.error}`);
                 }
 
-                const result = await response.json();
+                await response.json();
                 // console.log(`Successfully updated rankings:`, result);
             }
 

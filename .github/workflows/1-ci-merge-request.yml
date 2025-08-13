@@ -12,26 +12,13 @@ jobs:
   build-static-assets:
     name: ⚙️ Build Next.js Static Assets
     runs-on: ubuntu-latest
+    environment: preprod
 
     env:
-      # Firebase Admin SDK Configuration
-      FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
-      FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
-      FIREBASE_CLIENT_EMAIL: ${{ secrets.FIREBASE_CLIENT_EMAIL }}
-      
       # Supabase Configuration
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-      NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
       
-      # Firebase Client Configuration
-      NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
-      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
-      NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
-      NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
-      NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
-      NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
-
     steps:
       - name: 1. 📄 Checkout Repository
         uses: actions/checkout@v4
@@ -68,13 +55,5 @@ jobs:
       - name: 5. 📦 Install Dependencies
         run: ${{ steps.detect-pm.outputs.manager }} ${{ steps.detect-pm.outputs.command }}
 
-      - name: 6. 🔍 Debug Environment Variables
-        run: |
-          echo "FIREBASE_PROJECT_ID length: ${#FIREBASE_PROJECT_ID}"
-          echo "FIREBASE_CLIENT_EMAIL length: ${#FIREBASE_CLIENT_EMAIL}"
-          echo "FIREBASE_PRIVATE_KEY length: ${#FIREBASE_PRIVATE_KEY}"
-          echo "FIREBASE_PROJECT_ID value: $FIREBASE_PROJECT_ID"
-          echo "FIREBASE_CLIENT_EMAIL value: $FIREBASE_CLIENT_EMAIL"
-
-      - name: 7. 🚧 Build with Next.js
+      - name: 6. 🚧 Build with Next.js
         run: ${{ steps.detect-pm.outputs.manager }} run build
