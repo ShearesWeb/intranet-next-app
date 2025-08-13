@@ -1,55 +1,58 @@
+// C:\Ron\intranet-next-app\src\app\dashboard\home\page.tsx
 "use client";
 
 import React, { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import "./Dashboard.css";
-import { signOut } from "firebase/auth";
-import { auth } from "../../../../lib/firebase";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useEffect } from "react";
+import { useRoleAuth } from "@/hooks/useRoleAuth";
+import { usePhaseInfo } from "@/hooks/usePhaseInfo";
 
 export default function Dashboard() {
-    const { user } = useAuth();
-    const [points , setPoints] = useState<number>(0);
+    const { user, signOut } = useAuth();
+    const { isAuthorized, loading: roleLoading } = useRoleAuth();
+    const { phaseInfo } = usePhaseInfo();
+    const [points, setPoints] = useState<number>(0);
     const router = useRouter();
     const [counter, setCounter] = useState(0);
 
-    
+
     // fetch user specific points
     useEffect(() => {
         if (!user?.email) return;
 
         fetch(`/api/user/getPoints/${user.email}`)
-          .then(async (res) => {
-            if (!res.ok) {
-              const errorData = await res.json();
-              throw new Error(errorData.error || "Failed to fetch user points");
-            }
-            return res.json();
-          })
-          .then((data) => {
-            setPoints(data.userPoints);
-          })
-          .catch((error) => {
-            console.error("Error fetching points:", error.message);
-            toast.error(error.message); // Show a toast notification for the error
-          });
+            .then(async (res) => {
+                if (!res.ok) {
+                    const errorData = await res.json();
+                    throw new Error(errorData.error || "Failed to fetch user points");
+                }
+                return res.json();
+            })
+            .then((data) => {
+                setPoints(data.userPoints);
+            })
+            .catch((error) => {
+                console.error("Error fetching points:", error.message);
+                toast.error(error.message);
+            });
     }, [user?.email]);
-    
+
 
     useEffect(() => {
         const interval = setInterval(() => {
             setCounter((prev) => (prev < points ? prev + 1 : points));
-        }, 20); 
+        }, 20);
 
         return () => clearInterval(interval);
     }, [points]);
 
     const handleSignOut = async () => {
         try {
-            await signOut(auth);
+            await signOut();
             toast.success("Sign out successful!");
             router.push("/auth/login");
         } catch (e) {
@@ -58,6 +61,16 @@ export default function Dashboard() {
         }
     };
 
+    const getRankCCAButtonText = () => {
+        switch (phaseInfo.phase) {
+            case 'applicant_ranking_maincomm':
+                return 'Rank Maincomm';
+            case 'applicant_ranking_subcomm':
+                return 'Rank Subcomm';
+            default:
+                return 'CCA Ranking';
+        }
+    };
 
     return (
         <div className="dashboard">
@@ -71,7 +84,7 @@ export default function Dashboard() {
             {/* Welcome Section */}
             <div className="welcome-section">
                 <h2 className="welcome-text">Welcome Back,</h2>
-                <p className="username">{user?.displayName}</p>
+                <p className="username">{user?.user_metadata?.full_name || user?.email}</p>
             </div>
 
             {/* Content Section */}
@@ -108,18 +121,25 @@ export default function Dashboard() {
                         <div className="button-group">
                             <button className="activity-button" onClick={() => router.push("/dashboard/mycca")}>My CCAs</button>
                             <p className="button-description">
-                                Tap to view your CCAs and their respective
-                                points
+                                View your CCAs and Points
                             </p>
                         </div>
                         <div className="button-group">
-                            <button disabled className="activity-button">
-                                Rank CCA
-                            </button>
+                            <button className="activity-button" onClick={() => router.push("/dashboard/rank")}>{getRankCCAButtonText()}</button>
                             <p className="button-description">
-                                Tap to rank your Committee CCA preference
+                                Rank your CCA preferences
                             </p>
                         </div>
+                        {!roleLoading && isAuthorized && (
+                            <div className="button-group">
+                                <button className="activity-button" onClick={() => router.push("/dashboard/rankApplicants")}>
+                                    Rank Applicants
+                                </button>
+                                <p className="button-description">
+                                    Rank applicants for your CCA
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
