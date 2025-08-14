@@ -37,7 +37,7 @@ export class PhaseService {
         // 🧪 TESTING: Uncomment one line below to test different phases
         // return 'inactive';
         // return 'maincomm_interviews_test';
-        // return 'maincomm_concurrent_ranking_test';
+        return 'maincomm_concurrent_ranking_test';
         // return 'maincomm_results_processing_test';
         // return 'maincomm_results_available_test';
         // return 'subcomm_interviews_test';
