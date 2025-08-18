@@ -14,10 +14,10 @@ function Sidebar() {
 	// Memoize button text computation to prevent unnecessary recalculations
 	const getRankCCAButtonText = useMemo(() => {
 		switch (phaseInfo.phase) {
-			case 'applicant_ranking_maincomm':
-				return 'Rank Maincomm';
-			case 'applicant_ranking_subcomm':
-				return 'Rank Subcomm';
+			case 'maincomm_concurrent_ranking':
+                return 'Rank Maincomm';
+            case 'subcomm_concurrent_ranking':
+                return 'Rank Subcomm';
 			default:
 				return 'CCA Ranking';
 		}

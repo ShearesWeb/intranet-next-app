@@ -259,9 +259,9 @@ export default function RankCCA() {
 				<Sidebar />
 				<div style={styles.content}>
 					<div style={styles.header}>
-						<h1 style={styles.title}>Select CCA Positions to Rank</h1>
+						<h1 style={styles.title}>Select Committee Positions to Rank</h1>
 						<p style={styles.subtitle}>
-							You were considered for the following positions. Select which ones you are interested in, then rank them.
+							Select the positions you are interested in, then rank them.
 						</p>
 					</div>
 
