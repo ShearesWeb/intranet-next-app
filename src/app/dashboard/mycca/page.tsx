@@ -23,10 +23,18 @@ export default function MyCCA() {
   const [loadingCCAs, setLoadingCCAs] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // ✅ Helper function to capitalize first letter
-  const capitalizeFirstLetter = (str: string) => {
+  // Helper function to display CCA type with proper capitalization
+  const ccaTypeDisplay = (str: string) => {
     if (!str) return '';
-    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+
+    const typeMapping: Record<string, string> = {
+      'committee': 'Committee',
+      'sports': 'Sports',
+      'culture': 'Culture',
+      'jcrc': 'JCRC',
+    };
+
+    return typeMapping[str] || str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
   };
 
   useEffect(() => {
@@ -69,7 +77,7 @@ export default function MyCCA() {
       .then((data) => {
         // console.log("CCA Data received:", data);
         setCCAs(data.data);
-
+        ``
         if (process.env.NODE_ENV === 'development') {
           // console.log("Debug info:", data.debug);
         }
@@ -165,10 +173,9 @@ export default function MyCCA() {
                         {cca.role}
                       </span>
                     </td>
-                    {/* ✅ FIXED: Centered Type column with capitalization */}
                     <td style={styles.tdCenter}>
                       <span style={styles.typeTag}>
-                        {capitalizeFirstLetter(cca.cca_type)}
+                        {ccaTypeDisplay(cca.cca_type)}
                       </span>
                     </td>
                     {/* ✅ FIXED: Centered Points column */}
