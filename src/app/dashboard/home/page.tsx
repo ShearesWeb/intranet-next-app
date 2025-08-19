@@ -63,9 +63,9 @@ export default function Dashboard() {
 
     const getRankCCAButtonText = () => {
         switch (phaseInfo.phase) {
-            case 'applicant_ranking_maincomm':
+            case 'maincomm_concurrent_ranking':
                 return 'Rank Maincomm';
-            case 'applicant_ranking_subcomm':
+            case 'subcomm_concurrent_ranking':
                 return 'Rank Subcomm';
             default:
                 return 'CCA Ranking';
