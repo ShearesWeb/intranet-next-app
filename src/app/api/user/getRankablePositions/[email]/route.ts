@@ -54,6 +54,17 @@ export async function GET(
             return NextResponse.json({ positions: [] });
         }
 
+        function getValidPositionTypes(currentRound: string): string[] {
+            switch (currentRound) {
+                case 'maincomm':
+                    return ['maincomm', 'blockcomm'];
+                case 'subcomm':
+                    return ['subcomm', 'team manager'];
+                default:
+                    return [currentRound];
+            }
+        }
+
         // ✅ Get ALL available positions for the current phase
         const { data: availablePositions, error: positionsError } = await supabase
             .from('cca_position_info')
@@ -67,7 +78,7 @@ export async function GET(
                 description,
                 ccas!inner (name, cca_type, description, image_url)
             `)
-            .eq('position_type', phaseInfo.round)
+            .in('position_type', getValidPositionTypes(phaseInfo.round))
             .gt('capacity', 0)
             .not('position_type', 'in', '("lead","vice")'); // Exclude leadership positions
 

@@ -53,6 +53,17 @@ const getCachedChairAuthorization = cache(async (email: string, supabase: RouteH
     };
 });
 
+function getValidPositionTypes(currentRound: string): string[] {
+    switch (currentRound) {
+        case 'maincomm':
+            return ['maincomm', 'blockcomm'];
+        case 'subcomm':
+            return ['subcomm', 'team manager'];
+        default:
+            return [currentRound];
+    }
+}
+
 const getCachedPositionsForPhase = cache(async (ccaIds: number[], currentRound: string, supabase: RouteHandlerSupabaseClient) => {
     const { data: allPositions, error: posError } = await supabase
         .from("cca_position_info")
@@ -60,7 +71,7 @@ const getCachedPositionsForPhase = cache(async (ccaIds: number[], currentRound: 
         .in("cca_id", ccaIds)
         .gt("available_capacity", 0)
         .not('position_type', 'in', '("lead","vice")')
-        .eq('position_type', currentRound);
+        .in('position_type', getValidPositionTypes(currentRound));
 
     if (posError || !allPositions?.length) {
         return [];
