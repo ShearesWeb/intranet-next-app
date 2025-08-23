@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 interface CCAData {
   name: string;
   role: string;
+  position_type: string
   cca_type: string;
   description: string;
   points: number;
@@ -189,13 +190,17 @@ export default function MyCCA() {
                       <strong>{cca.points}</strong>
                     </td>
                     <td style={styles.tdCenter}>
-                      {/* Show button only for lead/vice roles */}
-                      {(cca.role.toLowerCase().includes('lead') || cca.role.toLowerCase().includes('vice')) && (
-                        <button
-                          style={styles.manageButton}
-                          onClick={() => handleManageMembers(cca)}
-                        >View</button>
-                      )}
+                      <td style={styles.tdCenter}>
+                        {(cca.position_type === 'lead' || cca.position_type === 'vice') &&
+                          cca.cca_type === 'committee' && (
+                            <button
+                              style={styles.manageButton}
+                              onClick={() => handleManageMembers(cca)}
+                            >
+                              View
+                            </button>
+                          )}
+                      </td>
                     </td>
                   </tr>
                 ))}
