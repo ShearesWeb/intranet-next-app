@@ -190,17 +190,15 @@ export default function MyCCA() {
                       <strong>{cca.points}</strong>
                     </td>
                     <td style={styles.tdCenter}>
-                      <td style={styles.tdCenter}>
-                        {(cca.position_type === 'lead' || cca.position_type === 'vice') &&
-                          cca.cca_type === 'committee' && (
-                            <button
-                              style={styles.manageButton}
-                              onClick={() => handleManageMembers(cca)}
-                            >
-                              View
-                            </button>
-                          )}
-                      </td>
+                      {(cca.position_type === 'lead' || cca.position_type === 'vice') &&
+                        cca.cca_type === 'committee' && (
+                          <button
+                            style={styles.manageButton}
+                            onClick={() => handleManageMembers(cca)}
+                          >
+                            View
+                          </button>
+                        )}
                     </td>
                   </tr>
                 ))}
@@ -284,7 +282,6 @@ const styles = {
     fontWeight: 'bold',
     color: '#374151'
   },
-  // ✅ NEW: Centered header for Role, Type, Points columns
   thCenter: {
     textAlign: 'center' as const,
     borderBottom: '2px solid #E5E7EB',
@@ -300,7 +297,6 @@ const styles = {
     fontSize: '14px',
     color: '#1F2937'
   },
-  // ✅ NEW: Centered cell for Role, Type, Points columns
   tdCenter: {
     borderBottom: '1px solid #E5E7EB',
     padding: '15px 12px',
@@ -331,7 +327,7 @@ const styles = {
     borderRadius: '4px',
     fontSize: '12px',
     fontWeight: 'bold',
-    display: 'inline-block' // ✅ Ensures proper centering
+    display: 'inline-block'
   },
   typeTag: {
     padding: '4px 8px',
@@ -340,7 +336,7 @@ const styles = {
     borderRadius: '4px',
     fontSize: '12px',
     fontWeight: 'bold',
-    display: 'inline-block' // ✅ Ensures proper centering
+    display: 'inline-block'
   },
   emptyState: {
     textAlign: 'center' as const,
