@@ -4,6 +4,7 @@
 import React, { useEffect, useState } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
 interface CCAData {
@@ -15,6 +16,7 @@ interface CCAData {
 }
 
 export default function MyCCA() {
+  const router = useRouter();
   const { user } = useAuth();
   const [points, setPoints] = useState(0);
   const [ccas, setCCAs] = useState<CCAData[]>([]);
@@ -92,6 +94,11 @@ export default function MyCCA() {
       });
   }, [user?.email]);
 
+  const handleManageMembers = (cca: CCAData) => {
+    // Navigate to member management page
+    router.push(`/dashboard/mycca/manageMembers/${encodeURIComponent(cca.name)}?ccaName=${encodeURIComponent(cca.name)}`);
+  };
+
   if (loadingPoints || loadingCCAs) {
     return (
       <div style={styles.container}>
@@ -149,6 +156,7 @@ export default function MyCCA() {
                   <th style={styles.thCenter}>Role</th>
                   <th style={styles.thCenter}>Type</th>
                   <th style={styles.thCenter}>Points</th>
+                  <th style={styles.thCenter}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -167,7 +175,6 @@ export default function MyCCA() {
                         )}
                       </div>
                     </td>
-                    {/* ✅ FIXED: Centered Role column */}
                     <td style={styles.tdCenter}>
                       <span style={styles.roleTag}>
                         {cca.role}
@@ -178,9 +185,17 @@ export default function MyCCA() {
                         {ccaTypeDisplay(cca.cca_type)}
                       </span>
                     </td>
-                    {/* ✅ FIXED: Centered Points column */}
                     <td style={styles.tdCenter}>
                       <strong>{cca.points}</strong>
+                    </td>
+                    <td style={styles.tdCenter}>
+                      {/* Show button only for lead/vice roles */}
+                      {(cca.role.toLowerCase().includes('lead') || cca.role.toLowerCase().includes('vice')) && (
+                        <button
+                          style={styles.manageButton}
+                          onClick={() => handleManageMembers(cca)}
+                        >View</button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -343,5 +358,15 @@ const styles = {
     color: '#1F2937',
     backgroundColor: '#F8F9FA',
     borderRadius: '6px'
+  },
+  manageButton: {
+    padding: '6px 12px',
+    backgroundColor: '#3B82F6',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    fontSize: '12px',
+    cursor: 'pointer',
+    fontWeight: 'bold',
   }
 };
