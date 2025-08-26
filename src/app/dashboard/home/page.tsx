@@ -72,6 +72,10 @@ export default function Dashboard() {
         }
     };
 
+    const isSportsCultureAvailable = () => {
+        return phaseInfo.phase === 'subcomm_concurrent_ranking';
+    };
+
     return (
         <div className="dashboard">
             {/* Header */}
@@ -130,6 +134,17 @@ export default function Dashboard() {
                                 Rank your CCA preferences
                             </p>
                         </div>
+                        {isSportsCultureAvailable() && (
+                            <div className="button-group">
+                                <button
+                                    className="activity-button"
+                                    onClick={() => router.push("/dashboard/sportsCulture")}
+                                >
+                                    Apply Sports & Culture
+                                </button>
+                                <div className="button-description">Apply to Sports & Culture CCAs</div>
+                            </div>
+                        )}
                         {!roleLoading && isAuthorized && (
                             <div className="button-group">
                                 <button className="activity-button" onClick={() => router.push("/dashboard/rankApplicants")}>

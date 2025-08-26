@@ -191,7 +191,7 @@ export default function MyCCA() {
                     </td>
                     <td style={styles.tdCenter}>
                       {(cca.position_type === 'lead' || cca.position_type === 'vice') &&
-                        cca.cca_type === 'committee' && (
+                        (
                           <button
                             style={styles.manageButton}
                             onClick={() => handleManageMembers(cca)}

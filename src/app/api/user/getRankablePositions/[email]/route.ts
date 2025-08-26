@@ -59,7 +59,7 @@ export async function GET(
                 case 'maincomm':
                     return ['maincomm', 'blockcomm'];
                 case 'subcomm':
-                    return ['subcomm', 'team manager'];
+                    return ['subcomm', 'blockcomm', 'maincomm'];
                 default:
                     return [currentRound];
             }

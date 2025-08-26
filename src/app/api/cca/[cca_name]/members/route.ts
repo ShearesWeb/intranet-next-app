@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
+import { phaseService } from '@/lib/phaseService';
 
 interface TransformedMember {
     user_id: number;
@@ -51,21 +52,21 @@ export async function GET(
             return NextResponse.json({ error: 'CCA not found' }, { status: 404 });
         }
 
-        // Check if CCA is of type "committee"
-        if (ccaData.cca_type !== 'committee') {
-            return NextResponse.json({
-                error: 'Access denied: Member viewing is only available for committee-type CCAs'
-            }, { status: 403 });
-        }
+        // Support committee, sports, and culture types
+        // if (!['committee', 'sports', 'culture'].includes(ccaData.cca_type)) {
+        //     return NextResponse.json({
+        //         error: 'Access denied: Member viewing is only available for committee, sports, and culture CCAs'
+        //     }, { status: 403 });
+        // }
 
         // Authorization - Check if user is lead/vice for THIS specific CCA
         const { data: userAppointments, error: appointmentError } = await supabase
             .from('cca_appointments')
             .select(`
                 cca_positions!inner (
-                    cca_id,
-                    position_type,
-                    name
+                cca_id,
+                position_type,
+                name
                 )
             `)
             .eq('user_id', userData.id)
@@ -78,7 +79,11 @@ export async function GET(
             }, { status: 403 });
         }
 
-        // Get all APPOINTED members for this CCA (Fixed ordering)
+        // Get phase info for sports/culture management permissions
+        const phaseInfo = await phaseService.getCurrentPhaseInfo();
+        const canManageSportsCulture = await isInSportsCultureManagementPhase(phaseInfo);
+
+        // Get all appointed members for this CCA
         const { data: ccaMembers, error: membersError } = await supabase
             .from('cca_appointments')
             .select(`
@@ -111,7 +116,7 @@ export async function GET(
             let positionData: any = null;
             if (member.cca_positions) {
                 positionData = Array.isArray(member.cca_positions)
-                    ? member.cca_positions
+                    ? member.cca_positions[0]
                     : member.cca_positions;
             }
 
@@ -129,7 +134,7 @@ export async function GET(
             }
         });
 
-        // Group members by position type and sort
+        // Group members by position type (including sports-specific positions)
         const groupedMembers = {
             lead: transformedMembers
                 .filter(member => member.position_type === 'lead')
@@ -138,11 +143,17 @@ export async function GET(
                 .filter(member => member.position_type === 'vice')
                 .sort((a, b) => a.position_name.localeCompare(b.position_name)),
             maincomm: transformedMembers
-                .filter(member => member.position_type === 'maincomm' || member.position_type === 'blockcomm')
+                .filter(member => ['maincomm', 'blockcomm'].includes(member.position_type))
                 .sort((a, b) => a.position_name.localeCompare(b.position_name)),
             subcomm: transformedMembers
-                .filter(member => member.position_type === 'subcomm' || member.position_type === 'team manager')
-                .sort((a, b) => a.position_name.localeCompare(b.position_name))
+                .filter(member => member.position_type === 'subcomm')
+                .sort((a, b) => a.position_name.localeCompare(b.position_name)),
+            teamManager: transformedMembers
+                .filter(member => member.position_type === 'team manager')
+                .sort((a, b) => a.position_name.localeCompare(b.position_name)),
+            members: transformedMembers
+                .filter(member => member.position_type === 'member')
+                .sort((a, b) => a.name.localeCompare(b.name))
         };
 
         return NextResponse.json({
@@ -153,7 +164,11 @@ export async function GET(
                 cca_type: ccaData.cca_type
             },
             groupedMembers,
-            total_members: transformedMembers.length
+            total_members: transformedMembers.length,
+            permissions: {
+                canManageMembers: canManageSportsCulture || ccaData.cca_type === 'committee',
+                ccaType: ccaData.cca_type
+            }
         });
 
     } catch (error) {
@@ -162,4 +177,15 @@ export async function GET(
             error: 'Internal server error'
         }, { status: 500 });
     }
+}
+
+// Determine if we're in sports/culture management phase
+async function isInSportsCultureManagementPhase(phaseInfo: any): Promise<boolean> {
+    // Sports/Culture management is available after subcomm_concurrent_ranking expires
+    const sportsCulturePhases = [
+        'subcomm_results_processing',
+        'full_results_available'
+    ];
+
+    return sportsCulturePhases.includes(phaseInfo.phase);
 }
