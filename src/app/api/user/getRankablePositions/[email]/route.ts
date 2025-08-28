@@ -79,8 +79,9 @@ export async function GET(
                 ccas!inner (name, cca_type, description, image_url)
             `)
             .in('position_type', getValidPositionTypes(phaseInfo.round))
-            .gt('capacity', 0)
-            .not('position_type', 'in', '("lead","vice")'); // Exclude leadership positions
+            .gt('available_capacity', 0)
+            .not('position_type', 'in', '("lead","vice")')
+            .order('name', { ascending: true });
 
         if (positionsError) {
             console.error('Error fetching available positions:', positionsError);
