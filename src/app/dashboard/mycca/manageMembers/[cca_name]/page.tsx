@@ -33,6 +33,19 @@ interface UserSearchResult {
     room?: string | null;
 }
 
+function LoadingOverlay({ visible }: { visible: boolean }) {
+    if (!visible) return null;
+
+    return (
+        <div style={styles.loadingOverlay}>
+            <div style={styles.loadingContent}>
+                <div style={styles.spinner}></div>
+                <p style={styles.loadingText}>Saving rankings...</p>
+            </div>
+        </div>
+    );
+}
+
 export default function ManageMembersPage() {
     const params = useParams();
     const router = useRouter();
@@ -551,6 +564,7 @@ export default function ManageMembersPage() {
                     </div>
                 </div>
             )}
+            <LoadingOverlay visible={saving || loading} />
         </div>
     );
 }
@@ -882,5 +896,41 @@ const styles = {
         color: '#1F2937',
         backgroundColor: '#F8F9FA',
         borderRadius: '6px'
+    },
+    loadingOverlay: {
+        position: 'fixed' as const,
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 9999
+    },
+    loadingContent: {
+        display: 'flex',
+        flexDirection: 'column' as const,
+        alignItems: 'center',
+        padding: '30px',
+        backgroundColor: 'white',
+        borderRadius: '12px',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)'
+    },
+    spinner: {
+        width: '50px',
+        height: '50px',
+        border: '6px solid #f3f3f3',
+        borderTop: '6px solid #10B981',
+        borderRadius: '50%',
+        animation: 'spin 1s linear infinite',
+        marginBottom: '15px'
+    },
+    loadingText: {
+        fontSize: '16px',
+        fontWeight: 'bold',
+        color: '#4A4A4A',
+        margin: 0
     }
 };
