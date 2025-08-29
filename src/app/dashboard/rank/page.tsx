@@ -11,7 +11,7 @@ interface RankablePosition {
 	id: number;
 	name: string;
 	cca_name: string;
-	position_type: 'maincomm' | 'subcomm';
+	position_type: 'maincomm' | 'subcomm' | 'blockcomm';
 	capacity: number;
 	available_capacity: number;
 	applied_count: number;
@@ -42,6 +42,7 @@ export default function RankCCA() {
 	const [isSaving, setIsSaving] = useState<boolean>(false);
 	const [currentStep, setCurrentStep] = useState<'selection' | 'ranking'>('selection');
 	const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+	const [searchTerm, setSearchTerm] = useState(''); // Added search state
 
 	// State for tracking changes
 	const [initialSelectedIds, setInitialSelectedIds] = useState<Set<number>>(new Set());
@@ -63,6 +64,15 @@ export default function RankCCA() {
 		detectChanges();
 	}, [selectedIds, selectedPositions, initialSelectedIds, initialRankingOrder, detectChanges]);
 
+	// Filter positions based on search term
+	const filterPositions = (positions: RankablePosition[]) => {
+		return positions.filter(pos =>
+			pos.cca_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+			pos.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+			(pos.description && pos.description.toLowerCase().includes(searchTerm.toLowerCase()))
+		);
+	};
+
 	// Fetch available positions for ranking
 	useEffect(() => {
 		if (!user?.email) return;
@@ -76,7 +86,6 @@ export default function RankCCA() {
 				}
 				const data = await response.json();
 
-				// ✅ NEW: Always set positions, regardless of phase
 				setAllPositions(data.positions || []);
 
 				const preSelected = new Set<number>(
@@ -252,7 +261,9 @@ export default function RankCCA() {
 		}
 	};
 
-	// Your existing JSX for selection and ranking steps
+	// Filter positions for display
+	const filteredPositions = filterPositions(allPositions);
+
 	if (currentStep === 'selection') {
 		return (
 			<div style={styles.container}>
@@ -265,15 +276,32 @@ export default function RankCCA() {
 						</p>
 					</div>
 
-					{allPositions.length === 0 ? (
+					<div style={styles.searchContainer}>
+						<input
+							type="text"
+							placeholder="Search positions by name, CCA, or description..."
+							value={searchTerm}
+							onChange={(e) => setSearchTerm(e.target.value)}
+							style={styles.searchInput}
+						/>
+					</div>
+
+					{filteredPositions.length === 0 ? (
 						<div style={styles.emptyState}>
-							<p>No positions available for ranking.</p>
+							<p>
+								{searchTerm
+									? 'No positions found matching your search.'
+									: 'No positions available for ranking.'
+								}
+							</p>
+							{searchTerm && <p>Try adjusting your search terms.</p>}
 						</div>
 					) : (
 						<>
 							<div style={styles.instructionsBar}>
 								<span style={styles.instructionText}>
-									{selectedIds.size} of {allPositions.length} positions selected
+									{selectedIds.size} of {filteredPositions.length} positions selected
+									{searchTerm && ` (filtered from ${allPositions.length} total)`}
 								</span>
 								<button
 									style={styles.proceedButton}
@@ -284,7 +312,7 @@ export default function RankCCA() {
 							</div>
 
 							<div style={styles.selectionContainer}>
-								{allPositions.map((position) => (
+								{filteredPositions.map((position) => (
 									<div
 										key={position.id}
 										style={{
@@ -382,7 +410,7 @@ export default function RankCCA() {
 									<p style={styles.ccaName}>{position.cca_name}</p>
 									<div style={styles.positionMeta}>
 										<span style={styles.positionType}>
-											{position.position_type === 'maincomm' ? 'Main Committee' : 'Sub Committee'}
+											{position.position_type === 'maincomm' ? 'Main Committee' : position.position_type === 'blockcomm' ? 'Block Committee' : 'Sub Committee'}
 										</span>
 										<span style={styles.capacity}>
 											Available Capacity: {position.available_capacity}
@@ -466,6 +494,18 @@ const styles = {
 		backgroundColor: '#F8F9FA',
 		borderRadius: '8px',
 		border: '2px dashed #E5E7EB'
+	},
+	searchContainer: {
+		marginBottom: '20px',
+	},
+	searchInput: {
+		width: '100%',
+		padding: '12px 16px',
+		border: '1px solid #D1D5DB',
+		borderRadius: '8px',
+		fontSize: '16px',
+		outline: 'none',
+		boxSizing: 'border-box' as const
 	},
 	instructionsBar: {
 		display: 'flex',

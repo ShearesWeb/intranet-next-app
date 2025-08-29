@@ -4,17 +4,20 @@
 import React, { useEffect, useState } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
 interface CCAData {
   name: string;
   role: string;
+  position_type: string
   cca_type: string;
   description: string;
   points: number;
 }
 
 export default function MyCCA() {
+  const router = useRouter();
   const { user } = useAuth();
   const [points, setPoints] = useState(0);
   const [ccas, setCCAs] = useState<CCAData[]>([]);
@@ -92,6 +95,11 @@ export default function MyCCA() {
       });
   }, [user?.email]);
 
+  const handleManageMembers = (cca: CCAData) => {
+    // Navigate to member management page
+    router.push(`/dashboard/mycca/manageMembers/${encodeURIComponent(cca.name)}?ccaName=${encodeURIComponent(cca.name)}`);
+  };
+
   if (loadingPoints || loadingCCAs) {
     return (
       <div style={styles.container}>
@@ -149,6 +157,7 @@ export default function MyCCA() {
                   <th style={styles.thCenter}>Role</th>
                   <th style={styles.thCenter}>Type</th>
                   <th style={styles.thCenter}>Points</th>
+                  <th style={styles.thCenter}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -167,7 +176,6 @@ export default function MyCCA() {
                         )}
                       </div>
                     </td>
-                    {/* ✅ FIXED: Centered Role column */}
                     <td style={styles.tdCenter}>
                       <span style={styles.roleTag}>
                         {cca.role}
@@ -178,9 +186,19 @@ export default function MyCCA() {
                         {ccaTypeDisplay(cca.cca_type)}
                       </span>
                     </td>
-                    {/* ✅ FIXED: Centered Points column */}
                     <td style={styles.tdCenter}>
                       <strong>{cca.points}</strong>
+                    </td>
+                    <td style={styles.tdCenter}>
+                      {(cca.position_type === 'lead' || cca.position_type === 'vice') &&
+                        (
+                          <button
+                            style={styles.manageButton}
+                            onClick={() => handleManageMembers(cca)}
+                          >
+                            View
+                          </button>
+                        )}
                     </td>
                   </tr>
                 ))}
@@ -264,7 +282,6 @@ const styles = {
     fontWeight: 'bold',
     color: '#374151'
   },
-  // ✅ NEW: Centered header for Role, Type, Points columns
   thCenter: {
     textAlign: 'center' as const,
     borderBottom: '2px solid #E5E7EB',
@@ -280,7 +297,6 @@ const styles = {
     fontSize: '14px',
     color: '#1F2937'
   },
-  // ✅ NEW: Centered cell for Role, Type, Points columns
   tdCenter: {
     borderBottom: '1px solid #E5E7EB',
     padding: '15px 12px',
@@ -311,7 +327,7 @@ const styles = {
     borderRadius: '4px',
     fontSize: '12px',
     fontWeight: 'bold',
-    display: 'inline-block' // ✅ Ensures proper centering
+    display: 'inline-block'
   },
   typeTag: {
     padding: '4px 8px',
@@ -320,7 +336,7 @@ const styles = {
     borderRadius: '4px',
     fontSize: '12px',
     fontWeight: 'bold',
-    display: 'inline-block' // ✅ Ensures proper centering
+    display: 'inline-block'
   },
   emptyState: {
     textAlign: 'center' as const,
@@ -343,5 +359,15 @@ const styles = {
     color: '#1F2937',
     backgroundColor: '#F8F9FA',
     borderRadius: '6px'
+  },
+  manageButton: {
+    padding: '6px 12px',
+    backgroundColor: '#3B82F6',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    fontSize: '12px',
+    cursor: 'pointer',
+    fontWeight: 'bold',
   }
 };

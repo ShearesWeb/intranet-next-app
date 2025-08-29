@@ -15,13 +15,17 @@ function Sidebar() {
 	const getRankCCAButtonText = useMemo(() => {
 		switch (phaseInfo.phase) {
 			case 'maincomm_concurrent_ranking':
-                return 'Rank Maincomm';
-            case 'subcomm_concurrent_ranking':
-                return 'Rank Subcomm';
+				return 'Rank Maincomm';
+			case 'subcomm_concurrent_ranking':
+				return 'Rank Subcomm';
 			default:
 				return 'CCA Ranking';
 		}
 	}, [phaseInfo.phase]);
+
+	const isSportsCultureAvailable = () => {
+		return phaseInfo.phase === 'subcomm_concurrent_ranking';
+	};
 
 	return (
 		<div style={styles.sidebar}>
@@ -38,10 +42,11 @@ function Sidebar() {
 				<Link href="/dashboard/home" style={styles.navItem}>❤️ Home</Link>
 				<Link href="/dashboard/mycca" style={{ ...styles.navItem }}>📋 My CCAs</Link>
 				<Link href="/dashboard/rank" style={styles.navItem}>📊 {getRankCCAButtonText}</Link>
+				{isSportsCultureAvailable() && (
+					<Link href="/dashboard/sportsCulture" style={styles.navItem}>🤸 Sports & Culture</Link>
+				)}
 				{!roleLoading && isAuthorized && (
-					<Link href="/dashboard/rankApplicants" style={styles.navItem}>
-						👥 Rank Applicants
-					</Link>
+					<Link href="/dashboard/rankApplicants" style={styles.navItem}>👥 Rank Applicants</Link>
 				)}
 			</nav>
 		</div>

@@ -15,7 +15,7 @@ interface PositionData {
 	name: string;
 	position_type: string;
 	cca_id: number;
-	ccas: CCAData | CCAData[]; // ✅ Union type handles both cases
+	ccas: CCAData | CCAData[];
 }
 
 interface AppointmentData {
@@ -116,12 +116,13 @@ export async function GET(
 				return {
 					name: getCCAProperty(position.ccas, 'name'),
 					role: position.name || 'Unknown Role',
+					position_type: position.position_type,
 					cca_type: getCCAProperty(position.ccas, 'cca_type'),
 					description: getCCAProperty(position.ccas, 'description'),
 					points: appointment.points || 0
 				};
 			})
-			.filter((item): item is NonNullable<typeof item> => item !== null); // ✅ Type-safe filter
+			.filter((item): item is NonNullable<typeof item> => item !== null);
 
 		// console.log("Final transformed data:", transformedData);
 
