@@ -45,7 +45,7 @@ export async function GET(
 
         // Get user ID
         const { data: user, error: userError } = await supabase
-            .from('public_users')
+            .from('public_user_info')
             .select('id')
             .eq('email', email)
             .single();

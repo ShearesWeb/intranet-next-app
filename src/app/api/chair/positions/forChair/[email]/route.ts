@@ -9,7 +9,7 @@ type RouteHandlerSupabaseClient = ReturnType<typeof createRouteHandlerClient>;
 
 const getCachedChairAuthorization = cache(async (email: string, supabase: RouteHandlerSupabaseClient) => {
     const { data: userData, error: userError } = await supabase
-        .from("public_users")
+        .from("public_user_info")
         .select("id, email")
         .eq("email", email)
         .single();
@@ -154,7 +154,7 @@ export async function GET(
             .from("cca_user_ranking")
             .select(`
                 position_id, user_id, ranking,
-                public_users!inner(id, name, email, room)
+                public_user_info!inner(id, name, email, room)
             `)
             .in("position_id", positionIds)
             .order('ranking', { ascending: true });
@@ -198,13 +198,13 @@ export async function GET(
             // ✅ BULLETPROOF: Handle both array and object cases
             let userData: any = null;
 
-            if (app.public_users) {
+            if (app.public_user_info) {
                 // If it's an array, take the first element
-                if (Array.isArray(app.public_users)) {
-                    userData = app.public_users[0];
+                if (Array.isArray(app.public_user_info)) {
+                    userData = app.public_user_info[0];
                 } else {
                     // If it's an object, use it directly
-                    userData = app.public_users;
+                    userData = app.public_user_info;
                 }
 
                 if (userData) {

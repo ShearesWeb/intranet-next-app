@@ -7,7 +7,7 @@ type RouteHandlerSupabaseClient = ReturnType<typeof createRouteHandlerClient>;
 
 const getCachedUserRole = cache(async (email: string, supabase: RouteHandlerSupabaseClient) => {
     const { data: user, error: userError } = await supabase
-        .from('public_users')
+        .from('public_user_info')
         .select('id')
         .eq('email', email)
         .single();

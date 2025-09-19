@@ -52,15 +52,15 @@ export async function GET(
 			return NextResponse.json({ data: [] });
 		}
 
-		// Step 1: Get user ID from public_users table
+		// Step 1: Get user ID from public_user_info table
 		const { data: userData, error: userError } = await supabase
-			.from('public_users')
+			.from('public_user_info')
 			.select('id')
 			.eq('email', email)
 			.single();
 
 		if (userError || !userData) {
-			console.log("User not found in public_users:", email, userError);
+			console.log("User not found in public_user_info:", email, userError);
 			return NextResponse.json({ data: [] });
 		}
 

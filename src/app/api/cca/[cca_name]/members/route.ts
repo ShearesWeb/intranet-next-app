@@ -32,7 +32,7 @@ export async function GET(
 
         // Get requesting user's ID
         const { data: userData, error: userError } = await supabase
-            .from('public_users')
+            .from('public_user_info')
             .select('id')
             .eq('email', user.email)
             .single();
@@ -90,7 +90,7 @@ export async function GET(
                 user_id,
                 points,
                 created_at,
-                public_users!inner(id, name, email, room),
+                public_user_info!inner(id, name, email, room),
                 cca_positions!inner(id, name, position_type, cca_id)
             `)
             .eq('cca_positions.cca_id', ccaData.id);
@@ -106,10 +106,10 @@ export async function GET(
         ccaMembers?.forEach((member: any) => {
             // Extract user data
             let userData: any = null;
-            if (member.public_users) {
-                userData = Array.isArray(member.public_users)
-                    ? member.public_users[0]
-                    : member.public_users;
+            if (member.public_user_info) {
+                userData = Array.isArray(member.public_user_info)
+                    ? member.public_user_info[0]
+                    : member.public_user_info;
             }
 
             // Extract position data

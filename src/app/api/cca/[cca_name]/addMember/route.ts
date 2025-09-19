@@ -23,7 +23,7 @@ export async function POST(
 
         // Get requesting user's data
         const { data: requestingUser, error: userError } = await supabase
-            .from('public_users')
+            .from('public_user_info')
             .select('id')
             .eq('email', user.email)
             .single();

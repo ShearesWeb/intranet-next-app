@@ -26,7 +26,7 @@ export async function GET(request: Request) {
 
         // Only search by email field
         const { data, error } = await supabase
-            .from('public_users')
+            .from('public_user_info')
             .select('id, name, email, room')
             .ilike('email', `%${query}%`)
             .limit(10);

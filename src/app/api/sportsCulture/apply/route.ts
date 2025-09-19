@@ -18,7 +18,7 @@ export async function POST(request: Request) {
 
         // Get user data
         const { data: userData, error: userError } = await supabase
-            .from('public_users')
+            .from('public_user_info')
             .select('id')
             .eq('email', user.email)
             .single();
@@ -159,7 +159,7 @@ export async function DELETE(request: Request) {
 
         // Get user data
         const { data: userData, error: userError } = await supabase
-            .from('public_users')
+            .from('public_user_info')
             .select('id')
             .eq('email', user.email)
             .single();
