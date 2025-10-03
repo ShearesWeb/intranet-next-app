@@ -24,11 +24,12 @@ export async function GET(request: Request) {
             return NextResponse.json({ users: [] });
         }
 
-        // Only search by email field
+        // Search for any field
         const { data, error } = await supabase
             .from('public_user_info')
             .select('id, name, email, room')
-            .ilike('email', `%${query}%`)
+            .or(`name.ilike.%${query}%,email.ilike.%${query}%,room.ilike.%${query}%`)
+            .order('name')
             .limit(10);
 
         if (error) {

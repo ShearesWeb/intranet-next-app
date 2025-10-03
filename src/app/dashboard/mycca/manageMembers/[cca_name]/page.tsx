@@ -514,7 +514,7 @@ export default function ManageMembersPage() {
                         <div style={styles.searchContainer}>
                             <input
                                 type="text"
-                                placeholder="Search by email..."
+                                placeholder="Search by name / email / room..."
                                 value={userSearchQuery}
                                 onChange={(e) => setUserSearchQuery(e.target.value)}
                                 onKeyPress={handleSearchKeyPress}
