@@ -1,6 +1,6 @@
 // src/app/api/sportsCulture/apply/route.ts
 import { NextResponse } from "next/server";
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from "@/utils/supabase/server";
 import { cookies } from 'next/headers';
 import { phaseService } from '@/lib/phaseService';
 
@@ -8,7 +8,7 @@ export async function POST(request: Request) {
     try {
         const { position_id } = await request.json();
 
-        const supabase = createRouteHandlerClient({ cookies });
+        const supabase = await createClient();
 
         // Verify authentication
         const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -149,7 +149,7 @@ export async function DELETE(request: Request) {
     try {
         const { position_id } = await request.json();
 
-        const supabase = createRouteHandlerClient({ cookies });
+        const supabase = await createClient();
 
         // Verify authentication
         const { data: { user }, error: authError } = await supabase.auth.getUser();

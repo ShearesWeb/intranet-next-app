@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from 'next/headers';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from "@/utils/supabase/server";
 import { phaseService } from '@/lib/phaseService';
 
 interface CCAData {
@@ -41,7 +41,7 @@ export async function GET(
             });
         }
 
-        const supabase = createRouteHandlerClient({ cookies });
+        const supabase = await createClient();
 
         // Get user ID
         const { data: user, error: userError } = await supabase

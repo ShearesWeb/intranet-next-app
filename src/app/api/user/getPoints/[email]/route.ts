@@ -2,7 +2,7 @@
 
 import { NextResponse } from "next/server";
 import { cookies } from 'next/headers';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from "@/utils/supabase/server";
 
 export async function GET(
 	request: Request,
@@ -12,9 +12,7 @@ export async function GET(
 		const { email } = await params;
 
 		const getCookies = () => cookies();
-		const supabase = createRouteHandlerClient({
-			cookies: getCookies
-		});
+		const supabase = await createClient();
 
 		const { data: { user }, error: authError } = await supabase.auth.getUser();
 

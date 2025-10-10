@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
 import { cookies } from 'next/headers';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from "@/utils/supabase/server";
 import { cache } from 'react';
 
-type RouteHandlerSupabaseClient = ReturnType<typeof createRouteHandlerClient>;
-
-const getCachedUserRole = cache(async (email: string, supabase: RouteHandlerSupabaseClient) => {
+const getCachedUserRole = cache(async (email: string, supabase: any) => {
     const { data: user, error: userError } = await supabase
         .from('public_user_info')
         .select('id')
@@ -75,7 +73,7 @@ export async function GET(
         };
 
         const getCookies = () => cookies();
-        const supabase = createRouteHandlerClient({ cookies: getCookies });
+        const supabase = await createClient();
 
         const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
         if (authError || !authUser) {

@@ -1,6 +1,6 @@
 // src/app/api/sportsCulture/available/route.ts
 import { NextResponse } from "next/server";
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from "@/utils/supabase/server";
 import { cookies } from 'next/headers';
 import { phaseService } from '@/lib/phaseService';
 
@@ -20,7 +20,7 @@ interface AvailablePosition {
 
 export async function GET(request: Request) {
     try {
-        const supabase = createRouteHandlerClient({ cookies });
+        const supabase = await createClient();
 
         // Verify authentication
         const { data: { user }, error: authError } = await supabase.auth.getUser();

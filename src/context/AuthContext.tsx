@@ -1,75 +1,121 @@
-// C:\Ron\intranet-next-app\src\context\AuthContext.tsx
-
 "use client";
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { User } from '@supabase/supabase-js';
-import { ReactNode } from 'react';
+
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createClient } from "@/utils/supabase/client";
+import { AuthError, Session } from "@supabase/supabase-js";
+import { toast } from "sonner";
+import { User } from "@/types/User";
+import { useRouter } from "next/navigation";
 
 interface AuthContextType {
 	user: User | null;
+	session: Session | null;
 	loading: boolean;
-	signIn: () => Promise<void>;
+	error: AuthError | null;
+	signIn: (code?: string) => Promise<void>;
 	signOut: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType>({
-	user: null,
-	loading: true,
-	signIn: async () => { },
-	signOut: async () => { },
-});
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const useAuth = () => {
-	const context = useContext(AuthContext);
-	if (context === null) {
-		throw new Error("useAuth must be used within an AuthProvider");
-	}
-	return context;
-};
-
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+	const supabase = createClient();
+	const router = useRouter();
 	const [user, setUser] = useState<User | null>(null);
+	const [session, setSession] = useState<Session | null>(null);
 	const [loading, setLoading] = useState(true);
-	const supabase = createClientComponentClient();
+	const [error, setError] = useState<AuthError | null>(null);
+	const fetchedRef = useRef<string | null>(null); // cache by session user id
 
-	useEffect(() => {
-		const getUser = async () => {
-			const { data: { user } } = await supabase.auth.getUser();
-			setUser(user);
-			setLoading(false);
-		};
+	const fetchUserFromBackend = async (email: string): Promise<User | null> => {
+		const { data, error } = await supabase
+			.from("users")
+			.select("*")
+			.eq("email", email)
+			.maybeSingle();
 
-		getUser();
+		if (error || !data) {
+			const authError: AuthError = {
+				name: "UserNotFoundError",
+				message: "Please login with your Intranet gmail instead.",
+				status: 401,
+			} as AuthError;
+			setError(authError);
 
-		const { data: { subscription } } = supabase.auth.onAuthStateChange(
-			async (event, session) => {
-				setUser(session?.user ?? null);
-				setLoading(false);
-			}
-		);
+			toast.error("Please login with your Intranet gmail instead.");
+			router.push('/auth/auth-error')
+			return null;
+		}
 
-		return () => subscription.unsubscribe();
-	}, [supabase]);
+		const publicUrl = data.profile_photo_path
+			? supabase.storage.from("user-profile-pictures").getPublicUrl(data.profile_photo_path).data.publicUrl
+			: null;
+		console.log("Fetched user from backend:", {
+			...data,
+			profile_photo_url: publicUrl,
+		})
+		return { ...data, profile_photo_url: publicUrl };
+	};
 
-	const signIn = async () => {
+	const signIn = async (next?: string) => {
 		const { error } = await supabase.auth.signInWithOAuth({
 			provider: 'google',
 			options: {
-				redirectTo: `${window.location.origin}/auth/callback`,
+				redirectTo: `${window.location.origin}/auth/callback${next ? `?next=${encodeURIComponent(next)}` : `?next=${encodeURIComponent('/dashboard/home')}`
+					}`,
 			},
 		});
 		if (error) throw error;
 	};
 
 	const signOut = async () => {
-		const { error } = await supabase.auth.signOut();
-		if (error) throw error;
+		await supabase.auth.signOut();
+		setUser(null);
+		setSession(null);
+		toast.info("Successfully signed out.")
+		router.push("/");
 	};
 
-	return (
-		<AuthContext.Provider value={{ user, loading, signIn, signOut }}>
-			{children}
-		</AuthContext.Provider>
+	useEffect(() => {
+		let isMounted = true;
+
+		const fetchAndCacheUser = async (session: Session | null) => {
+			if (!session?.user?.email) return;
+			if (fetchedRef.current === session.user.id) return; // already fetched
+
+			fetchedRef.current = session.user.id;
+			const fetchedUser = await fetchUserFromBackend(session.user.email);
+			if (isMounted) setUser(fetchedUser);
+			if (isMounted) setSession(session);
+		};
+
+		// Fetch current session once
+		supabase.auth.getSession().then(({ data: { session }, error }) => {
+			if (error) setError(error);
+			fetchAndCacheUser(session).finally(() => isMounted && setLoading(false));
+		});
+
+		// Listen to auth changes
+		const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+			fetchAndCacheUser(session);
+		});
+
+		return () => {
+			isMounted = false;
+			subscription.unsubscribe();
+		};
+	}, [supabase]);
+
+	const value = useMemo(
+		() => ({ user, session, loading, error, signIn, signOut }),
+		[user, session, loading, error]
 	);
-};
+
+	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth() {
+	const ctx = useContext(AuthContext);
+	if (!ctx) throw new Error("useAuth must be used within AuthProvider");
+	return ctx;
+}

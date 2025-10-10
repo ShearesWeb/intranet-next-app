@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from 'next/headers';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from "@/utils/supabase/server";
 
 // ✅ Proper TypeScript interfaces with union types
 interface CCAData {
@@ -41,10 +41,7 @@ export async function GET(
 ) {
 	try {
 		const { email } = await params;
-		const getCookies = () => cookies();
-		const supabase = createRouteHandlerClient({
-			cookies: getCookies
-		});
+		const supabase = await createClient();
 
 		const { data: { user }, error: authError } = await supabase.auth.getUser();
 		if (authError || !user) {
@@ -69,7 +66,7 @@ export async function GET(
 		// Step 2: Get appointments for this user
 		const { data: appointments, error: appointmentError } = await supabase
 			.from('cca_appointments')
-			.select('position_id, points')
+			.select('position_id')
 			.eq('user_id', userData.id);
 
 		if (appointmentError) {

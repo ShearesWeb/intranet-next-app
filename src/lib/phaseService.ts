@@ -1,5 +1,5 @@
 // src/lib/phaseService.ts
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from "@/utils/supabase/server";
 import { cookies } from 'next/headers';
 
 export interface PhaseInfo {
@@ -25,13 +25,6 @@ interface DatabaseFlag {
 }
 
 export class PhaseService {
-    private createSupabaseClient() {
-        const getCookies = () => cookies();
-        return createRouteHandlerClient({
-            cookies: getCookies
-        });
-    }
-
     // ✅ TESTING OVERRIDE - Change this line to test different phases
     private getTestingPhaseOverride(): string | null {
         // 🧪 TESTING: Uncomment one line below to test different phases
@@ -53,7 +46,7 @@ export class PhaseService {
 
     private async getNextPhaseInfo(): Promise<{ nextPhase: string; nextPhaseDate: string } | null> {
         try {
-            const supabase = this.createSupabaseClient();
+            const supabase = await createClient();
             const { data: flags, error } = await supabase
                 .from('feature_flags')
                 .select('name, expires_at')
@@ -89,7 +82,7 @@ export class PhaseService {
 
     async getCurrentPhaseInfo(): Promise<PhaseInfo> {
         try {
-            const supabase = this.createSupabaseClient();
+            const supabase = await createClient();
             const serverTime = this.getServerTime();
             const nextPhaseInfo = await this.getNextPhaseInfo();
 

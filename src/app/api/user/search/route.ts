@@ -1,14 +1,11 @@
 // src/app/api/user/search/route.ts
 import { NextResponse } from "next/server";
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from "@/utils/supabase/server";
 import { cookies } from 'next/headers';
 
 export async function GET(request: Request) {
     try {
-        const getCookies = () => cookies();
-        const supabase = createRouteHandlerClient({
-            cookies: getCookies
-        });
+        const supabase = await createClient();
 
         const { data: { user }, error: authError } = await supabase.auth.getUser();
 

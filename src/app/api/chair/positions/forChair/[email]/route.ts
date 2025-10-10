@@ -1,13 +1,11 @@
 // src/app/api/chair/positions/forChair/[email]/route.ts
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 import { phaseService } from '@/lib/phaseService';
 import { cache } from 'react';
+import { createClient } from "@/utils/supabase/server";
 
-type RouteHandlerSupabaseClient = ReturnType<typeof createRouteHandlerClient>;
 
-const getCachedChairAuthorization = cache(async (email: string, supabase: RouteHandlerSupabaseClient) => {
+const getCachedChairAuthorization = cache(async (email: string, supabase: any) => {
     const { data: userData, error: userError } = await supabase
         .from("public_user_info")
         .select("id, email")
@@ -64,7 +62,7 @@ function getValidPositionTypes(currentRound: string): string[] {
     }
 }
 
-const getCachedPositionsForPhase = cache(async (ccaIds: number[], currentRound: string, supabase: RouteHandlerSupabaseClient) => {
+const getCachedPositionsForPhase = cache(async (ccaIds: number[], currentRound: string, supabase: any) => {
     const { data: allPositions, error: posError } = await supabase
         .from("cca_position_info")
         .select("id, name, capacity, available_capacity, applied_count, position_type, cca_id, ccas(id, name)")
@@ -110,8 +108,7 @@ export async function GET(
             'Content-Type': 'application/json',
         };
 
-        const getCookies = () => cookies();
-        const supabase = createRouteHandlerClient({ cookies: getCookies });
+        const supabase = await createClient();
 
         const phaseInfo = await phaseService.getCurrentPhaseInfo();
 

@@ -1,12 +1,12 @@
 // src\app\api\chair\positions\saveRankings\route.ts
 import { NextResponse } from "next/server";
 import { cookies } from 'next/headers';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from "@/utils/supabase/server";
 
 export async function POST(request: Request) {
     try {
         const { chair_email, rankings } = await request.json();
-        const supabase = createRouteHandlerClient({ cookies });
+        const supabase = await createClient();
 
         // Verify chair permissions
         const { data: chair, error: chairError } = await supabase
