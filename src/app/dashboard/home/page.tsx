@@ -10,6 +10,7 @@ import { motion } from "framer-motion";
 import { useEffect } from "react";
 import { useRoleAuth } from "@/hooks/useRoleAuth";
 import { usePhaseInfo } from "@/hooks/usePhaseInfo";
+import { AppLayout } from "@/components/layout/app-layout";
 
 export default function Dashboard() {
     const { user, signOut } = useAuth();
@@ -77,87 +78,90 @@ export default function Dashboard() {
     };
 
     return (
-        <div className="dashboard">
-            {/* Header */}
-            <div className="header">
-                <button className="logout-button" onClick={handleSignOut}>
-                    Log Out
-                </button>
-            </div>
-
-            {/* Welcome Section */}
-            <div className="welcome-section">
-                <h2 className="welcome-text">Welcome Back,</h2>
-                <p className="username">{user?.user_metadata?.full_name || user?.email}</p>
-            </div>
-
-            {/* Content Section */}
-            <div className="content-section">
-                {/* Points Section */}
-                <div className="points-section">
-                    <div className="points-wrapper">
-                        <div className="circle circle-1"></div>
-                        <div className="circle circle-2"></div>
-                        <div className="circle circle-3"></div>
-                        <div className="circle circle-4">
-                            <span className="points-text">
-                                <motion.span
-                                    className="points-text"
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    transition={{
-                                        duration: 1.5,
-                                        ease: "easeInOut",
-                                    }}
-                                >
-                                    {counter}
-                                </motion.span>
-
-                            </span>
-                        </div>
-                    </div>
+        <AppLayout>
+            <div className="dashboard">
+                {/* Header */}
+                <div className="header">
+                    <button className="logout-button" onClick={handleSignOut}>
+                        Log Out
+                    </button>
                 </div>
 
-                {/* Activity Section */}
-                <div className="activity-section">
-                    <h3 className="activity-title">My Activity</h3>
-                    <div className="buttons">
-                        <div className="button-group">
-                            <button className="activity-button" onClick={() => router.push("/dashboard/mycca")}>My CCAs</button>
-                            <p className="button-description">
-                                View your CCAs and Points
-                            </p>
-                        </div>
-                        <div className="button-group">
-                            <button className="activity-button" onClick={() => router.push("/dashboard/rank")}>{getRankCCAButtonText()}</button>
-                            <p className="button-description">
-                                Rank your CCA preferences
-                            </p>
-                        </div>
-                        {isSportsCultureAvailable() && (
-                            <div className="button-group">
-                                <button
-                                    className="activity-button"
-                                    onClick={() => router.push("/dashboard/sportsCulture")}
-                                >
-                                    Apply Sports & Culture
-                                </button>
-                                <div className="button-description">Apply to Sports & Culture CCAs</div>
+                {/* Welcome Section */}
+                <div className="welcome-section">
+                    <h2 className="welcome-text">Welcome Back,</h2>
+                    <p className="username">{user?.user_metadata?.full_name || user?.email}</p>
+                </div>
+
+                {/* Content Section */}
+                <div className="content-section">
+                    {/* Points Section */}
+                    <div className="points-section">
+                        <div className="points-wrapper">
+                            <div className="circle circle-1"></div>
+                            <div className="circle circle-2"></div>
+                            <div className="circle circle-3"></div>
+                            <div className="circle circle-4">
+                                <span className="points-text">
+                                    <motion.span
+                                        className="points-text"
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        transition={{
+                                            duration: 1.5,
+                                            ease: "easeInOut",
+                                        }}
+                                    >
+                                        {counter}
+                                    </motion.span>
+
+                                </span>
                             </div>
-                        )}
-                        {!roleLoading && isAuthorized && (
+                        </div>
+                    </div>
+
+                    {/* Activity Section */}
+                    <div className="activity-section">
+                        <h3 className="activity-title">My Activity</h3>
+                        <div className="buttons">
                             <div className="button-group">
-                                <button className="activity-button" onClick={() => router.push("/dashboard/rankApplicants")}>
-                                    Rank Applicants
-                                </button>
+                                <button className="activity-button" onClick={() => router.push("/dashboard/mycca")}>My CCAs</button>
                                 <p className="button-description">
-                                    Rank applicants for your CCA
+                                    View your CCAs and Points
                                 </p>
                             </div>
-                        )}
+                            <div className="button-group">
+                                <button className="activity-button" onClick={() => router.push("/dashboard/rank")}>{getRankCCAButtonText()}</button>
+                                <p className="button-description">
+                                    Rank your CCA preferences
+                                </p>
+                            </div>
+                            {isSportsCultureAvailable() && (
+                                <div className="button-group">
+                                    <button
+                                        className="activity-button"
+                                        onClick={() => router.push("/dashboard/sportsCulture")}
+                                    >
+                                        Apply Sports & Culture
+                                    </button>
+                                    <div className="button-description">Apply to Sports & Culture CCAs</div>
+                                </div>
+                            )}
+                            {!roleLoading && isAuthorized && (
+                                <div className="button-group">
+                                    <button className="activity-button" onClick={() => router.push("/dashboard/rankApplicants")}>
+                                        Rank Applicants
+                                    </button>
+                                    <p className="button-description">
+                                        Rank applicants for your CCA
+                                    </p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </AppLayout>
+
     );
 }
