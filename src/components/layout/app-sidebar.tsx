@@ -2,9 +2,9 @@
 
 import * as React from "react"
 import {
-    BookOpen,
     FileUser,
-    BriefcaseBusiness,
+    Volleyball,
+    House,
 } from "lucide-react"
 
 import { NavMain } from "@/components/layout/nav-main"
@@ -20,41 +20,44 @@ import {
 } from "@/components/ui/sidebar"
 import Link from "next/link"
 import { Avatar, AvatarImage } from "@radix-ui/react-avatar"
-import { useAuth } from "@/context/AuthContext"
 
 const data = {
     navMain: [
         {
-            title: "Your Applications",
-            url: "/app/dashboard",
-            icon: FileUser,
+            title: "Dashboard",
+            url: "/dashboard",
+            icon: House,
             isActive: true,
         },
         {
-            title: "Jobs",
-            url: "/app/open-roles",
+            title: "Manage CCAs",
+            url: "/dashboard/mycca",
             isActive: true,
-            icon: BriefcaseBusiness,
+            icon: Volleyball,
             items: [
                 {
-                    title: "Open Roles",
-                    url: "/app/open-roles",
+                    title: "View My CCAs",
+                    url: "/dashboard/mycca",
+                },
+                {
+                    title: "Manage Members",
+                    url: "/dashboard/mycca/manageMembers",
                 },
             ],
         },
         {
-            title: "About",
-            url: "/app/hiring-process",
-            icon: BookOpen,
+            title: "CCA Allocation",
+            url: "/dashboard/rank",
+            icon: FileUser,
             isActive: true,
             items: [
                 {
-                    title: "Hiring Process",
-                    url: "/app/hiring-process",
+                    title: "Apply For CCAs",
+                    url: "/dashboard/rank",
                 },
                 {
-                    title: "FAQ",
-                    url: "/app/faq",
+                    title: "Rank CCA Applicants",
+                    url: "/dashboard/rankApplicants",
                 },
             ],
         },
@@ -62,20 +65,18 @@ const data = {
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-    const { user } = useAuth();
-
     return (
         <Sidebar variant="inset" {...props}>
             <SidebarHeader>
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
-                            <Link href="/dashboard/home">
+                            <Link href="/dashboard">
                                 <Avatar className="flex size-8 items-center justify-center rounded-md">
                                     <AvatarImage src="/images/shweb-logo.png" />
                                 </Avatar>
                                 <div className="grid flex-1 text-left leading-tight">
-                                    <span className="truncate font-medium">Sheares Web Intranet</span>
+                                    <span className="truncate font-bold">Sheares Intranet</span>
                                 </div>
                             </Link>
                         </SidebarMenuButton>

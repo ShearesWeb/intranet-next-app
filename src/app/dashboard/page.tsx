@@ -3,64 +3,33 @@
 
 import React, { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import "./Dashboard.css";
-import toast from "react-hot-toast";
+// import "./Dashboard.css";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useEffect } from "react";
 import { useRoleAuth } from "@/hooks/useRoleAuth";
 import { usePhaseInfo } from "@/hooks/usePhaseInfo";
 import { AppLayout } from "@/components/layout/app-layout";
+import { AppLoading } from "@/components/layout/app-loading";
 
 export default function Dashboard() {
-    const { user, signOut } = useAuth();
+    const { user } = useAuth();
     const { isAuthorized, loading: roleLoading } = useRoleAuth();
     const { phaseInfo } = usePhaseInfo();
-    const [points, setPoints] = useState<number>(0);
     const router = useRouter();
     const [counter, setCounter] = useState(0);
+    const [mounted, setMounted] = useState(false);
 
-
-    // fetch user specific points
-    useEffect(() => {
-        if (!user?.email) return;
-
-        fetch(`/api/user/getPoints/${user.email}`)
-            .then(async (res) => {
-                if (!res.ok) {
-                    const errorData = await res.json();
-                    throw new Error(errorData.error || "Failed to fetch user points");
-                }
-                return res.json();
-            })
-            .then((data) => {
-                setPoints(data.userPoints);
-            })
-            .catch((error) => {
-                console.error("Error fetching points:", error.message);
-                toast.error(error.message);
-            });
-    }, [user?.email]);
-
+    useEffect(() => setMounted(true), []);
 
     useEffect(() => {
+        if (!user) return;
         const interval = setInterval(() => {
-            setCounter((prev) => (prev < points ? prev + 1 : points));
+            setCounter(prev => (prev < user.points ? prev + 1 : user.points));
         }, 20);
 
         return () => clearInterval(interval);
-    }, [points]);
-
-    const handleSignOut = async () => {
-        try {
-            await signOut();
-            toast.success("Sign out successful!");
-            router.push("/auth/login");
-        } catch (e) {
-            console.error("Sign-out error:", e);
-            toast.error("Sign out failed!");
-        }
-    };
+    }, [user]);
 
     const getRankCCAButtonText = () => {
         switch (phaseInfo.phase) {
@@ -77,20 +46,19 @@ export default function Dashboard() {
         return phaseInfo.phase === 'subcomm_concurrent_ranking';
     };
 
+    if (!mounted || !user) {
+        return (
+            <AppLoading />
+        );
+    }
+
     return (
         <AppLayout>
             <div className="dashboard">
-                {/* Header */}
-                <div className="header">
-                    <button className="logout-button" onClick={handleSignOut}>
-                        Log Out
-                    </button>
-                </div>
-
                 {/* Welcome Section */}
                 <div className="welcome-section">
                     <h2 className="welcome-text">Welcome Back,</h2>
-                    <p className="username">{user?.user_metadata?.full_name || user?.email}</p>
+                    <p className="username">{user.name || user.email}</p>
                 </div>
 
                 {/* Content Section */}

@@ -11,7 +11,6 @@ interface AuthContextType {
 	user: User | null;
 	session: Session | null;
 	loading: boolean;
-	error: AuthError | null;
 	signIn: (code?: string) => Promise<void>;
 	signOut: () => Promise<void>;
 }
@@ -24,44 +23,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 	const [user, setUser] = useState<User | null>(null);
 	const [session, setSession] = useState<Session | null>(null);
 	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState<AuthError | null>(null);
-	const fetchedRef = useRef<string | null>(null); // cache by session user id
 
-	const fetchUserFromBackend = async (email: string): Promise<User | null> => {
-		const { data, error } = await supabase
-			.from("users")
-			.select("*")
-			.eq("email", email)
-			.maybeSingle();
-
-		if (error || !data) {
-			const authError: AuthError = {
-				name: "UserNotFoundError",
-				message: "Please login with your Intranet gmail instead.",
-				status: 401,
-			} as AuthError;
-			setError(authError);
-
-			toast.error("Please login with your Intranet gmail instead.");
-			router.push('/auth/auth-error')
+	const fetchUserFromBackend = async (): Promise<User | null> => {
+		try {
+			const res = await fetch("/api/user", { cache: "no-store" });
+			if (!res.ok) {
+				console.warn("Failed to fetch user from API:", await res.text());
+				return null;
+			}
+			const data = await res.json();
+			console.log("Fetched user from API:", data);
+			return data as User;
+		} catch (err) {
+			console.error("Error calling /api/user:", err);
 			return null;
 		}
-
-		const publicUrl = data.profile_photo_path
-			? supabase.storage.from("user-profile-pictures").getPublicUrl(data.profile_photo_path).data.publicUrl
-			: null;
-		console.log("Fetched user from backend:", {
-			...data,
-			profile_photo_url: publicUrl,
-		})
-		return { ...data, profile_photo_url: publicUrl };
 	};
 
 	const signIn = async (next?: string) => {
 		const { error } = await supabase.auth.signInWithOAuth({
 			provider: 'google',
 			options: {
-				redirectTo: `${window.location.origin}/auth/callback${next ? `?next=${encodeURIComponent(next)}` : `?next=${encodeURIComponent('/dashboard/home')}`
+				redirectTo: `${window.location.origin}/auth/callback${next ? `?next=${encodeURIComponent(next)}` : `?next=${encodeURIComponent('/dashboard')}`
 					}`,
 			},
 		});
@@ -79,25 +62,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 	useEffect(() => {
 		let isMounted = true;
 
-		const fetchAndCacheUser = async (session: Session | null) => {
-			if (!session?.user?.email) return;
-			if (fetchedRef.current === session.user.id) return; // already fetched
+		const fetchUser = async (session: Session | null) => {
+			if (!session) return;
+			const fetchedUser = await fetchUserFromBackend();
 
-			fetchedRef.current = session.user.id;
-			const fetchedUser = await fetchUserFromBackend(session.user.email);
-			if (isMounted) setUser(fetchedUser);
-			if (isMounted) setSession(session);
+			if (!fetchedUser) {
+				toast.error("Please login with your Intranet gmail instead.");
+				router.push("/auth/auth-error?reason=user_not_found");
+				return;
+			}
+			if (isMounted) {
+				setUser(fetchedUser);
+				setSession(session);
+			}
 		};
 
 		// Fetch current session once
 		supabase.auth.getSession().then(({ data: { session }, error }) => {
-			if (error) setError(error);
-			fetchAndCacheUser(session).finally(() => isMounted && setLoading(false));
+			fetchUser(session).finally(() => isMounted && setLoading(false));
 		});
 
 		// Listen to auth changes
 		const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-			fetchAndCacheUser(session);
+			fetchUser(session);
 		});
 
 		return () => {
@@ -107,8 +94,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 	}, [supabase]);
 
 	const value = useMemo(
-		() => ({ user, session, loading, error, signIn, signOut }),
-		[user, session, loading, error]
+		() => ({ user, session, loading, signIn, signOut }),
+		[user, session, loading]
 	);
 
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

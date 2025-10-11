@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode } from "react";
+import { Fragment, ReactNode } from "react";
 import { Separator } from "../ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "../ui/sidebar";
 import { AppSidebar } from "./app-sidebar";
@@ -9,13 +9,26 @@ import {
     BreadcrumbList,
     BreadcrumbItem,
     BreadcrumbPage,
+    BreadcrumbSeparator,
 } from "../ui/breadcrumb";
+import { usePathname } from "next/navigation";
+import Link from "next/link";
 
 interface AppLayoutProps {
     children: ReactNode;
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
+    const pathname = usePathname();
+
+    const segments = pathname
+        .split("/")
+        .filter(Boolean)
+        .map((seg) => ({
+            name: seg.charAt(0).toUpperCase() + seg.slice(1),
+            href: "/" + seg,
+        }));
+
     return (
         <SidebarProvider>
             <AppSidebar />
@@ -29,17 +42,60 @@ export function AppLayout({ children }: AppLayoutProps) {
                         />
                         <Breadcrumb>
                             <BreadcrumbList>
-                                <BreadcrumbItem className="hidden md:block">
-                                    <BreadcrumbPage>Your Applications</BreadcrumbPage>
-                                </BreadcrumbItem>
+                                {segments.map((seg, index) => {
+                                    const isFirst = index === 0;
+                                    const isLast = index === segments.length - 1;
+                                    const isSingle = segments.length === 1;
+
+                                    if (isSingle) {
+                                        // only one item, no separators
+                                        return (
+                                            <BreadcrumbItem key={seg.href} className="hidden md:block">
+                                                <BreadcrumbPage>{seg.name}</BreadcrumbPage>
+                                            </BreadcrumbItem>
+                                        );
+                                    }
+
+                                    if (isFirst) {
+                                        return (
+                                            <BreadcrumbItem key={seg.href} className="hidden md:block">
+                                                <Link href={seg.href}>{seg.name}</Link>
+                                            </BreadcrumbItem>
+                                        );
+                                    }
+
+                                    if (isLast) {
+                                        return (
+                                            <Fragment key={seg.href}>
+                                                <BreadcrumbSeparator />
+                                                <BreadcrumbItem className="hidden md:block">
+                                                    <BreadcrumbPage>{seg.name}</BreadcrumbPage>
+                                                </BreadcrumbItem>
+                                            </Fragment>
+                                        );
+                                    }
+
+                                    // middle items
+                                    return (
+                                        <Fragment >
+                                            <BreadcrumbSeparator key={seg.href} />
+                                            <BreadcrumbItem className="hidden md:block">
+                                                <Link href={seg.href}>{seg.name}</Link>
+                                            </BreadcrumbItem>
+                                        </Fragment>
+                                    );
+                                })}
+
                             </BreadcrumbList>
                         </Breadcrumb>
                     </div>
                 </header>
-                <div className="flex justify-center px-4 py-6 sm:px-6 sm:py-8 md:px-8 md:py-10 lg:px-12 lg:py-14">
-                    <section className="w-full max-w-3xl">{children}</section>
+                <div className="flex justify-center px-4 sm:px-6 md:px-8">
+                    <section className="w-full">{children}</section>
                 </div>
             </SidebarInset>
-        </SidebarProvider>
+
+
+        </SidebarProvider >
     );
 }

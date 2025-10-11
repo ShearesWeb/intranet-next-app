@@ -255,7 +255,7 @@ npm run run-script
 
 ## Key Components Analysis
 
-### Dashboard (`src/app/dashboard/home/page.tsx`)
+### Dashboard (`src/app/dashboard/page.tsx`)
 - **Animated points display** with expanding circles
 - **Counter animation** using Framer Motion
 - **CCA navigation buttons** with hover effects

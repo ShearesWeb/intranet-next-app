@@ -2,15 +2,15 @@
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useAuth } from "@/context/AuthContext";
 import { AvatarImage } from "@radix-ui/react-avatar";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from 'react'
 
 export default function LoginPage() {
     const router = useRouter();
-    const { error } = useAuth();
+    const searchParams = useSearchParams();
+    const reason = searchParams.get("reason");
 
     return (
         <Suspense>
@@ -19,9 +19,9 @@ export default function LoginPage() {
                     <div className="flex justify-center gap-2 md:justify-start">
                         <Link href="/" className="flex items-center gap-2 font-medium">
                             <Avatar>
-                                <AvatarImage src="/lion-logo.png" />
+                                <AvatarImage src="/images/shweb-logo.png" />
                             </Avatar>
-                            Sheares Web Jobs
+                            Sheares Web Intranet
                         </Link>
                     </div>
                     <div className="flex flex-1 items-center justify-center">
@@ -29,12 +29,18 @@ export default function LoginPage() {
                             <Card>
                                 <CardContent className="p-8 pt-4 pb-4 flex flex-col gap-8">
                                     <div className="flex flex-col items-center gap-2 text-center">
-                                        <h1 className="text-2xl font-bold">Sheares Web Job Portal</h1>
+                                        <h1 className="text-2xl font-bold">Sheares Web Intranet</h1>
                                         <p className="text-muted-foreground text-sm text-balance">
                                             There was an error signing you in.
                                         </p>
-                                        {error && <p className="text-muted-foreground text-sm text-balance">
-                                            {error.message}
+                                        {reason && <p className="text-red-500 text-sm text-balance">
+                                            {reason === "no_code"
+                                                ? "We couldn’t detect a valid login code. Please try signing in again."
+                                                : reason === "code_exchange_failed"
+                                                    ? "Something went wrong while verifying your sign-in. Please try again."
+                                                    : reason === "user_not_found"
+                                                        ? "Your account isn’t registered in our system. Please contact an administrator or sign up first."
+                                                        : "An unexpected error occurred during sign-in. Please try again later."}
                                         </p>}
                                     </div>
                                     <div className="grid gap-6">

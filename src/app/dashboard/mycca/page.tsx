@@ -22,7 +22,6 @@ export default function MyCCA() {
   const [points, setPoints] = useState(0);
   const [ccas, setCCAs] = useState<CCAData[]>([]);
 
-  const [loadingPoints, setLoadingPoints] = useState(true);
   const [loadingCCAs, setLoadingCCAs] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,31 +38,6 @@ export default function MyCCA() {
 
     return typeMapping[str] || str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
   };
-
-  useEffect(() => {
-    if (!user?.email) return;
-
-    setLoadingPoints(true);
-    fetch(`/api/user/getPoints/${user.email}`)
-      .then(async (res) => {
-        if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(errorData.error || "Failed to fetch user points");
-        }
-        return res.json();
-      })
-      .then((data) => {
-        setPoints(data.userPoints);
-      })
-      .catch((error) => {
-        console.error("Error fetching points:", error.message);
-        toast.error(error.message);
-        setError("Failed to load points");
-      })
-      .finally(() => {
-        setLoadingPoints(false);
-      });
-  }, [user?.email]);
 
   useEffect(() => {
     if (!user?.email) return;
@@ -100,7 +74,7 @@ export default function MyCCA() {
     router.push(`/dashboard/mycca/manageMembers/${encodeURIComponent(cca.name)}?ccaName=${encodeURIComponent(cca.name)}`);
   };
 
-  if (loadingPoints || loadingCCAs) {
+  if (loadingCCAs) {
     return (
       <div style={styles.container}>
         <Sidebar />

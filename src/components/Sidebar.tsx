@@ -39,7 +39,7 @@ function Sidebar() {
 				/>
 			</div>
 			<nav style={styles.nav}>
-				<Link href="/dashboard/home" style={styles.navItem}>❤️ Home</Link>
+				<Link href="/dashboard" style={styles.navItem}>❤️ Home</Link>
 				<Link href="/dashboard/mycca" style={{ ...styles.navItem }}>📋 My CCAs</Link>
 				<Link href="/dashboard/rank" style={styles.navItem}>📊 {getRankCCAButtonText}</Link>
 				{isSportsCultureAvailable() && (
