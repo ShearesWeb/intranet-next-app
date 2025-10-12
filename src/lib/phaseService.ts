@@ -1,6 +1,5 @@
 // src/lib/phaseService.ts
 import { createClient } from "@/utils/supabase/server";
-import { cookies } from 'next/headers';
 
 export interface PhaseInfo {
     phase: 'inactive' | 'maincomm_interviews' | 'maincomm_concurrent_ranking' |
