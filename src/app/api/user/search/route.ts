@@ -1,53 +1,52 @@
 // src/app/api/user/search/route.ts
 import { NextResponse } from "next/server";
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
+import { createClient } from "@/utils/supabase/server";
 
 export async function GET(request: Request) {
     try {
-        const getCookies = () => cookies();
-        const supabase = createRouteHandlerClient({
-            cookies: getCookies
-        });
-
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-        if (authError || !user) {
-            console.log("No authenticated user for request:", authError);
-            return NextResponse.json({ users: [] });
-        }
+        const supabase = await createClient();
 
         const { searchParams } = new URL(request.url);
-        const query = searchParams.get('query')?.trim() ?? '';
+        const query = searchParams.get("query")?.trim();
 
+        // Validate query parameter
         if (!query || query.length < 2) {
-            return NextResponse.json({ users: [] });
+            return NextResponse.json(
+                { success: false, data: [], message: "Query must be at least 2 characters." },
+                { status: 400 }
+            );
         }
 
-        // Search for any field
+        // Perform search
         const { data, error } = await supabase
-            .from('public_user_info')
-            .select('id, name, email, room')
+            .from("public_user_info")
+            .select("id, name, email, room")
             .or(`name.ilike.%${query}%,email.ilike.%${query}%,room.ilike.%${query}%`)
-            .order('name')
+            .order("name")
             .limit(10);
 
         if (error) {
             console.error("User search error:", error);
-            return NextResponse.json({ users: [] }, { status: 500 });
+            return NextResponse.json(
+                { success: false, data: [], message: "Database query failed." },
+                { status: 500 }
+            );
         }
 
         const users = (data ?? []).map(u => ({
             id: u.id,
             name: u.name,
             email: u.email,
-            room: u.room
+            room: u.room,
         }));
 
-        return NextResponse.json({ users });
+        return NextResponse.json({ success: true, data: users, message: "Users fetched successfully." });
 
-    } catch (error) {
-        console.error("User search API error:", error);
-        return NextResponse.json({ users: [] }, { status: 500 });
+    } catch (err) {
+        console.error("User search API error:", err);
+        return NextResponse.json(
+            { success: false, data: [], message: "Internal server error." },
+            { status: 500 }
+        );
     }
 }

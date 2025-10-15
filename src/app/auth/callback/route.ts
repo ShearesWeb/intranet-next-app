@@ -1,22 +1,33 @@
-// C:\Ron\intranet-next-app\src\app\auth\callback\route.ts
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
+import { createClient } from "@/utils/supabase/server";
+import { fetchUserInfo } from "@/lib/fetch-user-info";
 
 export async function GET(request: Request) {
-    const requestUrl = new URL(request.url);
-    const code = requestUrl.searchParams.get('code');
+    const { searchParams, origin } = new URL(request.url);
 
-    if (code) {
-        const supabase = createRouteHandlerClient({ cookies });
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
+    // Extract auth code and optional redirect path
+    const code = searchParams.get("code");
+    const next = searchParams.get("next") ?? "/";
 
-        if (error) {
-            console.error('Auth callback error:', error);
-            return NextResponse.redirect(`${requestUrl.origin}/auth/login?error=auth_error`);
+    if (!code) return NextResponse.redirect(`${origin}/auth/auth-error?reason=no_code`);
+
+    const supabase = await createClient();
+
+    // Exchange the auth code for a session
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) return NextResponse.redirect(`${origin}/auth/auth-error?reason=code_exchange_failed`);
+
+    try {
+        const userItem = await fetchUserInfo(true);
+        if (!userItem) {
+            await supabase.auth.signOut();
+            return NextResponse.redirect(`${origin}/auth/auth-error?reason=user_not_found`);
         }
+    } catch (error) {
+        console.error("Error fetching user info:", error);
+        return NextResponse.redirect(`${origin}/auth/auth-error?reason=user_not_found`);
     }
 
-    // Redirect to dashboard after successful authentication
-    return NextResponse.redirect(`${requestUrl.origin}/dashboard/home`);
+    // Redirect to the intended path or fallback to homepage
+    return NextResponse.redirect(`${origin}${next}`);
 }

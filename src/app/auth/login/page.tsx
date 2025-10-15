@@ -1,175 +1,38 @@
-// C:\Ron\intranet-next-app\src\app\auth\login\page.tsx
 "use client";
+import { LoginForm } from "@/components/auth/login-form";
+import { Avatar } from "@/components/ui/avatar";
+import { AvatarImage } from "@radix-ui/react-avatar";
+import Link from "next/link";
+import { Suspense } from 'react'
 
-import { useAuth } from "@/context/AuthContext";
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
-import toast from "react-hot-toast";
-
-import Image from "next/image";
-import { StyleSheet, css } from "aphrodite";
-
-
-
-export default function Home() {
-	const router = useRouter();
-	const { user, loading, signIn, signOut } = useAuth();
-
-	useEffect(() => {
-		if (user) {
-			router.push('/dashboard/home');
-		}
-	}, [user, router]);
-
-	const handleSignIn = async () => {
-		try {
-			await signIn();
-			toast.success("Redirecting to Google...");
-		} catch (error) {
-			console.error("Sign-in error:", error);
-			toast.error("Sign in failed!");
-		}
-	};
-
-	const handleSignOut = async () => {
-		try {
-			await signOut();
-			toast.success("Sign out successful!");
-			router.push("/auth/login");
-		} catch (e) {
-			console.error("Sign-out error:", e);
-			toast.error("Sign out failed!");
-		}
-	};
+export default function LoginPage() {
 
 	return (
-		!loading && (
-			<div className={css(styles.container)}>
-				<div className={css(styles.leftPane)}>
-					<div className={css(styles.logoContainer)}>
-						<Image
-							src="/images/lion_logo.png"
-							alt="Lion Logo"
-							width={90}
-							height={90}
-							className={css(styles.logoImage)}
-						/>
-						Sheares Intranet
+		<Suspense>
+			<div className="grid min-h-svh lg:grid-cols-2">
+				<div className="flex flex-col gap-4 p-6 md:p-10">
+					<div className="flex justify-center gap-2 md:justify-start">
+						<Link href="/" className="flex items-center gap-2 font-medium">
+							<Avatar>
+								<AvatarImage src="/images/shweb-logo.png" />
+							</Avatar>
+							Sheares Web Intranet
+						</Link>
+					</div>
+					<div className="flex flex-1 items-center justify-center">
+						<div className="w-full max-w-sm">
+							<LoginForm />
+						</div>
 					</div>
 				</div>
-
-				<div className={css(styles.rightPane)}>
-					<h1 className={css(styles.welcomeTitle)}>
-						<span className={css(styles.welcomeText)}>Welcome</span>
-						<br />
-						<span>Shearites!</span>
-					</h1>
-
-					<hr className={css(styles.divider)} />
-
-					{user && (
-						<button className={css(styles.signoutButton)} onClick={handleSignOut}>
-							Sign Out
-						</button>
-					)}
-					{!user && (
-						<>
-							<button className={css(styles.signinButton)} onClick={handleSignIn}>
-								<span className={css(styles.arrow)}>→</span> Sign In with Google
-							</button>
-							<p className={css(styles.description)}>
-								The intranet is a place where shearites.<br /> can rank and view their CCAs.
-							</p>
-						</>
-					)}
-					{user && <p className={css(styles.userInfo)}>Welcome User: {user?.user_metadata?.full_name || user?.email}</p>}
+				<div className="bg-muted hidden lg:flex bg-primary justify-center items-center relative" style={{ height: '100vh' }}>
+					<img
+						src="/images/shweb-logo.png"
+						alt="Image"
+						className="w-1/2 object-cover dark:brightness-[0.2] dark:grayscale"
+					/>
 				</div>
 			</div>
-		)
-	);
+		</Suspense>
+	)
 }
-
-const styles = StyleSheet.create({
-	container: {
-		display: 'flex',
-		flexDirection: 'row',
-		minHeight: '100vh',
-		width: '100%',
-		fontFamily: 'Reem Kufi, sans-serif',
-		fontWeight: 600
-	},
-	leftPane: {
-		flex: 2,
-		background: 'linear-gradient(to bottom, #FFCD9D, #FC8B1A, #FF6F00)',
-		color: '#FFFFFF',
-		display: 'flex',
-		justifyContent: 'center',
-		alignItems: 'center',
-		fontSize: '2rem',
-		fontWeight: 600
-	},
-	logoContainer: {
-		display: 'flex',
-		alignItems: 'center'
-	},
-	logoImage: {
-		borderRadius: '50%',
-		marginRight: '20px'
-	},
-	rightPane: {
-		flex: 1,
-		background: '#FFFFFF',
-		color: '#FF8C00',
-		display: 'flex',
-		flexDirection: 'column',
-		justifyContent: 'center',
-		alignItems: 'center',
-		padding: '2rem'
-	},
-	welcomeTitle: {
-		fontSize: '50px',
-		fontWeight: 600,
-		marginBottom: '2rem'
-	},
-	welcomeText: {
-		display: 'inline-block',
-		marginLeft: '8px'
-	},
-	divider: {
-		width: '80%',
-		border: '0.5px solid black',
-		marginBottom: '2rem'
-	},
-	signinButton: {
-		background: '#FF8C1A',
-		color: 'white',
-		padding: '8.85px 21.23px 8.85px 16.81px',
-		fontSize: '14px',
-		fontWeight: 500,
-		borderRadius: '12px'
-	},
-	signoutButton: {
-		background: '#FF8C1A',
-		color: 'white',
-		padding: '12px 24px',
-		fontSize: '18px',
-		fontWeight: 500,
-		borderRadius: '8px'
-	},
-	arrow: {
-		marginRight: '5px'
-	},
-	description: {
-		paddingTop: '2rem',
-		fontSize: '14px',
-		color: '#B7B7B7',
-		textAlign: 'center'
-	},
-	userInfo: {
-		marginTop: '1rem',
-		fontWeight: 600
-	},
-	errorMessage: {
-		color: 'red'
-	}
-});

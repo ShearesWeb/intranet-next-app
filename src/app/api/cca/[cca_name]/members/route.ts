@@ -1,6 +1,6 @@
 // src/app/api/cca/[cca_name]/members/route.ts
 import { NextResponse } from "next/server";
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createClient } from "@/utils/supabase/server";
 import { cookies } from 'next/headers';
 import { phaseService } from '@/lib/phaseService';
 
@@ -22,7 +22,7 @@ export async function GET(
     try {
         const { cca_name } = await params;
         const decodedCcaName = decodeURIComponent(cca_name);
-        const supabase = createRouteHandlerClient({ cookies });
+        const supabase = await createClient();
 
         // Verify authentication
         const { data: { user }, error: authError } = await supabase.auth.getUser();
