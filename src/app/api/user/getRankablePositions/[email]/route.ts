@@ -67,7 +67,7 @@ export async function GET(
 
         // ✅ Get ALL available positions for the current phase
         const { data: availablePositions, error: positionsError } = await supabase
-            .from('cca_position_info')
+            .from('cca_capacity_info')
             .select(`
                 id,
                 name,

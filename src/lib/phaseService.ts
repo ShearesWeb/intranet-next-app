@@ -33,7 +33,7 @@ export class PhaseService {
         // return 'maincomm_results_processing_test';
         // return 'maincomm_results_available_test';
         // return 'subcomm_interviews_test';
-        // return 'subcomm_concurrent_ranking_test';
+        return 'subcomm_concurrent_ranking_test';
         // return 'subcomm_results_processing_test';
         // return 'full_results_available_test';
         return null; // ✅ Default: no override (uses real database phases)
