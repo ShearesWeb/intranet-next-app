@@ -6,6 +6,7 @@ import Sidebar from '@/components/Sidebar';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import toast from 'react-hot-toast';
+import { AppLayout } from '@/components/layout/app-layout';
 
 //shadcn UI
 import { Button } from "@/components/ui/button";
@@ -477,7 +478,7 @@ export default function ManageMembersPage() {
 
     return (
         <div className="flex h-screen font-sans bg-white overflow-auto">
-            <Sidebar />
+            <AppLayout>
             <div className="flex-1 flex flex-col p-16">
                 <div className="mb-6">
                     <div className="flex justify-between items-center mb-4">
@@ -564,6 +565,7 @@ export default function ManageMembersPage() {
                     </div>
 
             </div>
+            </AppLayout>
 
             {/* Add Member Modal */}
             {showAddMemberModal && (
