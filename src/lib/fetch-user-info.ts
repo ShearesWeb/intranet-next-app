@@ -32,7 +32,7 @@ export async function fetchUserInfo(ignoreCache = false): Promise<User | null> {
     console.log("Fetching user info from database for", user.email);
     const { data, error } = await supabase
         .from("authenticated_user_info")
-        .select("id, email, name, room, points, profile_photo_path, is_admin ,is_jcrc")
+        .select("id, email, name, room, profile_photo_path, is_admin ,is_jcrc")
         .eq("email", user.email)
         .single();
 

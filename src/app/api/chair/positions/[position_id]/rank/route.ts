@@ -1,18 +1,19 @@
 // src\app\api\chair\positions\[position_id]\rank\route.ts
-
+// API route to save rankings for applicants as a chairperson
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-import { cookies } from 'next/headers';
+import { fetchUserId } from "@/lib/fetch-user-info";
+import { checkCCAChairAuthorization } from "@/lib/lead-auth-service";
 
 export async function POST(request: Request, { params }: { params: Promise<{ position_id: string }> }) {
     try {
         const { position_id } = await params;
         const supabase = await createClient();
 
-        // Verify authentication
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        // Verify authentication and get user ID
+        const requestingUserId = await fetchUserId();
 
-        if (authError || !user) {
+        if (!requestingUserId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
@@ -26,18 +27,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ pos
             return NextResponse.json({ error: 'Missing or invalid rankings array' }, { status: 400 });
         }
 
-        // Get user data
-        const { data: userData } = await supabase
-            .from('public_user_info')
-            .select('id')
-            .eq('email', user.email)
-            .single();
-
-        if (!userData) {
-            return NextResponse.json({ error: 'User not found' }, { status: 404 });
-        }
-
-        // ✅ CORRECTED AUTHORIZATION LOGIC
         // Step 1: Get the CCA that this position belongs to
         const { data: targetPosition } = await supabase
             .from('cca_positions')
@@ -50,40 +39,39 @@ export async function POST(request: Request, { params }: { params: Promise<{ pos
         }
 
         // Step 2: Check if user has chair/head/vice appointment for ANY position in the same CCA
-        const { data: userAppointments } = await supabase
-            .from('cca_appointments')
-            .select(`
-                cca_positions!inner (
-                cca_id,
-                position_type
-                )
-            `)
-            .eq('user_id', userData.id)
-            .eq('cca_positions.cca_id', targetPosition.cca_id)
-            .in('cca_positions.position_type', ['lead', 'vice'])
-            .not('position_id', 'is', null);
-
-        if (!userAppointments || userAppointments.length === 0) {
+        const authResult = await checkCCAChairAuthorization(requestingUserId, targetPosition.cca_id, supabase);
+        if (!authResult.authorized) {
             return NextResponse.json({
                 error: 'Unauthorized: Not a lead/vice for this CCA'
             }, { status: 403 });
         }
 
-        // Update rankings for all applicants
-        const updatePromises = rankings.map(async (ranking: { user_id: number; ranking: number }) => {
-            const { error } = await supabase
-                .from('cca_user_ranking')
-                .update({ ranking: ranking.ranking })
-                .eq('user_id', ranking.user_id)
-                .eq('position_id', positionId);
+        // Delete existing rankings for this position to avoid conflicts
+        const { error: deleteError } = await supabase
+            .from('cca_user_ranking')
+            .delete()
+            .eq('position_id', positionId);
 
-            if (error) {
-                console.error(`Error updating ranking for user ${ranking.user_id}:`, error);
-                throw error;
-            }
-        });
+        if (deleteError) {
+            console.error('Error deleting existing rankings:', deleteError);
+            return NextResponse.json({ error: 'Failed to clear existing rankings' }, { status: 500 });
+        }
 
-        await Promise.all(updatePromises);
+        // Insert new rankings
+        const rankingRecords = rankings.map((ranking: { user_id: number; ranking: number }) => ({
+            user_id: ranking.user_id,
+            position_id: positionId,
+            ranking: ranking.ranking
+        }));
+
+        const { error: insertError } = await supabase
+            .from('cca_user_ranking')
+            .insert(rankingRecords);
+
+        if (insertError) {
+            console.error('Error inserting new rankings:', insertError);
+            return NextResponse.json({ error: 'Failed to save new rankings' }, { status: 500 });
+        }
 
         return NextResponse.json({
             success: true,
@@ -96,4 +84,3 @@ export async function POST(request: Request, { params }: { params: Promise<{ pos
         return NextResponse.json({ error: 'Server error' }, { status: 500 });
     }
 }
-

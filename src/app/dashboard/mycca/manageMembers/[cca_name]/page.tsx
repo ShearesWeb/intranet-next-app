@@ -123,7 +123,7 @@ export default function ManageMembersPage() {
         try {
             const response = await fetch(`/api/user/search?query=${encodeURIComponent(query)}`);
             const data = await response.json();
-            setUserSearchResults(data.users || []);
+            setUserSearchResults(data.data || []);
         } catch (error) {
             console.error('Error searching users:', error);
             toast.error('Failed to search users');

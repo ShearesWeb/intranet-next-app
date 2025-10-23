@@ -1,18 +1,19 @@
 // src\app\api\chair\positions\[position_id]\removeApplicant\route.ts
-
+// API route to remove a ranked applicant
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-import { cookies } from 'next/headers';
+import { fetchUserId } from "@/lib/fetch-user-info";
+import { checkCCAChairAuthorization } from "@/lib/lead-auth-service";
 
 export async function POST(request: Request, { params }: { params: Promise<{ position_id: string }> }) {
     try {
         const { position_id } = await params;
         const supabase = await createClient();
 
-        // Verify authentication
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        // Verify authentication and get user ID
+        const requestingUserId = await fetchUserId();
 
-        if (authError || !user) {
+        if (!requestingUserId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
@@ -26,17 +27,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ pos
             return NextResponse.json({ error: 'Missing user_id' }, { status: 400 });
         }
 
-        // Get user data
-        const { data: userData } = await supabase
-            .from('public_user_info')
-            .select('id')
-            .eq('email', user.email)
-            .single();
-
-        if (!userData) {
-            return NextResponse.json({ error: 'User not found' }, { status: 404 });
-        }
-
         // Check if user has lead/vice appointment for this CCA
         const { data: targetPosition } = await supabase
             .from('cca_positions')
@@ -48,20 +38,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ pos
             return NextResponse.json({ error: 'Position not found' }, { status: 404 });
         }
 
-        const { data: userAppointments } = await supabase
-            .from('cca_appointments')
-            .select(`
-                cca_positions!inner (
-                cca_id,
-                position_type
-                )
-            `)
-            .eq('user_id', userData.id)
-            .eq('cca_positions.cca_id', targetPosition.cca_id)
-            .in('cca_positions.position_type', ['lead', 'vice'])
-            .not('position_id', 'is', null);
-
-        if (!userAppointments || userAppointments.length === 0) {
+        const authResult = await checkCCAChairAuthorization(requestingUserId, targetPosition.cca_id, supabase);
+        if (!authResult.authorized) {
             return NextResponse.json({
                 error: 'Unauthorized: Not a lead/vice for this CCA'
             }, { status: 403 });

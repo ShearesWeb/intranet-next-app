@@ -1,29 +1,22 @@
+// src/app/api/user/checkRole/route.ts
+// API route to check if a user has lead/vice roles and return their positions
 import { NextResponse } from "next/server";
-import { cookies } from 'next/headers';
 import { createClient } from "@/utils/supabase/server";
 import { cache } from 'react';
+import { fetchUserId } from "@/lib/fetch-user-info";
+import { AUTHORIZED_CHAIR_ROLES } from '@/lib/lead-auth-service';
 
-const getCachedUserRole = cache(async (email: string, supabase: any) => {
-    const { data: user, error: userError } = await supabase
-        .from('public_user_info')
-        .select('id')
-        .eq('email', email)
-        .single();
-
-    if (userError || !user) {
-        return { isAuthorized: false, positions: [] };
-    }
-
+const getCachedUserRole = cache(async (userId: number, supabase: any) => {
     const { data: appointments, error: appointmentError } = await supabase
         .from('cca_appointments')
         .select('position_id')
-        .eq('user_id', user.id);
+        .eq('user_id', userId);
 
     if (appointmentError || !appointments || appointments.length === 0) {
         return { isAuthorized: false, positions: [] };
     }
 
-    const positionIds = appointments.map(app => app.position_id);
+    const positionIds = appointments.map((app: any) => app.position_id);
 
     const { data: positions, error: positionError } = await supabase
         .from('cca_positions')
@@ -39,48 +32,49 @@ const getCachedUserRole = cache(async (email: string, supabase: any) => {
         return { isAuthorized: false, positions: [] };
     }
 
-    const authorizedRoles = ['lead', 'vice'];
+    const authorizedRoles = AUTHORIZED_CHAIR_ROLES;
 
     // ✅ FIXED: Handle ccas as array
-    const userPositions = positions.map(pos => ({
+    const userPositions = positions.map((pos: any) => ({
         position: pos.name,
         position_type: pos.position_type,
-        cca: pos.ccas?.[0]?.name || 'Unknown' // ✅ Array access
+        cca: pos.ccas?.[0]?.name || 'Unknown'
     }));
 
-    const isAuthorized = userPositions.some(pos =>
+    const isAuthorized = userPositions.some((pos: any) =>
         authorizedRoles.includes(pos.position_type.toLowerCase())
     );
 
     return {
         isAuthorized,
-        positions: userPositions.map(pos =>
+        positions: userPositions.map((pos: any) =>
             `${pos.position} (${pos.position_type}) - ${pos.cca}`
         )
     };
 });
 
-export async function GET(
-    request: Request,
-    { params }: { params: Promise<{ email: string }> }
-) {
+export async function GET(request: Request) {
     try {
-        const { email } = await params;
-
         const headers = {
             'Cache-Control': 'private, s-maxage=600, stale-while-revalidate=1200',
             'Content-Type': 'application/json',
         };
 
-        const getCookies = () => cookies();
-        const supabase = await createClient();
+        // user ID from cookie
+        const userId = await fetchUserId();
 
-        const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
-        if (authError || !authUser) {
-            return NextResponse.json({ isAuthorized: false, positions: [] }, { headers });
+        if (!userId) {
+            return NextResponse.json({
+                isAuthorized: false,
+                positions: []
+            }, {
+                status: 401,
+                headers
+            });
         }
 
-        const roleResult = await getCachedUserRole(email, supabase);
+        const supabase = await createClient();
+        const roleResult = await getCachedUserRole(userId, supabase);
 
         return NextResponse.json(roleResult, { headers });
 

@@ -42,7 +42,7 @@ export const useRoleAuth = () => {
                 }
 
                 // ✅ Fetch from API with cache headers
-                const response = await fetch(`/api/user/checkRole/${user.email}`, {
+                const response = await fetch(`/api/user/checkRole`, {
                     headers: {
                         'Cache-Control': 'max-age=300', // Respect server cache
                     }
