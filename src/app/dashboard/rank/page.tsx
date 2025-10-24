@@ -276,7 +276,7 @@ export default function RankCCA() {
             idField="id"
             searchColumn="name"
             searchPlaceholder="Filter by name, CCA, or description..."
-            pageSize={5}
+            pageSize={10}
             emptyMessage="No positions found."
           />
         </div>
