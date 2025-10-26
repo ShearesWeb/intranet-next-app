@@ -1,11 +1,15 @@
-// C:\Ron\intranet-next-app\src\app\dashboard\rankApplicants\page.tsx
 'use client';
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import Sidebar from '@/components/Sidebar';
 import { useAuth } from '@/context/AuthContext';
 import { usePhaseInfo } from '@/hooks/usePhaseInfo';
 import toast from 'react-hot-toast';
+import { AppLayout } from '@/components/layout/app-layout';
+import { AppLoading } from '@/components/layout/app-loading';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { ArrowUp, ArrowDown, X, Search, Loader2 } from 'lucide-react';
 
 // Types
 interface Applicant {
@@ -39,16 +43,16 @@ function LoadingOverlay({ visible }: { visible: boolean }) {
     if (!visible) return null;
 
     return (
-        <div style={styles.loadingOverlay}>
-            <div style={styles.loadingContent}>
-                <div style={styles.spinner}></div>
-                <p style={styles.loadingText}>Saving rankings...</p>
-            </div>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]">
+            <Card className="p-8 flex flex-col items-center shadow-xl">
+                <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+                <p className="text-lg font-semibold text-foreground">Saving rankings...</p>
+            </Card>
         </div>
     );
 }
 
-// ✅ FIXED: PositionSearchBox with loading state and proper user data handling
+// Position Search Box Component
 function PositionSearchBox({
     onAddApplicant
 }: {
@@ -59,7 +63,7 @@ function PositionSearchBox({
     const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
     const [isUserFocused, setIsUserFocused] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-    const [isSearching, setIsSearching] = useState(false); // ✅ NEW: Loading state
+    const [isSearching, setIsSearching] = useState(false);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -86,14 +90,13 @@ function PositionSearchBox({
         }
     }, [isUserFocused]);
 
-    // ✅ FIXED: Search with loading state
     const handleSearch = useCallback(async () => {
         if (searchTerm.length < 2) {
             setSearchResults([]);
             return;
         }
 
-        setIsSearching(true); // ✅ Show loading state
+        setIsSearching(true);
         try {
             const res = await fetch(`/api/user/search?query=${encodeURIComponent(searchTerm)}`);
             if (!res.ok) {
@@ -106,7 +109,7 @@ function PositionSearchBox({
             setSearchResults([]);
             toast.error('Search failed. Please try again.');
         } finally {
-            setIsSearching(false); // ✅ Hide loading state
+            setIsSearching(false);
         }
     }, [searchTerm]);
 
@@ -117,9 +120,8 @@ function PositionSearchBox({
         }
     }, []);
 
-    // ✅ FIXED: Pass complete user data instead of just ID
     const handleResultClick = useCallback((userData: UserSearchResult) => {
-        onAddApplicant(userData); // Pass full user data
+        onAddApplicant(userData);
         if (inputRef.current) {
             inputRef.current.value = '';
             setSearchTerm('');
@@ -129,11 +131,10 @@ function PositionSearchBox({
     }, [onAddApplicant]);
 
     return (
-        <div ref={containerRef} style={styles.searchContainer}>
-            <div style={styles.searchInputContainer}>
-                <input
+        <div ref={containerRef} className="relative mb-2">
+            <div className="flex gap-2 items-center">
+                <Input
                     ref={inputRef}
-                    style={styles.searchInput}
                     type="text"
                     placeholder="Search user by name/email/room"
                     value={searchTerm}
@@ -142,27 +143,34 @@ function PositionSearchBox({
                     onBlur={handleBlur}
                     onKeyPress={(e) => e.key === 'Enter' && !isSearching && handleSearch()}
                     autoComplete="off"
-                    disabled={isSearching} // ✅ Disable during search
+                    disabled={isSearching}
+                    className="flex"
                 />
-                {/* ✅ FIXED: Search button with loading state */}
-                <button
-                    style={isSearching ? styles.searchButtonLoading : styles.searchButton}
+                <Button
                     onClick={handleSearch}
                     disabled={searchTerm.length < 2 || isSearching}
+                    className="gap-2 flex-shrink-0"
                 >
-                    {isSearching ? 'Loading...' : 'Search'}
-                </button>
+                    {isSearching ? (
+                        <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Loading...
+                        </>
+                    ) : (
+                        <>
+                            <Search className="h-4 w-4" />
+                            Search
+                        </>
+                    )}
+                </Button>
             </div>
 
             {searchResults.length > 0 && (
-                <div
-                    style={styles.searchResultsContainer}
-                    data-search-results="true"
-                >
+                <div className="absolute mt-1 top-full bg-background border rounded-md shadow-lg z-10 max-h-[200px] overflow-y-auto">
                     {searchResults.map(user => (
                         <div
                             key={user.id}
-                            style={styles.searchResultItem}
+                            className="p-2 cursor-pointer border-b last:border-b-0 hover:bg-accent transition-colors"
                             onMouseDown={(e) => e.preventDefault()}
                             onClick={() => handleResultClick(user)}
                         >
@@ -175,7 +183,7 @@ function PositionSearchBox({
     );
 }
 
-// PositionCard component
+// Position Card Component
 function PositionCard(props: {
     position: Position;
     positionIndex: number;
@@ -197,94 +205,119 @@ function PositionCard(props: {
     } = props;
 
     return (
-        <div style={styles.positionCard}>
-            <div style={styles.rankNumber}></div>
-            <div style={styles.positionInfo}>
-                <h3 style={styles.positionName}>
-                    {position.name}
-                </h3>
-                <p style={styles.ccaName}>{position.cca_name}</p>
-                <div style={styles.positionMeta}>
-                    <span style={styles.positionType}>
-                        {position.position_type === 'maincomm'
-                            ? 'Main Committee'
-                            : position.position_type === 'subcomm'
-                                ? 'Sub Committee'
-                                : position.position_type
-                        }
-                    </span>
-                    <span style={styles.capacity}>Available Capacity: {position.available_capacity}</span>
+        <Card className="shadow-sm transition-all hover:shadow-md mb-6">
+            <div className="flex items-start p-5 gap-4">
+                <div className="text-2xl font-bold text-muted-foreground pr-5 min-w-[40px] text-center mt-1.5">
+                    {/* Rank number placeholder */}
                 </div>
-            </div>
-            <div style={styles.searchAndApplicantsContainer}>
-                <PositionSearchBox onAddApplicant={onAddApplicant} />
-
-                {position.applicants.length === 0 ? (
-                    <div style={styles.noApplicants}>
-                        <p>No applicants added for this position. Use the search above to find and add applicants.</p>
+                
+                <div className="mr-6">
+                    <h3 className="text-lg font-bold text-foreground">
+                        {position.name}
+                    </h3>
+                    <p className="py-2 text-base text-muted-foreground">
+                        {position.cca_name}
+                    </p>
+                    <div className="inline-flex items-center justify-center mb-2 gap-2">
+                        <span className="text-xs px-2 py-1.5 gap-1.5 bg-primary/10 text-primary rounded-xs font-bold">
+                            {position.position_type === 'maincomm'
+                                ? 'Main Committee'
+                                : position.position_type === 'subcomm'
+                                    ? 'Sub Committee'
+                                    : position.position_type
+                            }
+                        </span>
+                        <span className="flex p-1 text-sm text-muted-foreground self-center">
+                            Available Capacity: {position.available_capacity}
+                        </span>
                     </div>
-                ) : (
-                    <>
-                        <div style={styles.applicantsHeader}>
-                            Applicants ({position.applicants.length})
-                            {position.applicants.length < position.available_capacity && (
-                                <span style={styles.warningText}>
-                                    Warning: Fewer applicants than available slots.
-                                </span>
-                            )}
+                </div>
+
+                <div className="flex-1 px-4">
+                    <PositionSearchBox onAddApplicant={onAddApplicant} />
+                    {position.applicants.length === 0 ? (
+                        <div className="text-red-500 mb-2.5 text-sm p-2">
+                            <p>No applicants added for this position. Use the search above to find and add applicants.</p>
                         </div>
-                        {position.applicants.map((app: Applicant, appIdx: number) => (
-                            <div key={app.id || `applicant-${appIdx}`} style={styles.applicantCard}>
-                                <div style={styles.rankNumber}>{appIdx + 1}</div>
-                                <div style={styles.applicantInfo}>
-                                    <div style={styles.applicantName}>{app.name}</div>
-                                    <div style={styles.applicantDetails}>
-                                        {app.email} | Room {app.room}
+                    ) : (
+                        <>
+                            <div className="mb-2.5 text-medium font-light p-2">
+                                Applicants ({position.applicants.length})
+                                {position.applicants.length < position.available_capacity && (
+                                    <span className="text-red-500 text-medium ml-1">
+                                            Warning: Fewer applicants than available slots.
+                                    </span>
+                                )}
+                            </div>
+                            {position.applicants.map((app: Applicant, appIdx: number) => (
+                                <div 
+                                    key={app.id || `applicant-${appIdx}`} 
+                                    className="flex items-center border-b border-gray-100 py-1.5 mb-5"
+                                >
+                                    <div className="text-2xl p-5 font-bold text-muted-foreground mr-5 min-w-[40px] text-center">
+                                        {appIdx + 1}
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="font-medium text-foreground">
+                                            {app.name}
+                                        </div>
+                                        <div className="text-sm text-muted-foreground">
+                                            {app.email} | Room {app.room}
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col gap-2 ml-4">
+                                        <Button
+                                            variant="outline"
+                                            size="icon"
+                                            className="h-8 w-8"
+                                            onClick={() => onMoveApplicant(appIdx, -1)}
+                                            disabled={appIdx === 0}
+                                            title="Move up"
+                                        >
+                                            <ArrowUp className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="icon"
+                                            className="h-8 w-8"
+                                            onClick={() => onMoveApplicant(appIdx, 1)}
+                                            disabled={appIdx === position.applicants.length - 1}
+                                            title="Move down"
+                                        >
+                                            <ArrowDown className="h-4 w-4" />
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="icon"
+                                            className="h-8 w-8 hover:text-destructive"
+                                            onClick={() => onRemoveApplicant(app.id)}
+                                            title="Remove from consideration"
+                                        >
+                                            <X className="h-4 w-4 text-red-500" />
+                                        </Button>
                                     </div>
                                 </div>
-                                <div style={styles.controls}>
-                                    <button
-                                        style={appIdx === 0 ? styles.controlButtonDisabled : styles.controlButton}
-                                        onClick={() => onMoveApplicant(appIdx, -1)}
-                                        disabled={appIdx === 0}
-                                        title="Move up"
-                                    >
-                                        ↑
-                                    </button>
-                                    <button
-                                        style={appIdx === position.applicants.length - 1 ? styles.controlButtonDisabled : styles.controlButton}
-                                        onClick={() => onMoveApplicant(appIdx, 1)}
-                                        disabled={appIdx === position.applicants.length - 1}
-                                        title="Move down"
-                                    >
-                                        ↓
-                                    </button>
-                                    <button
-                                        style={{ ...styles.controlButton, color: '#B91C1C' }}
-                                        onClick={() => onRemoveApplicant(app.id)}
-                                        title="Remove from consideration"
-                                    >
-                                        ✕
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                    </>
-                )}
-                <button
-                    style={saving
-                        ? styles.saveButtonDisabled
-                        : hasChanges
-                            ? styles.saveButtonChanged
-                            : styles.saveButtonDisabled
-                    }
-                    onClick={onSaveRankings}
-                    disabled={saving || !hasChanges}
-                >
-                    {saving ? 'Saving...' : 'Save Rankings'}
-                </button>
+                            ))}
+                        </>
+                    )}
+                    
+                    <Button
+                        onClick={onSaveRankings}
+                        disabled={saving || !hasChanges}
+                        className="mt-6 font-semibold"
+                        variant={hasChanges ? "default" : "secondary"}>
+                        {saving ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Saving...
+                            </>
+                        ) : (
+                            'Save Rankings'
+                        )}
+                    </Button>
+                </div>
             </div>
-        </div>
+        </Card>
     );
 }
 
@@ -297,8 +330,10 @@ export default function RankApplicants() {
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [originalOrders, setOriginalOrders] = useState<{ [positionId: number]: number[] }>({});
     const [hasChanges, setHasChanges] = useState<{ [positionId: number]: boolean }>({});
+    const [mounted, setMounted] = useState(false);
 
-    // ✅ FIXED: Fetch positions with cache-busting for fresh data
+    useEffect(() => setMounted(true), []);
+
     const fetchPositions = useCallback(async (bustCache = false) => {
         if (!user?.email) return;
 
@@ -306,7 +341,6 @@ export default function RankApplicants() {
             const url = `/api/chair/positions/forChair`;
             const headers: HeadersInit = {};
 
-            // ✅ Cache busting when needed (after saves)
             if (bustCache) {
                 headers['Cache-Control'] = 'no-cache';
                 headers['Pragma'] = 'no-cache';
@@ -314,8 +348,6 @@ export default function RankApplicants() {
 
             const response = await fetch(url, { headers });
             const data = await response.json();
-
-            // console.log("DATA DATA DATA: ", data)
 
             setPositions(data.positions || []);
 
@@ -354,12 +386,10 @@ export default function RankApplicants() {
         }));
     }, [originalOrders]);
 
-    // ✅ FIXED: Add applicant with proper user data (no more "Loading...")
     const handleAddApplicant = useCallback((positionId: number, userData: UserSearchResult) => {
         setPositions(prevPositions => {
             const newPositions = prevPositions.map(pos => {
                 if (pos.id === positionId) {
-                    // Check if user already exists
                     if (pos.applicants.some(app => app.id === userData.id)) {
                         toast.error('Applicant already added to this position');
                         return pos;
@@ -369,7 +399,7 @@ export default function RankApplicants() {
                         id: userData.id,
                         name: userData.name,
                         email: userData.email,
-                        room: userData.room || 'N/A', // ✅ Proper room handling
+                        room: userData.room || 'N/A',
                         ranking: null
                     };
 
@@ -387,7 +417,6 @@ export default function RankApplicants() {
 
             return newPositions;
         });
-
     }, [checkForChanges]);
 
     const handleRemoveApplicant = useCallback((positionId: number, userId: number) => {
@@ -408,7 +437,6 @@ export default function RankApplicants() {
 
             return newPositions;
         });
-
     }, [checkForChanges]);
 
     const handleMoveApplicant = useCallback((positionIndex: number, applicantIndex: number, delta: number) => {
@@ -438,11 +466,7 @@ export default function RankApplicants() {
             const toAdd = currentApplicantIds.filter(id => !originalApplicantIds.includes(id));
             const toRemove = originalApplicantIds.filter(id => !currentApplicantIds.includes(id));
 
-            // console.log(`Saving for position ${position.id}:`, { toAdd, toRemove });
-
-            // Add new applicants to backend
             for (const userId of toAdd) {
-                // console.log(`Adding user ${userId} to position ${position.id}`);
                 const response = await fetch(`/api/chair/positions/${position.id}/addApplicant`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -456,12 +480,9 @@ export default function RankApplicants() {
                 }
 
                 await response.json();
-                // console.log(`Successfully added user ${userId}:`, result);
             }
 
-            // Remove applicants from backend
             for (const userId of toRemove) {
-                // console.log(`Removing user ${userId} from position ${position.id}`);
                 const response = await fetch(`/api/chair/positions/${position.id}/removeApplicant`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -475,17 +496,13 @@ export default function RankApplicants() {
                 }
 
                 await response.json();
-                // console.log(`Successfully removed user ${userId}:`, result);
             }
 
-            // Save the current ranking order
             if (position.applicants.length > 0) {
                 const rankings = position.applicants.map((a, i) => ({
                     user_id: a.id,
                     ranking: i + 1,
                 }));
-
-                // console.log(`Updating rankings for position ${position.id}:`, rankings);
 
                 const response = await fetch(`/api/chair/positions/${position.id}/rank`, {
                     method: 'POST',
@@ -500,7 +517,6 @@ export default function RankApplicants() {
                 }
 
                 await response.json();
-                // console.log(`Successfully updated rankings:`, result);
             }
 
             return true;
@@ -511,8 +527,6 @@ export default function RankApplicants() {
         }
     }, [originalOrders]);
 
-
-    // ✅ FIXED: Refresh data after save with cache busting
     const handleSaveRankings = useCallback(async (position: Position) => {
         setSaving(position.id);
         setIsLoading(true);
@@ -521,9 +535,7 @@ export default function RankApplicants() {
             const success = await saveRankingsForPosition(position);
 
             if (success) {
-                // ✅ FIXED: Refresh positions with cache busting after save
                 await fetchPositions(true);
-
                 toast.success(`Rankings saved for ${position.name}!`);
             } else {
                 toast.error('Failed to save rankings');
@@ -536,14 +548,18 @@ export default function RankApplicants() {
         }
     }, [saveRankingsForPosition, fetchPositions]);
 
+    if (!mounted || !user) return <AppLoading />;
+
     if (loading || phaseLoading) {
         return (
-            <div style={styles.container}>
-                <Sidebar />
-                <div style={styles.content}>
-                    <div style={styles.loading}>Loading CCA positions and applicants...</div>
+            <AppLayout>
+                <div className="flex items-center justify-center min-h-[60vh]">
+                    <div className="text-center">
+                        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+                        <p className="text-muted-foreground">Loading CCA positions and applicants...</p>
+                    </div>
                 </div>
-            </div>
+            </AppLayout>
         );
     }
 
@@ -572,46 +588,58 @@ export default function RankApplicants() {
         };
 
         return (
-            <div style={styles.container}>
-                <Sidebar />
-                <div style={styles.content}>
-                    <div style={styles.header}>
-                        <h1 style={styles.title}>Rank Applicants for Your CCA</h1>
-                        <p style={styles.subtitle}>Manage and rank applicants for your CCA positions.</p>
-                    </div>
+            <AppLayout>
+                <div className="space-y-6 p-6">
+                    <Card className="border-none shadow-lg">
+                        <CardHeader>
+                            <CardTitle className="text-3xl">Rank Applicants for Your CCA</CardTitle>
+                            <p className="text-muted-foreground mt-2">
+                                Manage and rank applicants for your CCA positions.
+                            </p>
+                        </CardHeader>
+                    </Card>
 
-                    <div style={styles.emptyState}>
-                        <p>{getStatusMessage()}</p>
-                        {phaseInfo.nextPhaseDate && (
-                            <p><strong>Next Update:</strong> {phaseInfo.nextPhaseDate}</p>
-                        )}
-                    </div>
+                    <Card className="border-none shadow-lg">
+                        <CardContent className="pt-6 text-center">
+                            <p className="text-muted-foreground mb-2">{getStatusMessage()}</p>
+                            {phaseInfo.nextPhaseDate && (
+                                <p className="text-sm">
+                                    <strong>Next Update:</strong> {phaseInfo.nextPhaseDate}
+                                </p>
+                            )}
+                        </CardContent>
+                    </Card>
                 </div>
-            </div>
+            </AppLayout>
         );
     }
 
     return (
-        <div style={styles.container}>
-            <Sidebar />
-            <div style={styles.content}>
-                <div style={styles.header}>
-                    <h1 style={styles.title}>
-                        Rank Applicants for Your CCA
-                    </h1>
-                    <p style={styles.subtitle}>
-                        Search and add applicants, then arrange them in order of preference.
-                        Changes are saved only when you click the &quot;Save Rankings&quot; button.
-                    </p>
-                </div>
+        <AppLayout>
+            <div className="space-y-6 p-6">
+                <Card className="border-none shadow-lg">
+                    <CardHeader>
+                        <CardTitle className="text-4xl">Rank Applicants for Your CCA</CardTitle>
+                        <p className="text-muted-foreground mt-2">
+                            Search and add applicants, then arrange them in order of preference.
+                            Changes are saved only when you click the &quot;Save Rankings&quot; button.
+                        </p>
+                    </CardHeader>
+                </Card>
 
                 {positions.length === 0 ? (
-                    <div style={styles.emptyState}>
-                        <p>You do not have any CCA positions to manage as chair/head/vice.</p>
-                        <p>Check your database chair appointments or try switching users.</p>
-                    </div>
+                    <Card className="border-none shadow-lg">
+                        <CardContent className="pt-6 text-center">
+                            <p className="text-muted-foreground mb-2">
+                                You do not have any CCA positions to manage as chair/head/vice.
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                                Check your database chair appointments or try switching users.
+                            </p>
+                        </CardContent>
+                    </Card>
                 ) : (
-                    <div style={styles.rankingContainer}>
+                    <div className="space-y-7">
                         {positions.map((pos: Position, posIdx: number) => (
                             <PositionCard
                                 key={pos.id}
@@ -630,298 +658,6 @@ export default function RankApplicants() {
             </div>
 
             <LoadingOverlay visible={isLoading} />
-        </div>
+        </AppLayout>
     );
 }
-
-const styles = {
-    container: {
-        display: 'flex',
-        height: '100vh',
-        fontFamily: 'Arial, sans-serif'
-    },
-    content: {
-        flex: 1,
-        padding: '20px',
-        backgroundColor: '#FFFFFF',
-        color: '#2C2C2C',
-        overflow: 'auto'
-    },
-    header: {
-        marginBottom: '30px'
-    },
-    title: {
-        fontSize: '28px',
-        marginBottom: '10px',
-        fontWeight: 'bold',
-        color: '#4A4A4A'
-    },
-    subtitle: {
-        fontSize: '14px',
-        color: '#7A7A7A',
-        margin: '0'
-    },
-    loading: {
-        textAlign: 'center' as const,
-        fontSize: '16px',
-        color: '#7A7A7A',
-        marginTop: '50px'
-    },
-    emptyState: {
-        textAlign: 'center' as const,
-        padding: '50px 20px',
-        color: '#7A7A7A'
-    },
-    rankingContainer: {
-        display: 'flex',
-        flexDirection: 'column' as const,
-        gap: '28px'
-    },
-    positionCard: {
-        display: 'flex',
-        alignItems: 'flex-start',
-        padding: '20px',
-        backgroundColor: '#FFFFFF',
-        border: '1px solid #E5E7EB',
-        borderRadius: '8px',
-        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
-        transition: 'all 0.2s ease',
-        marginBottom: 4
-    },
-    rankNumber: {
-        fontSize: '22px',
-        fontWeight: 'bold',
-        color: '#6B7280',
-        marginRight: '20px',
-        minWidth: '40px',
-        textAlign: 'center' as const,
-        marginTop: '6px'
-    },
-    positionInfo: {
-        minWidth: '220px',
-        marginRight: '24px'
-    },
-    positionName: {
-        fontSize: '18px',
-        fontWeight: 'bold',
-        color: '#1F2937',
-        margin: '0 0 5px 0'
-    },
-    ccaName: {
-        fontSize: '16px',
-        color: '#4B5563',
-        margin: '0 0 10px 0'
-    },
-    positionMeta: {
-        display: 'flex',
-        gap: '15px',
-        marginBottom: '8px'
-    },
-    positionType: {
-        fontSize: '12px',
-        padding: '4px 8px',
-        backgroundColor: '#EFF6FF',
-        color: '#1D4ED8',
-        borderRadius: '4px',
-        fontWeight: 'bold'
-    },
-    capacity: {
-        fontSize: '12px',
-        color: '#6B7280',
-        alignSelf: 'center'
-    },
-    applicantCard: {
-        display: 'flex',
-        alignItems: 'center',
-        borderBottom: '1px solid #F4F4F4',
-        padding: '6px'
-    },
-    noApplicants: {
-        color: '#B91C1C',
-        marginBottom: 10,
-        fontSize: '13px'
-    },
-    controls: {
-        display: 'flex',
-        flexDirection: 'column' as const,
-        gap: '8px',
-        marginLeft: '16px'
-    },
-    controlButton: {
-        width: '32px',
-        height: '32px',
-        borderRadius: '6px',
-        border: '1px solid #D1D5DB',
-        backgroundColor: '#FFFFFF',
-        cursor: 'pointer',
-        fontSize: '17px',
-        color: '#4B5563',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        transition: 'all 0.2s ease',
-    },
-    controlButtonDisabled: {
-        width: '32px',
-        height: '32px',
-        borderRadius: '6px',
-        border: '1px solid #E5E7EB',
-        backgroundColor: '#F9FAFB',
-        cursor: 'not-allowed',
-        fontSize: '17px',
-        color: '#D1D5DB',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-    },
-    saveButton: {
-        backgroundColor: 'gray',
-        color: 'white',
-        padding: '10px 20px',
-        borderRadius: '6px',
-        border: 'none',
-        cursor: 'pointer',
-        fontSize: '14px',
-        fontWeight: 'bold',
-        marginTop: 16
-    },
-    saveButtonChanged: {
-        backgroundColor: '#10B981',
-        color: 'white',
-        padding: '10px 20px',
-        borderRadius: '6px',
-        border: 'none',
-        cursor: 'pointer',
-        fontSize: '14px',
-        fontWeight: 'bold',
-        marginTop: 16,
-        boxShadow: '0 2px 4px rgba(16, 185, 129, 0.3)'
-    },
-    saveButtonDisabled: {
-        backgroundColor: '#9CA3AF',
-        color: 'white',
-        padding: '10px 20px',
-        borderRadius: '6px',
-        border: 'none',
-        cursor: 'not-allowed',
-        fontSize: '14px',
-        fontWeight: 'bold',
-        marginTop: 16
-    },
-    searchInputContainer: {
-        display: 'flex',
-        gap: '8px',
-        marginBottom: '8px',
-        alignItems: 'center'
-    },
-    searchInput: {
-        width: '60%',
-        padding: '8px',
-        border: '1px solid #D1D5DB',
-        borderRadius: '6px',
-        fontSize: '14px'
-    },
-    // ✅ FIXED: Normal search button state
-    searchButton: {
-        backgroundColor: '#3B82F6',
-        color: 'white',
-        padding: '8px 16px',
-        borderRadius: '6px',
-        border: 'none',
-        cursor: 'pointer',
-        fontSize: '14px',
-        fontWeight: 'bold',
-        transition: 'all 0.2s ease'
-    },
-    // ✅ NEW: Loading search button state
-    searchButtonLoading: {
-        backgroundColor: '#9CA3AF', // Gray color
-        color: 'white',
-        padding: '8px 16px',
-        borderRadius: '6px',
-        border: 'none',
-        cursor: 'not-allowed',
-        fontSize: '14px',
-        fontWeight: 'bold',
-        transition: 'all 0.2s ease'
-    },
-    searchContainer: {
-        marginBottom: '8px',
-        position: 'relative' as const
-    },
-    searchResultsContainer: {
-        position: 'absolute' as const,
-        background: '#fff',
-        border: '1px solid #DDD',
-        borderRadius: '4px',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.10)',
-        zIndex: 10,
-        width: '350px',
-        maxHeight: '200px',
-        overflowY: 'auto' as const
-    },
-    searchResultItem: {
-        padding: '8px',
-        cursor: 'pointer' as const,
-        borderBottom: '1px solid #f0f0f0'
-    },
-    searchAndApplicantsContainer: {
-        flex: 2,
-        marginLeft: '12px'
-    },
-    applicantsHeader: {
-        marginBottom: '6px',
-        fontWeight: '500'
-    },
-    warningText: {
-        color: '#FF8A24',
-        marginLeft: '10px'
-    },
-    applicantInfo: {
-        flex: 1
-    },
-    applicantName: {
-        fontWeight: '500',
-        color: '#1F2937'
-    },
-    applicantDetails: {
-        fontSize: '13px',
-        color: '#555'
-    },
-    loadingOverlay: {
-        position: 'fixed' as const,
-        top: 0,
-        left: 0,
-        width: '100vw',
-        height: '100vh',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        zIndex: 9999
-    },
-    loadingContent: {
-        display: 'flex',
-        flexDirection: 'column' as const,
-        alignItems: 'center',
-        padding: '30px',
-        backgroundColor: 'white',
-        borderRadius: '12px',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)'
-    },
-    spinner: {
-        width: '50px',
-        height: '50px',
-        border: '6px solid #f3f3f3',
-        borderTop: '6px solid #10B981',
-        borderRadius: '50%',
-        animation: 'spin 1s linear infinite',
-        marginBottom: '15px'
-    },
-    loadingText: {
-        fontSize: '16px',
-        fontWeight: 'bold',
-        color: '#4A4A4A',
-        margin: 0
-    }
-};
