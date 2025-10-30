@@ -100,7 +100,7 @@ function PositionSearchBox({
                 throw new Error(`HTTP error: ${res.status}`);
             }
             const data = await res.json();
-            setSearchResults(data.users || []);
+            setSearchResults(data.data || []);
         } catch (error) {
             console.error('Search error:', error);
             setSearchResults([]);
@@ -135,7 +135,7 @@ function PositionSearchBox({
                     ref={inputRef}
                     style={styles.searchInput}
                     type="text"
-                    placeholder="Search user by intranet gmail..."
+                    placeholder="Search user by name/email/room"
                     value={searchTerm}
                     onChange={handleInputChange}
                     onFocus={handleFocus}
@@ -303,7 +303,7 @@ export default function RankApplicants() {
         if (!user?.email) return;
 
         try {
-            const url = `/api/chair/positions/forChair/${user.email}`;
+            const url = `/api/chair/positions/forChair`;
             const headers: HeadersInit = {};
 
             // ✅ Cache busting when needed (after saves)

@@ -1,8 +1,10 @@
 // src/app/api/cca/[cca_name]/members/route.ts
+// API route to get members of a lead/vice's CCA
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-import { cookies } from 'next/headers';
-import { phaseService } from '@/lib/phaseService';
+import { phaseService } from '@/lib/phase-service';
+import { fetchUserId } from "@/lib/fetch-user-info";
+import { checkCCAChairAuthorization } from "@/lib/lead-auth-service";
 
 interface TransformedMember {
     user_id: number;
@@ -24,21 +26,11 @@ export async function GET(
         const decodedCcaName = decodeURIComponent(cca_name);
         const supabase = await createClient();
 
-        // Verify authentication
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        if (authError || !user) {
+        // Verify authentication and get user ID
+        const requestingUserId = await fetchUserId();
+
+        if (!requestingUserId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        // Get requesting user's ID
-        const { data: userData, error: userError } = await supabase
-            .from('public_user_info')
-            .select('id')
-            .eq('email', user.email)
-            .single();
-
-        if (userError || !userData) {
-            return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
 
         // Get CCA ID and type from name
@@ -60,20 +52,8 @@ export async function GET(
         // }
 
         // Authorization - Check if user is lead/vice for THIS specific CCA
-        const { data: userAppointments, error: appointmentError } = await supabase
-            .from('cca_appointments')
-            .select(`
-                cca_positions!inner (
-                cca_id,
-                position_type,
-                name
-                )
-            `)
-            .eq('user_id', userData.id)
-            .eq('cca_positions.cca_id', ccaData.id)
-            .in('cca_positions.position_type', ['lead', 'vice']);
-
-        if (appointmentError || !userAppointments || userAppointments.length === 0) {
+        const authResult = await checkCCAChairAuthorization(requestingUserId, ccaData.id, supabase);
+        if (!authResult.authorized) {
             return NextResponse.json({
                 error: 'Unauthorized: You are not a lead/vice for this CCA'
             }, { status: 403 });

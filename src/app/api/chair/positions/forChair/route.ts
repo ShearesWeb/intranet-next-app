@@ -1,54 +1,14 @@
-// src/app/api/chair/positions/forChair/[email]/route.ts
+// src/app/api/chair/positions/forChair/route.ts
+// API route to get positions available for chair ranking along with applicants' info
 import { NextResponse } from "next/server";
-import { phaseService } from '@/lib/phaseService';
+import { phaseService } from '@/lib/phase-service';
 import { cache } from 'react';
 import { createClient } from "@/utils/supabase/server";
+import { fetchUserId } from "@/lib/fetch-user-info";
+import { getUserAuthorizedCCAs } from "@/lib/lead-auth-service";
 
-
-const getCachedChairAuthorization = cache(async (email: string, supabase: any) => {
-    const { data: userData, error: userError } = await supabase
-        .from("public_user_info")
-        .select("id, email")
-        .eq("email", email)
-        .single();
-
-    if (userError || !userData) {
-        return { authorized: false, ccaIds: [] };
-    }
-
-    const { data: chairAppointments, error: appointmentError } = await supabase
-        .from("cca_appointments")
-        .select(`
-            id, user_id, position_id,
-            cca_positions!inner(
-                id, name, position_type, cca_id,
-                ccas(id, name)
-            )
-        `)
-        .eq("user_id", userData.id);
-
-    if (appointmentError) {
-        return { authorized: false, ccaIds: [] };
-    }
-
-    const authorizedRoles = ["lead", "vice"];
-    const ccasSet = new Set<number>();
-
-    (chairAppointments || []).forEach((appointment: any) => {
-        if (appointment.cca_positions) {
-            const position = appointment.cca_positions;
-            const positionType = (position.position_type || "").toLowerCase();
-            if (authorizedRoles.includes(positionType)) {
-                ccasSet.add(position.cca_id);
-            }
-        }
-    });
-
-    return {
-        authorized: ccasSet.size > 0,
-        ccaIds: Array.from(ccasSet),
-        userData
-    };
+const getCachedChairAuthorization = cache(async (userId: number, supabase: any) => {
+    return await getUserAuthorizedCCAs(userId, supabase);
 });
 
 function getValidPositionTypes(currentRound: string): string[] {
@@ -64,8 +24,8 @@ function getValidPositionTypes(currentRound: string): string[] {
 
 const getCachedPositionsForPhase = cache(async (ccaIds: number[], currentRound: string, supabase: any) => {
     const { data: allPositions, error: posError } = await supabase
-        .from("cca_position_info")
-        .select("id, name, capacity, available_capacity, applied_count, position_type, cca_id, ccas(id, name)")
+        .from("cca_capacity_info")
+        .select("id, name, capacity, available_capacity, applied_count, position_type, cca_id, cca_name")
         .in("cca_id", ccaIds)
         .gt("available_capacity", 0)
         .not('position_type', 'in', '("lead","vice")')
@@ -78,30 +38,16 @@ const getCachedPositionsForPhase = cache(async (ccaIds: number[], currentRound: 
     return allPositions;
 });
 
-// Helper function to safely extract CCA name
-function getCcaName(ccas: any): string {
-    // Handle both object and array cases defensively
-    if (!ccas) return "Unknown";
-
-    // If it's an array (what TS thinks), take first element
-    if (Array.isArray(ccas) && ccas.length > 0) {
-        return ccas[0]?.name || "Unknown";
-    }
-
-    // If it's an object (what runtime shows), access directly
-    if (typeof ccas === 'object' && ccas.name) {
-        return ccas.name;
-    }
-
-    return "Unknown";
-}
-
-export async function GET(
-    request: Request,
-    { params }: { params: Promise<{ email: string }> }
-) {
+export async function GET(request: Request) {
     try {
-        const { email } = await params;
+        const userId = await fetchUserId();
+
+        if (!userId) {
+            return NextResponse.json({
+                positions: [],
+                error: 'Unauthorized'
+            }, { status: 401 });
+        }
 
         const headers = {
             'Cache-Control': 'private, s-maxage=300, stale-while-revalidate=600',
@@ -124,13 +70,12 @@ export async function GET(
             }, { headers });
         }
 
-        const authResult = await getCachedChairAuthorization(email, supabase);
+        const authResult = await getCachedChairAuthorization(userId, supabase);
 
         if (!authResult.authorized) {
             return NextResponse.json({ positions: [] }, { headers });
         }
 
-        // Get raw data without forcing types
         const allPositions = await getCachedPositionsForPhase(
             authResult.ccaIds,
             phaseInfo.round,
@@ -141,11 +86,7 @@ export async function GET(
             return NextResponse.json({ positions: [] }, { headers });
         }
 
-        // Extract IDs safely
         const positionIds = allPositions.map((p: any) => p.id);
-
-        // console.log("✅ Position IDs being queried:", positionIds);
-        // console.log("✅ Querying cca_user_ranking for these position IDs...");
 
         const { data: applicationsWithUsers, error: appError } = await supabase
             .from("cca_user_ranking")
@@ -155,24 +96,6 @@ export async function GET(
             `)
             .in("position_id", positionIds)
             .order('ranking', { ascending: true });
-
-        // console.log("✅ Raw cca_user_ranking query result:", applicationsWithUsers);
-        // console.log("✅ Error from cca_user_ranking query:", appError);
-        // console.log("✅ Number of applicants found:", applicationsWithUsers?.length || 0);
-
-        // if (applicationsWithUsers && applicationsWithUsers.length > 0) {
-        //     console.log("✅ Sample applicant data:", applicationsWithUsers[0]);
-        // } else {
-        //     console.log("❌ No applicants found - checking why...");
-
-        //     // Test direct query
-        //     const { data: testQuery } = await supabase
-        //         .from("cca_user_ranking")
-        //         .select("*")
-        //         .in("position_id", positionIds);
-
-        //     console.log("✅ Direct cca_user_ranking query (no joins):", testQuery);
-        // }
 
         if (appError) {
             console.error("Error fetching applications:", appError);
@@ -192,7 +115,7 @@ export async function GET(
                 applicantsByPosition.set(app.position_id, []);
             }
 
-            // ✅ BULLETPROOF: Handle both array and object cases
+            // Handle both array and object cases
             let userData: any = null;
 
             if (app.public_user_info) {
@@ -216,13 +139,13 @@ export async function GET(
             }
         });
 
-        // console.log(allPositions);
+        console.log(allPositions);
 
         // Map the results using the safe helper function
         const result = allPositions.map((position: any) => ({
             id: position.id,
             name: position.name,
-            cca_name: getCcaName(position.ccas), // Use helper function
+            cca_name: position.cca_name, // Use helper function
             total_capacity: position.capacity,
             available_capacity: position.available_capacity,
             applied_count: position.applied_count,
