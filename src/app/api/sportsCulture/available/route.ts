@@ -1,8 +1,10 @@
 // src/app/api/sportsCulture/available/route.ts
+// API route to get available sports and culture positions for application
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from 'next/headers';
-import { phaseService } from '@/lib/phaseService';
+import { phaseService } from '@/lib/phase-service';
+import { fetchUserId } from "@/lib/fetch-user-info";
 
 interface AvailablePosition {
     id: number;
@@ -22,21 +24,11 @@ export async function GET(request: Request) {
     try {
         const supabase = await createClient();
 
-        // Verify authentication
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        if (authError || !user) {
+        // Verify authentication and get user ID
+        const requestingUserId = await fetchUserId();
+
+        if (!requestingUserId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        // Get user data
-        const { data: userData, error: userError } = await supabase
-            .from('public_user_info')
-            .select('id')
-            .eq('email', user.email)
-            .single();
-
-        if (userError || !userData) {
-            return NextResponse.json({ positions: [] });
         }
 
         // Check if applications are open
@@ -55,7 +47,7 @@ export async function GET(request: Request) {
                     ccas!inner(id, name, cca_type)
                 )
             `)
-            .eq('user_id', userData.id);
+            .eq('user_id', requestingUserId);
 
         if (currentCCAsError) {
             console.error('Error fetching user current CCAs:', currentCCAsError);
@@ -106,7 +98,7 @@ export async function GET(request: Request) {
         const { data: userApplications, error: appError } = await supabase
             .from('cca_appointments')
             .select('position_id')
-            .eq('user_id', userData.id);
+            .eq('user_id', requestingUserId);
 
         if (appError) {
             console.error('Error fetching user applications:', appError);

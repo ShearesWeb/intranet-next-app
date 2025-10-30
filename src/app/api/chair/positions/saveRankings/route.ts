@@ -1,36 +1,35 @@
 // src\app\api\chair\positions\saveRankings\route.ts
 import { NextResponse } from "next/server";
-import { cookies } from 'next/headers';
+import { cache } from 'react';
 import { createClient } from "@/utils/supabase/server";
+import { fetchUserId } from "@/lib/fetch-user-info";
+import { getUserAuthorizedCCAs } from "@/lib/lead-auth-service";
+
+const getCachedChairAuthorization = cache(async (userId: number, supabase: any) => {
+    return await getUserAuthorizedCCAs(userId, supabase);
+});
 
 export async function POST(request: Request) {
     try {
-        const { chair_email, rankings } = await request.json();
-        const supabase = await createClient();
+        const userId = await fetchUserId();
 
-        // Verify chair permissions
-        const { data: chair, error: chairError } = await supabase
-            .from('users')
-            .select('id')
-            .eq('email', chair_email)
-            .single();
-
-        if (chairError || !chair) {
-            return NextResponse.json({ error: 'Chair not found' }, { status: 404 });
+        if (!userId) {
+            return NextResponse.json({
+                error: 'Unauthorized'
+            }, { status: 401 });
         }
 
-        // Check if chair has lead/vice appointment
-        const { data: chairAppointments } = await supabase
-            .from('cca_appointments')
-            .select(`
-                cca_positions!inner (
-                position_type
-                )
-            `)
-            .eq('user_id', chair.id)
-            .in('cca_positions.position_type', ['lead', 'vice']);
+        const { rankings } = await request.json();
 
-        if (!chairAppointments || chairAppointments.length === 0) {
+        if (!rankings || !Array.isArray(rankings)) {
+            return NextResponse.json({ error: 'Invalid request data' }, { status: 400 });
+        }
+
+        const supabase = await createClient();
+
+        const authResult = await getCachedChairAuthorization(userId, supabase);
+
+        if (!authResult.authorized) {
             return NextResponse.json({ error: 'Unauthorized: Not a lead/vice' }, { status: 403 });
         }
 

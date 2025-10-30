@@ -1,11 +1,12 @@
 // src/app/dashboard/rank/page.tsx
+// Page for users to rank CCA positions
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import Sidebar from '@/components/Sidebar';
 import { useAuth } from '@/context/AuthContext';
 import { usePhaseInfo } from '@/hooks/usePhaseInfo';
 import toast from 'react-hot-toast';
+import { AppLayout } from '@/components/layout/app-layout';
 
 interface RankablePosition {
 	id: number;
@@ -120,10 +121,11 @@ export default function RankCCA() {
 	if (loading || phaseLoading) {
 		return (
 			<div style={styles.container}>
-				<Sidebar />
+				<AppLayout>
 				<div style={styles.content}>
 					<div style={styles.loading}>Loading your CCA rankings...</div>
 				</div>
+				</AppLayout>
 			</div>
 		);
 	}
@@ -154,7 +156,7 @@ export default function RankCCA() {
 
 		return (
 			<div style={styles.container}>
-				<Sidebar />
+				<AppLayout>
 				<div style={styles.content}>
 					<div style={styles.header}>
 						<h1 style={styles.title}>CCA Ranking</h1>
@@ -168,6 +170,7 @@ export default function RankCCA() {
 						)}
 					</div>
 				</div>
+				</AppLayout>
 			</div>
 		);
 	}
@@ -267,7 +270,7 @@ export default function RankCCA() {
 	if (currentStep === 'selection') {
 		return (
 			<div style={styles.container}>
-				<Sidebar />
+				<AppLayout>
 				<div style={styles.content}>
 					<div style={styles.header}>
 						<h1 style={styles.title}>Select Committee Positions to Rank</h1>
@@ -351,13 +354,14 @@ export default function RankCCA() {
 						</>
 					)}
 				</div>
+				</AppLayout>
 			</div>
 		);
 	}
 
 	return (
 		<div style={styles.container}>
-			<Sidebar />
+			<AppLayout>
 			<div style={styles.content}>
 				<div style={styles.header}>
 					<h1 style={styles.title}>Rank Your Selected CCA Positions</h1>
@@ -444,6 +448,7 @@ export default function RankCCA() {
 					)}
 				</div>
 			</div>
+			</AppLayout>
 			<LoadingOverlay visible={isSaving} />
 		</div>
 	);
