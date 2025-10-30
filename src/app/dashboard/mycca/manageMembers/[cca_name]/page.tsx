@@ -6,6 +6,17 @@ import Sidebar from '@/components/Sidebar';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import toast from 'react-hot-toast';
+import { AppLayout } from '@/components/layout/app-layout';
+
+//shadcn UI
+import { Button } from "@/components/ui/button";
+import { Item, ItemContent, ItemMedia, ItemTitle } from "@/components/ui/item";
+import { Spinner } from "@/components/ui/spinner"
+import { Card, CardContent } from "@/components/ui/card";
+import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead, TableHeaderRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { AlertCircleIcon } from "lucide-react";
 
 interface Member {
     user_id: number;
@@ -37,13 +48,36 @@ function LoadingOverlay({ visible }: { visible: boolean }) {
     if (!visible) return null;
 
     return (
-        <div style={styles.loadingOverlay}>
-            <div style={styles.loadingContent}>
-                <div style={styles.spinner}></div>
-                <p style={styles.loadingText}>Saving rankings...</p>
-            </div>
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+            <Item className="bg-white rounded-lg p-6 shadow-lg">
+                <ItemMedia>
+                <Spinner className="w-12 h-12 text-green-500" />
+                </ItemMedia>
+                <ItemContent>
+                <ItemTitle className="text-gray-700 font-semibold">
+                    Saving rankings...
+                </ItemTitle>
+                </ItemContent>
+            </Item>
         </div>
     );
+}
+
+function LoadingMembers() {
+  return (
+    <div className="flex items-center justify-center z-50">
+      <Item className="bg-white rounded-lg p-6">
+        <ItemMedia>
+          <Spinner className="w-8 h-8" />
+        </ItemMedia>
+        <ItemContent>
+          <ItemTitle className="text-gray-700 font-semibold">
+            Loading members...
+          </ItemTitle>
+        </ItemContent>
+      </Item>
+    </div>
+  );
 }
 
 export default function ManageMembersPage() {
@@ -332,92 +366,109 @@ export default function ManageMembersPage() {
 
     if (loading) {
         return (
-            <div style={styles.container}>
-                <Sidebar />
-                <div style={styles.content}>
-                    <div style={styles.loading}>Loading members...</div>
+        <div className="flex h-screen">
+            <Sidebar />
+            <div className="flex-1 p-6 bg-white overflow-auto flex justify-center items-center">
+                <LoadingMembers />
                 </div>
             </div>
         );
     }
 
+
     if (error) {
-        return (
-            <div style={styles.container}>
-                <Sidebar />
-                <div style={styles.content}>
-                    <div style={styles.header}>
-                        <h1 style={styles.title}>CCA Members</h1>
-                    </div>
-                    <div style={styles.error}>
-                        <p>⚠️ {error}</p>
-                        <button onClick={() => router.push('/dashboard/mycca')} style={styles.retryButton}>
-                            Back to My CCAs
-                        </button>
-                    </div>
-                </div>
+    return (
+        <div className="flex h-full">
+        <Sidebar />
+        <div className="flex-1 p-6">
+            <div className="mb-6">
+            <h1 className="text-2xl font-bold text-gray-800">CCA Members</h1>
             </div>
-        );
+
+            <Card className="bg-red-50 border-red-200">
+            <CardContent className="flex flex-col items-center p-6 gap-4">
+                <p className="text-red-700 font-medium text-center">⚠️ {error}</p>
+                <Button
+                    variant="default"
+                    className="bg-blue-500 text-white hover:bg-blue-400 px-6 py-4 shadow-md font-bold cursor-pointer"
+                    onClick={() => router.push("/dashboard/mycca")}
+                >
+                    Back to My CCAs
+                </Button>
+            </CardContent>
+            </Card>
+        </div>
+        </div>
+    );
     }
 
     const renderMemberGroup = (title: string, members: Member[], showManagementActions: boolean = false) => {
         if (members.length === 0 && !showManagementActions) return null;
 
-        return (
-            <div style={styles.groupSection}>
-                <div style={styles.groupHeader}>
-                    <h3 style={styles.groupTitle}>{title}</h3>
-                    {showManagementActions && permissions.canManageMembers && ['sports', 'culture'].includes(permissions.ccaType) && (
-                        <button
-                            onClick={() => setShowAddMemberModal(true)}
-                            style={styles.addButton}
-                        >
-                            + Add Member
-                        </button>
-                    )}
-                </div>
+        const canManage =
+            showManagementActions &&
+            permissions.canManageMembers &&
+            ["sports", "culture"].includes(permissions.ccaType);
 
-                {members.length === 0 ? (
-                    showManagementActions && (
-                        <div style={styles.emptySection}>
-                            <p>No {title.toLowerCase()} found.</p>
-                        </div>
-                    )
-                ) : (
-                    <table style={styles.table}>
-                        <thead>
-                            <tr>
-                                <th style={styles.th}>Name</th>
-                                <th style={styles.th}>Email</th>
-                                <th style={styles.th}>Room</th>
-                                <th style={styles.th}>Position</th>
-                                {showManagementActions && permissions.canManageMembers && ['sports', 'culture'].includes(permissions.ccaType) && (
-                                    <th style={styles.th}>Actions</th>
-                                )}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {members.map((member, index) => (
-                                <tr key={member.user_id} style={index % 2 === 0 ? styles.rowEven : styles.rowOdd}>
-                                    <td style={styles.td}>{member.name}</td>
-                                    <td style={styles.td}>{member.email}</td>
-                                    <td style={styles.td}>{member.room}</td>
-                                    <td style={styles.td}>{member.position_name}</td>
-                                    {showManagementActions && permissions.canManageMembers && ['sports', 'culture'].includes(permissions.ccaType) && (
-                                        <td style={styles.td}>
-                                            <button
-                                                onClick={() => handleLocalRemoveMember(member.user_id, member.name)}
-                                                style={styles.removeButton}
-                                            >
-                                                Remove
-                                            </button>
-                                        </td>
-                                    )}
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+        return (
+            <div className="mb-8">
+            {/* Group Header */}
+            <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-semibold">{title}</h3>
+                {canManage && (
+                    <Button 
+                        onClick={() => setShowAddMemberModal(true)}
+                        size="sm"
+                        className="bg-green-500 text-white hover:bg-green-400 px-4 py-2 shadow-md font-bold cursor-pointer"
+                    >
+                        + Add Member
+                    </Button>
                 )}
+            </div>
+
+            {/* Empty Section */}
+            {members.length === 0 ? (
+                canManage && (
+                <div className="p-4 border border-dashed border-gray-300 rounded-md text-gray-500">
+                    No {title.toLowerCase()} found.
+                </div>
+                )
+            ) : (
+                <div className="overflow-x-auto rounded-md">
+                <Table>
+                    <TableHeader>
+                    <TableHeaderRow className="bg-gray-100">
+                        <TableHead className="font-bold border-b border-gray-300 py-4 pl-4">Name</TableHead>
+                        <TableHead className="font-bold border-b border-gray-300 py-4">Email</TableHead>
+                        <TableHead className="font-bold border-b border-gray-300 py-4">Room</TableHead>
+                        <TableHead className="font-bold border-b border-gray-300 py-4">Position</TableHead>
+                        {canManage && <TableHead className="font-bold border-b border-gray-300 py-4">Actions</TableHead>}
+                    </TableHeaderRow>
+                    </TableHeader>
+                    <TableBody>
+                    {members.map((member, index) => (
+                        <TableRow key={member.user_id} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                        <TableCell className="border-b border-gray-200 py-4 pl-4">{member.name}</TableCell>
+                        <TableCell className="border-b border-gray-200 py-4">{member.email}</TableCell>
+                        <TableCell className="border-b border-gray-200 py-4">{member.room}</TableCell>
+                        <TableCell className="border-b border-gray-200 py-4">{member.position_name}</TableCell>
+                        {canManage && (
+                            <TableCell>
+                                <Button
+                                    size="sm"
+                                    onClick={() => handleLocalRemoveMember(member.user_id, member.name)}
+                                    className="bg-red-500 text-white hover:bg-red-400 px-4 py-2 shadow-md font-bold cursor-pointer"
+                                >
+                                    Remove
+                                </Button>
+                            </TableCell>
+                        )}
+                        </TableRow>
+                    ))}
+                    </TableBody>
+                </Table>
+                </div>
+            )}
             </div>
         );
     };
@@ -426,69 +477,78 @@ export default function ManageMembersPage() {
     const isSportsCulture = ['sports', 'culture'].includes(permissions.ccaType);
 
     return (
-        <div style={styles.container}>
-            <Sidebar />
-            <div style={styles.content}>
-                <div style={styles.header}>
-                    <div style={styles.titleRow}>
-                        <h1 style={styles.title}>CCA Members - {cca?.name}</h1>
-                        <div style={styles.headerActions}>
+        <div className="flex h-screen font-sans bg-white overflow-auto">
+            <AppLayout>
+            <div className="flex-1 flex flex-col p-16">
+                <div className="mb-6">
+                    <div className="flex justify-between items-center mb-4">
+                        <h1 className="text-2xl font-bold">CCA Members - {cca?.name}</h1>
+                        <div className="flex items-center gap-4">
                             {pendingChanges.length > 0 && (
-                                <button
+                                <Button
                                     onClick={handleSaveMembers}
                                     disabled={saving}
-                                    style={styles.saveButton}
+                                    size="lg"
+                                    className="bg-green-500 text-white hover:bg-green-400 px-6 py-4 shadow-md font-bold cursor-pointer"
                                 >
                                     {saving ? 'Saving...' : `Save Members (${pendingChanges.length})`}
-                                </button>
+                                </Button>
                             )}
-                            <button
+                            <Button 
                                 onClick={() => router.push('/dashboard/mycca')}
-                                style={styles.backButton}
+                                size="lg"
+                                className="bg-blue-500 text-white hover:bg-blue-400 px-6 py-4 shadow-md font-bold cursor-pointer"
                             >
                                 ← Back to My CCAs
-                            </button>
+                            </Button>
                         </div>
                     </div>
 
-                    <div style={styles.searchContainer}>
-                        <input
+                    <div className="mb-4">
+                        <Input
                             type="text"
                             placeholder="Search members by name, email, room, or position..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            style={styles.searchInput}
+                            className="focus-visible:ring-[3px] focus-visible:ring-blue-500/20 focus-visible:border-blue-500 py-5 rounded-sm border border-gray-300 w-full pl-4"
                         />
                     </div>
 
                     {pendingChanges.length > 0 && (
-                        <div style={styles.pendingChanges}>
-                            <p style={styles.pendingText}>
-                                <strong>{pendingChanges.length}</strong> pending changes. Click "Save Members" to apply.
-                            </p>
-                        </div>
+                        <Alert className="mb-4 bg-yellow-50 border-amber-600 py-3 rounded-sm">
+                            <AlertCircleIcon color="#a96800" />
+                            <AlertDescription className="text-yellow-700 ml-1">
+                                <span>
+                                    <strong>{pendingChanges.length}</strong> pending changes. Click "Save Members" to apply.
+                                </span>
+                            </AlertDescription>
+                        </Alert>
                     )}
 
                     {isSportsCulture && (
-                        <div style={styles.managementInfo}>
-                            <p style={styles.managementText}>
+                        <Card className="mb-4 bg-sky-50 border-blue-400 py-3 rounded-sm">
+                            <CardContent className="text-sky-900 text-sm pl-4">
                                 {permissions.canManageMembers
                                     ? 'You may add and remove members for your sports/culture CCA.'
                                     : 'Member management is not currently available.'}
-                            </p>
-                        </div>
+                            </CardContent>
+                        </Card>
                     )}
                 </div>
 
                 {totalFilteredMembers === 0 && !isSportsCulture ? (
-                    <div style={styles.emptyState}>
-                        <p>📋 {searchTerm ? 'No members found matching your search.' : 'No members found for this CCA.'}</p>
-                        <p style={styles.emptySubtext}>
-                            {searchTerm ? 'Try adjusting your search terms.' : 'Members will appear here when they are appointed to positions in this CCA.'}
+                    <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500 bg-gray-50 rounded-md">
+                        <p className="text-lg mb-2">
+                        📋 {searchTerm ? 'No members found matching your search.' : 'No members found for this CCA.'}
+                        </p>
+                        <p className="text-sm text-gray-400">
+                        {searchTerm
+                            ? 'Try adjusting your search terms.'
+                            : 'Members will appear here when they are appointed to positions in this CCA.'}
                         </p>
                     </div>
-                ) : (
-                    <div style={styles.tableContainer}>
+                    ) : (
+                    <div className="space-y-8">
                         {renderMemberGroup('Leadership', leadershipMembers)}
                         {!isSportsCulture && renderMemberGroup('Main Committee', filteredGroupedMembers.maincomm)}
                         {!isSportsCulture && renderMemberGroup('Sub Committee', filteredGroupedMembers.subcomm)}
@@ -497,69 +557,85 @@ export default function ManageMembersPage() {
                     </div>
                 )}
 
-                <div style={styles.footer}>
-                    <p><strong>Total Members:</strong> {totalFilteredMembers}</p>
-                    {searchTerm && (
-                        <p><strong>Showing:</strong> {totalFilteredMembers} of {totalMembers} members</p>
-                    )}
-                </div>
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mt-4 p-4 bg-gray-50 rounded-md text-gray-700 text-sm space-y-1 sm:space-y-0">
+                        <p><strong>Total Members:</strong> {totalFilteredMembers}</p>
+                        {searchTerm && (
+                            <p><strong>Showing:</strong> {totalFilteredMembers} of {totalMembers} members</p>
+                        )}
+                    </div>
+
             </div>
+            </AppLayout>
 
             {/* Add Member Modal */}
             {showAddMemberModal && (
-                <div style={styles.modal}>
-                    <div style={styles.modalContent}>
-                        <h3 style={styles.modalTitle}>Add Member</h3>
-
-                        <div style={styles.searchContainer}>
-                            <input
+                <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+                    <div className="bg-white p-6 rounded-xl w-[90%] max-w-[750px] max-h-[80vh] overflow-auto">
+                        <h3 className="text-lg font-bold mb-4">Add Member</h3>
+                        <div className="flex gap-4 mb-4">
+                            <Input
                                 type="text"
                                 placeholder="Search by name / email / room..."
                                 value={userSearchQuery}
                                 onChange={(e) => setUserSearchQuery(e.target.value)}
                                 onKeyPress={handleSearchKeyPress}
-                                style={styles.modalInput}
+                                className="focus-visible:ring-[2px] focus-visible:ring-blue-500/20 focus-visible:border-blue-500 py-5 rounded-sm border border-gray-300 w-full pl-4"
                             />
-                            <button
+                            <Button
                                 onClick={handleSearchUsers}
                                 disabled={isSearching}
-                                style={styles.searchButton}
+                                className="bg-blue-500 text-white hover:bg-blue-400 px-8 py-3 shadow-md font-bold cursor-pointer"
                             >
                                 {isSearching ? 'Searching...' : 'Search'}
-                            </button>
+                            </Button>
                         </div>
 
-                        {isSearching && <p style={styles.searchingText}>Searching...</p>}
+                        {isSearching && (
+                            <div className="flex items-center gap-2 text-gray-500 mt-2 justify-center">
+                                <Spinner className="w-5 h-5 animate-spin" />
+                                <p>Searching...</p>
+                            </div>
+                        )}
 
-                        <div style={styles.searchResults}>
-                            {userSearchResults.map(user => (
-                                <div key={user.id} style={styles.userResult}>
-                                    <div style={styles.userInfo}>
-                                        <strong style={styles.userName}>{user.name}</strong>
-                                        <span style={styles.userEmail}>({user.email})</span>
-                                        {user.room && <span style={styles.userRoom}> - {user.room}</span>}
-                                    </div>
-                                    <button
-                                        onClick={() => handleUserButtonClick(user)}
-                                        style={isUserAdded(user.id) ? styles.removeUserButton : styles.addUserButton}
+                        <div className="mt-4">
+                            <div className="space-y-2 max-h-64 overflow-y-auto">
+                                {userSearchResults.map(user => (
+                                    <div
+                                    key={user.id}
+                                    className="flex justify-between items-center p-3 border border-gray-200 rounded-md bg-white shadow-sm"
                                     >
-                                        {getUserButtonText(user.id)}
-                                    </button>
-                                </div>
-                            ))}
+                                        <div className="flex flex-wrap items-center gap-2 text-sm text-gray-700">
+                                            <strong className="font-bold">{user.name}</strong>
+                                            <span className="text-gray-500">({user.email})</span>
+                                            {user.room && <span className="text-gray-400">- {user.room}</span>}
+                                        </div>
+
+                                        <Button
+                                            size="sm"
+                                            onClick={() => handleUserButtonClick(user)}
+                                            className={isUserAdded(user.id)
+                                                ? "bg-red-500 text-white hover:bg-red-400 px-4 py-2 shadow-md font-bold cursor-pointer"
+                                                : "bg-green-500 text-white hover:bg-green-400 px-4 py-2 shadow-md font-bold cursor-pointer"
+                                            }
+                                        >
+                                            {getUserButtonText(user.id)}
+                                        </Button>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
 
-                        <div style={styles.modalActions}>
-                            <button
+                        <div className="mt-6 flex justify-end">
+                            <Button
                                 onClick={() => {
                                     setShowAddMemberModal(false);
                                     setUserSearchQuery('');
                                     setUserSearchResults([]);
                                 }}
-                                style={styles.cancelButton}
+                                className="bg-gray-500 text-white hover:bg-gray-400 px-6 py-4 shadow-md font-bold cursor-pointer"
                             >
                                 Close
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </div>
@@ -568,369 +644,3 @@ export default function ManageMembersPage() {
         </div>
     );
 }
-
-const styles = {
-    headerActions: {
-        display: 'flex',
-        gap: '12px',
-        alignItems: 'center'
-    },
-    saveButton: {
-        padding: '10px 20px',
-        backgroundColor: '#10B981',
-        color: 'white',
-        border: 'none',
-        borderRadius: '6px',
-        cursor: 'pointer',
-        fontSize: '14px',
-        fontWeight: 'bold'
-    },
-    pendingChanges: {
-        padding: '12px 16px',
-        backgroundColor: '#FFF3CD',
-        border: '1px solid #FFEAA7',
-        borderRadius: '8px',
-        marginBottom: '20px'
-    },
-    pendingText: {
-        margin: 0,
-        fontSize: '14px',
-        color: '#856404'
-    },
-    removeUserButton: {
-        padding: '6px 12px',
-        backgroundColor: '#EF4444',
-        color: 'white',
-        border: 'none',
-        borderRadius: '4px',
-        cursor: 'pointer',
-        fontSize: '12px'
-    },
-    container: {
-        display: 'flex',
-        height: '100vh',
-        fontFamily: 'Arial, sans-serif'
-    },
-    content: {
-        flex: 1,
-        padding: '20px',
-        backgroundColor: '#FFFFFF',
-        color: '#2C2C2C',
-        overflow: 'auto'
-    },
-    header: {
-        marginBottom: '30px'
-    },
-    titleRow: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '16px'
-    },
-    title: {
-        fontSize: '28px',
-        marginBottom: '10px',
-        fontWeight: 'bold',
-        color: '#4A4A4A'
-    },
-    backButton: {
-        padding: '10px 20px',
-        backgroundColor: '#3B82F6',
-        color: 'white',
-        border: 'none',
-        borderRadius: '6px',
-        cursor: 'pointer',
-        fontSize: '14px',
-        fontWeight: 'bold'
-    },
-    searchContainer: {
-        display: 'flex',
-        gap: '12px',
-        marginBottom: '20px'
-    },
-    searchInput: {
-        padding: '10px 16px',
-        border: '1px solid #E5E7EB',
-        borderRadius: '8px',
-        flex: 1,
-        fontSize: '14px',
-        backgroundColor: '#FFFFFF',
-        color: '#1F2937'
-    },
-    searchButton: {
-        padding: '10px 20px',
-        backgroundColor: '#3B82F6',
-        color: 'white',
-        border: 'none',
-        borderRadius: '6px',
-        cursor: 'pointer',
-        fontSize: '14px',
-        fontWeight: 'bold',
-        minWidth: '100px'
-    },
-    managementInfo: {
-        padding: '12px 16px',
-        backgroundColor: '#F0F9FF',
-        border: '1px solid #0EA5E9',
-        borderRadius: '8px',
-        marginBottom: '20px'
-    },
-    managementText: {
-        margin: 0,
-        fontSize: '14px',
-        color: '#0C4A6E'
-    },
-    groupHeader: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '15px'
-    },
-    addButton: {
-        padding: '8px 16px',
-        backgroundColor: '#10B981',
-        color: 'white',
-        border: 'none',
-        borderRadius: '6px',
-        cursor: 'pointer',
-        fontSize: '14px',
-        fontWeight: 'bold'
-    },
-    removeButton: {
-        padding: '6px 12px',
-        backgroundColor: '#EF4444',
-        color: 'white',
-        border: 'none',
-        borderRadius: '4px',
-        cursor: 'pointer',
-        fontSize: '12px'
-    },
-    emptySection: {
-        padding: '20px',
-        textAlign: 'center' as const,
-        color: '#6B7280',
-        fontStyle: 'italic'
-    },
-    modal: {
-        position: 'fixed' as const,
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        zIndex: 1000
-    },
-    modalContent: {
-        backgroundColor: 'white',
-        padding: '24px',
-        borderRadius: '12px',
-        width: '90%',
-        maxWidth: '750px',
-        maxHeight: '80vh',
-        overflow: 'auto'
-    },
-    modalTitle: {
-        fontSize: '20px',
-        fontWeight: 'bold',
-        marginBottom: '16px',
-        color: '#1F2937'
-    },
-    modalInput: {
-        padding: '10px 16px',
-        border: '1px solid #E5E7EB',
-        borderRadius: '8px',
-        flex: 1,
-        fontSize: '14px',
-        color: '#1F2937',
-        backgroundColor: '#FFFFFF'
-    },
-    searchingText: {
-        fontSize: '14px',
-        color: '#6B7280',
-        fontStyle: 'italic',
-        textAlign: 'center' as const
-    },
-    searchResults: {
-        maxHeight: '300px',
-        overflow: 'auto',
-        marginBottom: '20px'
-    },
-    userResult: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '12px',
-        border: '1px solid #E5E7EB',
-        borderRadius: '8px',
-        marginBottom: '8px',
-        backgroundColor: '#F9FAFB'
-    },
-    userInfo: {
-        flex: 1,
-        color: '#1F2937' // ✅ FIXED: Black text
-    },
-    // ✅ FIXED: Separate styles for different text elements
-    userName: {
-        color: '#1F2937', // Black for name
-        fontWeight: 'bold'
-    },
-    userEmail: {
-        color: '#1F2937' // Black for email
-    },
-    userRoom: {
-        color: '#6B7280', // Keep grey for room (subtle info)
-        fontSize: '14px'
-    },
-    addUserButton: {
-        padding: '6px 12px',
-        backgroundColor: '#10B981',
-        color: 'white',
-        border: 'none',
-        borderRadius: '4px',
-        cursor: 'pointer',
-        fontSize: '12px'
-    },
-    modalActions: {
-        display: 'flex',
-        justifyContent: 'flex-end',
-        gap: '12px'
-    },
-    cancelButton: {
-        padding: '10px 20px',
-        backgroundColor: '#6B7280',
-        color: 'white',
-        border: 'none',
-        borderRadius: '6px',
-        cursor: 'pointer',
-        fontSize: '14px'
-    },
-    loading: {
-        textAlign: 'center' as const,
-        fontSize: '16px',
-        color: '#7A7A7A',
-        marginTop: '50px',
-        padding: '20px'
-    },
-    error: {
-        textAlign: 'center' as const,
-        padding: '50px 20px',
-        color: '#B91C1C',
-        backgroundColor: '#FEF2F2',
-        borderRadius: '8px',
-        border: '1px solid #FCA5A5'
-    },
-    retryButton: {
-        marginTop: '15px',
-        padding: '10px 20px',
-        backgroundColor: '#3B82F6',
-        color: 'white',
-        border: 'none',
-        borderRadius: '6px',
-        cursor: 'pointer',
-        fontSize: '14px'
-    },
-    emptyState: {
-        textAlign: 'center' as const,
-        padding: '60px 20px',
-        color: '#6B7280',
-        backgroundColor: '#F9FAFB',
-        borderRadius: '8px',
-        border: '2px dashed #E5E7EB'
-    },
-    emptySubtext: {
-        fontSize: '14px',
-        marginTop: '10px',
-        color: '#9CA3AF'
-    },
-    tableContainer: {
-        marginBottom: '20px'
-    },
-    groupSection: {
-        marginBottom: '20px'
-    },
-    groupTitle: {
-        fontSize: '16px',
-        fontWeight: 'bold',
-        color: '#1F2937',
-        borderBottom: '2px solid #E5E7EB',
-        paddingBottom: '8px'
-    },
-    table: {
-        width: '100%',
-        borderCollapse: 'collapse' as const,
-        marginTop: '10px',
-        backgroundColor: '#FFFFFF',
-        borderRadius: '8px',
-        overflow: 'hidden',
-        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
-    },
-    th: {
-        textAlign: 'left' as const,
-        borderBottom: '2px solid #E5E7EB',
-        padding: '15px 12px',
-        backgroundColor: '#F9FAFB',
-        fontSize: '14px',
-        fontWeight: 'bold',
-        color: '#374151'
-    },
-    td: {
-        borderBottom: '1px solid #E5E7EB',
-        padding: '15px 12px',
-        fontSize: '14px',
-        color: '#1F2937'
-    },
-    rowEven: {
-        backgroundColor: '#F9FAFB'
-    },
-    rowOdd: {
-        backgroundColor: '#FFFFFF'
-    },
-    footer: {
-        marginTop: '20px',
-        padding: '15px',
-        textAlign: 'center' as const,
-        fontSize: '14px',
-        color: '#1F2937',
-        backgroundColor: '#F8F9FA',
-        borderRadius: '6px'
-    },
-    loadingOverlay: {
-        position: 'fixed' as const,
-        top: 0,
-        left: 0,
-        width: '100vw',
-        height: '100vh',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        zIndex: 9999
-    },
-    loadingContent: {
-        display: 'flex',
-        flexDirection: 'column' as const,
-        alignItems: 'center',
-        padding: '30px',
-        backgroundColor: 'white',
-        borderRadius: '12px',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)'
-    },
-    spinner: {
-        width: '50px',
-        height: '50px',
-        border: '6px solid #f3f3f3',
-        borderTop: '6px solid #10B981',
-        borderRadius: '50%',
-        animation: 'spin 1s linear infinite',
-        marginBottom: '15px'
-    },
-    loadingText: {
-        fontSize: '16px',
-        fontWeight: 'bold',
-        color: '#4A4A4A',
-        margin: 0
-    }
-};

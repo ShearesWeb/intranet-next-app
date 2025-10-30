@@ -38,24 +38,6 @@ const getCachedPositionsForPhase = cache(async (ccaIds: number[], currentRound: 
     return allPositions;
 });
 
-// Helper function to safely extract CCA name
-function getCcaName(ccas: any): string {
-    // Handle both object and array cases defensively
-    if (!ccas) return "Unknown";
-
-    // If it's an array (what TS thinks), take first element
-    if (Array.isArray(ccas) && ccas.length > 0) {
-        return ccas[0]?.name || "Unknown";
-    }
-
-    // If it's an object (what runtime shows), access directly
-    if (typeof ccas === 'object' && ccas.name) {
-        return ccas.name;
-    }
-
-    return "Unknown";
-}
-
 export async function GET(request: Request) {
     try {
         const userId = await fetchUserId();
