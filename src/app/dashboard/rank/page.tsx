@@ -1,8 +1,8 @@
 // src/app/dashboard/rank/page.tsx
+// Page for users to rank CCA positions
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import Sidebar from '@/components/Sidebar';
 import { useAuth } from '@/context/AuthContext';
 import { usePhaseInfo } from '@/hooks/usePhaseInfo';
 import toast from 'react-hot-toast';

@@ -5,6 +5,7 @@ import {
     FileUser,
     Volleyball,
     House,
+    LucideIcon,
 } from "lucide-react"
 
 import { NavMain } from "@/components/layout/nav-main"
@@ -19,52 +20,84 @@ import {
     SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import Link from "next/link"
-import { Avatar, AvatarImage } from "@radix-ui/react-avatar"
+import { Avatar, AvatarImage } from "../ui/avatar"
+import { useAuth } from "@/context/AuthContext"
+import { usePhaseInfo } from "@/hooks/usePhaseInfo"
 
-const data = {
-    navMain: [
-        {
-            title: "Dashboard",
-            url: "/dashboard",
-            icon: House,
-            isActive: true,
-        },
-        {
-            title: "Manage CCAs",
-            url: "/dashboard/mycca",
-            isActive: true,
-            icon: Volleyball,
-            items: [
-                {
-                    title: "View My CCAs",
-                    url: "/dashboard/mycca",
-                },
-                {
-                    title: "Manage Members",
-                    url: "/dashboard/mycca/manageMembers",
-                },
-            ],
-        },
-        {
-            title: "CCA Allocation",
-            url: "/dashboard/rank",
-            icon: FileUser,
-            isActive: true,
-            items: [
-                {
-                    title: "Apply For CCAs",
-                    url: "/dashboard/rank",
-                },
-                {
-                    title: "Rank CCA Applicants",
-                    url: "/dashboard/rankApplicants",
-                },
-            ],
-        },
-    ],
+type NavItem = {
+    title: string
+    url: string
+    icon: LucideIcon
+    isActive?: boolean
+    adminOnly?: boolean
+    featureFlag?: string
+    items?: {
+        title: string
+        url: string
+        adminOnly?: boolean
+        featureFlag?: string
+    }[]
 }
 
+const options: NavItem[] = [
+    {
+        title: "Dashboard",
+        url: "/dashboard",
+        icon: House,
+        isActive: true,
+    },
+    {
+        title: "Manage CCAs",
+        url: "/dashboard/mycca",
+        isActive: true,
+        icon: Volleyball,
+        items: [
+            {
+                title: "My CCAs",
+                url: "/dashboard/mycca",
+            },
+            {
+                title: "Manage Members",
+                url: "/dashboard/mycca/manageMembers",
+                adminOnly: true,
+            },
+        ],
+    },
+    {
+        title: "CCA Allocation",
+        url: "/dashboard/rank",
+        icon: FileUser,
+        isActive: true,
+        items: [
+            {
+                title: "Apply For CCAs",
+                url: "/dashboard/rank",
+            },
+            {
+                title: "Rank CCA Applicants",
+                url: "/dashboard/rankApplicants",
+                adminOnly: true,
+            },
+        ],
+    },
+]
+
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+    const { user } = useAuth();
+    const { phaseInfo } = usePhaseInfo();
+
+    const navItems = options
+        .filter(item => !item.adminOnly || user?.is_admin)
+        .map(item => ({
+            ...item,
+            items: item.items?.filter(
+                sub =>
+                    (!sub.adminOnly || user?.is_admin)
+                // &&
+                // (!sub.featureFlag || flags[sub.featureFlag])
+            ),
+        }));
+
     return (
         <Sidebar variant="inset" {...props}>
             <SidebarHeader>
@@ -84,7 +117,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </SidebarMenu>
             </SidebarHeader>
             <SidebarContent>
-                <NavMain items={data.navMain} />
+                <NavMain items={navItems} />
             </SidebarContent>
             <SidebarFooter>
                 <NavUser />
