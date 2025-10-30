@@ -57,13 +57,27 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
     <tr
       data-slot="table-row"
       className={cn(
-        "hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors",
+        "hover:bg-orange-50 data-[state=selected]:bg-muted border-b transition-colors",
         className
       )}
       {...props}
     />
   )
 }
+
+function TableHeaderRow({ className, ...props }: React.ComponentProps<"tr">) {
+  return (
+    <tr
+      data-slot="table-row"
+      className={cn(
+        "border-b transition-colors", // no hover here
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
 
 function TableHead({ className, ...props }: React.ComponentProps<"th">) {
   return (
@@ -113,4 +127,5 @@ export {
   TableRow,
   TableCell,
   TableCaption,
+  TableHeaderRow,
 }

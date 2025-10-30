@@ -77,8 +77,8 @@ export function AppLayout({ children }: AppLayoutProps) {
 
                                     // middle items
                                     return (
-                                        <Fragment >
-                                            <BreadcrumbSeparator key={seg.href} />
+                                        <Fragment key={seg.href}>
+                                            <BreadcrumbSeparator />
                                             <BreadcrumbItem className="hidden md:block">
                                                 <Link href={seg.href}>{seg.name}</Link>
                                             </BreadcrumbItem>
