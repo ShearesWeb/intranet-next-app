@@ -6,6 +6,7 @@ import Sidebar from '@/components/Sidebar';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
+import { AUTHORIZED_CHAIR_ROLES, type ChairRole } from '@/lib/lead-auth-service';
 
 interface CCAData {
   name: string;
@@ -43,7 +44,7 @@ export default function MyCCA() {
     if (!user?.email) return;
 
     setLoadingCCAs(true);
-    fetch('/api/user/getCCAs/' + user?.email)
+    fetch('/api/user/getCCAs')
       .then(async (res) => {
         if (!res.ok) {
           const errorData = await res.json();
@@ -164,7 +165,7 @@ export default function MyCCA() {
                       <strong>{cca.points}</strong>
                     </td>
                     <td style={styles.tdCenter}>
-                      {(cca.position_type === 'lead' || cca.position_type === 'vice') &&
+                      {AUTHORIZED_CHAIR_ROLES.includes(cca.position_type as ChairRole) &&
                         (
                           <button
                             style={styles.manageButton}

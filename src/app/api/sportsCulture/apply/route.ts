@@ -1,8 +1,10 @@
 // src/app/api/sportsCulture/apply/route.ts
+// API route to get available sports and culture positions for application
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from 'next/headers';
-import { phaseService } from '@/lib/phaseService';
+import { phaseService } from '@/lib/phase-service';
+import { fetchUserId } from "@/lib/fetch-user-info";
 
 export async function POST(request: Request) {
     try {
@@ -10,21 +12,11 @@ export async function POST(request: Request) {
 
         const supabase = await createClient();
 
-        // Verify authentication
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        if (authError || !user) {
+        // Verify authentication and get user ID
+        const requestingUserId = await fetchUserId();
+
+        if (!requestingUserId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        // Get user data
-        const { data: userData, error: userError } = await supabase
-            .from('public_user_info')
-            .select('id')
-            .eq('email', user.email)
-            .single();
-
-        if (userError || !userData) {
-            return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
 
         // Check if applications are open
@@ -73,7 +65,7 @@ export async function POST(request: Request) {
                     name
                 )
             `)
-            .eq('user_id', userData.id)
+            .eq('user_id', requestingUserId)
             .eq('cca_positions.cca_id', positionData.cca_id)
             .in('cca_positions.position_type', ['member', 'team manager']);
 
@@ -99,7 +91,7 @@ export async function POST(request: Request) {
         const { data: exactMatch } = await supabase
             .from('cca_appointments')
             .select('id')
-            .eq('user_id', userData.id)
+            .eq('user_id', requestingUserId)
             .eq('position_id', position_id)
             .single();
 
@@ -113,7 +105,7 @@ export async function POST(request: Request) {
         const { error: applyError } = await supabase
             .from('cca_appointments')
             .insert({
-                user_id: userData.id,
+                user_id: requestingUserId,
                 position_id: position_id,
                 points: 0
             });
@@ -128,7 +120,7 @@ export async function POST(request: Request) {
             await supabase
                 .from('cca_allocation_events')
                 .insert({
-                    user_id: userData.id,
+                    user_id: requestingUserId,
                     position_id: position_id,
                     reason: 'Applied during open application period',
                     event_type: 'applied'
@@ -151,21 +143,11 @@ export async function DELETE(request: Request) {
 
         const supabase = await createClient();
 
-        // Verify authentication
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        if (authError || !user) {
+        // Verify authentication and get user ID
+        const requestingUserId = await fetchUserId();
+
+        if (!requestingUserId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        // Get user data
-        const { data: userData, error: userError } = await supabase
-            .from('public_user_info')
-            .select('id')
-            .eq('email', user.email)
-            .single();
-
-        if (userError || !userData) {
-            return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
 
         // Check if applications are open
@@ -181,7 +163,7 @@ export async function DELETE(request: Request) {
         const { error: removeError } = await supabase
             .from('cca_appointments')
             .delete()
-            .eq('user_id', userData.id)
+            .eq('user_id', requestingUserId)
             .eq('position_id', position_id);
 
         if (removeError) {
@@ -194,7 +176,7 @@ export async function DELETE(request: Request) {
             await supabase
                 .from('cca_allocation_events')
                 .delete()
-                .eq('user_id', userData.id)
+                .eq('user_id', requestingUserId)
                 .eq('position_id', position_id);
         } catch (deleteError) {
             console.warn('Failed to delete allocation events:', deleteError);

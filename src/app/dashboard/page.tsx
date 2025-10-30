@@ -1,16 +1,18 @@
-// C:\Ron\intranet-next-app\src\app\dashboard\home\page.tsx
+// src\app\dashboard\home\page.tsx
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 // import "./Dashboard.css";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { useEffect } from "react";
 import { useRoleAuth } from "@/hooks/useRoleAuth";
 import { usePhaseInfo } from "@/hooks/usePhaseInfo";
 import { AppLayout } from "@/components/layout/app-layout";
 import { AppLoading } from "@/components/layout/app-loading";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 
 export default function Dashboard() {
     const { user } = useAuth();
@@ -47,89 +49,138 @@ export default function Dashboard() {
     };
 
     if (!mounted || !user) {
-        return (
-            <AppLoading />
-        );
+        return <AppLoading />;
     }
 
     return (
         <AppLayout>
-            <div className="dashboard">
+            <div className="space-y-6 p-6">
                 {/* Welcome Section */}
-                <div className="welcome-section">
-                    <h2 className="welcome-text">Welcome Back,</h2>
-                    <p className="username">{user.name || user.email}</p>
-                </div>
+                <Card className="border-none shadow-lg">
+                    <CardHeader>
+                        <h2 className="text-2xl font-semibold text-muted-foreground">
+                            Welcome Back,
+                        </h2>
+                        <CardTitle className="text-4xl">
+                            {user.name || user.email}
+                        </CardTitle>
+                    </CardHeader>
+                </Card>
 
-                {/* Content Section */}
-                <div className="content-section">
-                    {/* Points Section */}
-                    <div className="points-section">
-                        <div className="points-wrapper">
-                            <div className="circle circle-1"></div>
-                            <div className="circle circle-2"></div>
-                            <div className="circle circle-3"></div>
-                            <div className="circle circle-4">
-                                <span className="points-text">
+                {/* Content Grid */}
+                <div className="grid gap-6 md:grid-cols-2">
+                    {/* Points Display Card */}
+                    <Card className="border-none shadow-lg flex flex-col">
+                        <CardHeader>
+                            <CardTitle>Your Points</CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex-1 flex items-center justify-center p-8">
+                            <div className="relative flex items-center justify-center">
+                                {/* Animated Circles */}
+                                <div className="absolute h-64 w-64 rounded-full bg-primary/5 animate-pulse" />
+                                <div className="absolute h-48 w-48 rounded-full bg-primary/10 animate-pulse delay-75" />
+                                <div className="absolute h-32 w-32 rounded-full bg-primary/20 animate-pulse delay-150" />
+
+                                {/* Points Counter */}
+                                <div className="relative z-10 flex h-40 w-40 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/70 shadow-xl">
                                     <motion.span
-                                        className="points-text"
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        transition={{
-                                            duration: 1.5,
-                                            ease: "easeInOut",
-                                        }}
+                                        className="text-5xl font-bold text-primary-foreground"
+                                        initial={{ opacity: 0, scale: 0.5 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        transition={{ duration: 0.5, ease: "easeOut" }}
                                     >
-                                        {counter}
+                                        {user.points === undefined ? 0 : user.points}
                                     </motion.span>
-
-                                </span>
+                                </div>
                             </div>
-                        </div>
-                    </div>
+                        </CardContent>
+                    </Card>
 
-                    {/* Activity Section */}
-                    <div className="activity-section">
-                        <h3 className="activity-title">My Activity</h3>
-                        <div className="buttons">
-                            <div className="button-group">
-                                <button className="activity-button" onClick={() => router.push("/dashboard/mycca")}>My CCAs</button>
-                                <p className="button-description">
+                    {/* Activity Section Card */}
+                    <Card className="border-none shadow-lg">
+                        <CardHeader>
+                            <CardTitle>My Activity</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                            {/* My CCAs Button */}
+                            <div className="space-y-1">
+                                <Button
+                                    className="w-full justify-start text-left h-auto py-3 cursor-pointer"
+                                    variant="default"
+                                    onClick={() => router.push("/dashboard/mycca")}
+                                >
+                                    <div className="flex flex-col items-start">
+                                        <span className="font-semibold">My CCAs</span>
+                                    </div>
+                                </Button>
+                                <p className="text-sm text-muted-foreground px-3">
                                     View your CCAs and Points
                                 </p>
                             </div>
-                            <div className="button-group">
-                                <button className="activity-button" onClick={() => router.push("/dashboard/rank")}>{getRankCCAButtonText()}</button>
-                                <p className="button-description">
+
+                            <Separator />
+
+                            {/* Rank CCA Button */}
+                            <div className="space-y-1">
+                                <Button
+                                    className="w-full justify-start text-left h-auto py-3 cursor-pointer"
+                                    variant="default"
+                                    onClick={() => router.push("/dashboard/rank")}
+                                >
+                                    <div className="flex flex-col items-start">
+                                        <span className="font-semibold">{getRankCCAButtonText()}</span>
+                                    </div>
+                                </Button>
+                                <p className="text-sm text-muted-foreground px-3">
                                     Rank your CCA preferences
                                 </p>
                             </div>
+
+                            {/* Sports & Culture Button (conditional) */}
                             {isSportsCultureAvailable() && (
-                                <div className="button-group">
-                                    <button
-                                        className="activity-button"
-                                        onClick={() => router.push("/dashboard/sportsCulture")}
-                                    >
-                                        Apply Sports & Culture
-                                    </button>
-                                    <div className="button-description">Apply to Sports & Culture CCAs</div>
-                                </div>
+                                <>
+                                    <Separator />
+                                    <div className="space-y-1">
+                                        <Button
+                                            className="w-full justify-start text-left h-auto py-3 cursor-pointer"
+                                            variant="default"
+                                            onClick={() => router.push("/dashboard/sportsCulture")}
+                                        >
+                                            <div className="flex flex-col items-start">
+                                                <span className="font-semibold">Apply Sports & Culture</span>
+                                            </div>
+                                        </Button>
+                                        <p className="text-sm text-muted-foreground px-3">
+                                            Apply to Sports & Culture CCAs
+                                        </p>
+                                    </div>
+                                </>
                             )}
+
+                            {/* Rank Applicants Button (conditional for authorized users) */}
                             {!roleLoading && isAuthorized && (
-                                <div className="button-group">
-                                    <button className="activity-button" onClick={() => router.push("/dashboard/rankApplicants")}>
-                                        Rank Applicants
-                                    </button>
-                                    <p className="button-description">
-                                        Rank applicants for your CCA
-                                    </p>
-                                </div>
+                                <>
+                                    <Separator />
+                                    <div className="space-y-1">
+                                        <Button
+                                            className="w-full justify-start text-left h-auto py-3 cursor-pointer"
+                                            variant="default"
+                                            onClick={() => router.push("/dashboard/rankApplicants")}
+                                        >
+                                            <div className="flex flex-col items-start">
+                                                <span className="font-semibold">Rank Applicants</span>
+                                            </div>
+                                        </Button>
+                                        <p className="text-sm text-muted-foreground px-3">
+                                            Rank applicants for your CCA
+                                        </p>
+                                    </div>
+                                </>
                             )}
-                        </div>
-                    </div>
+                        </CardContent>
+                    </Card>
                 </div>
             </div>
         </AppLayout>
-
     );
 }

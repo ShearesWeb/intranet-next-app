@@ -1,6 +1,7 @@
 // src/app/api/system/currentPhase/route.ts
+// API route to get the current system phase information
 import { NextResponse } from 'next/server';
-import { phaseService } from '@/lib/phaseService';
+import { phaseService } from '@/lib/phase-service';
 
 export async function GET() {
     try {

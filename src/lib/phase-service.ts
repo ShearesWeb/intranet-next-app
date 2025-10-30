@@ -1,5 +1,6 @@
 // src/lib/phaseService.ts
 import { createClient } from "@/utils/supabase/server";
+import { cookies } from 'next/headers';
 
 export interface PhaseInfo {
     phase: 'inactive' | 'maincomm_interviews' | 'maincomm_concurrent_ranking' |
@@ -35,7 +36,7 @@ export class PhaseService {
         // return 'subcomm_interviews_test';
         return 'subcomm_concurrent_ranking_test';
         // return 'subcomm_results_processing_test';
-        // return 'full_results_available_test';
+        return 'full_results_available_test';
         return null; // ✅ Default: no override (uses real database phases)
     }
 
@@ -50,6 +51,7 @@ export class PhaseService {
                 .from('feature_flags')
                 .select('name, expires_at')
                 .gt('expires_at', new Date().toISOString())
+                // .eq('enabled', true)
                 .order('expires_at', { ascending: true })
                 .limit(1);
 

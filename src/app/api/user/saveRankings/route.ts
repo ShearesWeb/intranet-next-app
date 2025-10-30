@@ -1,27 +1,26 @@
 // src/app/api/user/saveRankings/route.ts
+// API route to save CCA rankings for a user
 import { NextResponse } from "next/server";
-import { cookies } from 'next/headers';
 import { createClient } from "@/utils/supabase/server";
+import { fetchUserId } from "@/lib/fetch-user-info";
 
 export async function POST(request: Request) {
     try {
-        const { email, rankings } = await request.json();
+        const { rankings } = await request.json();
         const supabase = await createClient();
 
-        // Get user ID
-        const { data: user, error: userError } = await supabase
-            .from('public_user_info')
-            .select('id')
-            .eq('email', email)
-            .single();
+        // Get user ID from cookie
+        const userId = await fetchUserId();
 
-        if (userError || !user) {
-            return NextResponse.json({ error: 'User not found' }, { status: 404 });
+        if (!userId) {
+            return NextResponse.json({
+                error: 'Unauthorized'
+            }, { status: 401 });
         }
 
         // Save rankings
         const preferences = rankings.map((rank: { position_id: number; ranking: number }) => ({
-            user_id: user.id,
+            user_id: userId,
             position_id: rank.position_id,
             ranking: rank.ranking,
             application_status: 'pending'
@@ -31,7 +30,7 @@ export async function POST(request: Request) {
         const { error: deleteError } = await supabase
             .from('user_cca_applications')
             .delete()
-            .eq('user_id', user.id);
+            .eq('user_id', userId);
 
         if (deleteError) {
             console.error('Error deleting existing preferences:', deleteError);

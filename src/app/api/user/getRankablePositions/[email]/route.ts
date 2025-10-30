@@ -1,7 +1,10 @@
+// src/app/api/user/getRankablePositions/[email]/route.ts
+// API route to get rankable positions for a user
 import { NextResponse } from "next/server";
-import { cookies } from 'next/headers';
 import { createClient } from "@/utils/supabase/server";
-import { phaseService } from '@/lib/phaseService';
+import { phaseService } from '@/lib/phase-service';
+import { fetchUserId } from "@/lib/fetch-user-info";
+import { AUTHORIZED_CHAIR_ROLES } from '@/lib/lead-auth-service';
 
 interface CCAData {
     name: string;
@@ -21,13 +24,8 @@ interface PositionData {
     ccas: CCAData[];  // Keep as array for consistency
 }
 
-export async function GET(
-    request: Request,
-    { params }: { params: Promise<{ email: string }> }
-) {
+export async function GET(request: Request) {
     try {
-        const { email } = await params;
-
         const phaseInfo = await phaseService.getCurrentPhaseInfo();
         if (!phaseInfo.allowApplicantRanking) {
             return NextResponse.json({
@@ -43,15 +41,13 @@ export async function GET(
 
         const supabase = await createClient();
 
-        // Get user ID
-        const { data: user, error: userError } = await supabase
-            .from('public_user_info')
-            .select('id')
-            .eq('email', email)
-            .single();
+        // Get user ID from cookie
+        const userId = await fetchUserId();
 
-        if (userError || !user) {
-            return NextResponse.json({ positions: [] });
+        if (!userId) {
+            return NextResponse.json({
+                error: 'Unauthorized'
+            }, { status: 401 });
         }
 
         function getValidPositionTypes(currentRound: string): string[] {
@@ -80,7 +76,7 @@ export async function GET(
             `)
             .in('position_type', getValidPositionTypes(phaseInfo.round))
             .gt('available_capacity', 0)
-            .not('position_type', 'in', '("lead","vice")')
+            .not('position_type', 'in', `("${AUTHORIZED_CHAIR_ROLES.join('","')}")`)
             .order('name', { ascending: true });
 
         if (positionsError) {
@@ -101,7 +97,7 @@ export async function GET(
         const { data: userApplications, error: appError } = await supabase
             .from('user_cca_applications')
             .select('position_id, ranking, application_status')
-            .eq('user_id', user.id);
+            .eq('user_id', userId);
 
         if (appError) {
             console.error('Error fetching user applications:', appError);

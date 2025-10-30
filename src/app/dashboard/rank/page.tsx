@@ -1,3 +1,5 @@
+// src/app/dashboard/rank/page.tsx
+// Page for users to rank CCA positions
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';

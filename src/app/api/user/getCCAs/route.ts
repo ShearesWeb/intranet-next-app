@@ -1,8 +1,10 @@
+// src/app/api/user/getCCAs/route.ts
+// API route to get CCAs a user is appointed to
 import { NextResponse } from "next/server";
-import { cookies } from 'next/headers';
 import { createClient } from "@/utils/supabase/server";
+import { fetchUserId } from "@/lib/fetch-user-info";
 
-// ✅ Proper TypeScript interfaces with union types
+// ✅ TypeScript interfaces with union types
 interface CCAData {
 	name: string;
 	cca_type: string;
@@ -18,11 +20,6 @@ interface PositionData {
 	ccas: CCAData | CCAData[];
 }
 
-interface AppointmentData {
-	position_id: number;
-	points: number;
-}
-
 // ✅ Type-safe helper function with proper type guards
 function getCCAProperty(cca: CCAData | CCAData[], property: keyof CCAData): string {
 	if (Array.isArray(cca)) {
@@ -35,39 +32,24 @@ function getCCAProperty(cca: CCAData | CCAData[], property: keyof CCAData): stri
 	return 'Unknown';
 }
 
-export async function GET(
-	request: Request,
-	{ params }: { params: Promise<{ email: string }> }
-) {
+export async function GET(request: Request) {
 	try {
-		const { email } = await params;
 		const supabase = await createClient();
 
-		const { data: { user }, error: authError } = await supabase.auth.getUser();
-		if (authError || !user) {
-			console.log("No authenticated user for request:", authError);
-			return NextResponse.json({ data: [] });
+		// Get user ID from cookie
+		const userId = await fetchUserId();
+
+		if (!userId) {
+			return NextResponse.json({
+				error: 'Unauthorized'
+			}, { status: 401 });
 		}
-
-		// Step 1: Get user ID from public_user_info table
-		const { data: userData, error: userError } = await supabase
-			.from('public_user_info')
-			.select('id')
-			.eq('email', email)
-			.single();
-
-		if (userError || !userData) {
-			console.log("User not found in public_user_info:", email, userError);
-			return NextResponse.json({ data: [] });
-		}
-
-		// console.log("User found with ID:", userData.id);
 
 		// Step 2: Get appointments for this user
 		const { data: appointments, error: appointmentError } = await supabase
 			.from('cca_appointments')
 			.select('position_id')
-			.eq('user_id', userData.id);
+			.eq('user_id', userId);
 
 		if (appointmentError) {
 			console.error("Error fetching appointments:", appointmentError);
@@ -81,7 +63,7 @@ export async function GET(
 		}
 
 		// Step 3: Get position details for these appointments
-		const positionIds = appointments.map((app: AppointmentData) => app.position_id);
+		const positionIds = appointments.map((app: any) => app.position_id);
 
 		const { data: positions, error: positionError } = await supabase
 			.from('cca_positions')
@@ -103,7 +85,7 @@ export async function GET(
 
 		// Step 4: Combine the data - ✅ Type-safe transformation
 		const transformedData = appointments
-			.map((appointment: AppointmentData) => {
+			.map((appointment: any) => {
 				const position = positions?.find(
 					(p: PositionData) => p.id === appointment.position_id
 				) as PositionData | undefined;
@@ -126,10 +108,9 @@ export async function GET(
 		return NextResponse.json({
 			data: transformedData,
 			debug: {
-				userFound: !!userData,
+				userId: userId,
 				appointmentsCount: appointments?.length || 0,
-				positionsCount: positions?.length || 0,
-				email: email
+				positionsCount: positions?.length || 0
 			}
 		});
 
