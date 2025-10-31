@@ -1,10 +1,7 @@
-// C:\Ron\intranet-next-app\src\app\dashboard\mycca\page.tsx
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import Sidebar from '@/components/Sidebar';
 import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { AUTHORIZED_CHAIR_ROLES, type ChairRole } from '@/lib/lead-auth-service';
 import { AppLayout } from '@/components/layout/app-layout';
@@ -13,6 +10,7 @@ import { SimpleTable, SimpleTableColumn } from '@/components/table/simple-table'
 import { Spinner } from '@/components/ui/spinner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertTitle } from '@/components/ui/alert';
+import Link from 'next/link';
 
 interface CCAData {
   name: string;
@@ -86,7 +84,6 @@ const ccaTableColumns: SimpleTableColumn<CCAData>[] = [
 
 
 export default function MyCCA() {
-  const router = useRouter();
   const { user } = useAuth();
   const [points, setPoints] = useState(0);
   const [ccas, setCCAs] = useState<CCAData[]>([]);
@@ -117,10 +114,6 @@ export default function MyCCA() {
         setLoadingCCAs(false);
       });
   }, [user?.email]);
-
-  const handleManageMembers = (cca: CCAData) => {
-    router.push(`/dashboard/mycca/manageMembers/${encodeURIComponent(cca.name)}?ccaName=${encodeURIComponent(cca.name)}`);
-  };
 
   if (loadingCCAs) {
     return (
@@ -169,13 +162,14 @@ export default function MyCCA() {
         cell: (_, row) =>
           AUTHORIZED_CHAIR_ROLES.includes(row.position_type as ChairRole) && (
             <div className="text-center">
-              <Button
-                size="sm"
-                onClick={() => handleManageMembers(row)}
-                className="bg-blue-500 text-white hover:bg-blue-400 px-4 py-2 shadow-md font-bold cursor-pointer"
-              >
-                View
-              </Button>
+              <Link href={`/dashboard/mycca/manageMembers/${encodeURIComponent(row.name)}?ccaName=${encodeURIComponent(row.name)}`}>
+                <Button
+                  size="sm"
+                  className="bg-blue-500 text-white hover:bg-blue-400 px-4 py-2 shadow-md font-bold cursor-pointer"
+                >
+                  View
+                </Button>
+              </Link>
             </div>
           ),
       },
