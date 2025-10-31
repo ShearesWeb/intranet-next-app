@@ -19,6 +19,7 @@ import { AlertCircleIcon, Volleyball } from "lucide-react";
 
 // Custom table component
 import { SimpleTable, SimpleTableColumn } from "@/components/table/simple-table";
+import Link from 'next/link';
 
 interface Member {
     user_id: number;
@@ -93,7 +94,6 @@ const memberTableColumns: SimpleTableColumn<Member>[] = [
 export default function ManageMembersPage() {
     const params = useParams();
     const router = useRouter();
-    const { user } = useAuth();
 
     const ccaName = decodeURIComponent(params.cca_name as string);
 
@@ -475,13 +475,14 @@ export default function ManageMembersPage() {
                                 {saving ? 'Saving...' : `Save Members (${pendingChanges.length})`}
                             </Button>
                         )}
-                        <Button
-                            onClick={() => router.push('/dashboard/mycca')}
-                            size="lg"
-                            className="bg-blue-500 text-white hover:bg-blue-400 px-6 py-4 shadow-md font-bold cursor-pointer"
-                        >
-                            ← Back to My CCAs
-                        </Button>
+                        <Link href="/dashboard/mycca">
+                            <Button
+                                size="lg"
+                                className="bg-blue-500 text-white hover:bg-blue-400 px-6 py-4 shadow-md font-bold cursor-pointer"
+                            >
+                                ← Back to My CCAs
+                            </Button>
+                        </Link>
                     </div>
                 </div>
 
