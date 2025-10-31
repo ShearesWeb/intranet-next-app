@@ -56,11 +56,6 @@ const options: NavItem[] = [
                 title: "My CCAs",
                 url: "/dashboard/mycca",
             },
-            {
-                title: "Manage Members",
-                url: "/dashboard/mycca/manageMembers",
-                adminOnly: true,
-            },
         ],
     },
     {
