@@ -4,7 +4,6 @@
 import React, { useEffect, useState } from 'react';
 import Sidebar from '@/components/Sidebar';
 import { useParams, useRouter } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
 import toast from 'react-hot-toast';
 import { AppLayout } from '@/components/layout/app-layout';
 
@@ -354,19 +353,26 @@ export default function ManageMembersPage() {
 
     if (loading) {
         return (
-            <div className="flex h-screen">
-                <Sidebar />
-                <div className="flex-1 p-6 bg-white overflow-auto flex justify-center items-center">
-                    <LoadingMembers />
+            <AppLayout>
+                <div className="flex items-center justify-center z-50">
+                    <Item className="bg-white rounded-lg p-6">
+                        <ItemMedia>
+                            <Spinner className="w-8 h-8" />
+                        </ItemMedia>
+                        <ItemContent>
+                            <ItemTitle className="text-gray-700 font-semibold">
+                                Loading members...
+                            </ItemTitle>
+                        </ItemContent>
+                    </Item>
                 </div>
-            </div>
+            </AppLayout>
         );
     }
 
     if (error) {
         return (
-            <div className="flex h-full">
-                <Sidebar />
+            <AppLayout>
                 <div className="flex-1 p-6">
                     <div className="mb-6">
                         <h1 className="text-2xl font-bold text-gray-800">CCA Members</h1>
@@ -385,7 +391,7 @@ export default function ManageMembersPage() {
                         </CardContent>
                     </Card>
                 </div>
-            </div>
+            </AppLayout>
         );
     }
 
