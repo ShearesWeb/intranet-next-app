@@ -4,7 +4,6 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 // import "./Dashboard.css";
-import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useRoleAuth } from "@/hooks/useRoleAuth";
 import { usePhaseInfo } from "@/hooks/usePhaseInfo";
@@ -13,12 +12,12 @@ import { AppLoading } from "@/components/layout/app-loading";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import Link from "next/link";
 
 export default function Dashboard() {
     const { user } = useAuth();
     const { isAuthorized, loading: roleLoading } = useRoleAuth();
     const { phaseInfo } = usePhaseInfo();
-    const router = useRouter();
     const [counter, setCounter] = useState(0);
     const [mounted, setMounted] = useState(false);
 
@@ -104,15 +103,16 @@ export default function Dashboard() {
                         <CardContent className="space-y-3">
                             {/* My CCAs Button */}
                             <div className="space-y-1">
-                                <Button
-                                    className="w-full justify-start text-left h-auto py-3 cursor-pointer"
-                                    variant="default"
-                                    onClick={() => router.push("/dashboard/mycca")}
-                                >
-                                    <div className="flex flex-col items-start">
-                                        <span className="font-semibold">My CCAs</span>
-                                    </div>
-                                </Button>
+                                <Link href="/dashboard/mycca">
+                                    <Button
+                                        className="w-full justify-start text-left h-auto py-3 cursor-pointer"
+                                        variant="default"
+                                    >
+                                        <div className="flex flex-col items-start">
+                                            <span className="font-semibold">My CCAs</span>
+                                        </div>
+                                    </Button>
+                                </Link>
                                 <p className="text-sm text-muted-foreground px-3">
                                     View your CCAs and Points
                                 </p>
@@ -122,15 +122,16 @@ export default function Dashboard() {
 
                             {/* Rank CCA Button */}
                             <div className="space-y-1">
-                                <Button
-                                    className="w-full justify-start text-left h-auto py-3 cursor-pointer"
-                                    variant="default"
-                                    onClick={() => router.push("/dashboard/rank")}
-                                >
-                                    <div className="flex flex-col items-start">
-                                        <span className="font-semibold">{getRankCCAButtonText()}</span>
-                                    </div>
-                                </Button>
+                                <Link href="/dashboard/rank">
+                                    <Button
+                                        className="w-full justify-start text-left h-auto py-3 cursor-pointer"
+                                        variant="default"
+                                    >
+                                        <div className="flex flex-col items-start">
+                                            <span className="font-semibold">{getRankCCAButtonText()}</span>
+                                        </div>
+                                    </Button>
+                                </Link>
                                 <p className="text-sm text-muted-foreground px-3">
                                     Rank your CCA preferences
                                 </p>
@@ -141,15 +142,16 @@ export default function Dashboard() {
                                 <>
                                     <Separator />
                                     <div className="space-y-1">
-                                        <Button
-                                            className="w-full justify-start text-left h-auto py-3 cursor-pointer"
-                                            variant="default"
-                                            onClick={() => router.push("/dashboard/sportsCulture")}
-                                        >
-                                            <div className="flex flex-col items-start">
-                                                <span className="font-semibold">Apply Sports & Culture</span>
-                                            </div>
-                                        </Button>
+                                        <Link href="/dashboard/sportsCulture">
+                                            <Button
+                                                className="w-full justify-start text-left h-auto py-3 cursor-pointer"
+                                                variant="default"
+                                            >
+                                                <div className="flex flex-col items-start">
+                                                    <span className="font-semibold">Apply Sports & Culture</span>
+                                                </div>
+                                            </Button>
+                                        </Link>
                                         <p className="text-sm text-muted-foreground px-3">
                                             Apply to Sports & Culture CCAs
                                         </p>
@@ -162,15 +164,16 @@ export default function Dashboard() {
                                 <>
                                     <Separator />
                                     <div className="space-y-1">
-                                        <Button
-                                            className="w-full justify-start text-left h-auto py-3 cursor-pointer"
-                                            variant="default"
-                                            onClick={() => router.push("/dashboard/rankApplicants")}
-                                        >
-                                            <div className="flex flex-col items-start">
-                                                <span className="font-semibold">Rank Applicants</span>
-                                            </div>
-                                        </Button>
+                                        <Link href="/dashboard/rankApplicants">
+                                            <Button
+                                                className="w-full justify-start text-left h-auto py-3 cursor-pointer"
+                                                variant="default"
+                                            >
+                                                <div className="flex flex-col items-start">
+                                                    <span className="font-semibold">Rank Applicants</span>
+                                                </div>
+                                            </Button>
+                                        </Link>
                                         <p className="text-sm text-muted-foreground px-3">
                                             Rank applicants for your CCA
                                         </p>
