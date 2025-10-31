@@ -48,7 +48,7 @@ export async function POST(
 
         if (!canManage) {
             return NextResponse.json({
-                error: 'Sports/Culture member management is not currently available'
+                error: 'Sports/Culture member management is currently not available'
             }, { status: 403 });
         }
 

@@ -501,7 +501,7 @@ export default function ManageMembersPage() {
                         <CardContent className="text-sky-900 text-sm pl-4">
                             {permissions.canManageMembers
                                 ? 'You may add and remove members for your sports/culture CCA.'
-                                : 'Member management is not currently available.'}
+                                : 'Member management is currently not available.'}
                         </CardContent>
                     </Card>
                 )}
