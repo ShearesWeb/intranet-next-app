@@ -245,7 +245,7 @@ export class PhaseService {
                 allowChairRanking: false,
                 allowApplicantRanking: false,
                 showResults: false,
-                userMessage: 'CCA allocation is not currently active.',
+                userMessage: 'CCA allocation is currently not active.',
                 nextPhaseDate: nextPhaseInfo?.nextPhaseDate,
                 serverTime: serverTime.toISOString(),
                 activeFlags

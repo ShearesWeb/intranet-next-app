@@ -210,7 +210,7 @@ function PositionCard(props: {
                 <div className="text-2xl font-bold text-muted-foreground pr-5 min-w-[40px] text-center mt-1.5">
                     {/* Rank number placeholder */}
                 </div>
-                
+
                 <div className="mr-6">
                     <h3 className="text-lg font-bold text-foreground">
                         {position.name}
@@ -245,13 +245,13 @@ function PositionCard(props: {
                                 Applicants ({position.applicants.length})
                                 {position.applicants.length < position.available_capacity && (
                                     <span className="text-red-500 text-medium ml-1">
-                                            Warning: Fewer applicants than available slots.
+                                        Warning: Fewer applicants than available slots.
                                     </span>
                                 )}
                             </div>
                             {position.applicants.map((app: Applicant, appIdx: number) => (
-                                <div 
-                                    key={app.id || `applicant-${appIdx}`} 
+                                <div
+                                    key={app.id || `applicant-${appIdx}`}
                                     className="flex items-center border-b border-gray-100 py-1.5 mb-5"
                                 >
                                     <div className="text-2xl p-5 font-bold text-muted-foreground mr-5 min-w-[40px] text-center">
@@ -300,7 +300,7 @@ function PositionCard(props: {
                             ))}
                         </>
                     )}
-                    
+
                     <Button
                         onClick={onSaveRankings}
                         disabled={saving || !hasChanges}
@@ -581,9 +581,9 @@ export default function RankApplicants() {
                 case 'subcomm_results_processing':
                     return "Subcomm results are currently being processed. Results will be available soon."
                 case 'full_results_available':
-                    return "Subcomm results have been released. Chair ranking is not currently active.";
+                    return "Subcomm results have been released. Chair ranking is currently not active.";
                 default:
-                    return "Chair ranking is not currently active.";
+                    return "Chair ranking is currently not active.";
             }
         };
 
