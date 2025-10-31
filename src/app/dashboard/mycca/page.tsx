@@ -7,6 +7,12 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { AUTHORIZED_CHAIR_ROLES, type ChairRole } from '@/lib/lead-auth-service';
+import { AppLayout } from '@/components/layout/app-layout';
+import { Button } from '@/components/ui/button';
+import { SimpleTable, SimpleTableColumn } from '@/components/table/simple-table';
+import { Spinner } from '@/components/ui/spinner';
+import { Card, CardContent } from '@/components/ui/card';
+import { Alert, AlertTitle } from '@/components/ui/alert';
 
 interface CCAData {
   name: string;
@@ -17,28 +23,75 @@ interface CCAData {
   points: number;
 }
 
+// Helper function to display CCA type with proper capitalization
+const ccaTypeDisplay = (str: string) => {
+  if (!str) return '';
+
+  const typeMapping: Record<string, string> = {
+    'committee': 'Committee',
+    'sports': 'Sports',
+    'culture': 'Culture',
+    'jcrc': 'JCRC',
+  };
+
+  return typeMapping[str] || str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+};
+
+// Define table columns
+const ccaTableColumns: SimpleTableColumn<CCAData>[] = [
+  {
+    accessorKey: 'name',
+    header: 'CCA',
+    cell: (value, row) => (
+      <div className="flex flex-col gap-2 pr-4">
+        <strong className="font-semibold text-sm md:text-base">{value}</strong>
+        {row.description && (
+          <div className="text-xs md:text-sm text-gray-600 break-words whitespace-normal text-justify leading-relaxed line-clamp-5">
+            {row.description}
+          </div>
+        )}
+      </div>
+    ),
+  },
+  {
+    accessorKey: 'role',
+    header: 'Role',
+    cell: (value) => (
+      <span className="inline-block px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-bold whitespace-nowrap">
+        {value}
+      </span>
+    ),
+    enableSorting: true,
+  },
+  {
+    accessorKey: 'cca_type',
+    header: 'Type',
+    cell: (value) => (
+      <span className="inline-block px-2 py-1 bg-green-50 text-green-700 rounded text-xs font-bold whitespace-nowrap">
+        {ccaTypeDisplay(value)}
+      </span>
+    ),
+    enableSorting: true,
+  },
+  {
+    accessorKey: 'points',
+    header: 'Points',
+    cell: (value) => (
+      <div className="font-semibold text-center text-sm md:text-base">{value}</div>
+    ),
+    enableSorting: true,
+  },
+];
+
+
+
 export default function MyCCA() {
   const router = useRouter();
   const { user } = useAuth();
   const [points, setPoints] = useState(0);
   const [ccas, setCCAs] = useState<CCAData[]>([]);
-
   const [loadingCCAs, setLoadingCCAs] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Helper function to display CCA type with proper capitalization
-  const ccaTypeDisplay = (str: string) => {
-    if (!str) return '';
-
-    const typeMapping: Record<string, string> = {
-      'committee': 'Committee',
-      'sports': 'Sports',
-      'culture': 'Culture',
-      'jcrc': 'JCRC',
-    };
-
-    return typeMapping[str] || str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
-  };
 
   useEffect(() => {
     if (!user?.email) return;
@@ -53,12 +106,7 @@ export default function MyCCA() {
         return res.json();
       })
       .then((data) => {
-        // console.log("CCA Data received:", data);
         setCCAs(data.data);
-        ``
-        if (process.env.NODE_ENV === 'development') {
-          // console.log("Debug info:", data.debug);
-        }
       })
       .catch((error) => {
         console.error("Error fetching CCAs:", error.message);
@@ -71,278 +119,96 @@ export default function MyCCA() {
   }, [user?.email]);
 
   const handleManageMembers = (cca: CCAData) => {
-    // Navigate to member management page
     router.push(`/dashboard/mycca/manageMembers/${encodeURIComponent(cca.name)}?ccaName=${encodeURIComponent(cca.name)}`);
   };
 
   if (loadingCCAs) {
     return (
-      <div style={styles.container}>
-        <Sidebar />
-        <div style={styles.content}>
-          <div style={styles.loading}>Loading your CCA data...</div>
+      <AppLayout>
+        <div className="flex justify-center items-center h-full min-h-[400px]">
+          <div className="flex flex-col items-center gap-3">
+            <Spinner className="w-8 h-8" />
+            <p className="text-gray-600">Loading your CCA data...</p>
+          </div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
-  if (error && ccas.length === 0 && points === 0) {
+  if (error && ccas.length === 0) {
     return (
-      <div style={styles.container}>
-        <Sidebar />
-        <div style={styles.content}>
-          <div style={styles.header}>
-            <h1 style={styles.title}>My CCAs</h1>
-          </div>
-          <div style={styles.error}>
-            <p>⚠️ {error}</p>
-            <button
-              style={styles.retryButton}
-              onClick={() => window.location.reload()}
-            >
-              Retry
-            </button>
-          </div>
+      <AppLayout>
+        <div className="flex flex-col space-y-4 p-4">
+          <h1 className="text-2xl font-bold">My CCAs</h1>
+          <Card className="bg-red-50 border-red-200">
+            <CardContent className="flex flex-col items-center p-6 gap-4">
+              <p className="text-red-700 font-medium text-center">⚠️ {error}</p>
+              <Button
+                onClick={() => window.location.reload()}
+                className="bg-blue-500 text-white hover:bg-blue-400 px-6 py-4 shadow-md font-bold cursor-pointer"
+              >
+                Retry
+              </Button>
+            </CardContent>
+          </Card>
         </div>
-      </div>
+      </AppLayout>
     );
   }
+
+  // Build dynamic columns based on user permissions
+  const dynamicColumns: SimpleTableColumn<CCAData>[] = ccas.some(cca =>
+    AUTHORIZED_CHAIR_ROLES.includes(cca.position_type as ChairRole)
+  )
+    ? [
+      ...ccaTableColumns,
+      {
+        accessorKey: 'actions' as keyof CCAData,
+        header: 'Actions',
+        enableSorting: false,
+        cell: (_, row) =>
+          AUTHORIZED_CHAIR_ROLES.includes(row.position_type as ChairRole) && (
+            <div className="text-center">
+              <Button
+                size="sm"
+                onClick={() => handleManageMembers(row)}
+                className="bg-blue-500 text-white hover:bg-blue-400 px-4 py-2 shadow-md font-bold cursor-pointer"
+              >
+                View
+              </Button>
+            </div>
+          ),
+      },
+    ]
+    : ccaTableColumns;
 
   return (
-    <div style={styles.container}>
-      <Sidebar />
-      <div style={styles.content}>
-        <div style={styles.header}>
-          <h1 style={styles.title}>My CCAs</h1>
-        </div>
+    <AppLayout>
+      <div className="flex flex-col space-y-4 p-4">
+        <h1 className="text-2xl font-bold">My CCAs</h1>
 
-        <div style={styles.tableContainer}>
-          {ccas.length === 0 ? (
-            <div style={styles.emptyState}>
-              <p>📋 No CCA appointments found.</p>
-              <p style={styles.emptySubtext}>
+        {ccas.length === 0 ? (
+          <Card className="bg-gray-50 border-2 border-dashed border-gray-300">
+            <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+              <p className="text-lg text-gray-600 mb-2">📋 No CCA appointments found.</p>
+              <p className="text-sm text-gray-500">
                 You have not been assigned to any CCAs yet. Check back later or contact your CCA chairs/ICs.
               </p>
-            </div>
-          ) : (
-            <table style={styles.table}>
-              <thead>
-                <tr>
-                  <th style={styles.th}>CCA</th>
-                  <th style={styles.thCenter}>Role</th>
-                  <th style={styles.thCenter}>Type</th>
-                  <th style={styles.thCenter}>Points</th>
-                  <th style={styles.thCenter}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {ccas.map((cca, index) => (
-                  <tr
-                    key={index}
-                    style={index % 2 === 0 ? styles.rowEven : styles.rowOdd}
-                  >
-                    <td style={styles.td}>
-                      <div style={styles.ccaInfo}>
-                        <strong>{cca.name}</strong>
-                        {cca.description && (
-                          <div style={styles.description}>
-                            {cca.description}
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td style={styles.tdCenter}>
-                      <span style={styles.roleTag}>
-                        {cca.role}
-                      </span>
-                    </td>
-                    <td style={styles.tdCenter}>
-                      <span style={styles.typeTag}>
-                        {ccaTypeDisplay(cca.cca_type)}
-                      </span>
-                    </td>
-                    <td style={styles.tdCenter}>
-                      <strong>{cca.points}</strong>
-                    </td>
-                    <td style={styles.tdCenter}>
-                      {AUTHORIZED_CHAIR_ROLES.includes(cca.position_type as ChairRole) &&
-                        (
-                          <button
-                            style={styles.manageButton}
-                            onClick={() => handleManageMembers(cca)}
-                          >
-                            View
-                          </button>
-                        )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-        <div style={styles.footer}>
-          <strong>Total Points: </strong> {points ? points : 0}
-        </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <SimpleTable<CCAData>
+            data={ccas}
+            columns={dynamicColumns}
+            pageSize={10}
+            emptyMessage="No CCAs found"
+          />
+        )}
+
+        <Alert className="bg-blue-500/10 dark:bg-blue-600/20 text-blue-500 border-none">
+          <AlertTitle><strong>Total Points:</strong> {points || 0}</AlertTitle>
+        </Alert>
       </div>
-    </div>
+    </AppLayout>
   );
 }
-
-const styles = {
-  container: {
-    display: 'flex',
-    height: '100vh',
-    fontFamily: 'Arial, sans-serif'
-  },
-  content: {
-    flex: 1,
-    padding: '20px',
-    backgroundColor: '#FFFFFF',
-    color: '#2C2C2C',
-    overflow: 'auto'
-  },
-  header: {
-    marginBottom: '30px'
-  },
-  title: {
-    fontSize: '28px',
-    marginBottom: '10px',
-    fontWeight: 'bold',
-    color: '#4A4A4A'
-  },
-  loading: {
-    textAlign: 'center' as const,
-    fontSize: '16px',
-    color: '#7A7A7A',
-    marginTop: '50px',
-    padding: '20px'
-  },
-  error: {
-    textAlign: 'center' as const,
-    padding: '50px 20px',
-    color: '#B91C1C',
-    backgroundColor: '#FEF2F2',
-    borderRadius: '8px',
-    border: '1px solid #FCA5A5'
-  },
-  retryButton: {
-    marginTop: '15px',
-    padding: '10px 20px',
-    backgroundColor: '#3B82F6',
-    color: 'white',
-    border: 'none',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    fontSize: '14px'
-  },
-  tableContainer: {
-    marginBottom: '20px'
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse' as const,
-    marginTop: '10px',
-    backgroundColor: '#FFFFFF',
-    borderRadius: '8px',
-    overflow: 'hidden',
-    boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
-  },
-  th: {
-    textAlign: 'left' as const,
-    borderBottom: '2px solid #E5E7EB',
-    padding: '15px 12px',
-    backgroundColor: '#F9FAFB',
-    fontSize: '14px',
-    fontWeight: 'bold',
-    color: '#374151'
-  },
-  thCenter: {
-    textAlign: 'center' as const,
-    borderBottom: '2px solid #E5E7EB',
-    padding: '15px 12px',
-    backgroundColor: '#F9FAFB',
-    fontSize: '14px',
-    fontWeight: 'bold',
-    color: '#374151'
-  },
-  td: {
-    borderBottom: '1px solid #E5E7EB',
-    padding: '15px 12px',
-    fontSize: '14px',
-    color: '#1F2937'
-  },
-  tdCenter: {
-    borderBottom: '1px solid #E5E7EB',
-    padding: '15px 12px',
-    fontSize: '14px',
-    color: '#1F2937',
-    textAlign: 'center' as const
-  },
-  rowEven: {
-    backgroundColor: '#F9FAFB'
-  },
-  rowOdd: {
-    backgroundColor: '#FFFFFF'
-  },
-  ccaInfo: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: '4px'
-  },
-  description: {
-    fontSize: '12px',
-    color: '#6B7280',
-    fontStyle: 'italic'
-  },
-  roleTag: {
-    padding: '4px 8px',
-    backgroundColor: '#EFF6FF',
-    color: '#1D4ED8',
-    borderRadius: '4px',
-    fontSize: '12px',
-    fontWeight: 'bold',
-    display: 'inline-block'
-  },
-  typeTag: {
-    padding: '4px 8px',
-    backgroundColor: '#F0FDF4',
-    color: '#15803D',
-    borderRadius: '4px',
-    fontSize: '12px',
-    fontWeight: 'bold',
-    display: 'inline-block'
-  },
-  emptyState: {
-    textAlign: 'center' as const,
-    padding: '60px 20px',
-    color: '#6B7280',
-    backgroundColor: '#F9FAFB',
-    borderRadius: '8px',
-    border: '2px dashed #E5E7EB'
-  },
-  emptySubtext: {
-    fontSize: '14px',
-    marginTop: '10px',
-    color: '#9CA3AF'
-  },
-  footer: {
-    marginTop: '20px',
-    padding: '15px',
-    textAlign: 'center' as const,
-    fontSize: '14px',
-    color: '#1F2937',
-    backgroundColor: '#F8F9FA',
-    borderRadius: '6px'
-  },
-  manageButton: {
-    padding: '6px 12px',
-    backgroundColor: '#3B82F6',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    fontSize: '12px',
-    cursor: 'pointer',
-    fontWeight: 'bold',
-  }
-};
