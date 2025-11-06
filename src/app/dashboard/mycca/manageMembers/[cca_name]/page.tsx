@@ -29,6 +29,7 @@ interface Member {
     position_type: string;
     points: number;
     appointed_date: string;
+    cut?: boolean;
 }
 
 interface PendingChange {
@@ -529,6 +530,7 @@ export default function ManageMembersPage() {
                         {!isSportsCulture && renderMemberGroup('Sub Committee', currentGroupedMembers.subcomm || [])}
                         {isSportsCulture && renderMemberGroup('Team Manager', currentGroupedMembers.teamManager || [])}
                         {isSportsCulture && renderMemberGroup('Members', currentGroupedMembers.members || [], true)}
+                        {isSportsCulture && renderMemberGroup('Cutted Members', currentGroupedMembers.cut || [], true)}
                     </div>
                 )}
                 <Alert className="bg-blue-500/10 dark:bg-blue-600/20 text-blue-500 border-none">
