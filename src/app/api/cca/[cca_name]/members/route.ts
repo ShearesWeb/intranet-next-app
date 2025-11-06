@@ -45,12 +45,12 @@ export async function GET(
             return NextResponse.json({ error: 'CCA not found' }, { status: 404 });
         }
 
-        // Support committee, sports, and culture types
-        // if (!['committee', 'sports', 'culture'].includes(ccaData.cca_type)) {
-        //     return NextResponse.json({
-        //         error: 'Access denied: Member viewing is only available for committee, sports, and culture CCAs'
-        //     }, { status: 403 });
-        // }
+        const { data: memberPositionId } = await supabase
+            .from('cca_positions')
+            .select('id')
+            .eq('cca_id', ccaData.id)
+            .eq('position_type', 'member')
+            .single();
 
         // Authorization - Check if user is lead/vice for THIS specific CCA
         const authResult = await checkCCAChairAuthorization(requestingUserId, ccaData.id, supabase);
@@ -150,6 +150,7 @@ export async function GET(
                 cca_type: ccaData.cca_type
             },
             groupedMembers,
+            member_position_id: memberPositionId?.id,
             total_members: transformedMembers.length,
             permissions: {
                 canManageMembers: canManageSportsCulture || ccaData.cca_type === 'committee',

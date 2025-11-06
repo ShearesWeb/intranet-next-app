@@ -33,7 +33,7 @@ interface Member {
 }
 
 interface PendingChange {
-    type: 'add' | 'remove';
+    type: 'add' | 'remove' | 'cut';
     user_id: number;
     user_name: string;
     user_email: string;
@@ -106,7 +106,7 @@ export default function ManageMembersPage() {
     const [permissions, setPermissions] = useState<any>({ canManageMembers: false, ccaType: '' });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [totalMembers, setTotalMembers] = useState(0);
+    const [memberPositionId, setMemberPositionId] = useState<number | null>(null);
     const [saving, setSaving] = useState(false);
 
     // Modal state
@@ -137,7 +137,7 @@ export default function ManageMembersPage() {
             setCurrentGroupedMembers(data.groupedMembers || {});
             setCCA(data.cca);
             setPermissions(data.permissions || { canManageMembers: false, ccaType: '' });
-            setTotalMembers(data.total_members || 0);
+            setMemberPositionId(data.member_position_id || 0);
             setError(null);
             setPendingChanges([]); // Reset pending changes
         } catch (error: any) {
@@ -232,10 +232,16 @@ export default function ManageMembersPage() {
 
     // Local remove member
     const handleLocalRemoveMember = (userId: number, memberName: string) => {
-        // Remove from pending adds if exists
-        setPendingChanges(prev => prev.filter(change =>
-            !(change.type === 'add' && change.user_id === userId)
-        ));
+        // Remove from pending adds or cut if exists
+        setPendingChanges(prev =>
+            prev.filter(
+                change =>
+                    !(
+                        (change.type === 'add' || change.type === 'cut') &&
+                        change.user_id === userId
+                    )
+            )
+        );
 
         // Check if this is an original member (needs API removal)
         const allOriginalMembers = Object.values(originalGroupedMembers).flat() as Member[];
@@ -262,6 +268,53 @@ export default function ManageMembersPage() {
         });
 
         toast.success(`${memberName} marked for removal`);
+    };
+
+    // Local cut member
+    const handleLocalCutMember = (userId: number, memberName: string) => {
+        // Check if already cut
+        const allCurrentMembers = Object.values(currentGroupedMembers).flat() as Member[];
+        const member = allCurrentMembers.find(m => m.user_id === userId);
+
+        if (!member) {
+            toast.error(`${memberName} not found in current members`);
+            return;
+        }
+
+        if (member.cut) {
+            toast.error(`${memberName} is already cut`);
+            return;
+        }
+
+        // Remove from pending adds if exists
+        setPendingChanges(prev =>
+            prev.filter(change => !(change.type === 'add' && change.user_id === userId))
+        );
+
+        // Add cut change
+        const newChange: PendingChange = {
+            type: 'cut',
+            user_id: userId,
+            user_name: memberName,
+            user_email: member.email,
+            user_room: member.room,
+        };
+        setPendingChanges(prev => [...prev, newChange]);
+
+        // Update currentGroupedMembers locally to show “cut”
+        setCurrentGroupedMembers((prev: any) => {
+            const updated = { ...prev };
+
+            // Remove from members
+            updated.members = (updated.members || []).filter((m: any) => m.user_id !== userId);
+
+            // Add to cut
+            updated.cut = [...(updated.cut || []), { ...member, cut: true }];
+
+            return updated;
+        });
+
+        toast.success(`${memberName} marked as cut`);
     };
 
     // Save all pending changes
@@ -306,6 +359,22 @@ export default function ManageMembersPage() {
                         if (!response.ok) {
                             const errorData = await response.json();
                             throw new Error(errorData.error || 'Failed to remove member');
+                        }
+                        successCount++;
+                    } else if (change.type === 'cut') {
+                        const response = await fetch(`/api/cca/${encodeURIComponent(ccaName)}/cutMember`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                user_id: change.user_id,
+                                position_id: memberPositionId,
+                                reason: 'Cut by lead/vice'
+                            })
+                        });
+
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            throw new Error(errorData.error || 'Failed to cut member');
                         }
                         successCount++;
                     }
@@ -399,7 +468,8 @@ export default function ManageMembersPage() {
     const renderMemberGroup = (
         title: string,
         members: Member[],
-        showManagementActions: boolean = false
+        showManagementActions: boolean = false,
+        allowCut: boolean = false,
     ) => {
         if (members.length === 0 && !showManagementActions) return null;
 
@@ -416,13 +486,22 @@ export default function ManageMembersPage() {
                     accessorKey: 'actions' as keyof Member,
                     header: 'Actions',
                     cell: (_value, row) => (
-                        <Button
-                            size="sm"
-                            onClick={() => handleLocalRemoveMember(row.user_id, row.name)}
-                            className="bg-red-500 text-white hover:bg-red-400 px-4 py-2 shadow-md font-bold cursor-pointer"
-                        >
-                            Remove
-                        </Button>
+                        <div className="flex flex-wrap gap-3">
+                            {allowCut && <Button
+                                size="sm"
+                                onClick={() => handleLocalCutMember(row.user_id, row.name)}
+                                className="bg-orange-500 text-white hover:bg-orange-400 px-4 py-2 shadow-md font-bold cursor-pointer"
+                            >
+                                Cut
+                            </Button>}
+                            <Button
+                                size="sm"
+                                onClick={() => handleLocalRemoveMember(row.user_id, row.name)}
+                                className="bg-red-500 text-white hover:bg-red-400 px-4 py-2 shadow-md font-bold cursor-pointer"
+                            >
+                                Remove
+                            </Button>
+                        </div>
                     ),
                 },
             ]
@@ -529,8 +608,8 @@ export default function ManageMembersPage() {
                         {!isSportsCulture && renderMemberGroup('Main Committee', currentGroupedMembers.maincomm || [])}
                         {!isSportsCulture && renderMemberGroup('Sub Committee', currentGroupedMembers.subcomm || [])}
                         {isSportsCulture && renderMemberGroup('Team Manager', currentGroupedMembers.teamManager || [])}
-                        {isSportsCulture && renderMemberGroup('Members', currentGroupedMembers.members || [], true)}
-                        {isSportsCulture && renderMemberGroup('Cutted Members', currentGroupedMembers.cut || [], true)}
+                        {isSportsCulture && renderMemberGroup('Final Cut Members', currentGroupedMembers.members || [], true, true)}
+                        {isSportsCulture && renderMemberGroup('Members', currentGroupedMembers.cut || [], true)}
                     </div>
                 )}
                 <Alert className="bg-blue-500/10 dark:bg-blue-600/20 text-blue-500 border-none">
