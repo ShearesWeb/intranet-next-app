@@ -15,6 +15,7 @@ interface TransformedMember {
     position_type: string;
     points: number;
     appointed_date: string;
+    cut?: boolean;
 }
 
 export async function GET(
@@ -44,12 +45,12 @@ export async function GET(
             return NextResponse.json({ error: 'CCA not found' }, { status: 404 });
         }
 
-        // Support committee, sports, and culture types
-        // if (!['committee', 'sports', 'culture'].includes(ccaData.cca_type)) {
-        //     return NextResponse.json({
-        //         error: 'Access denied: Member viewing is only available for committee, sports, and culture CCAs'
-        //     }, { status: 403 });
-        // }
+        const { data: memberPositionId } = await supabase
+            .from('cca_positions')
+            .select('id')
+            .eq('cca_id', ccaData.id)
+            .eq('position_type', 'member')
+            .single();
 
         // Authorization - Check if user is lead/vice for THIS specific CCA
         const authResult = await checkCCAChairAuthorization(requestingUserId, ccaData.id, supabase);
@@ -70,6 +71,7 @@ export async function GET(
                 user_id,
                 points,
                 created_at,
+                comments,
                 public_user_info!inner(id, name, email, room),
                 cca_positions!inner(id, name, position_type, cca_id)
             `)
@@ -109,7 +111,8 @@ export async function GET(
                     position_name: positionData.name,
                     position_type: positionData.position_type,
                     points: member.points || 0,
-                    appointed_date: member.created_at
+                    appointed_date: member.created_at,
+                    cut: member.comments?.toLowerCase() === 'cut' ? true : false
                 });
             }
         });
@@ -132,7 +135,10 @@ export async function GET(
                 .filter(member => member.position_type === 'team manager')
                 .sort((a, b) => a.position_name.localeCompare(b.position_name)),
             members: transformedMembers
-                .filter(member => member.position_type === 'member')
+                .filter(member => member.position_type === 'member' && !member.cut)
+                .sort((a, b) => a.name.localeCompare(b.name)),
+            cut: transformedMembers
+                .filter(member => member.position_type === 'member' && member.cut)
                 .sort((a, b) => a.name.localeCompare(b.name))
         };
 
@@ -144,6 +150,7 @@ export async function GET(
                 cca_type: ccaData.cca_type
             },
             groupedMembers,
+            member_position_id: memberPositionId?.id,
             total_members: transformedMembers.length,
             permissions: {
                 canManageMembers: canManageSportsCulture || ccaData.cca_type === 'committee',
