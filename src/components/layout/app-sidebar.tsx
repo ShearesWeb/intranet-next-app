@@ -39,7 +39,7 @@ type NavItem = {
     }[]
 }
 
-const options: NavItem[] = [
+export const navOptions: NavItem[] = [
     {
         title: "Dashboard",
         url: "/dashboard",
@@ -75,23 +75,38 @@ const options: NavItem[] = [
             },
         ],
     },
+    {
+        title: "Holiday Subsidy",
+        url: "/dashboard/holidaySubsidy",
+        icon: FileUser,
+        isActive: true,
+        adminOnly: true,
+        items: [
+            {
+                title: "Subsidy Declaration",
+                url: "/dashboard/holidaySubsidy/declaration",
+            },
+            {
+                title: "Guide and FAQ",
+                url: "/dashboard/holidaySubsidy/guide",
+            },
+        ],
+    },
 ]
+
+export const buildNavItems = (user?: { is_admin?: boolean } | null) =>
+    navOptions
+        .filter(item => !item.adminOnly || user?.is_admin)
+        .map(item => ({
+            ...item,
+            items: item.items?.filter(sub => !sub.adminOnly || user?.is_admin),
+        }));
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const { user } = useAuth();
     const { phaseInfo } = usePhaseInfo();
 
-    const navItems = options
-        .filter(item => !item.adminOnly || user?.is_admin)
-        .map(item => ({
-            ...item,
-            items: item.items?.filter(
-                sub =>
-                    (!sub.adminOnly || user?.is_admin)
-                // &&
-                // (!sub.featureFlag || flags[sub.featureFlag])
-            ),
-        }));
+    const navItems = buildNavItems(user);
 
     return (
         <Sidebar variant="inset" {...props}>

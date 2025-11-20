@@ -1,9 +1,9 @@
 "use client";
 
-import { Fragment, ReactNode } from "react";
+import { Fragment, ReactNode, useMemo } from "react";
 import { Separator } from "../ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "../ui/sidebar";
-import { AppSidebar } from "./app-sidebar";
+import { AppSidebar, buildNavItems } from "./app-sidebar";
 import {
     Breadcrumb,
     BreadcrumbList,
@@ -13,6 +13,7 @@ import {
 } from "../ui/breadcrumb";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { useAuth } from "@/context/AuthContext";
 
 interface AppLayoutProps {
     children: ReactNode;
@@ -20,14 +21,39 @@ interface AppLayoutProps {
 
 export function AppLayout({ children }: AppLayoutProps) {
     const pathname = usePathname();
+    const { user } = useAuth();
 
-    const segments = pathname
-        .split("/")
-        .filter(Boolean)
-        .map((seg) => ({
-            name: seg.charAt(0).toUpperCase() + seg.slice(1),
-            href: "/" + seg,
-        }));
+    const navItems = useMemo(() => buildNavItems(user), [user]);
+
+    const flattenedNav = useMemo(() => {
+        const list: { title: string; url: string; parentUrl?: string }[] = [];
+        navItems.forEach((item) => {
+            list.push({ title: item.title, url: item.url });
+            item.items?.forEach((sub) => {
+                list.push({ title: sub.title, url: sub.url, parentUrl: item.url });
+            });
+        });
+        return list;
+    }, [navItems]);
+
+    const breadcrumbTrail = useMemo(() => {
+        if (!pathname) return [];
+        const matches = flattenedNav.filter((entry) => pathname.startsWith(entry.url));
+        if (!matches.length) return [];
+
+        const bestMatch = matches.sort((a, b) => b.url.length - a.url.length)[0];
+
+        // Build the trail from the matched item back to the root using parentUrl pointers
+        const trail: { name: string; href: string }[] = [];
+        let current: { title: string; url: string; parentUrl?: string } | undefined = bestMatch;
+        while (current) {
+            trail.unshift({ name: current.title, href: current.url });
+            const parentUrl: string | undefined = current.parentUrl;
+            current = parentUrl ? flattenedNav.find((entry) => entry.url === parentUrl) : undefined;
+        }
+
+        return trail;
+    }, [pathname, flattenedNav]);
 
     return (
         <SidebarProvider>
@@ -42,10 +68,10 @@ export function AppLayout({ children }: AppLayoutProps) {
                         />
                         <Breadcrumb>
                             <BreadcrumbList>
-                                {segments.map((seg, index) => {
+                                {breadcrumbTrail.map((seg, index) => {
                                     const isFirst = index === 0;
-                                    const isLast = index === segments.length - 1;
-                                    const isSingle = segments.length === 1;
+                                    const isLast = index === breadcrumbTrail.length - 1;
+                                    const isSingle = breadcrumbTrail.length === 1;
 
                                     if (isSingle) {
                                         // only one item, no separators

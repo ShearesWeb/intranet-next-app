@@ -11,7 +11,7 @@ interface AuthContextType {
 	user: User | null;
 	session: Session | null;
 	loading: boolean;
-	signIn: (code?: string) => Promise<void>;
+	signIn: (next?: string) => Promise<void>;
 	signOut: () => Promise<void>;
 }
 

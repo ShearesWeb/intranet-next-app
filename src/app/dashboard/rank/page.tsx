@@ -11,19 +11,7 @@ import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SelectionTable, SelectionTableColumn } from '@/components/table/selection-table';
 import { OrderingTable, OrderingTableColumn } from '@/components/table/ordering-table';
-
-interface RankablePosition {
-  id: number;
-  name: string;
-  cca_name: string;
-  position_type: 'maincomm' | 'subcomm' | 'blockcomm';
-  capacity: number;
-  available_capacity: number;
-  applied_count: number;
-  description?: string;
-  user_ranking?: number | null;
-  is_selected?: boolean;
-}
+import { RankablePosition } from '@/types/dashboard';
 
 export default function RankCCA() {
   const { user } = useAuth();

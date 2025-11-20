@@ -5,28 +5,45 @@ import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 
 export async function fetchUserInfo(ignoreCache = false): Promise<User | null> {
-    // Check if user item is stored in cookies
     const cookieStore = await cookies();
+    const supabase = await createClient();
+
+    const clearCachedUser = () => {
+        try {
+            cookieStore.delete("authenticated_user");
+            cookieStore.delete("user_id");
+        } catch {
+            // RSC contexts can make cookie mutation a no-op
+        }
+    };
+
+    // Ensure we have a valid authenticated user before trusting cached data
+    const { data: { user }, error: getUserError } = await supabase.auth.getUser();
+
+    if (getUserError) {
+        console.error("Error retrieving authenticated user:", getUserError);
+    }
+
+    if (!user) {
+        clearCachedUser();
+        console.log("No authenticated user found");
+        return null;
+    }
 
     if (!ignoreCache) {
         const cached = cookieStore.get("authenticated_user")?.value;
         if (cached) {
             try {
-                console.log("Using cached user info from cookies");
-                const user = JSON.parse(cached) as User;
-                return user;
+                const cachedUser = JSON.parse(cached) as User;
+                // Only use cache if it matches the signed-in user
+                if (cachedUser.email === user.email) {
+                    console.log("Using cached user info from cookies");
+                    return cachedUser;
+                }
             } catch {
                 // Invalid JSON → ignore and refresh
             }
         }
-    }
-
-    // Get the authenticated Supabase user
-    const supabase = await createClient();
-    const { data: { user }, } = await supabase.auth.getUser();
-    if (!user) {
-        console.log("No authenticated user found");
-        return null;
     }
 
     console.log("Fetching user info from database for", user.email);
@@ -38,6 +55,7 @@ export async function fetchUserInfo(ignoreCache = false): Promise<User | null> {
 
     if (error) throw error;
     if (!data) {
+        clearCachedUser();
         console.log("No user info found in database for", user.email);
         return null;
     }
@@ -58,18 +76,23 @@ export async function fetchUserInfo(ignoreCache = false): Promise<User | null> {
     };
 
     // Store full user info in cookie
-    cookieStore.set("authenticated_user", JSON.stringify(userInfo), {
-        httpOnly: false, // accessible from client AuthContext
-        path: "/",
-        maxAge: 60 * 60 * 24 * 7, // 7 days
-    });
+    try {
+        cookieStore.set("authenticated_user", JSON.stringify(userInfo), {
+            httpOnly: false, // accessible from client AuthContext
+            path: "/",
+            maxAge: 60 * 60 * 24 * 7, // 7 days
+        });
 
-    // Store fast-access user ID cookie
-    cookieStore.set("user_id", data.id, {
-        httpOnly: false,
-        path: "/",
-        maxAge: 60 * 60 * 24 * 7,
-    });
+        // Store fast-access user ID cookie
+        cookieStore.set("user_id", data.id, {
+            httpOnly: false,
+            path: "/",
+            maxAge: 60 * 60 * 24 * 7,
+        });
+    } catch {
+        // Ignore cookie set failures in environments where mutation isn't allowed
+    }
+
     return userInfo;
 };
 

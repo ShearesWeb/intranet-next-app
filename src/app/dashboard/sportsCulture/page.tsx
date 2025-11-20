@@ -6,25 +6,7 @@ import Sidebar from '@/components/Sidebar';
 import { useAuth } from '@/context/AuthContext';
 import { usePhaseInfo } from '@/hooks/usePhaseInfo';
 import toast from 'react-hot-toast';
-
-interface SportsCulturePosition {
-    id: number;
-    name: string;
-    cca_name: string;
-    cca_id: number;
-    cca_type: 'sports' | 'culture';
-    description: string | null;
-    capacity: number | null;
-    is_applied: boolean;
-    user_current_role?: string;
-    conflict_reason?: string;
-    can_apply: boolean;
-}
-
-interface GroupedPositions {
-    sports: SportsCulturePosition[];
-    culture: SportsCulturePosition[];
-}
+import { GroupedPositions, SportsCulturePosition } from '@/types/dashboard';
 
 function LoadingOverlay({ visible }: { visible: boolean }) {
     if (!visible) return null;

@@ -2,8 +2,17 @@ import { cn } from "@/lib/utils";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import Link from "next/link";
+import { createClient } from "@/utils/supabase/server";
+import { redirect } from "next/navigation";
 
-const Page = () => {
+const Page = async () => {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (user) {
+    redirect("/dashboard");
+  }
+
   return (
     <section className="flex min-h-screen flex-col items-center lg:justify-center text-center p-24">
       <div className="hidden lg:block absolute inset-x-0 top-0 flex h-full w-full items-center justify-center opacity-100">
