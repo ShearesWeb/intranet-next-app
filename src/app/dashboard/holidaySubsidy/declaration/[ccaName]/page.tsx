@@ -13,20 +13,6 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { redirect, useParams } from "next/navigation";
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
     Dialog,
     DialogContent,
     DialogDescription,
@@ -38,30 +24,42 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { PositionTypeBadge } from "@/components/badges/position-type-badge";
+import { SimpleTable, type SimpleTableColumn } from "@/components/table/simple-table";
+import Link from "next/link";
 
 type DeclarationStatus = "Pending" | "Approved" | "Rejected";
 
 type Declaration = {
     position: string;
+    positionType: string;
     week: string;
-    hours: string;
+    hours: number;
     justification: string;
     status: DeclarationStatus;
+};
+
+type DeclarationSection = {
+    key: Lowercase<DeclarationStatus>;
+    title: string;
+    data: Declaration[];
 };
 
 const mockDeclarations: Record<Lowercase<DeclarationStatus>, Declaration[]> = {
     pending: [
         {
             position: "Swim Team Member",
+            positionType: "member",
             week: "Week 1",
-            hours: "4",
+            hours: 4,
             justification: "Training on Wed/Fri",
             status: "Pending",
         },
         {
             position: "Choir Vocalist",
+            positionType: "subcomm",
             week: "Week 2",
-            hours: "3",
+            hours: 3,
             justification: "Sectional practice and rehearsal",
             status: "Pending",
         },
@@ -69,15 +67,17 @@ const mockDeclarations: Record<Lowercase<DeclarationStatus>, Declaration[]> = {
     approved: [
         {
             position: "Drama Crew",
+            positionType: "crew",
             week: "Week 1",
-            hours: "5",
+            hours: 5,
             justification: "Stage setup and blocking",
             status: "Approved",
         },
         {
             position: "Badminton Captain",
+            positionType: "lead",
             week: "Week 3",
-            hours: "6",
+            hours: 6,
             justification: "Inter-hall scrimmage prep",
             status: "Approved",
         },
@@ -85,8 +85,9 @@ const mockDeclarations: Record<Lowercase<DeclarationStatus>, Declaration[]> = {
     rejected: [
         {
             position: "Photography Lead",
+            positionType: "lead",
             week: "Week 2",
-            hours: "2",
+            hours: 2,
             justification: "Photo walk coverage",
             status: "Rejected",
         },
@@ -114,12 +115,83 @@ export default function SubsidyDeclarationPage() {
     const titleSuffix = ` - ${ccaName}`;
 
     const sections = useMemo(
-        () => [
-            { title: "Pending Declarations", data: mockDeclarations.pending },
-            { title: "Approved Declarations", data: mockDeclarations.approved },
-            { title: "Rejected Declarations", data: mockDeclarations.rejected },
+        (): DeclarationSection[] => [
+            { key: "pending", title: "Pending Declarations", data: mockDeclarations.pending },
+            { key: "approved", title: "Approved Declarations", data: mockDeclarations.approved },
+            { key: "rejected", title: "Rejected Declarations", data: mockDeclarations.rejected },
         ],
         []
+    );
+
+    const commonColumns = useMemo<SimpleTableColumn<Declaration>[]>(
+        () => [
+            {
+                accessorKey: "position",
+                header: "Position",
+                cell: (value: string) => <span className="font-semibold">{value}</span>,
+                enableSorting: true,
+            },
+            {
+                accessorKey: "positionType",
+                header: "Position Type",
+                cell: (value: string) => <PositionTypeBadge value={value} />,
+                enableSorting: false,
+            },
+            {
+                accessorKey: "week",
+                header: "Week",
+                enableSorting: true,
+            },
+            {
+                accessorKey: "hours",
+                header: "Requested Hours",
+                cell: (value: number) => `${value} hrs`,
+                enableSorting: true,
+            },
+            {
+                accessorKey: "justification",
+                header: "Justification",
+                cell: (value: string) => (
+                    <div className="text-sm text-muted-foreground line-clamp-2 max-w-[320px]">
+                        {value}
+                    </div>
+                ),
+                enableSorting: false,
+            },
+            {
+                accessorKey: "status",
+                header: "Status",
+                cell: (value: DeclarationStatus) => (
+                    <Badge variant={statusVariant[value]}>
+                        {value}
+                    </Badge>
+                ),
+                enableSorting: false,
+            },
+        ],
+        []
+    );
+
+    const pendingColumns = useMemo<SimpleTableColumn<Declaration>[]>(
+        () => [
+            ...commonColumns,
+            {
+                accessorKey: "actions" as keyof Declaration,
+                header: "Actions",
+                enableSorting: false,
+                cell: (_, row) => (
+                    <div className="flex justify-start gap-2">
+                        <Button variant="outline" size="sm">
+                            Edit
+                        </Button>
+                        <Button variant="destructive" size="sm">
+                            Delete
+                        </Button>
+                    </div>
+                ),
+            },
+        ],
+        [commonColumns]
     );
 
     return (
@@ -134,61 +206,68 @@ export default function SubsidyDeclarationPage() {
                             Submit and track your weekly subsidy declarations.
                         </p>
                     </div>
-                    <Dialog>
-                        <DialogTrigger asChild>
-                            <Button className="px-4 py-3">Declare New Subsidy</Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>
-                                    New Subsidy Declaration{titleSuffix}
-                                </DialogTitle>
-                                <DialogDescription>
-                                    Fill in the details for your subsidy request. This is a static preview.
-                                </DialogDescription>
-                            </DialogHeader>
-                            <div className="space-y-4 pt-2">
-                                <div className="space-y-1">
-                                    <label className="text-sm font-medium text-foreground">CCA</label>
-                                    <Input value={ccaName} disabled />
+                    <div className="flex gap-2">
+                        <Link href="/dashboard/holidaySubsidy">
+                            <Button variant="outline">
+                                ← Back to CCAs
+                            </Button>
+                        </Link>
+                        <Dialog>
+                            <DialogTrigger asChild>
+                                <Button className="px-4 py-3">Declare New Subsidy</Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>
+                                        New Subsidy Declaration{titleSuffix}
+                                    </DialogTitle>
+                                    <DialogDescription>
+                                        Fill in the details for your subsidy request. This is a static preview.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <div className="space-y-4 pt-2">
+                                    <div className="space-y-1">
+                                        <label className="text-sm font-medium text-foreground">CCA</label>
+                                        <Input value={ccaName} disabled />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-sm font-medium text-foreground">
+                                            CCA Position
+                                        </label>
+                                        <Input placeholder="e.g., Swim Team Member" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-sm font-medium text-foreground">
+                                            Week
+                                        </label>
+                                        <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                                            {weeks.map((week) => (
+                                                <option key={week}>{week}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-sm font-medium text-foreground">
+                                            Hours
+                                        </label>
+                                        <Input type="number" min={0} placeholder="e.g., 4" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-sm font-medium text-foreground">
+                                            Justification
+                                        </label>
+                                        <Textarea placeholder="Briefly describe the activities and time spent." />
+                                    </div>
                                 </div>
-                                <div className="space-y-1">
-                                    <label className="text-sm font-medium text-foreground">
-                                        CCA Position
-                                    </label>
-                                    <Input placeholder="e.g., Swim Team Member" />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-sm font-medium text-foreground">
-                                        Week
-                                    </label>
-                                    <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                                        {weeks.map((week) => (
-                                            <option key={week}>{week}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-sm font-medium text-foreground">
-                                        Hours
-                                    </label>
-                                    <Input type="number" min={0} placeholder="e.g., 4" />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="text-sm font-medium text-foreground">
-                                        Justification
-                                    </label>
-                                    <Textarea placeholder="Briefly describe the activities and time spent." />
-                                </div>
-                            </div>
-                            <DialogFooter>
-                                <DialogClose asChild>
-                                    <Button variant="secondary">Cancel</Button>
-                                </DialogClose>
-                                <Button>Submit Declaration</Button>
-                            </DialogFooter>
-                        </DialogContent>
-                    </Dialog>
+                                <DialogFooter>
+                                    <DialogClose asChild>
+                                        <Button variant="secondary">Cancel</Button>
+                                    </DialogClose>
+                                    <Button>Submit Declaration</Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
+                    </div>
                 </div>
 
                 <Separator />
@@ -200,55 +279,16 @@ export default function SubsidyDeclarationPage() {
                                 <CardTitle>{section.title}</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className="overflow-x-auto rounded-md border">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead className="w-[22%]">Position</TableHead>
-                                                <TableHead className="w-[12%]">Week</TableHead>
-                                                <TableHead className="w-[14%]">Requested Hours</TableHead>
-                                                <TableHead className="w-[30%]">Justification</TableHead>
-                                                <TableHead className="w-[12%]">Status</TableHead>
-                                                <TableHead className="text-right w-[10%]">Actions</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {section.data.map((row, index) => (
-                                                <TableRow key={`${section.title}-${index}`}>
-                                                    <TableCell className="font-semibold">{row.position}</TableCell>
-                                                    <TableCell>{row.week}</TableCell>
-                                                    <TableCell>{row.hours} hrs</TableCell>
-                                                    <TableCell className="max-w-[280px]">
-                                                        <div className="truncate text-sm text-muted-foreground">
-                                                            {row.justification}
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Badge variant={statusVariant[row.status]}>
-                                                            {row.status}
-                                                        </Badge>
-                                                    </TableCell>
-                                                    <TableCell className="text-right">
-                                                        <DropdownMenu>
-                                                            <DropdownMenuTrigger asChild>
-                                                                <Button variant="outline" size="sm">
-                                                                    Actions
-                                                                </Button>
-                                                            </DropdownMenuTrigger>
-                                                            <DropdownMenuContent align="end">
-                                                                <DropdownMenuItem>View</DropdownMenuItem>
-                                                                <DropdownMenuItem>Edit</DropdownMenuItem>
-                                                                <DropdownMenuItem className="text-destructive">
-                                                                    Delete
-                                                                </DropdownMenuItem>
-                                                            </DropdownMenuContent>
-                                                        </DropdownMenu>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </div>
+                                <SimpleTable
+                                    data={section.data}
+                                    columns={section.key === "pending" ? pendingColumns : commonColumns}
+                                    searchColumn="position"
+                                    searchPlaceholder="Search position..."
+                                    pageSize={5}
+                                    emptyMessage="No declarations found."
+                                    tableContainerClassName="rounded-md border bg-card/30 overflow-hidden"
+                                    tableClassName="[&_th]:px-5 [&_td]:px-5"
+                                />
                             </CardContent>
                         </Card>
                     ))}
