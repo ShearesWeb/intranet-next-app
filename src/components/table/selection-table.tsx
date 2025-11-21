@@ -32,6 +32,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
+import { cn } from '@/lib/utils';
 
 export interface SelectionTableColumn<TData> {
     accessorKey: keyof TData;
@@ -44,25 +45,35 @@ export interface SelectionTableColumn<TData> {
 interface SelectionTableProps<TData, TId = number | string> {
     data: TData[];
     columns: SelectionTableColumn<TData>[];
-    selectedIds: Set<TId>;
-    onSelectionChange: (id: TId) => void;
-    idField?: keyof TData;
     searchColumn?: keyof TData;
     searchPlaceholder?: string;
     pageSize?: number;
     emptyMessage?: string;
+    className?: string;
+    tableContainerClassName?: string;
+    tableClassName?: string;
+    tablePadding?: string;
+    selectionEnabled?: boolean;
+    selectedIds?: Set<TId>;
+    onSelectionChange?: (id: TId) => void;
+    idField?: keyof TData;
 }
 
 export function SelectionTable<TData extends Record<string, any>, TId = number | string>({
     data,
     columns,
-    selectedIds,
-    onSelectionChange,
-    idField = 'id' as keyof TData,
     searchColumn,
     searchPlaceholder = 'Search...',
     pageSize = 10,
     emptyMessage = 'No results.',
+    className,
+    tableContainerClassName,
+    tableClassName,
+    tablePadding = "[&_th]:px-5 [&_td]:px-5 py-3",
+    selectionEnabled = false,
+    selectedIds,
+    onSelectionChange,
+    idField = 'id' as keyof TData,
 }: SelectionTableProps<TData, TId>) {
     const [sorting, setSorting] = React.useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -75,52 +86,18 @@ export function SelectionTable<TData extends Record<string, any>, TId = number |
         });
         return visibility;
     });
-    const [rowSelection, setRowSelection] = React.useState({});
     const [pagination, setPagination] = React.useState<PaginationState>({
         pageIndex: 0,
-        pageSize: pageSize,
+        pageSize,
     });
 
-    // Build column definitions with auto-generated headers
-    const tableColumns: ColumnDef<TData>[] = React.useMemo(() => {
-        const cols: ColumnDef<TData>[] = [
-            {
-                id: 'select',
-                header: ({ table }) => (
-                    <Checkbox
-                        checked={
-                            table.getIsAllPageRowsSelected() ||
-                            (table.getIsSomePageRowsSelected() && 'indeterminate')
-                        }
-                        onCheckedChange={(value) => {
-                            table.toggleAllPageRowsSelected(!!value);
-                            const visibleRows = table.getRowModel().rows;
-                            visibleRows.forEach((row) => {
-                                onSelectionChange(row.original[idField] as TId);
-                            });
-                        }}
-                        aria-label="Select all"
-                    />
-                ),
-                cell: ({ row }) => (
-                    <Checkbox
-                        checked={selectedIds.has(row.original[idField] as TId)}
-                        onCheckedChange={(value) => {
-                            row.toggleSelected(!!value);
-                            onSelectionChange(row.original[idField] as TId);
-                        }}
-                        aria-label="Select row"
-                        onClick={(e) => e.stopPropagation()}
-                    />
-                ),
-                enableSorting: false,
-                enableHiding: false,
-            },
-        ];
+    // Enable selection if selection props are provided, or explicitly toggled on.
+    const selectionActive = (!!selectedIds && !!onSelectionChange) || selectionEnabled;
 
-        columns.forEach((col) => {
+    const baseColumns: ColumnDef<TData>[] = React.useMemo(() => {
+        return columns.map((col) => {
             const enableSort = col.enableSorting !== false;
-            cols.push({
+            return {
                 accessorKey: col.accessorKey as string,
                 header: ({ column }) => {
                     if (!enableSort) {
@@ -147,11 +124,58 @@ export function SelectionTable<TData extends Record<string, any>, TId = number |
                     return <div>{value as React.ReactNode}</div>;
                 },
                 enableSorting: enableSort,
-            });
+            } as ColumnDef<TData>;
         });
+    }, [columns]);
 
-        return cols;
-    }, [columns, selectedIds, onSelectionChange, idField]);
+    const tableColumns = React.useMemo(() => {
+        if (!selectionActive) return baseColumns;
+
+        const selectCol: ColumnDef<TData> = {
+            id: 'select',
+            header: ({ table }) => {
+                const visibleRows = table.getRowModel().rows;
+                const allSelected =
+                    visibleRows.length > 0 &&
+                    visibleRows.every((row) => selectedIds?.has(row.original[idField] as TId));
+                const someSelected =
+                    visibleRows.some((row) => selectedIds?.has(row.original[idField] as TId));
+                return (
+                    <Checkbox
+                        checked={allSelected || (someSelected && 'indeterminate')}
+                        onCheckedChange={(value) => {
+                            if (!onSelectionChange || !selectedIds) return;
+                            visibleRows.forEach((row) => {
+                                const rowId = row.original[idField] as TId;
+                                const currentlySelected = selectedIds.has(rowId);
+                                if (value && !currentlySelected) {
+                                    onSelectionChange(rowId);
+                                } else if (!value && currentlySelected) {
+                                    onSelectionChange(rowId);
+                                }
+                            });
+                        }}
+                        aria-label="Select all"
+                    />
+                );
+            },
+            cell: ({ row }) => (
+                <Checkbox
+                    checked={selectedIds?.has(row.original[idField] as TId)}
+                    onCheckedChange={() => {
+                        const rowId = row.original[idField] as TId;
+                        onSelectionChange?.(rowId);
+                    }}
+                    aria-label="Select row"
+                    onClick={(e) => e.stopPropagation()}
+                />
+            ),
+            enableSorting: false,
+            enableHiding: false,
+        };
+
+        return [selectCol, ...baseColumns];
+    }, [baseColumns, selectionActive, selectedIds, onSelectionChange, idField]);
 
     const table = useReactTable({
         data,
@@ -163,19 +187,17 @@ export function SelectionTable<TData extends Record<string, any>, TId = number |
         getSortedRowModel: getSortedRowModel(),
         getFilteredRowModel: getFilteredRowModel(),
         onColumnVisibilityChange: setColumnVisibility,
-        onRowSelectionChange: setRowSelection,
         onPaginationChange: setPagination,
         state: {
             sorting,
             columnFilters,
             columnVisibility,
-            rowSelection,
             pagination,
         },
     });
 
     return (
-        <div className="w-full space-y-4">
+        <div className={cn("w-full space-y-4", className)}>
             {/* Toolbar */}
             <div className="flex items-center gap-2">
                 {searchColumn && (
@@ -201,55 +223,63 @@ export function SelectionTable<TData extends Record<string, any>, TId = number |
                         {table
                             .getAllColumns()
                             .filter((column) => column.getCanHide())
-                            .map((column) => {
-                                return (
-                                    <DropdownMenuCheckboxItem
-                                        key={column.id}
-                                        className="capitalize"
-                                        checked={column.getIsVisible()}
-                                        onCheckedChange={(value) => column.toggleVisibility(!!value)}
-                                    >
-                                        {column.id.replace(/_/g, ' ')}
-                                    </DropdownMenuCheckboxItem>
-                                );
-                            })}
+                            .map((column) => (
+                                <DropdownMenuCheckboxItem
+                                    key={column.id}
+                                    className="capitalize"
+                                    checked={column.getIsVisible()}
+                                    onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                                >
+                                    {column.id.replace(/_/g, ' ')}
+                                </DropdownMenuCheckboxItem>
+                            ))}
                     </DropdownMenuContent>
                 </DropdownMenu>
             </div>
 
             {/* Table */}
-            <div className="rounded-md border">
-                <Table>
+            <div className={cn("rounded-md border overflow-hidden", tableContainerClassName)}>
+                <Table className={cn(tablePadding, tableClassName)}>
                     <TableHeader>
                         {table.getHeaderGroups().map((headerGroup) => (
                             <TableRow key={headerGroup.id}>
-                                {headerGroup.headers.map((header) => {
-                                    return (
-                                        <TableHead key={header.id}>
-                                            {header.isPlaceholder
-                                                ? null
-                                                : flexRender(header.column.columnDef.header, header.getContext())}
-                                        </TableHead>
-                                    );
-                                })}
+                                {headerGroup.headers.map((header) => (
+                                    <TableHead key={header.id}>
+                                        {header.isPlaceholder
+                                            ? null
+                                            : flexRender(header.column.columnDef.header, header.getContext())}
+                                    </TableHead>
+                                ))}
                             </TableRow>
                         ))}
                     </TableHeader>
                     <TableBody>
-                        {table.getRowModel().rows?.length ? (
+                        {table.getRowModel().rows.length ? (
                             table.getRowModel().rows.map((row) => {
                                 const id = row.original[idField] as TId;
-                                const isSelected = selectedIds.has(id);
+                                const isSelected = selectionActive && selectedIds?.has(id);
+                                const rowClickable = selectionActive && !!onSelectionChange;
+
                                 return (
                                     <TableRow
                                         key={row.id}
                                         data-state={isSelected && 'selected'}
-                                        className={`cursor-pointer transition-colors hover:bg-muted/50 ${isSelected ? 'bg-blue-50' : ''
-                                            }`}
-                                        onClick={() => {
-                                            row.toggleSelected(!isSelected);
-                                            onSelectionChange(id);
-                                        }}
+                                        className={cn(
+                                            "transition-colors hover:bg-muted/50",
+                                            isSelected && "bg-orange-50",
+                                            rowClickable && "cursor-pointer"
+                                        )}
+                                        onClick={
+                                            rowClickable
+                                                ? (event) => {
+                                                    const target = event.target as HTMLElement;
+                                                    if (target.closest('input, textarea, button, select, [role="textbox"], [contenteditable="true"]')) {
+                                                        return;
+                                                    }
+                                                    onSelectionChange?.(id);
+                                                }
+                                                : undefined
+                                        }
                                     >
                                         {row.getVisibleCells().map((cell) => (
                                             <TableCell key={cell.id}>
@@ -272,8 +302,8 @@ export function SelectionTable<TData extends Record<string, any>, TId = number |
 
             {/* Pagination */}
             <div className="flex items-center justify-between">
-                <div className="flex-1 text-sm text-muted-foreground">
-                    {selectedIds.size} of {table.getFilteredRowModel().rows.length} row(s) selected.
+                <div className="text-sm text-muted-foreground">
+                    Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
                 </div>
                 <div className="flex items-center space-x-2">
                     <Button
@@ -284,9 +314,6 @@ export function SelectionTable<TData extends Record<string, any>, TId = number |
                     >
                         Previous
                     </Button>
-                    <div className="text-sm text-muted-foreground">
-                        Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
-                    </div>
                     <Button
                         variant="outline"
                         size="sm"

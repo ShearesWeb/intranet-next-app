@@ -10,33 +10,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ArrowUp, ArrowDown, X, Search, Loader2 } from 'lucide-react';
-
-// Types
-interface Applicant {
-    id: number;
-    name: string;
-    email: string;
-    room: string;
-    ranking: number | null;
-}
-
-interface Position {
-    id: number;
-    name: string;
-    cca_name: string;
-    total_capacity: number;
-    available_capacity: number;
-    applied_count: number;
-    position_type: string;
-    applicants: Applicant[];
-}
-
-interface UserSearchResult {
-    id: number;
-    name: string;
-    email: string;
-    room?: string | null;
-}
+import { Applicant, Position, UserSearchResult } from '@/types/dashboard';
 
 // Loading Overlay Component
 function LoadingOverlay({ visible }: { visible: boolean }) {

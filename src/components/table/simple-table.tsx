@@ -31,6 +31,7 @@ import {
     DropdownMenuContent,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
 
 export interface SimpleTableColumn<TData> {
     accessorKey: keyof TData;
@@ -47,6 +48,10 @@ interface SimpleTableProps<TData> {
     searchPlaceholder?: string;
     pageSize?: number;
     emptyMessage?: string;
+    className?: string;
+    tableContainerClassName?: string;
+    tableClassName?: string;
+    tablePadding?: string;
 }
 
 export function SimpleTable<TData extends Record<string, any>>({
@@ -56,6 +61,10 @@ export function SimpleTable<TData extends Record<string, any>>({
     searchPlaceholder = 'Search...',
     pageSize = 10,
     emptyMessage = 'No results.',
+    className,
+    tableContainerClassName,
+    tableClassName,
+    tablePadding = "[&_th]:px-5 [&_td]:px-5 py-3",
 }: SimpleTableProps<TData>) {
     const [sorting, setSorting] = React.useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -128,7 +137,7 @@ export function SimpleTable<TData extends Record<string, any>>({
     });
 
     return (
-        <div className="w-full space-y-4">
+        <div className={cn("w-full space-y-4", className)}>
             {/* Toolbar */}
             <div className="flex items-center gap-2">
                 {searchColumn && (
@@ -169,8 +178,8 @@ export function SimpleTable<TData extends Record<string, any>>({
             </div>
 
             {/* Table */}
-            <div className="rounded-md border">
-                <Table>
+            <div className={cn("rounded-md border overflow-hidden", tableContainerClassName)}>
+                <Table className={cn(tablePadding, tableClassName)}>
                     <TableHeader>
                         {table.getHeaderGroups().map((headerGroup) => (
                             <TableRow key={headerGroup.id}>

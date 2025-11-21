@@ -6,6 +6,7 @@ import Sidebar from '@/components/Sidebar';
 import { useParams, useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { AppLayout } from '@/components/layout/app-layout';
+import { Member, PendingChange, UserSearchResult } from '@/types/dashboard';
 
 // shadcn UI
 import { Button } from "@/components/ui/button";
@@ -19,33 +20,6 @@ import { AlertCircleIcon, Volleyball } from "lucide-react";
 // Custom table component
 import { SimpleTable, SimpleTableColumn } from "@/components/table/simple-table";
 import Link from 'next/link';
-
-interface Member {
-    user_id: number;
-    name: string;
-    email: string;
-    room: string;
-    position_name: string;
-    position_type: string;
-    points: number;
-    appointed_date: string;
-    cut?: boolean;
-}
-
-interface PendingChange {
-    type: 'add' | 'remove' | 'cut';
-    user_id: number;
-    user_name: string;
-    user_email: string;
-    user_room?: string;
-}
-
-interface UserSearchResult {
-    id: number;
-    name: string;
-    email: string;
-    room?: string | null;
-}
 
 function LoadingOverlay({ visible }: { visible: boolean }) {
     if (!visible) return null;

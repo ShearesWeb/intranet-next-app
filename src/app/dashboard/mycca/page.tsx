@@ -11,15 +11,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertTitle } from '@/components/ui/alert';
 import Link from 'next/link';
-
-interface CCAData {
-  name: string;
-  role: string;
-  position_type: string
-  cca_type: string;
-  description: string;
-  points: number;
-}
+import { CCAData } from '@/types/dashboard';
 
 // Helper function to display CCA type with proper capitalization
 const ccaTypeDisplay = (str: string) => {
