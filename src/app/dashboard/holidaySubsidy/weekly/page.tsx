@@ -8,8 +8,9 @@ import { SelectionTable, type SelectionTableColumn } from "@/components/table/se
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ChevronLeft, ChevronRight, Copy, Info } from "lucide-react";
-import { PositionTypeBadge } from "@/components/badges/type-badges";
+import { PositionTypeBadge } from "@/components/badges/position-type-badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Link from "next/link";
 
 type WeeklyRow = {
   id: number;
@@ -173,13 +174,19 @@ export default function WeeklyCommitmentPage() {
   return (
     <AppLayout>
       <div className="flex flex-col space-y-6 p-4">
-        <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div className="space-y-1">
-            <h1 className="text-2xl font-bold">Weekly Commitment Declaration</h1>
-            <p className="text-muted-foreground">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold">Weekly Commitment Declaration</h1>
+            <p className="text-gray-600 mt-1">
               Update hours, justification, and remarks per member.
             </p>
-
+          </div>
+          <div className="flex gap-2">
+            <Link href="/dashboard/holidaySubsidy">
+              <Button variant="outline">
+                ← Back to CCAs
+              </Button>
+            </Link>
           </div>
         </div>
 
@@ -210,11 +217,19 @@ export default function WeeklyCommitmentPage() {
         </Tabs>
 
         <Card className="border shadow-sm">
-          <CardHeader>
-            <CardTitle>Members</CardTitle>
-            <CardDescription className="flex items-center gap-2">
-              <Info className="h-4 w-4" />
-              Edit hours and remarks directly in the table.
+          <CardHeader >
+            <CardTitle>Committed Hours</CardTitle>
+            <CardDescription className="flex items-center gap-2 justify-between">
+              <div className="flex items-center gap-2">
+                <Info className="h-4 w-4" />
+                Edit hours and remarks directly in the table.
+              </div>
+              <Button
+                variant="default"
+                className="bg-green-500 text-white hover:bg-green-400 px-6 py-4 shadow-md font-bold cursor-pointer"
+              >
+                Save Changes
+              </Button>
             </CardDescription>
           </CardHeader>
           <CardContent>

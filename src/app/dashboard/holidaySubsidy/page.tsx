@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { SimpleTable, type SimpleTableColumn } from '@/components/table/simple-table';
 import { CCAData } from '@/types/dashboard';
 import { ArrowRight, Info } from 'lucide-react';
-import { CcaTypeBadge } from '@/components/badges/type-badges';
+import { CcaTypeBadge } from '@/components/badges/cca-type-badge';
 
 type SubsidyRow = CCAData;
 

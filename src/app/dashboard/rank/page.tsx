@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { SelectionTable, SelectionTableColumn } from '@/components/table/selection-table';
 import { OrderingTable, OrderingTableColumn } from '@/components/table/ordering-table';
 import { RankablePosition } from '@/types/dashboard';
-import { PositionTypeBadge } from '@/components/badges/type-badges';
+import { PositionTypeBadge } from '@/components/badges/position-type-badge';
 
 export default function RankCCA() {
   const { user } = useAuth();
