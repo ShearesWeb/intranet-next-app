@@ -47,16 +47,10 @@ export const navOptions: NavItem[] = [
         isActive: true,
     },
     {
-        title: "Manage CCAs",
+        title: "My CCAs",
         url: "/dashboard/mycca",
         isActive: true,
         icon: Volleyball,
-        items: [
-            {
-                title: "My CCAs",
-                url: "/dashboard/mycca",
-            },
-        ],
     },
     {
         title: "CCA Allocation",
@@ -82,10 +76,6 @@ export const navOptions: NavItem[] = [
         isActive: true,
         adminOnly: true,
         items: [
-            {
-                title: "Subsidy Declaration",
-                url: "/dashboard/holidaySubsidy/declaration",
-            },
             {
                 title: "Guide and FAQ",
                 url: "/dashboard/holidaySubsidy/guide",

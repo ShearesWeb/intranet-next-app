@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { SelectionTable, SelectionTableColumn } from '@/components/table/selection-table';
 import { OrderingTable, OrderingTableColumn } from '@/components/table/ordering-table';
 import { RankablePosition } from '@/types/dashboard';
+import { PositionTypeBadge } from '@/components/badges/type-badges';
 
 export default function RankCCA() {
   const { user } = useAuth();
@@ -158,18 +159,7 @@ export default function RankCCA() {
     {
       accessorKey: 'position_type',
       header: 'Type',
-      cell: (value) => {
-        const type = value as string;
-        return (
-          <div className="capitalize">
-            {type === 'maincomm'
-              ? 'Main Committee'
-              : type === 'blockcomm'
-                ? 'Block Committee'
-                : 'Sub Committee'}
-          </div>
-        );
-      },
+      cell: (value) => <PositionTypeBadge value={String(value)} />,
     },
     {
       accessorKey: 'available_capacity',
@@ -208,18 +198,7 @@ export default function RankCCA() {
     {
       accessorKey: 'position_type',
       header: 'Type',
-      cell: (value) => {
-        const type = value as string;
-        return (
-          <div className="capitalize text-sm">
-            {type === 'maincomm'
-              ? 'Main Committee'
-              : type === 'blockcomm'
-                ? 'Block Committee'
-                : 'Sub Committee'}
-          </div>
-        );
-      },
+      cell: (value) => <PositionTypeBadge value={String(value)} />,
     },
     {
       accessorKey: 'available_capacity',

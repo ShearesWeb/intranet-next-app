@@ -200,7 +200,7 @@ export default function Guide() {
                             </ul>
 
                             <Alert className="bg-blue-50 border border-blue-200">
-                                <InfoIcon className="h-4 w-4 text-blue-600" />
+                                <CheckCircle2Icon className="h-4 w-4 text-blue-600" />
                                 <AlertTitle className="text-blue-700 font-semibold">Why the Interface Is Designed This Way</AlertTitle>
                                 <AlertDescription >
                                     <p className="text-blue-900/80">
