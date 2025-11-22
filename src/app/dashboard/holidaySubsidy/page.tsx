@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { AppLayout } from '@/components/layout/app-layout';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -8,35 +8,13 @@ import { SimpleTable, type SimpleTableColumn } from '@/components/table/simple-t
 import { CCAData } from '@/types/dashboard';
 import { ArrowRight, Info } from 'lucide-react';
 import { CcaTypeBadge } from '@/components/badges/cca-type-badge';
+import { Spinner } from '@/components/ui/spinner';
+import { Card, CardContent } from '@/components/ui/card';
+import { useAuth } from '@/context/AuthContext';
+import toast from 'react-hot-toast';
+import { AUTHORIZED_CHAIR_ROLES, type ChairRole } from '@/lib/lead-auth-service';
 
 type SubsidyRow = CCAData;
-
-const mockSubsidyData: SubsidyRow[] = [
-  {
-    name: 'Swim Team',
-    role: 'Member',
-    position_type: 'member',
-    cca_type: 'sports',
-    description: 'Weekly pool training sessions and inter-hall meets.',
-    points: 12,
-  },
-  {
-    name: 'Drama',
-    role: 'Crew',
-    position_type: 'subcomm',
-    cca_type: 'culture',
-    description: 'Stage setup, blocking rehearsals, and lighting support.',
-    points: 9,
-  },
-  {
-    name: 'Block Committee',
-    role: 'Logistics',
-    position_type: 'blockcomm',
-    cca_type: 'committee',
-    description: 'Block-level programming, weekly meetings, and holiday ops.',
-    points: 7,
-  },
-];
 
 const columns: SimpleTableColumn<SubsidyRow>[] = [
   {
@@ -82,6 +60,90 @@ const columns: SimpleTableColumn<SubsidyRow>[] = [
 ];
 
 export default function HolidaySubsidyLanding() {
+  const { user } = useAuth();
+  const [subsidyData, setSubsidyData] = useState<SubsidyRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user?.email) {
+      setLoading(false);
+      setSubsidyData([]);
+      return;
+    }
+
+    const fetchCCAData = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const res = await fetch('/api/user/getCCAs');
+        if (!res.ok) {
+          throw new Error('Failed to fetch CCA data');
+        }
+
+        const data = await res.json();
+        const chairCCAs = (data.data || []).filter((cca: CCAData) =>
+          AUTHORIZED_CHAIR_ROLES.includes((cca.position_type || '').toLowerCase() as ChairRole)
+        );
+        setSubsidyData(chairCCAs);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to load CCAs';
+        setError(message);
+        toast.error(message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCCAData();
+  }, [user?.email]);
+
+  const hasChairAccess = subsidyData.length > 0;
+
+  if (loading) {
+    return (
+      <AppLayout>
+        <div className="flex justify-center items-center h-full min-h-[400px]">
+          <div className="flex flex-col items-center gap-3">
+            <Spinner className="w-8 h-8" />
+            <p className="text-gray-600">Loading your CCAs...</p>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if ((error && subsidyData.length === 0) || (!hasChairAccess && !error)) {
+    return (
+      <AppLayout>
+        <div className="flex flex-col space-y-4 p-4">
+          <div className="flex flex-col gap-2">
+            <h1 className="text-2xl font-bold">Holiday Subsidy</h1>
+            <p className="text-muted-foreground text-sm leading-relaxed">
+              Review your CCAs, see pending hours, and jump straight into the subsidy declaration page for each role.
+            </p>
+          </div>
+
+          <Card className="bg-muted/40">
+            <CardContent className="flex flex-col gap-3 p-6">
+              <div className="text-lg font-semibold">You are not a chair/vice for any CCA.</div>
+              <p className="text-sm text-muted-foreground">
+                Only CCA leads and vice leads can submit holiday subsidy declarations. If you believe this is a mistake,
+                please contact your CCA administrator.
+              </p>
+              {error && (
+                <div className="text-sm text-destructive">
+                  {error}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout>
       <div className="flex flex-col space-y-4 p-4">
@@ -106,7 +168,7 @@ export default function HolidaySubsidyLanding() {
             </Link>
           </div>
           <SimpleTable
-            data={mockSubsidyData}
+            data={subsidyData}
             columns={columns}
             searchColumn="name"
             searchPlaceholder="Search CCA..."
