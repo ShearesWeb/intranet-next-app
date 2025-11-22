@@ -1,17 +1,19 @@
-'use server'
+"use server"
 
-import { User } from "@/types/User";
+import { AUTH_USER_CACHE_KEY, AUTH_USER_CACHE_TTL_SECONDS, AUTH_USER_ID_CACHE_KEY } from "@/lib/constants/auth";
+import { isCacheFresh, parseCachedUser, serializeCachedUser } from "@/lib/auth/user-cache";
+import { AuthenticatedUser } from "@/types/User";
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 
-export async function fetchUserInfo(ignoreCache = false): Promise<User | null> {
+export async function fetchUserInfo(ignoreCache = false): Promise<AuthenticatedUser | null> {
     const cookieStore = await cookies();
     const supabase = await createClient();
 
     const clearCachedUser = () => {
         try {
-            cookieStore.delete("authenticated_user");
-            cookieStore.delete("user_id");
+            cookieStore.delete(AUTH_USER_CACHE_KEY);
+            cookieStore.delete(AUTH_USER_ID_CACHE_KEY);
         } catch {
             // RSC contexts can make cookie mutation a no-op
         }
@@ -31,25 +33,18 @@ export async function fetchUserInfo(ignoreCache = false): Promise<User | null> {
     }
 
     if (!ignoreCache) {
-        const cached = cookieStore.get("authenticated_user")?.value;
-        if (cached) {
-            try {
-                const cachedUser = JSON.parse(cached) as User;
-                // Only use cache if it matches the signed-in user
-                if (cachedUser.email === user.email) {
-                    console.log("Using cached user info from cookies");
-                    return cachedUser;
-                }
-            } catch {
-                // Invalid JSON → ignore and refresh
-            }
+        const cached = parseCachedUser(cookieStore.get(AUTH_USER_CACHE_KEY)?.value);
+
+        if (cached && cached.user.email === user.email && isCacheFresh(cached.cachedAt)) {
+            console.log("Using cached user info from cookies");
+            return cached.user;
         }
     }
 
     console.log("Fetching user info from database for", user.email);
     const { data, error } = await supabase
         .from("authenticated_user_info")
-        .select("id, email, name, room, points, profile_photo_path, is_admin ,is_jcrc")
+        .select("id, email, name, room, points, profile_photo_path, appointments, is_admin, is_jcrc, is_culture_sports_admin")
         .eq("email", user.email)
         .single();
 
@@ -64,7 +59,7 @@ export async function fetchUserInfo(ignoreCache = false): Promise<User | null> {
         ? supabase.storage.from("user-profile-pictures").getPublicUrl(data.profile_photo_path).data.publicUrl
         : null;
 
-    const userInfo: User = {
+    const userInfo: AuthenticatedUser = {
         id: data.id,
         email: data.email,
         name: data.name,
@@ -73,21 +68,23 @@ export async function fetchUserInfo(ignoreCache = false): Promise<User | null> {
         profile_photo_url: publicUrl,
         is_admin: data.is_admin,
         is_jcrc: data.is_jcrc,
+        is_culture_sports_admin: data.is_culture_sports_admin,
+        appointments: data.appointments ?? [],
     };
 
     // Store full user info in cookie
     try {
-        cookieStore.set("authenticated_user", JSON.stringify(userInfo), {
+        cookieStore.set(AUTH_USER_CACHE_KEY, serializeCachedUser(userInfo), {
             httpOnly: false, // accessible from client AuthContext
             path: "/",
-            maxAge: 60 * 60 * 24 * 7, // 7 days
+            maxAge: AUTH_USER_CACHE_TTL_SECONDS,
         });
 
         // Store fast-access user ID cookie
-        cookieStore.set("user_id", data.id, {
+        cookieStore.set(AUTH_USER_ID_CACHE_KEY, data.id, {
             httpOnly: false,
             path: "/",
-            maxAge: 60 * 60 * 24 * 7,
+            maxAge: AUTH_USER_CACHE_TTL_SECONDS,
         });
     } catch {
         // Ignore cookie set failures in environments where mutation isn't allowed
@@ -103,11 +100,14 @@ export async function fetchUserInfo(ignoreCache = false): Promise<User | null> {
  */
 export async function fetchUserId(): Promise<number | null> {
     const cookieStore = await cookies();
-    const userIdCookie = cookieStore.get("user_id")?.value;
+    const userIdCookie = cookieStore.get(AUTH_USER_ID_CACHE_KEY)?.value;
+    const cachedUser = parseCachedUser(cookieStore.get(AUTH_USER_CACHE_KEY)?.value);
 
     let userId: number | null = null;
 
-    if (userIdCookie) {
+    if (cachedUser && isCacheFresh(cachedUser.cachedAt)) {
+        userId = cachedUser.user.id;
+    } else if (userIdCookie) {
         const parsed = Number(userIdCookie);
         if (!isNaN(parsed)) {
             userId = parsed;
