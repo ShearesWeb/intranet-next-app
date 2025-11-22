@@ -6,7 +6,6 @@ import { ShieldCheck, ListChecks } from "lucide-react";
 
 import { AppLayout } from "@/components/layout/app-layout";
 import { SimpleTable, type SimpleTableColumn } from "@/components/table/simple-table";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
@@ -22,23 +21,16 @@ const columns: SimpleTableColumn<CcaApprovalRow>[] = [
     {
         accessorKey: "name",
         header: "CCA",
-        cell: value => (
-            <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-xs uppercase tracking-wide">
-                    Subsidy
-                </Badge>
-                <span className="font-semibold text-sm md:text-base">{value}</span>
-            </div>
-        ),
+        cell: value => <span className="font-semibold text-sm md:text-base">{value}</span>,
     },
     {
         accessorKey: "pendingDeclarations",
-        header: "Declarations",
+        header: "Pending Declarations",
         cell: value => <span className="text-sm md:text-base font-medium">{value}</span>,
     },
     {
         accessorKey: "pendingWeekly",
-        header: "Weekly Commitments",
+        header: "Pending Weekly Commitments",
         cell: value => <span className="text-sm md:text-base font-medium">{value}</span>,
     },
     {
@@ -46,16 +38,16 @@ const columns: SimpleTableColumn<CcaApprovalRow>[] = [
         header: "Actions",
         enableSorting: false,
         cell: (_value, row) => (
-            <div className="flex flex-col lg:flex-row gap-2 justify-end w-full">
-                <Button asChild variant="secondary" size="sm" className="gap-2">
+            <div className="flex flex-col lg:flex-row gap-2 justify-start w-full">
+                <Button asChild variant="outline" size="sm" className="gap-2">
                     <Link href={`/dashboard/holidaySubsidy/declaration/${encodeURIComponent(row.name)}`}>
-                        Approve declarations
+                        Approve pending declarations
                         <ListChecks className="h-4 w-4" />
                     </Link>
                 </Button>
                 <Button asChild size="sm" className="gap-2">
                     <Link href={`/dashboard/holidaySubsidy/weekly`}>
-                        Approve weekly commitments
+                        Approve pending weekly commitments
                         <ShieldCheck className="h-4 w-4" />
                     </Link>
                 </Button>
