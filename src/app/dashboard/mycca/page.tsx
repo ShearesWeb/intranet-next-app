@@ -83,7 +83,19 @@ export default function MyCCA() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user?.email) return;
+    if (!user) {
+      setCCAs([]);
+      setPoints(0);
+      setLoadingCCAs(false);
+      return;
+    }
+
+    if (!user.appointments?.length) {
+      setCCAs([]);
+      setPoints(user.points || 0);
+      setLoadingCCAs(false);
+      return;
+    }
 
     setLoadingCCAs(true);
     fetch('/api/user/getCCAs')
@@ -96,6 +108,7 @@ export default function MyCCA() {
       })
       .then((data) => {
         setCCAs(data.data);
+        setPoints(user.points || 0);
       })
       .catch((error) => {
         console.error("Error fetching CCAs:", error.message);
@@ -105,7 +118,7 @@ export default function MyCCA() {
       .finally(() => {
         setLoadingCCAs(false);
       });
-  }, [user?.email]);
+  }, [user]);
 
   if (loadingCCAs) {
     return (

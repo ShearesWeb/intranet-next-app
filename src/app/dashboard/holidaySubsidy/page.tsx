@@ -66,7 +66,13 @@ export default function HolidaySubsidyLanding() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user?.email) {
+    if (!user) {
+      setLoading(false);
+      setSubsidyData([]);
+      return;
+    }
+
+    if (!user.appointments?.length) {
       setLoading(false);
       setSubsidyData([]);
       return;
@@ -97,7 +103,7 @@ export default function HolidaySubsidyLanding() {
     };
 
     fetchCCAData();
-  }, [user?.email]);
+  }, [user]);
 
   const hasChairAccess = subsidyData.length > 0;
 
