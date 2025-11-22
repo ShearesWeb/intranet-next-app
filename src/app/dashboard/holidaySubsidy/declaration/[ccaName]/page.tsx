@@ -1,145 +1,112 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
 import { AppLayout } from "@/components/layout/app-layout";
+import { PositionTypeBadge } from "@/components/badges/position-type-badge";
+import { SimpleTable, type SimpleTableColumn } from "@/components/table/simple-table";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
     Card,
     CardContent,
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
-import { redirect, useParams } from "next/navigation";
+import { SubsidyDeclarationFormDialog } from "./subsidy-declaration-form-dialog";
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-    DialogClose,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { PositionTypeBadge } from "@/components/badges/position-type-badge";
-import { SimpleTable, type SimpleTableColumn } from "@/components/table/simple-table";
-import Link from "next/link";
+    DeclarationSection,
+    PositionOption,
+    SubsidyDeclaration,
+    SubsidyFromApi,
+    SubsidyStatus,
+    WeekOption,
+} from "./types";
 
-type DeclarationStatus = "Pending" | "Approved" | "Rejected";
+const WEEK_OPTIONS: WeekOption[] = [
+    { id: 1, label: "Week 1 (Dec 4 - Dec 10)" },
+    { id: 2, label: "Week 2 (Dec 11 - Dec 17)" },
+    { id: 3, label: "Week 3 (Dec 18 - Dec 24)" },
+    { id: 4, label: "Week 4 (Dec 25 - Dec 31)" },
+    { id: 5, label: "Week 5 (Jan 1 - Jan 7)" },
+    { id: 6, label: "Week 6 (Jan 8 - Jan 14)" },
+    { id: 7, label: "Week 7 (Jan 15 - Jan 21)" },
+    { id: 8, label: "Week 8 (Jan 22 - Jan 28)" },
+    { id: 9, label: "Week 9 (Jan 29 - Feb 4)" },
+    { id: 10, label: "Week 10 (Feb 5 - Feb 11)" },
+];
 
-type Declaration = {
-    position: string;
-    positionType: string;
-    week: string;
-    hours: number;
-    justification: string;
-    status: DeclarationStatus;
+const statusVariant: Record<SubsidyStatus, "default" | "secondary" | "destructive"> = {
+    pending: "secondary",
+    approved: "default",
+    rejected: "destructive",
 };
-
-type DeclarationSection = {
-    key: Lowercase<DeclarationStatus>;
-    title: string;
-    data: Declaration[];
-};
-
-const mockDeclarations: Record<Lowercase<DeclarationStatus>, Declaration[]> = {
-    pending: [
-        {
-            position: "Swim Team Member",
-            positionType: "member",
-            week: "Week 1",
-            hours: 4,
-            justification: "Training on Wed/Fri",
-            status: "Pending",
-        },
-        {
-            position: "Choir Vocalist",
-            positionType: "subcomm",
-            week: "Week 2",
-            hours: 3,
-            justification: "Sectional practice and rehearsal",
-            status: "Pending",
-        },
-    ],
-    approved: [
-        {
-            position: "Drama Crew",
-            positionType: "crew",
-            week: "Week 1",
-            hours: 5,
-            justification: "Stage setup and blocking",
-            status: "Approved",
-        },
-        {
-            position: "Badminton Captain",
-            positionType: "lead",
-            week: "Week 3",
-            hours: 6,
-            justification: "Inter-hall scrimmage prep",
-            status: "Approved",
-        },
-    ],
-    rejected: [
-        {
-            position: "Photography Lead",
-            positionType: "lead",
-            week: "Week 2",
-            hours: 2,
-            justification: "Photo walk coverage",
-            status: "Rejected",
-        },
-    ],
-};
-
-const statusVariant: Record<DeclarationStatus, "default" | "secondary" | "destructive"> = {
-    Pending: "secondary",
-    Approved: "default",
-    Rejected: "destructive",
-};
-
-const weeks = ["Week 1", "Week 2", "Week 3", "Week 4", "Week 5"];
 
 export default function SubsidyDeclarationPage() {
     const params = useParams();
     const ccaNameParam = params?.ccaName;
     const ccaName = typeof ccaNameParam === "string" ? decodeURIComponent(ccaNameParam) : "";
 
-    if (!ccaName) {
-        redirect("/dashboard/holidaySubsidy");
-        return null;
-    }
+    const router = useRouter();
 
     const titleSuffix = ` - ${ccaName}`;
 
-    const sections = useMemo(
-        (): DeclarationSection[] => [
-            { key: "pending", title: "Pending Declarations", data: mockDeclarations.pending },
-            { key: "approved", title: "Approved Declarations", data: mockDeclarations.approved },
-            { key: "rejected", title: "Rejected Declarations", data: mockDeclarations.rejected },
-        ],
-        []
+    const [positions, setPositions] = useState<PositionOption[]>([]);
+    const [declarations, setDeclarations] = useState<SubsidyDeclaration[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [editingDeclaration, setEditingDeclaration] = useState<SubsidyDeclaration | null>(null);
+
+    const positionMap = useMemo(
+        () =>
+            positions.reduce((acc, position) => {
+                acc.set(position.id, position);
+                return acc;
+            }, new Map<number, PositionOption>()),
+        [positions]
     );
 
-    const commonColumns = useMemo<SimpleTableColumn<Declaration>[]>(
+    const weekLabel = useCallback((weekId: number) => {
+        const week = WEEK_OPTIONS.find((w) => w.id === weekId);
+        return week?.label || `Week ${weekId}`;
+    }, []);
+
+    const formatStatus = useCallback((status: SubsidyStatus) => {
+        return status.charAt(0).toUpperCase() + status.slice(1);
+    }, []);
+
+    const sections = useMemo((): DeclarationSection[] => {
+        const statusOrder: SubsidyStatus[] = ["pending", "approved", "rejected"];
+
+        return statusOrder.map((status) => ({
+            key: status,
+            title: `${formatStatus(status)} Declarations`,
+            data: declarations.filter((declaration) => declaration.status === status),
+        }));
+    }, [declarations, formatStatus]);
+
+    const commonColumns = useMemo<SimpleTableColumn<SubsidyDeclaration>[]>(
         () => [
             {
-                accessorKey: "position",
+                accessorKey: "positionName",
                 header: "Position",
-                cell: (value: string) => <span className="font-semibold">{value}</span>,
-                enableSorting: true,
-            },
-            {
-                accessorKey: "positionType",
-                header: "Position Type",
-                cell: (value: string) => <PositionTypeBadge value={value} />,
+                cell: (value: string, row) => (
+                    <div className="flex items-center gap-2">
+                        <span className="font-semibold">{value}</span>
+                        <PositionTypeBadge value={row.positionType} />
+                    </div>
+                ),
                 enableSorting: false,
             },
             {
-                accessorKey: "week",
+                accessorKey: "weekId",
                 header: "Week",
+                cell: (value: number) => weekLabel(value),
                 enableSorting: true,
             },
             {
@@ -152,7 +119,7 @@ export default function SubsidyDeclarationPage() {
                 accessorKey: "justification",
                 header: "Justification",
                 cell: (value: string) => (
-                    <div className="text-sm text-muted-foreground line-clamp-2 max-w-[320px]">
+                    <div className="text-sm text-muted-foreground whitespace-pre-line line-clamp-3 max-w-[320px]">
                         {value}
                     </div>
                 ),
@@ -161,37 +128,188 @@ export default function SubsidyDeclarationPage() {
             {
                 accessorKey: "status",
                 header: "Status",
-                cell: (value: DeclarationStatus) => (
+                cell: (value: SubsidyStatus) => (
                     <Badge variant={statusVariant[value]}>
-                        {value}
+                        {formatStatus(value)}
                     </Badge>
                 ),
                 enableSorting: false,
             },
         ],
+        [formatStatus, weekLabel]
+    );
+
+    const mapSubsidyToDeclaration = useCallback(
+        (subsidy: SubsidyFromApi, overrideMap?: Map<number, PositionOption>): SubsidyDeclaration => {
+            const map = overrideMap ?? positionMap;
+            const position = subsidy.cca_positions || map.get(subsidy.position_id);
+
+            return {
+                id: subsidy.id,
+                positionId: subsidy.position_id,
+                positionName: position?.name || "Unknown Position",
+                positionType: position?.position_type || "",
+                weekId: subsidy.week_id,
+                hours: subsidy.hours,
+                justification: subsidy.reason || "",
+                status: subsidy.subsidy_status,
+            };
+        },
+        [positionMap]
+    );
+
+    useEffect(() => {
+        if (!ccaName) {
+            router.replace("/dashboard/holidaySubsidy");
+        }
+    }, [ccaName, router]);
+
+    useEffect(() => {
+        if (!ccaName) return;
+
+        let isMounted = true;
+        setLoading(true);
+        setError(null);
+
+        fetch(`/api/holidaySubsidy/declarations/${encodeURIComponent(ccaName)}`)
+            .then(async (res) => {
+                const data = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(data.error || "Failed to fetch subsidy declarations");
+                }
+
+                return data as { positions?: PositionOption[]; subsidies?: SubsidyFromApi[] };
+            })
+            .then((data) => {
+                if (!isMounted) return;
+
+                const positionsData = data.positions ?? [];
+                const positionsMap = positionsData.reduce((acc, position) => {
+                    acc.set(position.id, position);
+                    return acc;
+                }, new Map<number, PositionOption>());
+
+                const mapFromApi = (subsidy: SubsidyFromApi): SubsidyDeclaration => {
+                    const position = subsidy.cca_positions || positionsMap.get(subsidy.position_id);
+
+                    return {
+                        id: subsidy.id,
+                        positionId: subsidy.position_id,
+                        positionName: position?.name || "Unknown Position",
+                        positionType: position?.position_type || "",
+                        weekId: subsidy.week_id,
+                        hours: subsidy.hours,
+                        justification: subsidy.reason || "",
+                        status: subsidy.subsidy_status,
+                    };
+                };
+
+                setPositions(positionsData);
+
+                setDeclarations((data.subsidies || []).map((subsidy: SubsidyFromApi) => mapFromApi(subsidy)));
+            })
+            .catch((err) => {
+                if (!isMounted) return;
+                setError(err instanceof Error ? err.message : "Failed to load subsidy declarations");
+            })
+            .finally(() => {
+                if (!isMounted) return;
+                setLoading(false);
+            });
+
+        return () => {
+            isMounted = false;
+        };
+    }, [ccaName]);
+
+    if (!ccaName) {
+        return null;
+    }
+
+    const handleDialogOpenChange = useCallback(
+        (open: boolean) => {
+            setDialogOpen(open);
+            if (!open) setEditingDeclaration(null);
+        },
         []
     );
 
-    const pendingColumns = useMemo<SimpleTableColumn<Declaration>[]>(
+    const openCreateDialog = useCallback(() => {
+        setEditingDeclaration(null);
+        setDialogOpen(true);
+    }, []);
+
+    const openEditDialog = useCallback(
+        (declaration: SubsidyDeclaration) => {
+            setEditingDeclaration(declaration);
+            setDialogOpen(true);
+        },
+        []
+    );
+
+    const handleDelete = useCallback(
+        async (declaration: SubsidyDeclaration) => {
+            if (!confirm("Are you sure you want to delete this declaration?")) return;
+
+            try {
+                const response = await fetch(
+                    `/api/holidaySubsidy/declarations/${encodeURIComponent(ccaName)}`,
+                    {
+                        method: "DELETE",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ subsidyId: declaration.id }),
+                    }
+                );
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || "Failed to delete declaration");
+                }
+
+                setDeclarations((prev) => prev.filter((item) => item.id !== declaration.id));
+            } catch (err) {
+                setError(err instanceof Error ? err.message : "Failed to delete declaration");
+            }
+        },
+        [ccaName]
+    );
+
+    const handleDeclarationSaved = useCallback(
+        (declaration: SubsidyDeclaration, isEdit: boolean) => {
+            setDeclarations((prev) =>
+                isEdit ? prev.map((item) => (item.id === declaration.id ? declaration : item)) : [declaration, ...prev]
+            );
+        },
+        []
+    );
+
+    const pendingColumns = useMemo<SimpleTableColumn<SubsidyDeclaration>[]>(
         () => [
             ...commonColumns,
             {
-                accessorKey: "actions" as keyof Declaration,
+                accessorKey: "actions" as keyof SubsidyDeclaration,
                 header: "Actions",
                 enableSorting: false,
-                cell: (_, row) => (
+                cell: (_value, row) => (
                     <div className="flex justify-start gap-2">
-                        <Button variant="outline" size="sm">
+                        <Button variant="outline" size="sm" type="button" onClick={() => openEditDialog(row)}>
                             Edit
                         </Button>
-                        <Button variant="destructive" size="sm">
+                        <Button
+                            variant="destructive"
+                            size="sm"
+                            type="button"
+                            onClick={() => handleDelete(row)}
+                        >
                             Delete
                         </Button>
                     </div>
                 ),
             },
         ],
-        [commonColumns]
+        [commonColumns, handleDelete, openEditDialog]
     );
 
     return (
@@ -212,87 +330,65 @@ export default function SubsidyDeclarationPage() {
                                 ← Back to CCAs
                             </Button>
                         </Link>
-                        <Dialog>
-                            <DialogTrigger asChild>
-                                <Button className="px-4 py-3">Declare New Subsidy</Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle>
-                                        New Subsidy Declaration{titleSuffix}
-                                    </DialogTitle>
-                                    <DialogDescription>
-                                        Fill in the details for your subsidy request. This is a static preview.
-                                    </DialogDescription>
-                                </DialogHeader>
-                                <div className="space-y-4 pt-2">
-                                    <div className="space-y-1">
-                                        <label className="text-sm font-medium text-foreground">CCA</label>
-                                        <Input value={ccaName} disabled />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-sm font-medium text-foreground">
-                                            CCA Position
-                                        </label>
-                                        <Input placeholder="e.g., Swim Team Member" />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-sm font-medium text-foreground">
-                                            Week
-                                        </label>
-                                        <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                                            {weeks.map((week) => (
-                                                <option key={week}>{week}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-sm font-medium text-foreground">
-                                            Hours
-                                        </label>
-                                        <Input type="number" min={0} placeholder="e.g., 4" />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-sm font-medium text-foreground">
-                                            Justification
-                                        </label>
-                                        <Textarea placeholder="Briefly describe the activities and time spent." />
-                                    </div>
-                                </div>
-                                <DialogFooter>
-                                    <DialogClose asChild>
-                                        <Button variant="secondary">Cancel</Button>
-                                    </DialogClose>
-                                    <Button>Submit Declaration</Button>
-                                </DialogFooter>
-                            </DialogContent>
-                        </Dialog>
+                        <Button className="px-4 py-3" onClick={openCreateDialog}>
+                            Declare New Subsidy
+                        </Button>
+                        <SubsidyDeclarationFormDialog
+                            ccaName={ccaName}
+                            titleSuffix={titleSuffix}
+                            positions={positions}
+                            weekOptions={WEEK_OPTIONS}
+                            open={dialogOpen}
+                            editingDeclaration={editingDeclaration}
+                            onOpenChange={handleDialogOpenChange}
+                            onSubmitSuccess={handleDeclarationSaved}
+                            mapSubsidyToDeclaration={mapSubsidyToDeclaration}
+                        />
                     </div>
                 </div>
 
                 <Separator />
 
-                <div className="grid gap-6">
-                    {sections.map((section) => (
-                        <Card key={section.title} className="border shadow-sm">
-                            <CardHeader className="flex flex-row items-center justify-between">
-                                <CardTitle>{section.title}</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <SimpleTable
-                                    data={section.data}
-                                    columns={section.key === "pending" ? pendingColumns : commonColumns}
-                                    searchColumn="position"
-                                    searchPlaceholder="Search position..."
-                                    pageSize={5}
-                                    emptyMessage="No declarations found."
-                                    tableContainerClassName="rounded-md border bg-card/30 overflow-hidden"
-                                    tableClassName="[&_th]:px-5 [&_td]:px-5"
-                                />
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
+                {loading ? (
+                    <div className="flex justify-center items-center py-12">
+                        <Spinner className="w-8 h-8" />
+                    </div>
+                ) : error ? (
+                    <Alert variant="destructive" className="border-red-200 bg-red-50 text-red-800">
+                        <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                ) : positions.length === 0 ? (
+                    <Card className="bg-gray-50 border-2 border-dashed border-gray-300">
+                        <CardContent className="flex flex-col items-center justify-center py-12 text-center gap-2">
+                            <p className="text-lg font-semibold">No positions found for this CCA.</p>
+                            <p className="text-sm text-muted-foreground">
+                                Ensure you have chair access and positions are configured for this CCA.
+                            </p>
+                        </CardContent>
+                    </Card>
+                ) : (
+                    <div className="grid gap-6">
+                        {sections.map((section) => (
+                            <Card key={section.title} className="border shadow-sm">
+                                <CardHeader className="flex flex-row items-center justify-between">
+                                    <CardTitle>{section.title}</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <SimpleTable
+                                        data={section.data}
+                                        columns={section.key === "pending" ? pendingColumns : commonColumns}
+                                        searchColumn="positionName"
+                                        searchPlaceholder="Search position..."
+                                        pageSize={5}
+                                        emptyMessage="No declarations found."
+                                        tableContainerClassName="rounded-md border bg-card/30 overflow-hidden"
+                                        tableClassName="[&_th]:px-5 [&_td]:px-5"
+                                    />
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                )}
             </div>
         </AppLayout>
     );
