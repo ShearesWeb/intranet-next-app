@@ -15,7 +15,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircleIcon, Volleyball } from "lucide-react";
+import { AlertCircleIcon, ArrowLeft, Volleyball } from "lucide-react";
 
 // Custom table component
 import { SimpleTable, SimpleTableColumn } from "@/components/table/simple-table";
@@ -536,11 +536,9 @@ export default function ManageMembersPage() {
                             </Button>
                         )}
                         <Link href="/dashboard/mycca">
-                            <Button
-                                size="lg"
-                                className="bg-blue-500 text-white hover:bg-blue-400 px-6 py-4 shadow-md font-bold cursor-pointer"
-                            >
-                                ← Back to My CCAs
+                            <Button variant="outline" size="lg" className="px-6 py-4" >
+                                <ArrowLeft className="h-4 w-4" />
+                                Back to my CCAs
                             </Button>
                         </Link>
                     </div>

@@ -7,7 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { usePhaseInfo } from '@/hooks/usePhaseInfo';
 import toast from 'react-hot-toast';
 import { AppLayout } from '@/components/layout/app-layout';
-import { Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SelectionTable, SelectionTableColumn } from '@/components/table/selection-table';
 import { OrderingTable, OrderingTableColumn } from '@/components/table/ordering-table';
@@ -265,7 +265,8 @@ export default function RankCCA() {
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={backToSelection}>
-              ← Back to Selection
+              <ArrowLeft className="h-4 w-4" />
+              Back to Selection
             </Button>
             <Button
               onClick={saveRankings}

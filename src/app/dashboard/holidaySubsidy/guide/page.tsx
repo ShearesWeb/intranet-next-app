@@ -88,16 +88,6 @@ export default function Guide() {
 
                 {/* GUIDE SECTION */}
                 <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            Workflow Overview
-                            <Badge variant="default">Chairs</Badge>
-                        </CardTitle>
-                        <CardDescription>
-                            Understand the end-to-end process of holiday subsidy declaration and weekly tracking.
-                        </CardDescription>
-                    </CardHeader>
-
                     <CardContent className="space-y-6">
 
                         {/* Phase 1 */}
@@ -114,7 +104,9 @@ export default function Guide() {
                             {/* Description */}
                             <p className="text-muted-foreground">
                                 Chairs declare subsidy requirements for the entire holiday period. For each position,
-                                provide weekly hours and a sound justification.
+                                provide weekly hours and a sound justification. You can create new declarations and, if
+                                JCRC rejects them, edit and resubmit; updates automatically return the status to
+                                <strong> Pending</strong> so they re-enter the approval queue.
                             </p>
 
                             {/* Alert with examples + explanation */}
@@ -186,15 +178,15 @@ export default function Guide() {
                             </Alert>
 
                             <p className="text-muted-foreground">
-                                The interface auto-fills recommended values based on approved declarations.
+                                The interface auto-fills recommended values based on approved declarations from Phase 1.
                                 You may decrease hours and add remarks, but you cannot increase them.
                             </p>
 
                             <ul className="list-disc list-inside text-muted-foreground space-y-1">
                                 <li>Each member appears as a row in the table prefilled according to the previous subsidy declaration.</li>
-                                <li>By default, all members are marked as <strong>not committed</strong>.</li>
+                                <li>By default, all members are marked as <strong>not having committed any hours</strong>.</li>
                                 <li>You must manually <strong>tick</strong> each member you want to confirm hours for.</li>
-                                <li>Modify the number of hours if the member attended less than planned.</li>
+                                <li>Modify the number of hours if the member's contributions are less than planned.</li>
                                 <li>You may add <strong>remarks</strong> to explain reduced hours or exceptions.</li>
                                 <li>Hours cannot be increased beyond the approved subsidy declaration.</li>
                             </ul>
