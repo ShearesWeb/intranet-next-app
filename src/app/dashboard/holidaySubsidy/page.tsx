@@ -21,10 +21,10 @@ const columns: SimpleTableColumn<SubsidyRow>[] = [
     accessorKey: 'name',
     header: 'CCA',
     cell: (value, row) => (
-      <div className="flex flex-col gap-1 pr-4">
-        <strong className="font-semibold text-sm md:text-base leading-tight">{value}</strong>
+      <div className="flex flex-col gap-2 pr-4">
+        <strong className="font-semibold text-sm md:text-base">{value}</strong>
         {row.description && (
-          <div className="text-xs md:text-sm text-muted-foreground line-clamp-2">
+          <div className="text-xs md:text-sm text-gray-600 break-words whitespace-normal text-justify leading-relaxed line-clamp-5">
             {row.description}
           </div>
         )}
@@ -104,7 +104,7 @@ export default function HolidaySubsidyLanding() {
   if (loading) {
     return (
       <AppLayout>
-        <div className="flex justify-center items-center h-full min-h-[400px]">
+        <div className="flex justify-center items-center">
           <div className="flex flex-col items-center gap-3">
             <Spinner className="w-8 h-8" />
             <p className="text-gray-600">Loading your CCAs...</p>
