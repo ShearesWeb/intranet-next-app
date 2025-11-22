@@ -30,11 +30,13 @@ type NavItem = {
     icon: LucideIcon
     isActive?: boolean
     adminOnly?: boolean
+    jcrcOnly?: boolean
     featureFlag?: string
     items?: {
         title: string
         url: string
         adminOnly?: boolean
+        jcrcOnly?: boolean
         featureFlag?: string
     }[]
 }
@@ -75,22 +77,38 @@ export const navOptions: NavItem[] = [
         icon: FileUser,
         isActive: true,
         adminOnly: true,
+        jcrcOnly: true,
         items: [
             {
                 title: "Guide and FAQ",
                 url: "/dashboard/holidaySubsidy/guide",
             },
+            {
+                title: "JCRC Approvals",
+                url: "/dashboard/holidaySubsidy/approvals",
+                jcrcOnly: true,
+            },
         ],
     },
 ]
 
-export const buildNavItems = (user?: { is_admin?: boolean } | null) =>
-    navOptions
-        .filter(item => !item.adminOnly || user?.is_admin)
+export const buildNavItems = (user?: { is_admin?: boolean; is_jcrc?: boolean } | null) => {
+    const allowItem = (item: { adminOnly?: boolean; jcrcOnly?: boolean }) => {
+        if (item.adminOnly && item.jcrcOnly) {
+            return Boolean(user?.is_admin || user?.is_jcrc)
+        }
+        if (item.adminOnly) return Boolean(user?.is_admin)
+        if (item.jcrcOnly) return Boolean(user?.is_jcrc)
+        return true
+    }
+
+    return navOptions
+        .filter(allowItem)
         .map(item => ({
             ...item,
-            items: item.items?.filter(sub => !sub.adminOnly || user?.is_admin),
+            items: item.items?.filter(allowItem),
         }));
+}
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const { user } = useAuth();
