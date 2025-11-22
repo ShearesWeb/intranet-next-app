@@ -5,16 +5,18 @@ import { AppLayout } from '@/components/layout/app-layout';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { SimpleTable, type SimpleTableColumn } from '@/components/table/simple-table';
-import { CCAData } from '@/types/dashboard';
 import { ArrowRight, Info } from 'lucide-react';
-import { CcaTypeBadge } from '@/components/badges/cca-type-badge';
 import { Spinner } from '@/components/ui/spinner';
 import { AUTHORIZED_CHAIR_ROLES, ChairRole } from '@/lib/lead-auth-service';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 
-type SubsidyRow = CCAData;
+type SubsidyRow = {
+  name: string;
+  position_name: string;
+  position_type: string;
+};
 
 const columns: SimpleTableColumn<SubsidyRow>[] = [
   {
@@ -23,18 +25,11 @@ const columns: SimpleTableColumn<SubsidyRow>[] = [
     cell: (value, row) => (
       <div className="flex flex-col gap-2 pr-4">
         <strong className="font-semibold text-sm md:text-base">{value}</strong>
-        {row.description && (
-          <div className="text-xs md:text-sm text-gray-600 break-words whitespace-normal text-justify leading-relaxed line-clamp-5">
-            {row.description}
-          </div>
-        )}
+        <div className="text-xs md:text-sm text-gray-600 break-words whitespace-normal text-justify leading-relaxed">
+          {row.position_name} ({row.position_type})
+        </div>
       </div>
     ),
-  },
-  {
-    accessorKey: 'cca_type',
-    header: 'Type',
-    cell: (value) => <CcaTypeBadge value={String(value)} />,
   },
   {
     accessorKey: 'actions' as keyof SubsidyRow,
@@ -78,31 +73,27 @@ export default function HolidaySubsidyLanding() {
       return;
     }
 
-    const fetchCCAData = async () => {
-      setLoading(true);
-      setError(null);
+    setLoading(true);
+    setError(null);
 
-      try {
-        const res = await fetch('/api/user/getCCAs');
-        if (!res.ok) {
-          throw new Error('Failed to fetch CCA data');
-        }
-
-        const data = await res.json();
-        const chairCCAs = (data.data || []).filter((cca: CCAData) =>
-          AUTHORIZED_CHAIR_ROLES.includes((cca.position_type || '').toLowerCase() as ChairRole)
-        );
-        setSubsidyData(chairCCAs);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to load CCAs';
-        setError(message);
-        toast.error(message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCCAData();
+    try {
+      const chairCCAs = user.appointments
+        .filter((appointment) =>
+          AUTHORIZED_CHAIR_ROLES.includes((appointment.position_type || '').toLowerCase() as ChairRole)
+        )
+        .map((appointment) => ({
+          name: appointment.cca_name,
+          position_name: appointment.position_name,
+          position_type: appointment.position_type,
+        }));
+      setSubsidyData(chairCCAs);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load CCAs';
+      setError(message);
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
   }, [user]);
 
   const hasChairAccess = subsidyData.length > 0;
