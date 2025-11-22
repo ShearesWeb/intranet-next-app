@@ -120,7 +120,7 @@ export default function SubsidyDeclarationPage() {
                 accessorKey: "justification",
                 header: "Justification",
                 cell: (value: string) => (
-                    <div className="text-sm text-muted-foreground whitespace-pre-line break-words max-w-[320px] max-h-32 overflow-y-auto pr-1 line-clamp-5">
+                    <div className="text-sm text-muted-foreground whitespace-pre-line break-words max-w-[320px] max-h-32 overflow-y-auto pr-1 line-clamp-3">
                         {value}
                     </div>
                 ),
