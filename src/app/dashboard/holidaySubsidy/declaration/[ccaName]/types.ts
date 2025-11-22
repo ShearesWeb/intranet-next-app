@@ -1,4 +1,4 @@
-export type SubsidyStatus = "pending" | "approved" | "rejected" | "partial";
+export type SubsidyStatus = "pending" | "approved" | "rejected";
 
 export type SubsidyDeclaration = {
     id: number;

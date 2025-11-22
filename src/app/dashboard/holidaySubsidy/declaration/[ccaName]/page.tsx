@@ -44,7 +44,6 @@ const statusVariant: Record<SubsidyStatus, "default" | "secondary" | "destructiv
     pending: "secondary",
     approved: "default",
     rejected: "destructive",
-    partial: "default",
 };
 
 export default function SubsidyDeclarationPage() {
@@ -82,7 +81,7 @@ export default function SubsidyDeclarationPage() {
     }, []);
 
     const sections = useMemo((): DeclarationSection[] => {
-        const statusOrder: SubsidyStatus[] = ["pending", "approved", "partial", "rejected"];
+        const statusOrder: SubsidyStatus[] = ["pending", "approved", "rejected"];
 
         return statusOrder.map((status) => ({
             key: status,
