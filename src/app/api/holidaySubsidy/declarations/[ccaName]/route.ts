@@ -206,10 +206,6 @@ export async function PATCH(request: Request, { params }: Params) {
             return NextResponse.json({ error: "Subsidy declaration not found" }, { status: 404 });
         }
 
-        if (existing.cca_positions.cca_id !== ccaId) {
-            return NextResponse.json({ error: "Invalid subsidy for this CCA" }, { status: 400 });
-        }
-
         if (existing.subsidy_status !== "pending") {
             return NextResponse.json({ error: "Only pending declarations can be edited" }, { status: 400 });
         }
@@ -279,10 +275,6 @@ export async function DELETE(request: Request, { params }: Params) {
 
         if (fetchError || !existing) {
             return NextResponse.json({ error: "Subsidy declaration not found" }, { status: 404 });
-        }
-
-        if (existing.cca_positions.cca_id !== ccaId) {
-            return NextResponse.json({ error: "Invalid subsidy for this CCA" }, { status: 400 });
         }
 
         if (existing.subsidy_status !== "pending") {
