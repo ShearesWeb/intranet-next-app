@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { redirect, useParams } from "next/navigation";
 import { AppLayout } from "@/components/layout/app-layout";
@@ -15,22 +15,19 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
-import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
+import { SubsidyDeclarationFormDialog } from "./subsidy-declaration-form-dialog";
+import {
+    DeclarationSection,
+    PositionOption,
+    SubsidyDeclaration,
+    SubsidyFromApi,
+    SubsidyStatus,
+    WeekOption,
+} from "./types";
 
-const WEEK_OPTIONS = [
+const WEEK_OPTIONS: WeekOption[] = [
     { id: 1, label: "Week 1 (Dec 4 - Dec 10)" },
     { id: 2, label: "Week 2 (Dec 11 - Dec 17)" },
     { id: 3, label: "Week 3 (Dec 18 - Dec 24)" },
@@ -42,45 +39,6 @@ const WEEK_OPTIONS = [
     { id: 9, label: "Week 9 (Jan 29 - Feb 4)" },
     { id: 10, label: "Week 10 (Feb 5 - Feb 11)" },
 ];
-
-type SubsidyStatus = "pending" | "approved" | "rejected" | "partial";
-
-type SubsidyDeclaration = {
-    id: number;
-    positionId: number;
-    positionName: string;
-    positionType: string;
-    weekId: number;
-    hours: number;
-    justification: string;
-    status: SubsidyStatus;
-};
-
-type DeclarationSection = {
-    key: SubsidyStatus;
-    title: string;
-    data: SubsidyDeclaration[];
-};
-
-type PositionOption = {
-    id: number;
-    name: string;
-    position_type: string;
-};
-
-type SubsidyFromApi = {
-    id: number;
-    position_id: number;
-    week_id: number;
-    hours: number;
-    reason: string | null;
-    subsidy_status: SubsidyStatus;
-    cca_positions?: {
-        id: number;
-        name: string;
-        position_type: string;
-    } | null;
-};
 
 const statusVariant: Record<SubsidyStatus, "default" | "secondary" | "destructive"> = {
     pending: "secondary",
@@ -105,16 +63,8 @@ export default function SubsidyDeclarationPage() {
     const [declarations, setDeclarations] = useState<SubsidyDeclaration[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [formError, setFormError] = useState<string | null>(null);
-    const [submitting, setSubmitting] = useState(false);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingDeclaration, setEditingDeclaration] = useState<SubsidyDeclaration | null>(null);
-    const [formState, setFormState] = useState({
-        positionId: 0,
-        weekId: WEEK_OPTIONS[0].id,
-        hours: "",
-        justification: "",
-    });
 
     const positionMap = useMemo(
         () =>
@@ -253,57 +203,29 @@ export default function SubsidyDeclarationPage() {
                 setPositions(positionsData);
 
                 setDeclarations((data.subsidies || []).map((subsidy: SubsidyFromApi) => mapFromApi(subsidy)));
-
-                if (positionsData.length > 0) {
-                    resetForm(positionsData);
-                }
             })
             .catch((err) => {
                 setError(err.message || "Failed to load subsidy declarations");
             })
             .finally(() => setLoading(false));
-    }, [ccaName, mapSubsidyToDeclaration, resetForm]);
-
-    const resetForm = useCallback(
-        (nextPositions?: PositionOption[]) => {
-            const availablePositions = nextPositions ?? positions;
-            setFormState({
-                positionId: availablePositions[0]?.id ?? 0,
-                weekId: WEEK_OPTIONS[0].id,
-                hours: "",
-                justification: "",
-            });
-            setFormError(null);
-            setEditingDeclaration(null);
-        },
-        [positions]
-    );
+    }, [ccaName, mapSubsidyToDeclaration]);
 
     const handleDialogOpenChange = useCallback(
         (open: boolean) => {
             setDialogOpen(open);
-            if (!open) {
-                resetForm();
-            }
+            if (!open) setEditingDeclaration(null);
         },
-        [resetForm]
+        []
     );
 
     const openCreateDialog = useCallback(() => {
-        resetForm();
+        setEditingDeclaration(null);
         setDialogOpen(true);
-    }, [resetForm]);
+    }, []);
 
     const openEditDialog = useCallback(
         (declaration: SubsidyDeclaration) => {
             setEditingDeclaration(declaration);
-            setFormState({
-                positionId: declaration.positionId,
-                weekId: declaration.weekId,
-                hours: declaration.hours.toString(),
-                justification: declaration.justification,
-            });
-            setFormError(null);
             setDialogOpen(true);
         },
         []
@@ -331,10 +253,19 @@ export default function SubsidyDeclarationPage() {
 
                 setDeclarations((prev) => prev.filter((item) => item.id !== declaration.id));
             } catch (err) {
-                setFormError(err instanceof Error ? err.message : "Failed to delete declaration");
+                setError(err instanceof Error ? err.message : "Failed to delete declaration");
             }
         },
         [ccaName]
+    );
+
+    const handleDeclarationSaved = useCallback(
+        (declaration: SubsidyDeclaration, isEdit: boolean) => {
+            setDeclarations((prev) =>
+                isEdit ? prev.map((item) => (item.id === declaration.id ? declaration : item)) : [declaration, ...prev]
+            );
+        },
+        []
     );
 
     const pendingColumns = useMemo<SimpleTableColumn<SubsidyDeclaration>[]>(
@@ -364,80 +295,6 @@ export default function SubsidyDeclarationPage() {
         [commonColumns, handleDelete, openEditDialog]
     );
 
-    const handleSubmit = useCallback(
-        async (event: FormEvent<HTMLFormElement>) => {
-            event.preventDefault();
-            setFormError(null);
-            setSubmitting(true);
-
-            if (
-                !formState.positionId ||
-                !formState.weekId ||
-                formState.hours === "" ||
-                Number(formState.hours) <= 0 ||
-                !formState.justification.trim()
-            ) {
-                setFormError("All fields are required and hours must be greater than 0.");
-                setSubmitting(false);
-                return;
-            }
-
-            try {
-                const response = await fetch(
-                    `/api/holidaySubsidy/declarations/${encodeURIComponent(ccaName)}`,
-                    {
-                        method: editingDeclaration ? "PATCH" : "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify({
-                            subsidyId: editingDeclaration?.id,
-                            positionId: formState.positionId,
-                            weekId: Number(formState.weekId),
-                            hours: Number(formState.hours),
-                            reason: formState.justification,
-                        }),
-                    }
-                );
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(data.error || "Failed to submit declaration");
-                }
-
-                if (data.subsidy) {
-                    setDeclarations((prev) => {
-                        const mapped = mapSubsidyToDeclaration(data.subsidy);
-
-                        if (editingDeclaration) {
-                            return prev.map((decl) => (decl.id === mapped.id ? mapped : decl));
-                        }
-
-                        return [mapped, ...prev];
-                    });
-                }
-                setDialogOpen(false);
-                setEditingDeclaration(null);
-                resetForm();
-            } catch (err) {
-                setFormError(err instanceof Error ? err.message : "Failed to submit declaration");
-            } finally {
-                setSubmitting(false);
-            }
-        },
-        [
-            ccaName,
-            editingDeclaration,
-            formState.hours,
-            formState.justification,
-            formState.positionId,
-            formState.weekId,
-            mapSubsidyToDeclaration,
-            resetForm,
-        ]
-    );
-
     return (
         <AppLayout>
             <div className="flex flex-col space-y-6 p-4">
@@ -456,124 +313,20 @@ export default function SubsidyDeclarationPage() {
                                 ← Back to CCAs
                             </Button>
                         </Link>
-                        <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
-                            <DialogTrigger asChild>
-                                <Button className="px-4 py-3" onClick={openCreateDialog}>
-                                    Declare New Subsidy
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle>
-                                        {editingDeclaration
-                                            ? "Edit Subsidy Declaration"
-                                            : `New Subsidy Declaration${titleSuffix}`}
-                                    </DialogTitle>
-                                    <DialogDescription>
-                                        Fill in the details for your subsidy request.
-                                    </DialogDescription>
-                                </DialogHeader>
-                                <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-                                    <div className="space-y-1">
-                                        <label className="text-sm font-medium text-foreground">CCA</label>
-                                        <Input value={ccaName} disabled />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-sm font-medium text-foreground">CCA Position</label>
-                                        <select
-                                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                            value={formState.positionId}
-                                            onChange={(e) =>
-                                                setFormState((prev) => ({
-                                                    ...prev,
-                                                    positionId: Number(e.target.value),
-                                                }))
-                                            }
-                                            disabled={positions.length === 0}
-                                        >
-                                            {positions.map((position) => (
-                                                <option key={position.id} value={position.id}>
-                                                    {position.name} ({position.position_type})
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-sm font-medium text-foreground">Week</label>
-                                        <select
-                                            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                            value={formState.weekId}
-                                            onChange={(e) =>
-                                                setFormState((prev) => ({
-                                                    ...prev,
-                                                    weekId: Number(e.target.value),
-                                                }))
-                                            }
-                                        >
-                                            {WEEK_OPTIONS.map((week) => (
-                                                <option key={week.id} value={week.id}>
-                                                    {week.label}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-sm font-medium text-foreground">Hours</label>
-                                        <Input
-                                            type="number"
-                                            min={0}
-                                            step={0.5}
-                                            placeholder="e.g., 4"
-                                            value={formState.hours}
-                                            onChange={(e) =>
-                                                setFormState((prev) => ({
-                                                    ...prev,
-                                                    hours: e.target.value,
-                                                }))
-                                            }
-                                            required
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-sm font-medium text-foreground">Justification</label>
-                                        <Textarea
-                                            placeholder="Briefly describe the activities and time spent."
-                                            value={formState.justification}
-                                            onChange={(e) =>
-                                                setFormState((prev) => ({
-                                                    ...prev,
-                                                    justification: e.target.value,
-                                                }))
-                                            }
-                                            required
-                                        />
-                                    </div>
-
-                                    {formError ? (
-                                        <Alert variant="destructive">
-                                            <AlertDescription>{formError}</AlertDescription>
-                                        </Alert>
-                                    ) : null}
-
-                                    <DialogFooter>
-                                        <DialogClose asChild>
-                                            <Button type="button" variant="secondary" disabled={submitting}>
-                                                Cancel
-                                            </Button>
-                                        </DialogClose>
-                                        <Button type="submit" disabled={submitting || positions.length === 0}>
-                                            {submitting
-                                                ? editingDeclaration
-                                                    ? "Updating..."
-                                                    : "Submitting..."
-                                                : editingDeclaration
-                                                    ? "Update Declaration"
-                                                    : "Submit Declaration"}
-                                        </Button>
-                                    </DialogFooter>
-                                </form>
-                            </DialogContent>
-                        </Dialog>
+                        <Button className="px-4 py-3" onClick={openCreateDialog}>
+                            Declare New Subsidy
+                        </Button>
+                        <SubsidyDeclarationFormDialog
+                            ccaName={ccaName}
+                            titleSuffix={titleSuffix}
+                            positions={positions}
+                            weekOptions={WEEK_OPTIONS}
+                            open={dialogOpen}
+                            editingDeclaration={editingDeclaration}
+                            onOpenChange={handleDialogOpenChange}
+                            onSubmitSuccess={handleDeclarationSaved}
+                            mapSubsidyToDeclaration={mapSubsidyToDeclaration}
+                        />
                     </div>
                 </div>
 
