@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { AppLayout } from '@/components/layout/app-layout';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -8,35 +8,12 @@ import { SimpleTable, type SimpleTableColumn } from '@/components/table/simple-t
 import { CCAData } from '@/types/dashboard';
 import { ArrowRight, Info } from 'lucide-react';
 import { CcaTypeBadge } from '@/components/badges/cca-type-badge';
+import { Spinner } from '@/components/ui/spinner';
+import { AUTHORIZED_CHAIR_ROLES } from '@/lib/lead-auth-service';
+import { Card, CardContent } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 type SubsidyRow = CCAData;
-
-const mockSubsidyData: SubsidyRow[] = [
-  {
-    name: 'Swim Team',
-    role: 'Member',
-    position_type: 'member',
-    cca_type: 'sports',
-    description: 'Weekly pool training sessions and inter-hall meets.',
-    points: 12,
-  },
-  {
-    name: 'Drama',
-    role: 'Crew',
-    position_type: 'subcomm',
-    cca_type: 'culture',
-    description: 'Stage setup, blocking rehearsals, and lighting support.',
-    points: 9,
-  },
-  {
-    name: 'Block Committee',
-    role: 'Logistics',
-    position_type: 'blockcomm',
-    cca_type: 'committee',
-    description: 'Block-level programming, weekly meetings, and holiday ops.',
-    points: 7,
-  },
-];
 
 const columns: SimpleTableColumn<SubsidyRow>[] = [
   {
@@ -82,6 +59,37 @@ const columns: SimpleTableColumn<SubsidyRow>[] = [
 ];
 
 export default function HolidaySubsidyLanding() {
+  const [ccas, setCcas] = useState<CCAData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    fetch('/api/user/getCCAs')
+      .then(async (res) => {
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || 'Failed to fetch user CCA data');
+        }
+        return res.json();
+      })
+      .then((data) => {
+        const leadOrViceCcas = (data.data as CCAData[]).filter((cca) =>
+          AUTHORIZED_CHAIR_ROLES.includes((cca.position_type || '').toLowerCase())
+        );
+        setCcas(leadOrViceCcas);
+      })
+      .catch((err) => {
+        console.error('Error fetching CCAs:', err.message);
+        setError(err.message || 'Failed to load CCAs');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
+
+  const hasChairRole = ccas.length > 0;
+
   return (
     <AppLayout>
       <div className="flex flex-col space-y-4 p-4">
@@ -105,16 +113,39 @@ export default function HolidaySubsidyLanding() {
               <Button variant="default" size="sm">View Guide</Button>
             </Link>
           </div>
-          <SimpleTable
-            data={mockSubsidyData}
-            columns={columns}
-            searchColumn="name"
-            searchPlaceholder="Search CCA..."
-            pageSize={5}
-            emptyMessage="No CCAs found."
-            tableContainerClassName="rounded-lg border bg-card/40 overflow-hidden"
-            tableClassName="[&_th]:px-5 [&_td]:px-5"
-          />
+
+          {loading ? (
+            <div className="flex justify-center items-center py-12">
+              <div className="flex flex-col items-center gap-3">
+                <Spinner className="w-8 h-8" />
+                <p className="text-gray-600">Loading your CCAs...</p>
+              </div>
+            </div>
+          ) : error ? (
+            <Alert variant="destructive" className="border-red-200 bg-red-50 text-red-800">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : hasChairRole ? (
+            <SimpleTable
+              data={ccas}
+              columns={columns}
+              searchColumn="name"
+              searchPlaceholder="Search CCA..."
+              pageSize={5}
+              emptyMessage="No CCAs found."
+              tableContainerClassName="rounded-lg border bg-card/40 overflow-hidden"
+              tableClassName="[&_th]:px-5 [&_td]:px-5"
+            />
+          ) : (
+            <Card className="bg-gray-50 border-2 border-dashed border-gray-300">
+              <CardContent className="flex flex-col items-center justify-center py-12 text-center gap-2">
+                <p className="text-lg font-semibold">You are not a chair for any CCA.</p>
+                <p className="text-sm text-muted-foreground">
+                  Holiday subsidy declarations are available only for CCA leads or vices.
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </AppLayout>
