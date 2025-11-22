@@ -114,7 +114,9 @@ export default function Guide() {
                             {/* Description */}
                             <p className="text-muted-foreground">
                                 Chairs declare subsidy requirements for the entire holiday period. For each position,
-                                provide weekly hours and a sound justification.
+                                provide weekly hours and a sound justification. You can create new declarations and, if
+                                JCRC rejects them, edit and resubmit; updates automatically return the status to
+                                <strong> Pending</strong> so they re-enter the approval queue.
                             </p>
 
                             {/* Alert with examples + explanation */}
