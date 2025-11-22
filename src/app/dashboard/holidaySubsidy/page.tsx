@@ -9,9 +9,10 @@ import { CCAData } from '@/types/dashboard';
 import { ArrowRight, Info } from 'lucide-react';
 import { CcaTypeBadge } from '@/components/badges/cca-type-badge';
 import { Spinner } from '@/components/ui/spinner';
-import { AUTHORIZED_CHAIR_ROLES } from '@/lib/lead-auth-service';
+import { AUTHORIZED_CHAIR_ROLES, ChairRole } from '@/lib/lead-auth-service';
 import { Card, CardContent } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useAuth } from '@/context/AuthContext';
+import { toast } from 'sonner';
 
 type SubsidyRow = CCAData;
 
