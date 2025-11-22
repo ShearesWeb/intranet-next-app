@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { fetchAuthenticatedUser } from "@/lib/fetch-user-info";
+import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { createClient } from "@/utils/supabase/server";
 
 type SupabaseClient = ReturnType<typeof createClient> extends Promise<infer T>
@@ -64,7 +64,7 @@ async function fetchPendingDeclarations(supabase: SupabaseClient): Promise<Appro
 
 export async function GET() {
     try {
-        const user = await fetchAuthenticatedUser();
+        const user = await fetchUserInfo();
 
         if (!user || !user.is_jcrc) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 403 });

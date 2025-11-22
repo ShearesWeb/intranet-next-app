@@ -12,6 +12,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
+import { PositionTypeBadge } from '@/components/badges/position-type-badge';
 
 type SubsidyRow = {
   name: string;
@@ -24,19 +25,17 @@ const columns: SimpleTableColumn<SubsidyRow>[] = [
     accessorKey: 'name',
     header: 'CCA',
     cell: (value) => (
-      <div className="font-semibold text-sm md:text-base break-words whitespace-normal">{value}</div>
+      <div className="font-semibold">{value}</div>
     ),
   },
   {
     accessorKey: 'position_name',
-    header: 'Position',
+    header: 'Your Position',
     enableSorting: false,
     cell: (_, row) => (
       <div className="flex flex-wrap items-center gap-2">
-        <Badge variant="secondary" className="capitalize">
-          {row.position_type}
-        </Badge>
-        <span className="text-sm md:text-base text-foreground">{row.position_name}</span>
+        <span className="text-foreground">{row.position_name}</span>
+        <PositionTypeBadge value={row.position_type} className="capitalize" />
       </div>
     ),
   },

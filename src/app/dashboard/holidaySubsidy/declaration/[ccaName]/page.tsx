@@ -26,6 +26,7 @@ import {
     SubsidyStatus,
     WeekOption,
 } from "./types";
+import { ArrowLeft } from "lucide-react";
 
 const WEEK_OPTIONS: WeekOption[] = [
     { id: 1, label: "Week 1 (Dec 4 - Dec 10)" },
@@ -355,8 +356,9 @@ export default function SubsidyDeclarationPage() {
                     </div>
                     <div className="flex gap-2">
                         <Link href="/dashboard/holidaySubsidy">
-                            <Button variant="outline">
-                                ← Back to CCAs
+                            <Button variant="outline" className="px-4 py-3" >
+                                <ArrowLeft className="h-4 w-4" />
+                                Back to CCAs
                             </Button>
                         </Link>
                         <Button className="px-4 py-3" onClick={openCreateDialog}>

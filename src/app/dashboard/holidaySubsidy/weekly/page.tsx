@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { SelectionTable, type SelectionTableColumn } from "@/components/table/selection-table";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronLeft, ChevronRight, Copy, Info } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Copy, Info } from "lucide-react";
 import { PositionTypeBadge } from "@/components/badges/position-type-badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
@@ -183,8 +183,9 @@ export default function WeeklyCommitmentPage() {
           </div>
           <div className="flex gap-2">
             <Link href="/dashboard/holidaySubsidy">
-              <Button variant="outline">
-                ← Back to CCAs
+              <Button variant="outline" >
+                <ArrowLeft className="h-4 w-4" />
+                Back to CCAs
               </Button>
             </Link>
           </div>

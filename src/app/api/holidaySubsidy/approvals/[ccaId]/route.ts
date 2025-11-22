@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { fetchAuthenticatedUser } from "@/lib/fetch-user-info";
+import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { createClient } from "@/utils/supabase/server";
 
 const VALID_STATUSES = new Set(["pending", "approved", "rejected"]);
@@ -34,7 +34,7 @@ type SubsidyFromApi = {
 };
 
 async function assertJcrcAccess() {
-    const user = await fetchAuthenticatedUser();
+    const user = await fetchUserInfo();
 
     if (!user || !user.is_jcrc) {
         return { authorized: false as const, response: NextResponse.json({ error: "Unauthorized" }, { status: 403 }) };
