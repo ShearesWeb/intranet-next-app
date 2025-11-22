@@ -97,7 +97,7 @@ export default function SubsidyDeclarationPage() {
                 accessorKey: "positionName",
                 header: "Position",
                 cell: (value: string, row) => (
-                    <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2">
                         <span className="font-semibold">{value}</span>
                         <PositionTypeBadge value={row.positionType} />
                     </div>
@@ -120,7 +120,7 @@ export default function SubsidyDeclarationPage() {
                 accessorKey: "justification",
                 header: "Justification",
                 cell: (value: string) => (
-                    <div className="text-sm text-muted-foreground line-clamp-2 max-w-[320px]">
+                    <div className="text-sm text-muted-foreground whitespace-pre-line line-clamp-3 max-w-[320px]">
                         {value}
                     </div>
                 ),
