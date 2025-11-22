@@ -206,8 +206,11 @@ export async function PATCH(request: Request, { params }: Params) {
             return NextResponse.json({ error: "Subsidy declaration not found" }, { status: 404 });
         }
 
-        if (existing.subsidy_status !== "pending") {
-            return NextResponse.json({ error: "Only pending declarations can be edited" }, { status: 400 });
+        if (!["pending", "rejected"].includes(existing.subsidy_status)) {
+            return NextResponse.json(
+                { error: "Only pending or rejected declarations can be edited" },
+                { status: 400 }
+            );
         }
 
         const positionValidation = await validatePosition(supabase, positionId, ccaId);
@@ -223,6 +226,7 @@ export async function PATCH(request: Request, { params }: Params) {
                 week_id: weekId,
                 hours,
                 reason,
+                subsidy_status: "pending",
             })
             .eq("id", subsidyId)
             .select("id, position_id, week_id, hours, reason, subsidy_status")

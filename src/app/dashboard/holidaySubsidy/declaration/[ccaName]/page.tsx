@@ -285,30 +285,59 @@ export default function SubsidyDeclarationPage() {
         []
     );
 
-    const pendingColumns = useMemo<SimpleTableColumn<SubsidyDeclaration>[]>(
-        () => [
-            ...commonColumns,
-            {
-                accessorKey: "actions" as keyof SubsidyDeclaration,
-                header: "Actions",
-                enableSorting: false,
-                cell: (_value, row) => (
-                    <div className="flex justify-start gap-2">
-                        <Button variant="outline" size="sm" type="button" onClick={() => openEditDialog(row)}>
-                            Edit
-                        </Button>
-                        <Button
-                            variant="destructive"
-                            size="sm"
-                            type="button"
-                            onClick={() => handleDelete(row)}
-                        >
-                            Delete
-                        </Button>
-                    </div>
-                ),
-            },
-        ],
+    const columnsForStatus = useCallback(
+        (status: SubsidyStatus): SimpleTableColumn<SubsidyDeclaration>[] => {
+            if (status === "pending") {
+                return [
+                    ...commonColumns,
+                    {
+                        accessorKey: "actions" as keyof SubsidyDeclaration,
+                        header: "Actions",
+                        enableSorting: false,
+                        cell: (_value, row) => (
+                            <div className="flex justify-start gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    type="button"
+                                    onClick={() => openEditDialog(row)}
+                                >
+                                    Edit
+                                </Button>
+                                <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    type="button"
+                                    onClick={() => handleDelete(row)}
+                                >
+                                    Delete
+                                </Button>
+                            </div>
+                        ),
+                    },
+                ];
+            }
+
+            if (status === "rejected") {
+                return [
+                    ...commonColumns,
+                    {
+                        accessorKey: "actions" as keyof SubsidyDeclaration,
+                        header: "Actions",
+                        enableSorting: false,
+                        cell: (_value, row) => (
+                            <div className="flex justify-start gap-2">
+                                <Button size="sm" type="button" onClick={() => openEditDialog(row)}>
+                                    Edit & Resubmit
+                                </Button>
+                            </div>
+                        ),
+                    },
+                ];
+            }
+
+            return commonColumns;
+        },
         [commonColumns, handleDelete, openEditDialog]
     );
 
@@ -376,7 +405,7 @@ export default function SubsidyDeclarationPage() {
                                 <CardContent>
                                     <SimpleTable
                                         data={section.data}
-                                        columns={section.key === "pending" ? pendingColumns : commonColumns}
+                                        columns={columnsForStatus(section.key)}
                                         searchColumn="positionName"
                                         searchPlaceholder="Search position..."
                                         pageSize={5}
