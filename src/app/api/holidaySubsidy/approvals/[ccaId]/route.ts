@@ -177,17 +177,38 @@ export async function PATCH(request: Request, { params }: Params) {
             updates.map((u) => u.subsidyId)
         );
 
+        const groupedByStatus = updates.reduce<Record<SubsidyStatus, number[]>>(
+            (acc, { subsidyId, status }) => {
+                acc[status].push(subsidyId);
+                return acc;
+            },
+            { pending: [], approved: [], rejected: [] }
+        );
+
+        for (const [status, ids] of Object.entries(groupedByStatus) as Array<
+            [SubsidyStatus, number[]]
+        >) {
+            if (ids.length === 0) continue;
+
+            const { error } = await supabase
+                .from("subsidies")
+                .update({ subsidy_status: status })
+                .in("id", ids);
+
+            if (error) {
+                throw new Error(error.message);
+            }
+        }
+
         const { data, error } = await supabase
             .from("subsidies")
-            .upsert(
-                updates.map(({ subsidyId, status }) => ({
-                    id: subsidyId,
-                    subsidy_status: status,
-                }))
-            )
             .select(
                 `id, position_id, week_id, hours, reason, subsidy_status,
                 cca_positions!inner(id, name, position_type, cca_id)`
+            )
+            .in(
+                "id",
+                updates.map((u) => u.subsidyId)
             );
 
         if (error) {
