@@ -107,6 +107,8 @@ export default function SubsidyDeclarationPage() {
     const [error, setError] = useState<string | null>(null);
     const [formError, setFormError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [editingDeclaration, setEditingDeclaration] = useState<SubsidyDeclaration | null>(null);
     const [formState, setFormState] = useState({
         positionId: 0,
         weekId: WEEK_OPTIONS[0].id,
@@ -191,28 +193,6 @@ export default function SubsidyDeclarationPage() {
         [formatStatus, weekLabel]
     );
 
-    const pendingColumns = useMemo<SimpleTableColumn<SubsidyDeclaration>[]>(
-        () => [
-            ...commonColumns,
-            {
-                accessorKey: "actions" as keyof SubsidyDeclaration,
-                header: "Actions",
-                enableSorting: false,
-                cell: () => (
-                    <div className="flex justify-start gap-2">
-                        <Button variant="outline" size="sm" disabled>
-                            Edit
-                        </Button>
-                        <Button variant="destructive" size="sm" disabled>
-                            Delete
-                        </Button>
-                    </div>
-                ),
-            },
-        ],
-        [commonColumns]
-    );
-
     const mapSubsidyToDeclaration = useCallback(
         (subsidy: SubsidyFromApi, overrideMap?: Map<number, PositionOption>): SubsidyDeclaration => {
             const map = overrideMap ?? positionMap;
@@ -275,17 +255,114 @@ export default function SubsidyDeclarationPage() {
                 setDeclarations((data.subsidies || []).map((subsidy: SubsidyFromApi) => mapFromApi(subsidy)));
 
                 if (positionsData.length > 0) {
-                    setFormState((prev) => ({
-                        ...prev,
-                        positionId: positionsData[0].id,
-                    }));
+                    resetForm(positionsData);
                 }
             })
             .catch((err) => {
                 setError(err.message || "Failed to load subsidy declarations");
             })
             .finally(() => setLoading(false));
-    }, [ccaName]);
+    }, [ccaName, mapSubsidyToDeclaration, resetForm]);
+
+    const resetForm = useCallback(
+        (nextPositions?: PositionOption[]) => {
+            const availablePositions = nextPositions ?? positions;
+            setFormState({
+                positionId: availablePositions[0]?.id ?? 0,
+                weekId: WEEK_OPTIONS[0].id,
+                hours: "",
+                justification: "",
+            });
+            setFormError(null);
+            setEditingDeclaration(null);
+        },
+        [positions]
+    );
+
+    const handleDialogOpenChange = useCallback(
+        (open: boolean) => {
+            setDialogOpen(open);
+            if (!open) {
+                resetForm();
+            }
+        },
+        [resetForm]
+    );
+
+    const openCreateDialog = useCallback(() => {
+        resetForm();
+        setDialogOpen(true);
+    }, [resetForm]);
+
+    const openEditDialog = useCallback(
+        (declaration: SubsidyDeclaration) => {
+            setEditingDeclaration(declaration);
+            setFormState({
+                positionId: declaration.positionId,
+                weekId: declaration.weekId,
+                hours: declaration.hours.toString(),
+                justification: declaration.justification,
+            });
+            setFormError(null);
+            setDialogOpen(true);
+        },
+        []
+    );
+
+    const handleDelete = useCallback(
+        async (declaration: SubsidyDeclaration) => {
+            if (!confirm("Are you sure you want to delete this declaration?")) return;
+
+            try {
+                const response = await fetch(
+                    `/api/holidaySubsidy/declarations/${encodeURIComponent(ccaName)}`,
+                    {
+                        method: "DELETE",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ subsidyId: declaration.id }),
+                    }
+                );
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || "Failed to delete declaration");
+                }
+
+                setDeclarations((prev) => prev.filter((item) => item.id !== declaration.id));
+            } catch (err) {
+                setFormError(err instanceof Error ? err.message : "Failed to delete declaration");
+            }
+        },
+        [ccaName]
+    );
+
+    const pendingColumns = useMemo<SimpleTableColumn<SubsidyDeclaration>[]>(
+        () => [
+            ...commonColumns,
+            {
+                accessorKey: "actions" as keyof SubsidyDeclaration,
+                header: "Actions",
+                enableSorting: false,
+                cell: (_value, row) => (
+                    <div className="flex justify-start gap-2">
+                        <Button variant="outline" size="sm" type="button" onClick={() => openEditDialog(row)}>
+                            Edit
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            size="sm"
+                            type="button"
+                            onClick={() => handleDelete(row)}
+                        >
+                            Delete
+                        </Button>
+                    </div>
+                ),
+            },
+        ],
+        [commonColumns, handleDelete, openEditDialog]
+    );
 
     const handleSubmit = useCallback(
         async (event: FormEvent<HTMLFormElement>) => {
@@ -293,15 +370,28 @@ export default function SubsidyDeclarationPage() {
             setFormError(null);
             setSubmitting(true);
 
+            if (
+                !formState.positionId ||
+                !formState.weekId ||
+                formState.hours === "" ||
+                Number(formState.hours) <= 0 ||
+                !formState.justification.trim()
+            ) {
+                setFormError("All fields are required and hours must be greater than 0.");
+                setSubmitting(false);
+                return;
+            }
+
             try {
                 const response = await fetch(
                     `/api/holidaySubsidy/declarations/${encodeURIComponent(ccaName)}`,
                     {
-                        method: "POST",
+                        method: editingDeclaration ? "PATCH" : "POST",
                         headers: {
                             "Content-Type": "application/json",
                         },
                         body: JSON.stringify({
+                            subsidyId: editingDeclaration?.id,
                             positionId: formState.positionId,
                             weekId: Number(formState.weekId),
                             hours: Number(formState.hours),
@@ -317,15 +407,35 @@ export default function SubsidyDeclarationPage() {
                 }
 
                 if (data.subsidy) {
-                    setDeclarations((prev) => [mapSubsidyToDeclaration(data.subsidy), ...prev]);
+                    setDeclarations((prev) => {
+                        const mapped = mapSubsidyToDeclaration(data.subsidy);
+
+                        if (editingDeclaration) {
+                            return prev.map((decl) => (decl.id === mapped.id ? mapped : decl));
+                        }
+
+                        return [mapped, ...prev];
+                    });
                 }
+                setDialogOpen(false);
+                setEditingDeclaration(null);
+                resetForm();
             } catch (err) {
                 setFormError(err instanceof Error ? err.message : "Failed to submit declaration");
             } finally {
                 setSubmitting(false);
             }
         },
-        [ccaName, formState.hours, formState.justification, formState.positionId, formState.weekId, mapSubsidyToDeclaration]
+        [
+            ccaName,
+            editingDeclaration,
+            formState.hours,
+            formState.justification,
+            formState.positionId,
+            formState.weekId,
+            mapSubsidyToDeclaration,
+            resetForm,
+        ]
     );
 
     return (
@@ -346,14 +456,18 @@ export default function SubsidyDeclarationPage() {
                                 ← Back to CCAs
                             </Button>
                         </Link>
-                        <Dialog>
+                        <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
                             <DialogTrigger asChild>
-                                <Button className="px-4 py-3">Declare New Subsidy</Button>
+                                <Button className="px-4 py-3" onClick={openCreateDialog}>
+                                    Declare New Subsidy
+                                </Button>
                             </DialogTrigger>
                             <DialogContent>
                                 <DialogHeader>
                                     <DialogTitle>
-                                        New Subsidy Declaration{titleSuffix}
+                                        {editingDeclaration
+                                            ? "Edit Subsidy Declaration"
+                                            : `New Subsidy Declaration${titleSuffix}`}
                                     </DialogTitle>
                                     <DialogDescription>
                                         Fill in the details for your subsidy request.
@@ -431,6 +545,7 @@ export default function SubsidyDeclarationPage() {
                                                     justification: e.target.value,
                                                 }))
                                             }
+                                            required
                                         />
                                     </div>
 
@@ -447,7 +562,13 @@ export default function SubsidyDeclarationPage() {
                                             </Button>
                                         </DialogClose>
                                         <Button type="submit" disabled={submitting || positions.length === 0}>
-                                            {submitting ? "Submitting..." : "Submit Declaration"}
+                                            {submitting
+                                                ? editingDeclaration
+                                                    ? "Updating..."
+                                                    : "Submitting..."
+                                                : editingDeclaration
+                                                    ? "Update Declaration"
+                                                    : "Submit Declaration"}
                                         </Button>
                                     </DialogFooter>
                                 </form>

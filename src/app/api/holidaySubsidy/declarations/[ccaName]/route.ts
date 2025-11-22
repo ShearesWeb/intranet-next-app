@@ -3,13 +3,17 @@ import { createClient } from "@/utils/supabase/server";
 import { fetchUserId } from "@/lib/fetch-user-info";
 import { checkCCAChairAuthorization } from "@/lib/lead-auth-service";
 
+type SupabaseClient = ReturnType<typeof createClient> extends Promise<infer T>
+    ? T
+    : never;
+
 type Params = {
     params: {
         ccaName: string;
     };
 };
 
-async function resolveCCAId(ccaName: string, supabase: any) {
+async function resolveCCAId(ccaName: string, supabase: SupabaseClient) {
     const decodedName = decodeURIComponent(ccaName);
 
     const { data, error } = await supabase
@@ -25,7 +29,7 @@ async function resolveCCAId(ccaName: string, supabase: any) {
     return { ccaId: data.id as number, ccaName: data.name as string };
 }
 
-async function authorizeChair(ccaId: number, supabase: any) {
+async function authorizeChair(ccaId: number, supabase: SupabaseClient) {
     const userId = await fetchUserId();
 
     if (!userId) {
@@ -43,6 +47,24 @@ async function authorizeChair(ccaId: number, supabase: any) {
     }
 
     return { authorized: true, status: 200 };
+}
+
+async function validatePosition(
+    supabase: SupabaseClient,
+    positionId: number,
+    ccaId: number
+) {
+    const { data: position, error: positionError } = await supabase
+        .from("cca_positions")
+        .select("id, cca_id")
+        .eq("id", positionId)
+        .single();
+
+    if (positionError || !position || position.cca_id !== ccaId) {
+        return { valid: false, error: "Invalid position for this CCA" };
+    }
+
+    return { valid: true };
 }
 
 export async function GET(_request: Request, { params }: Params) {
@@ -109,18 +131,14 @@ export async function POST(request: Request, { params }: Params) {
         const body = await request.json();
         const { positionId, weekId, hours, reason } = body || {};
 
-        if (!positionId || !weekId) {
-            return NextResponse.json({ error: "Position and week are required" }, { status: 400 });
+        if (!positionId || !weekId || hours === undefined || hours === null || reason === undefined) {
+            return NextResponse.json({ error: "Position, week, hours, and justification are required" }, { status: 400 });
         }
 
-        const { data: position, error: positionError } = await supabase
-            .from("cca_positions")
-            .select("id, cca_id")
-            .eq("id", positionId)
-            .single();
+        const positionValidation = await validatePosition(supabase, positionId, ccaId);
 
-        if (positionError || !position || position.cca_id !== ccaId) {
-            return NextResponse.json({ error: "Invalid position for this CCA" }, { status: 400 });
+        if (!positionValidation.valid) {
+            return NextResponse.json({ error: positionValidation.error }, { status: 400 });
         }
 
         const { data, error: insertError } = await supabase
@@ -146,5 +164,136 @@ export async function POST(request: Request, { params }: Params) {
     } catch (error) {
         console.error("Error creating subsidy declaration:", error);
         return NextResponse.json({ error: "Failed to submit declaration" }, { status: 500 });
+    }
+}
+
+export async function PATCH(request: Request, { params }: Params) {
+    try {
+        const supabase = await createClient();
+
+        const { ccaId, error } = await resolveCCAId(params.ccaName, supabase);
+
+        if (!ccaId) {
+            return NextResponse.json({ error: error || "CCA not found" }, { status: 404 });
+        }
+
+        const authResult = await authorizeChair(ccaId, supabase);
+
+        if (!authResult.authorized) {
+            return NextResponse.json({ error: authResult.message }, { status: authResult.status });
+        }
+
+        const body = await request.json();
+        const { subsidyId, positionId, weekId, hours, reason } = body || {};
+
+        if (!subsidyId || !positionId || !weekId || hours === undefined || hours === null || reason === undefined) {
+            return NextResponse.json(
+                { error: "Subsidy ID, position, week, hours, and justification are required" },
+                { status: 400 }
+            );
+        }
+
+        const { data: existing, error: fetchError } = await supabase
+            .from("subsidies")
+            .select("id, position_id, subsidy_status, cca_positions!inner(cca_id)")
+            .eq("id", subsidyId)
+            .single();
+
+        if (fetchError || !existing) {
+            return NextResponse.json({ error: "Subsidy declaration not found" }, { status: 404 });
+        }
+
+        if (existing.cca_positions.cca_id !== ccaId) {
+            return NextResponse.json({ error: "Invalid subsidy for this CCA" }, { status: 400 });
+        }
+
+        if (existing.subsidy_status !== "pending") {
+            return NextResponse.json({ error: "Only pending declarations can be edited" }, { status: 400 });
+        }
+
+        const positionValidation = await validatePosition(supabase, positionId, ccaId);
+
+        if (!positionValidation.valid) {
+            return NextResponse.json({ error: positionValidation.error }, { status: 400 });
+        }
+
+        const { data, error: updateError } = await supabase
+            .from("subsidies")
+            .update({
+                position_id: positionId,
+                week_id: weekId,
+                hours,
+                reason,
+            })
+            .eq("id", subsidyId)
+            .select("id, position_id, week_id, hours, reason, subsidy_status")
+            .single();
+
+        if (updateError) {
+            const status = updateError.code === "23505" ? 409 : 500;
+            const message = updateError.code === "23505"
+                ? "A declaration for this position and week already exists"
+                : updateError.message;
+            return NextResponse.json({ error: message }, { status });
+        }
+
+        return NextResponse.json({ subsidy: data });
+    } catch (error) {
+        console.error("Error updating subsidy declaration:", error);
+        return NextResponse.json({ error: "Failed to update declaration" }, { status: 500 });
+    }
+}
+
+export async function DELETE(request: Request, { params }: Params) {
+    try {
+        const supabase = await createClient();
+
+        const { ccaId, error } = await resolveCCAId(params.ccaName, supabase);
+
+        if (!ccaId) {
+            return NextResponse.json({ error: error || "CCA not found" }, { status: 404 });
+        }
+
+        const authResult = await authorizeChair(ccaId, supabase);
+
+        if (!authResult.authorized) {
+            return NextResponse.json({ error: authResult.message }, { status: authResult.status });
+        }
+
+        const body = await request.json();
+        const { subsidyId } = body || {};
+
+        if (!subsidyId) {
+            return NextResponse.json({ error: "Subsidy ID is required" }, { status: 400 });
+        }
+
+        const { data: existing, error: fetchError } = await supabase
+            .from("subsidies")
+            .select("id, subsidy_status, cca_positions!inner(cca_id)")
+            .eq("id", subsidyId)
+            .single();
+
+        if (fetchError || !existing) {
+            return NextResponse.json({ error: "Subsidy declaration not found" }, { status: 404 });
+        }
+
+        if (existing.cca_positions.cca_id !== ccaId) {
+            return NextResponse.json({ error: "Invalid subsidy for this CCA" }, { status: 400 });
+        }
+
+        if (existing.subsidy_status !== "pending") {
+            return NextResponse.json({ error: "Only pending declarations can be deleted" }, { status: 400 });
+        }
+
+        const { error: deleteError } = await supabase.from("subsidies").delete().eq("id", subsidyId);
+
+        if (deleteError) {
+            return NextResponse.json({ error: deleteError.message }, { status: 500 });
+        }
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        console.error("Error deleting subsidy declaration:", error);
+        return NextResponse.json({ error: "Failed to delete declaration" }, { status: 500 });
     }
 }
