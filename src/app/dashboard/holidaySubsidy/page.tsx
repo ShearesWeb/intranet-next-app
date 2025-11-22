@@ -11,6 +11,7 @@ import { AUTHORIZED_CHAIR_ROLES, ChairRole } from '@/lib/lead-auth-service';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
 
 type SubsidyRow = {
   name: string;
@@ -22,12 +23,20 @@ const columns: SimpleTableColumn<SubsidyRow>[] = [
   {
     accessorKey: 'name',
     header: 'CCA',
-    cell: (value, row) => (
-      <div className="flex flex-col gap-2 pr-4">
-        <strong className="font-semibold text-sm md:text-base">{value}</strong>
-        <div className="text-xs md:text-sm text-gray-600 break-words whitespace-normal text-justify leading-relaxed">
-          {row.position_name} ({row.position_type})
-        </div>
+    cell: (value) => (
+      <div className="font-semibold text-sm md:text-base break-words whitespace-normal">{value}</div>
+    ),
+  },
+  {
+    accessorKey: 'position_name',
+    header: 'Position',
+    enableSorting: false,
+    cell: (_, row) => (
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant="secondary" className="capitalize">
+          {row.position_type}
+        </Badge>
+        <span className="text-sm md:text-base text-foreground">{row.position_name}</span>
       </div>
     ),
   },
@@ -36,7 +45,7 @@ const columns: SimpleTableColumn<SubsidyRow>[] = [
     header: 'Actions',
     enableSorting: false,
     cell: (_, row) => (
-      <div className="flex flex-col sm:flex-row sm:items-center justify-start gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-end sm:justify-start gap-2 w-full sm:w-auto">
         <Link href={`/dashboard/holidaySubsidy/declaration/${encodeURIComponent(row.name)}`}>
           <Button size="sm" variant="outline" className="gap-2 px-3 py-2">
             Subsidy Declaration
@@ -172,7 +181,7 @@ export default function HolidaySubsidyLanding() {
             pageSize={5}
             emptyMessage="No CCAs found."
             tableContainerClassName="rounded-lg border bg-card/40 overflow-hidden"
-            tableClassName="[&_th]:px-5 [&_td]:px-5"
+            tableClassName="min-w-full [&_th]:px-5 [&_td]:px-5"
           />
         </div>
       </div>
