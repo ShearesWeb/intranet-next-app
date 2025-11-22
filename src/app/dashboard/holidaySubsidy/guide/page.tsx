@@ -114,9 +114,14 @@ export default function Guide() {
                                 <AlertCircleIcon className="h-4 w-4 text-orange-600" />
                                 <AlertTitle className="text-orange-700 font-semibold">Important — Valid Justifications Required</AlertTitle>
                                 <AlertDescription className="space-y-2">
-                                    <p>
-                                        Justifications must be <strong>realistic, relevant, and verifiable</strong>.
-                                        Weak or vague explanations may lead to rejection by JCRC.
+                                    <p className="text-muted-foreground">
+                                        Chairs declare subsidy requirements for <strong>each week</strong> within the entire holiday period. For <strong>each position</strong>,
+                                        provide weekly hours and a sound justification.
+                                    </p>
+                                    <p className="text-muted-foreground">
+                                        You can create new declarations and, if
+                                        JCRC rejects them, edit and resubmit; the status updates automatically to
+                                        <strong> Pending</strong> so they re-enter the approval queue.
                                     </p>
 
                                     <div className="mt-3 space-y-1">

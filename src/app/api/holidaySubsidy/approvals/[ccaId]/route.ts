@@ -73,7 +73,7 @@ async function fetchCcaData(ccaId: number, supabase: SupabaseClient) {
         throw new Error(subsidiesError.message);
     }
 
-    return { positions: positions || [], subsidies: (subsidies as SubsidyFromApi[] | null) || [] };
+    return { positions: positions || [], subsidies: (subsidies as unknown as SubsidyFromApi[] | null) || [] };
 }
 
 function validateUpdates(
@@ -215,7 +215,7 @@ export async function PATCH(request: Request, { params }: Params) {
             throw new Error(error.message);
         }
 
-        return NextResponse.json({ updated: (data as SubsidyFromApi[] | null) || [] });
+        return NextResponse.json({ updated: (data as unknown as SubsidyFromApi[] | null) || [] });
     } catch (error) {
         console.error("Error updating subsidy approvals:", error);
         return NextResponse.json({ error: "Failed to update approvals" }, { status: 500 });
