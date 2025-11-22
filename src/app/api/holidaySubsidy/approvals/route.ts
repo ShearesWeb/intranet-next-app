@@ -13,10 +13,29 @@ type ApprovalRow = {
     pendingDeclarations: number;
 };
 
+type SubsidyWithCCA = {
+    cca_positions?: {
+        cca_id?: number;
+        ccas?: {
+            id?: number;
+            name?: string;
+        } | null;
+    } | null;
+};
+
 async function fetchPendingDeclarations(supabase: SupabaseClient): Promise<ApprovalRow[]> {
     const { data, error } = await supabase
         .from("subsidies")
-        .select("subsidy_status, cca_positions!inner(cca_id, ccas!inner(name))")
+        .select(
+            `subsidy_status,
+            cca_positions!inner (
+                cca_id,
+                ccas!inner (
+                    id,
+                    name
+                )
+            )`
+        )
         .eq("subsidy_status", "pending");
 
     if (error) {
@@ -25,9 +44,9 @@ async function fetchPendingDeclarations(supabase: SupabaseClient): Promise<Appro
 
     const map = new Map<number, ApprovalRow>();
 
-    (data || []).forEach((row) => {
-        const ccaId = row.cca_positions?.cca_id as number | undefined;
-        const ccaName = row.cca_positions?.ccas?.name as string | undefined;
+    (data as SubsidyWithCCA[] | null | undefined)?.forEach((row) => {
+        const ccaId = row.cca_positions?.ccas?.id ?? row.cca_positions?.cca_id;
+        const ccaName = row.cca_positions?.ccas?.name;
 
         if (!ccaId || !ccaName) return;
 
