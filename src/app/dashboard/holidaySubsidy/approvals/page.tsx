@@ -12,6 +12,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/context/AuthContext";
 
 interface CcaApprovalRow {
+    id: number;
     name: string;
     pendingDeclarations: number;
     pendingWeekly: number;
@@ -40,7 +41,7 @@ const columns: SimpleTableColumn<CcaApprovalRow>[] = [
         cell: (_value, row) => (
             <div className="flex flex-col lg:flex-row gap-2 justify-start w-full">
                 <Button asChild variant="outline" size="sm" className="gap-2">
-                    <Link href={`/dashboard/holidaySubsidy/declaration/${encodeURIComponent(row.name)}`}>
+                    <Link href={`/dashboard/holidaySubsidy/approvals/${row.id}`}>
                         Approve pending declarations
                         <ListChecks className="h-4 w-4" />
                     </Link>
@@ -56,22 +57,44 @@ const columns: SimpleTableColumn<CcaApprovalRow>[] = [
     },
 ];
 
-const mockRows: CcaApprovalRow[] = [
-    { name: "Sheares Basketball", pendingDeclarations: 3, pendingWeekly: 2 },
-    { name: "Sheares Band", pendingDeclarations: 1, pendingWeekly: 0 },
-    { name: "Sheares Dance", pendingDeclarations: 5, pendingWeekly: 4 },
-];
-
 export default function HolidaySubsidyApprovalsPage() {
     const { user } = useAuth();
     const [rows, setRows] = useState<CcaApprovalRow[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        setLoading(true);
-        // TODO: replace with API call to fetch CCAs with pending subsidy activity for JCRC
-        setRows(mockRows);
-        setLoading(false);
+        const loadData = async () => {
+            try {
+                setError(null);
+                setLoading(true);
+
+                const response = await fetch("/api/holidaySubsidy/approvals");
+
+                if (!response.ok) {
+                    throw new Error("Failed to load approvals");
+                }
+
+                const data = await response.json();
+                const ccas = data.ccas as Array<{ id: number; name: string; pendingDeclarations: number }>;
+
+                setRows(
+                    (ccas || []).map(({ id, name, pendingDeclarations }) => ({
+                        id,
+                        name,
+                        pendingDeclarations,
+                        pendingWeekly: 0,
+                    }))
+                );
+            } catch (err) {
+                console.error(err);
+                setError("Unable to load subsidy approvals right now. Please try again.");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadData();
     }, []);
 
     const isAuthorized = Boolean(user?.is_jcrc);
@@ -116,16 +139,22 @@ export default function HolidaySubsidyApprovalsPage() {
                     </p>
                 </div>
 
-                <SimpleTable
-                    data={rows}
-                    columns={columns}
-                    searchColumn="name"
-                    searchPlaceholder="Search CCA..."
-                    pageSize={10}
-                    emptyMessage="No CCAs with subsidy declarations yet."
-                    tableContainerClassName="rounded-lg border bg-card/40 overflow-hidden"
-                    tableClassName="min-w-full [&_th]:px-5 [&_td]:px-5"
-                />
+                {error ? (
+                    <Card>
+                        <CardContent className="p-6 text-sm text-destructive">{error}</CardContent>
+                    </Card>
+                ) : (
+                    <SimpleTable
+                        data={rows}
+                        columns={columns}
+                        searchColumn="name"
+                        searchPlaceholder="Search CCA..."
+                        pageSize={10}
+                        emptyMessage="No CCAs with subsidy declarations yet."
+                        tableContainerClassName="rounded-lg border bg-card/40 overflow-hidden"
+                        tableClassName="min-w-full [&_th]:px-5 [&_td]:px-5"
+                    />
+                )}
             </div>
         </AppLayout>
     );
