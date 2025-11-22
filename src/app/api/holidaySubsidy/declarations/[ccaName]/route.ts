@@ -8,9 +8,9 @@ type SupabaseClient = ReturnType<typeof createClient> extends Promise<infer T>
     : never;
 
 type Params = {
-    params: {
+    params: Promise<{
         ccaName: string;
-    };
+    }>;
 };
 
 async function resolveCCAId(ccaName: string, supabase: SupabaseClient) {
@@ -71,7 +71,8 @@ export async function GET(_request: Request, { params }: Params) {
     try {
         const supabase = await createClient();
 
-        const { ccaId, error } = await resolveCCAId(params.ccaName, supabase);
+        const { ccaName } = await params;
+        const { ccaId, error } = await resolveCCAId(ccaName, supabase);
 
         if (!ccaId) {
             return NextResponse.json({ error: error || "CCA not found" }, { status: 404 });
@@ -116,7 +117,8 @@ export async function POST(request: Request, { params }: Params) {
     try {
         const supabase = await createClient();
 
-        const { ccaId, error } = await resolveCCAId(params.ccaName, supabase);
+        const { ccaName } = await params;
+        const { ccaId, error } = await resolveCCAId(ccaName, supabase);
 
         if (!ccaId) {
             return NextResponse.json({ error: error || "CCA not found" }, { status: 404 });
@@ -171,7 +173,8 @@ export async function PATCH(request: Request, { params }: Params) {
     try {
         const supabase = await createClient();
 
-        const { ccaId, error } = await resolveCCAId(params.ccaName, supabase);
+        const { ccaName } = await params;
+        const { ccaId, error } = await resolveCCAId(ccaName, supabase);
 
         if (!ccaId) {
             return NextResponse.json({ error: error || "CCA not found" }, { status: 404 });
@@ -248,7 +251,8 @@ export async function DELETE(request: Request, { params }: Params) {
     try {
         const supabase = await createClient();
 
-        const { ccaId, error } = await resolveCCAId(params.ccaName, supabase);
+        const { ccaName } = await params;
+        const { ccaId, error } = await resolveCCAId(ccaName, supabase);
 
         if (!ccaId) {
             return NextResponse.json({ error: error || "CCA not found" }, { status: 404 });
