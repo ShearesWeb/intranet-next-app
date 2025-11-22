@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { redirect, useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { AppLayout } from "@/components/layout/app-layout";
 import { PositionTypeBadge } from "@/components/badges/position-type-badge";
 import { SimpleTable, type SimpleTableColumn } from "@/components/table/simple-table";
@@ -52,10 +52,7 @@ export default function SubsidyDeclarationPage() {
     const ccaNameParam = params?.ccaName;
     const ccaName = typeof ccaNameParam === "string" ? decodeURIComponent(ccaNameParam) : "";
 
-    if (!ccaName) {
-        redirect("/dashboard/holidaySubsidy");
-        return null;
-    }
+    const router = useRouter();
 
     const titleSuffix = ` - ${ccaName}`;
 
@@ -163,8 +160,15 @@ export default function SubsidyDeclarationPage() {
     );
 
     useEffect(() => {
+        if (!ccaName) {
+            router.replace("/dashboard/holidaySubsidy");
+        }
+    }, [ccaName, router]);
+
+    useEffect(() => {
         if (!ccaName) return;
 
+        let isMounted = true;
         setLoading(true);
         setError(null);
 
@@ -176,10 +180,12 @@ export default function SubsidyDeclarationPage() {
                     throw new Error(data.error || "Failed to fetch subsidy declarations");
                 }
 
-                return data;
+                return data as { positions?: PositionOption[]; subsidies?: SubsidyFromApi[] };
             })
             .then((data) => {
-                const positionsData = (data.positions || []) as PositionOption[];
+                if (!isMounted) return;
+
+                const positionsData = data.positions ?? [];
                 const positionsMap = positionsData.reduce((acc, position) => {
                     acc.set(position.id, position);
                     return acc;
@@ -205,10 +211,22 @@ export default function SubsidyDeclarationPage() {
                 setDeclarations((data.subsidies || []).map((subsidy: SubsidyFromApi) => mapFromApi(subsidy)));
             })
             .catch((err) => {
-                setError(err.message || "Failed to load subsidy declarations");
+                if (!isMounted) return;
+                setError(err instanceof Error ? err.message : "Failed to load subsidy declarations");
             })
-            .finally(() => setLoading(false));
-    }, [ccaName, mapSubsidyToDeclaration]);
+            .finally(() => {
+                if (!isMounted) return;
+                setLoading(false);
+            });
+
+        return () => {
+            isMounted = false;
+        };
+    }, [ccaName]);
+
+    if (!ccaName) {
+        return null;
+    }
 
     const handleDialogOpenChange = useCallback(
         (open: boolean) => {
