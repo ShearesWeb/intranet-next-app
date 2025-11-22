@@ -150,7 +150,7 @@ export default function HolidaySubsidyApprovalsPage() {
                         searchColumn="name"
                         searchPlaceholder="Search CCA..."
                         pageSize={10}
-                        emptyMessage="No CCAs with subsidy declarations yet."
+                        emptyMessage="No CCAs with pending subsidy / weekly declarations."
                         tableContainerClassName="rounded-lg border bg-card/40 overflow-hidden"
                         tableClassName="min-w-full [&_th]:px-5 [&_td]:px-5"
                     />
