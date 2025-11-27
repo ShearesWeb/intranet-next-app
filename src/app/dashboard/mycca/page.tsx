@@ -7,7 +7,7 @@ import { AUTHORIZED_CHAIR_ROLES, type ChairRole } from '@/lib/lead-auth-service'
 import { AppLayout } from '@/components/layout/app-layout';
 import { Button } from '@/components/ui/button';
 import { SimpleTable, SimpleTableColumn } from '@/components/table/simple-table';
-import { Spinner } from '@/components/ui/spinner';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertTitle } from '@/components/ui/alert';
 import Link from 'next/link';
@@ -123,12 +123,7 @@ export default function MyCCA() {
   if (loadingCCAs) {
     return (
       <AppLayout>
-        <div className="flex justify-center items-center h-full min-h-[400px]">
-          <div className="flex flex-col items-center gap-3">
-            <Spinner className="w-8 h-8" />
-            <p className="text-gray-600">Loading your CCA data...</p>
-          </div>
-        </div>
+        <LoadingSpinner message="Loading your CCA data..." />
       </AppLayout>
     );
   }

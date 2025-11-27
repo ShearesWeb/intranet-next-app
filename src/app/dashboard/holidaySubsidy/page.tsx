@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { SimpleTable, type SimpleTableColumn } from '@/components/table/simple-table';
 import { ArrowRight, Info } from 'lucide-react';
-import { Spinner } from '@/components/ui/spinner';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { AUTHORIZED_CHAIR_ROLES, ChairRole } from '@/lib/lead-auth-service';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
@@ -109,12 +109,7 @@ export default function HolidaySubsidyLanding() {
   if (loading) {
     return (
       <AppLayout>
-        <div className="flex justify-center items-center">
-          <div className="flex flex-col items-center gap-3">
-            <Spinner className="w-8 h-8" />
-            <p className="text-gray-600">Loading your CCAs...</p>
-          </div>
-        </div>
+        <LoadingSpinner message="Loading your CCAs..." />
       </AppLayout>
     );
   }

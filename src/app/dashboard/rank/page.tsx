@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 import { AppLayout } from '@/components/layout/app-layout';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { SelectionTable, SelectionTableColumn } from '@/components/table/selection-table';
 import { OrderingTable, OrderingTableColumn } from '@/components/table/ordering-table';
 import { RankablePosition } from '@/types/dashboard';
@@ -212,10 +213,7 @@ export default function RankCCA() {
   if (loading || phaseLoading) {
     return (
       <AppLayout>
-        <div className="flex justify-center items-center h-full min-h-[400px]">
-          <Loader2 className="animate-spin text-gray-500" size={32} />
-          <p className="ml-3 text-gray-600">Loading your CCA rankings...</p>
-        </div>
+        <LoadingSpinner message="Loading your CCA rankings..." />
       </AppLayout>
     );
   }
