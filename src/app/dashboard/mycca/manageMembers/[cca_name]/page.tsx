@@ -11,7 +11,7 @@ import { Member, PendingChange, UserSearchResult } from '@/types/dashboard';
 // shadcn UI
 import { Button } from "@/components/ui/button";
 import { Item, ItemContent, ItemMedia, ItemTitle } from "@/components/ui/item";
-import { Spinner } from "@/components/ui/spinner"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -20,42 +20,6 @@ import { AlertCircleIcon, ArrowLeft, Volleyball } from "lucide-react";
 // Custom table component
 import { SimpleTable, SimpleTableColumn } from "@/components/table/simple-table";
 import Link from 'next/link';
-
-function LoadingOverlay({ visible }: { visible: boolean }) {
-    if (!visible) return null;
-
-    return (
-        <div className="fixed inset-0 flex items-center justify-center z-50">
-            <Item className="bg-white rounded-lg p-6 shadow-lg">
-                <ItemMedia>
-                    <Spinner className="w-12 h-12 text-green-500" />
-                </ItemMedia>
-                <ItemContent>
-                    <ItemTitle className="text-gray-700 font-semibold">
-                        Saving rankings...
-                    </ItemTitle>
-                </ItemContent>
-            </Item>
-        </div>
-    );
-}
-
-function LoadingMembers() {
-    return (
-        <div className="flex items-center justify-center z-50">
-            <Item className="bg-white rounded-lg p-6">
-                <ItemMedia>
-                    <Spinner className="w-8 h-8" />
-                </ItemMedia>
-                <ItemContent>
-                    <ItemTitle className="text-gray-700 font-semibold">
-                        Loading members...
-                    </ItemTitle>
-                </ItemContent>
-            </Item>
-        </div>
-    );
-}
 
 // Define member table columns
 const memberTableColumns: SimpleTableColumn<Member>[] = [
@@ -398,18 +362,7 @@ export default function ManageMembersPage() {
     if (loading) {
         return (
             <AppLayout>
-                <div className="flex items-center justify-center z-50">
-                    <Item className="bg-white rounded-lg p-6">
-                        <ItemMedia>
-                            <Spinner className="w-8 h-8" />
-                        </ItemMedia>
-                        <ItemContent>
-                            <ItemTitle className="text-gray-700 font-semibold">
-                                Loading members...
-                            </ItemTitle>
-                        </ItemContent>
-                    </Item>
-                </div>
+                <LoadingSpinner message="Loading members..." />
             </AppLayout>
         );
     }
@@ -614,9 +567,8 @@ export default function ManageMembersPage() {
                             </div>
 
                             {isSearching && (
-                                <div className="flex items-center gap-2 text-gray-500 mt-2 justify-center">
-                                    <Spinner className="w-5 h-5 animate-spin" />
-                                    <p>Searching...</p>
+                                <div className="flex items-center justify-center mt-4">
+                                    <LoadingSpinner message="Searching users..." fullHeight={false} />
                                 </div>
                             )}
 
@@ -663,7 +615,7 @@ export default function ManageMembersPage() {
                         </div>
                     </div>
                 )}
-                <LoadingOverlay visible={saving || loading} />
+                {saving && <LoadingSpinner message="Saving changes..." overlay />}
             </div>
         </AppLayout>
     );

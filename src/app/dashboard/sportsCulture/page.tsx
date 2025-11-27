@@ -7,20 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { usePhaseInfo } from '@/hooks/usePhaseInfo';
 import toast from 'react-hot-toast';
 import { GroupedPositions, SportsCulturePosition } from '@/types/dashboard';
-
-function LoadingOverlay({ visible }: { visible: boolean }) {
-    if (!visible) return null;
-
-    return (
-        <div style={styles.loadingOverlay}>
-            <div style={styles.loadingContent}>
-                <div style={styles.spinner}></div>
-                <p style={styles.loadingText}>Processing application...</p>
-            </div>
-        </div>
-    );
-}
-
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 export default function SportsCulturePage() {
     const { user } = useAuth();
     const { phaseInfo } = usePhaseInfo();
@@ -148,7 +135,7 @@ export default function SportsCulturePage() {
             <div style={styles.container}>
                 <Sidebar />
                 <div style={styles.content}>
-                    <div style={styles.loading}>Loading positions...</div>
+                    <LoadingSpinner message="Loading positions..." />
                 </div>
             </div>
         );
@@ -266,7 +253,7 @@ export default function SportsCulturePage() {
                     </div>
                 )}
             </div>
-            <LoadingOverlay visible={pendingActions.size > 0} />
+            {pendingActions.size > 0 && <LoadingSpinner message="Processing application..." overlay />}
         </div>
     );
 }
@@ -479,24 +466,6 @@ const styles = {
         justifyContent: 'center',
         alignItems: 'center',
         zIndex: 9999
-    },
-    loadingContent: {
-        display: 'flex',
-        flexDirection: 'column' as const,
-        alignItems: 'center',
-        padding: '30px',
-        backgroundColor: 'white',
-        borderRadius: '12px',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)'
-    },
-    spinner: {
-        width: '50px',
-        height: '50px',
-        border: '6px solid #f3f3f3',
-        borderTop: '6px solid #10B981',
-        borderRadius: '50%',
-        animation: 'spin 1s linear infinite',
-        marginBottom: '15px'
     },
     loadingText: {
         fontSize: '16px',

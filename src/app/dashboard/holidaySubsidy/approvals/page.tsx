@@ -8,7 +8,7 @@ import { AppLayout } from "@/components/layout/app-layout";
 import { SimpleTable, type SimpleTableColumn } from "@/components/table/simple-table";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Spinner } from "@/components/ui/spinner";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useAuth } from "@/context/AuthContext";
 
 interface CcaApprovalRow {
@@ -121,9 +121,7 @@ export default function HolidaySubsidyApprovalsPage() {
     if (loading) {
         return (
             <AppLayout>
-                <div className="flex items-center justify-center py-12">
-                    <Spinner className="h-8 w-8" />
-                </div>
+                <LoadingSpinner message="Loading approvals..." />
             </AppLayout>
         );
     }

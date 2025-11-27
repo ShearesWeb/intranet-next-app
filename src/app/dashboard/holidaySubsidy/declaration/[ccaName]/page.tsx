@@ -337,6 +337,24 @@ export default function SubsidyDeclarationPage() {
                 ];
             }
 
+            if (status === "approved") {
+                return [
+                    ...commonColumns,
+                    {
+                        accessorKey: "actions" as keyof SubsidyDeclaration,
+                        header: "Actions",
+                        enableSorting: false,
+                        cell: (_value, row) => (
+                            <div className="flex justify-start gap-2">
+                                <Button variant="outline" size="sm" type="button" onClick={() => openEditDialog(row)}>
+                                    Edit
+                                </Button>
+                            </div>
+                        ),
+                    },
+                ];
+            }
+
             return commonColumns;
         },
         [commonColumns, handleDelete, openEditDialog]

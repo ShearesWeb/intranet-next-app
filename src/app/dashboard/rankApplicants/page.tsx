@@ -10,21 +10,8 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ArrowUp, ArrowDown, X, Search, Loader2 } from 'lucide-react';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { Applicant, Position, UserSearchResult } from '@/types/dashboard';
-
-// Loading Overlay Component
-function LoadingOverlay({ visible }: { visible: boolean }) {
-    if (!visible) return null;
-
-    return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]">
-            <Card className="p-8 flex flex-col items-center shadow-xl">
-                <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-                <p className="text-lg font-semibold text-foreground">Saving rankings...</p>
-            </Card>
-        </div>
-    );
-}
 
 // Position Search Box Component
 function PositionSearchBox({
@@ -527,12 +514,7 @@ export default function RankApplicants() {
     if (loading || phaseLoading) {
         return (
             <AppLayout>
-                <div className="flex items-center justify-center min-h-[60vh]">
-                    <div className="text-center">
-                        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-                        <p className="text-muted-foreground">Loading CCA positions and applicants...</p>
-                    </div>
-                </div>
+                <LoadingSpinner message="Loading CCA positions and applicants..." />
             </AppLayout>
         );
     }
@@ -631,7 +613,7 @@ export default function RankApplicants() {
                 )}
             </div>
 
-            <LoadingOverlay visible={isLoading} />
+            {isLoading && <LoadingSpinner message="Saving rankings..." overlay />}
         </AppLayout>
     );
 }

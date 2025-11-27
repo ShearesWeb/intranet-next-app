@@ -11,7 +11,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Spinner } from "@/components/ui/spinner";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/context/AuthContext";
 
@@ -339,9 +340,7 @@ export default function HolidaySubsidyApprovalDetailsPage() {
     if (loading) {
         return (
             <AppLayout>
-                <div className="flex items-center justify-center py-12">
-                    <Spinner className="w-8 h-8" />
-                </div>
+                <LoadingSpinner message="Loading subsidy approvals..." />
             </AppLayout>
         );
     }
@@ -355,7 +354,7 @@ export default function HolidaySubsidyApprovalDetailsPage() {
             <div className="flex flex-col space-y-6 p-4">
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                     <div className="space-y-1">
-                        <h1 className="text-2xl font-bold">Holiday Subsidy Approvals - {ccaName || `CCA #${ccaId}`}</h1>
+                        <h1 className="text-2xl font-bold">JCRC Holiday Subsidy Approvals - {ccaName || `CCA #${ccaId}`}</h1>
                         <p className="text-muted-foreground">
                             Review, approve, or reject subsidy declarations for this CCA.
                         </p>
