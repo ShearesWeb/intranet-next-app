@@ -2,12 +2,9 @@ import { NextResponse } from "next/server";
 
 import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { createClient } from "@/utils/supabase/server";
+import { SubsidyStatus, SubsidyWithPosition, PositionOption } from "@/types/holiday-subsidy";
 
 const VALID_STATUSES = new Set(["pending", "approved", "rejected"]);
-
-type SupabaseClient = ReturnType<typeof createClient> extends Promise<infer T>
-    ? T
-    : never;
 
 type Params = {
     params: Promise<{
@@ -15,21 +12,8 @@ type Params = {
     }>;
 };
 
-type SubsidyStatus = "pending" | "approved" | "rejected";
-
-type PositionOption = {
-    id: number;
-    name: string;
-    position_type: string;
-};
-
-type SubsidyFromApi = {
-    id: number;
-    position_id: number;
-    week_id: number;
-    hours: number;
-    justification: string | null;
-    subsidy_status: SubsidyStatus;
+// API-specific type with joined position data
+type SubsidyFromApi = SubsidyWithPosition & {
     cca_positions?: PositionOption & { cca_id: number };
 };
 
@@ -43,7 +27,7 @@ async function assertJcrcAccess() {
     return { authorized: true as const };
 }
 
-async function loadCcaName(ccaId: number, supabase: SupabaseClient) {
+async function loadCcaName(ccaId: number, supabase: Awaited<ReturnType<typeof createClient>>) {
     const { data, error } = await supabase.from("ccas").select("name").eq("id", ccaId).single();
 
     if (error || !data) {
@@ -53,7 +37,7 @@ async function loadCcaName(ccaId: number, supabase: SupabaseClient) {
     return { name: data.name as string };
 }
 
-async function fetchCcaData(ccaId: number, supabase: SupabaseClient) {
+async function fetchCcaData(ccaId: number, supabase: Awaited<ReturnType<typeof createClient>>) {
     const [{ data: positions, error: positionsError }, { data: subsidies, error: subsidiesError }] = await Promise.all([
         supabase.from("cca_positions").select("id, name, position_type").eq("cca_id", ccaId),
         supabase
@@ -91,7 +75,7 @@ function validateUpdates(
 }
 
 async function ensureSubsidiesBelongToCca(
-    supabase: SupabaseClient,
+    supabase: Awaited<ReturnType<typeof createClient>>,
     ccaId: number,
     ids: number[]
 ): Promise<void> {
@@ -105,7 +89,7 @@ async function ensureSubsidiesBelongToCca(
         throw new Error(error.message);
     }
 
-    const foundIds = new Set((data || []).map((row) => row.id as number));
+    const foundIds = new Set((data || []).map((row: { id: number }) => row.id as number));
 
     const missing = ids.filter((id) => !foundIds.has(id));
 

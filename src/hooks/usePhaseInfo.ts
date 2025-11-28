@@ -2,19 +2,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { PhaseInfo } from '@/lib/phase-service';
 
-interface PhaseInfo {
-    phase: string;
-    round: string;
-    allowChairRanking: boolean;
-    allowApplicantRanking: boolean;
-    showResults: boolean;
-    userMessage: string;
-    nextPhaseDate?: string;
-    serverTime: string;
-    activeFlags: string[];
-    isTestingMode?: boolean;
-}
 
 export const usePhaseInfo = () => {
     const [phaseInfo, setPhaseInfo] = useState<PhaseInfo>({

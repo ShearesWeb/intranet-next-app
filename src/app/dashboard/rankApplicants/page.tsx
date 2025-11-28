@@ -291,11 +291,12 @@ export default function RankApplicants() {
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [originalOrders, setOriginalOrders] = useState<{ [positionId: number]: number[] }>({});
     const [hasChanges, setHasChanges] = useState<{ [positionId: number]: boolean }>({});
+    const fetchingRef = useRef<boolean>(false);
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => setMounted(true), []);
 
-    const fetchPositions = useCallback(async (bustCache = false) => {
+    const fetchPositions = useRef(async (bustCache = false) => {
         if (!user?.email) return;
 
         try {
@@ -326,14 +327,19 @@ export default function RankApplicants() {
             console.error('Error fetching positions:', error);
             toast.error('Error loading positions');
         }
-    }, [user?.email]);
+    });
 
     useEffect(() => {
-        if (!user?.email) return;
+        if (!user?.email || fetchingRef.current) return;
 
+        fetchingRef.current = true;
         setLoading(true);
-        fetchPositions().finally(() => setLoading(false));
-    }, [user?.email, fetchPositions]);
+        fetchPositions.current().finally(() => {
+            setLoading(false);
+            fetchingRef.current = false;
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user?.email]); // fetchPositions is a ref, so it's stable
 
     const checkForChanges = useCallback((positionId: number, currentApplicants: Applicant[]) => {
         const originalOrder = originalOrders[positionId] || [];
@@ -496,7 +502,7 @@ export default function RankApplicants() {
             const success = await saveRankingsForPosition(position);
 
             if (success) {
-                await fetchPositions(true);
+                await fetchPositions.current(true);
                 toast.success(`Rankings saved for ${position.name}!`);
             } else {
                 toast.error('Failed to save rankings');
@@ -524,16 +530,12 @@ export default function RankApplicants() {
             switch (phaseInfo.phase) {
                 case 'maincomm_interviews':
                     return "Maincomm interviews are in progress. Chair ranking opens after interviews complete.";
-                case 'applicant_ranking_maincomm':
-                    return "Applicants are currently ranking maincomm positions. Maincomm results processing will begin soon.";
                 case 'maincomm_results_processing':
                     return "Maincomm results are currently being processed. Results will be available soon."
                 case 'maincomm_results_available':
                     return "Maincomm results have been released. Subcomm interviews will begin soon.";
                 case 'subcomm_interviews':
                     return "Subcomm interviews are in progress. Chair ranking opens after interviews complete.";
-                case 'applicant_ranking_subcomm':
-                    return "Applicants are currently ranking subcomm positions. Chair ranking has ended.";
                 case 'subcomm_results_processing':
                     return "Subcomm results are currently being processed. Results will be available soon."
                 case 'full_results_available':

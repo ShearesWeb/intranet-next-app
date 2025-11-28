@@ -3,9 +3,6 @@ import { createClient } from "@/utils/supabase/server";
 import { fetchUserId } from "@/lib/fetch-user-info";
 import { checkCCAChairAuthorization } from "@/lib/lead-auth-service";
 
-type SupabaseClient = ReturnType<typeof createClient> extends Promise<infer T>
-    ? T
-    : never;
 
 type Params = {
     params: Promise<{
@@ -13,7 +10,7 @@ type Params = {
     }>;
 };
 
-async function resolveCCAId(ccaName: string, supabase: SupabaseClient) {
+async function resolveCCAId(ccaName: string, supabase: Awaited<ReturnType<typeof createClient>>) {
     const decodedName = decodeURIComponent(ccaName);
 
     const { data, error } = await supabase
@@ -29,7 +26,7 @@ async function resolveCCAId(ccaName: string, supabase: SupabaseClient) {
     return { ccaId: data.id as number, ccaName: data.name as string };
 }
 
-async function authorizeChair(ccaId: number, supabase: SupabaseClient) {
+async function authorizeChair(ccaId: number, supabase: Awaited<ReturnType<typeof createClient>>) {
     const userId = await fetchUserId();
 
     if (!userId) {
@@ -50,7 +47,7 @@ async function authorizeChair(ccaId: number, supabase: SupabaseClient) {
 }
 
 async function validatePosition(
-    supabase: SupabaseClient,
+    supabase: Awaited<ReturnType<typeof createClient>>,
     positionId: number,
     ccaId: number
 ) {

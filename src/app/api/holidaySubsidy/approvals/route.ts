@@ -2,10 +2,9 @@ import { NextResponse } from "next/server";
 
 import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { createClient } from "@/utils/supabase/server";
+import { SubsidyStatus } from "@/types/holiday-subsidy";
 
-type SupabaseClient = ReturnType<typeof createClient> extends Promise<infer T>
-    ? T
-    : never;
+const VALID_CCAS = new Set(["J Block", "K Block", "R Block", "S Block", "A Block", "B Block"]);
 
 type ApprovalRow = {
     id: number;
@@ -23,7 +22,7 @@ type SubsidyWithCCA = {
     } | null;
 };
 
-async function fetchPendingDeclarations(supabase: SupabaseClient): Promise<ApprovalRow[]> {
+async function fetchSubsidies(supabase: Awaited<ReturnType<typeof createClient>>): Promise<ApprovalRow[]> {
     const { data, error } = await supabase
         .from("subsidies")
         .select(
@@ -71,9 +70,9 @@ export async function GET() {
         }
 
         const supabase = await createClient();
-        const rows = await fetchPendingDeclarations(supabase);
+        const declarations = await fetchSubsidies(supabase);
 
-        return NextResponse.json({ ccas: rows });
+        return NextResponse.json({ ccas: declarations });
     } catch (error) {
         console.error("Error loading subsidy approvals:", error);
         return NextResponse.json({ error: "Failed to load subsidy approvals" }, { status: 500 });

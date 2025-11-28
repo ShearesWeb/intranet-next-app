@@ -17,6 +17,7 @@ export interface PhaseInfo {
     nextPhaseDate?: string;
     serverTime: string;
     activeFlags: string[];
+    isTestingMode?: boolean;
 }
 
 interface DatabaseFlag {

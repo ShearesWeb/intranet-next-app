@@ -16,7 +16,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/context/AuthContext";
 
-import { type SubsidyStatus, type SubsidyDeclaration, type DeclarationSection } from "../../declaration/[ccaName]/types";
+import { type SubsidyStatus, type SubsidyDeclaration, type DeclarationSection } from "@/types/holiday-subsidy";
 
 type ApprovalPayload = {
     ccaName: string;
