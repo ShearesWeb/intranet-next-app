@@ -1,80 +1,171 @@
 import { NextResponse } from "next/server";
-
-import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { createClient } from "@/utils/supabase/server";
-import { SubsidyStatus } from "@/types/holiday-subsidy";
+import { fetchUserInfo } from "@/lib/fetch-user-info";
+import { VALID_STATUSES } from "@/lib/constants/holiday-subsidy";
+import type { SubsidyStatus, SubsidyWithCCAInfo } from "@/types/holiday-subsidy";
 
-const VALID_CCAS = new Set(["J Block", "K Block", "R Block", "S Block", "A Block", "B Block"]);
+type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
-type ApprovalRow = {
-    id: number;
-    name: string;
-    pendingDeclarations: number;
-};
+/**
+ * Verify that the requesting user has JCRC access
+ */
+async function assertJcrcAccess() {
+    const user = await fetchUserInfo();
 
-type SubsidyWithCCA = {
-    cca_positions?: {
-        cca_id?: number;
-        ccas?: {
-            id?: number;
-            name?: string;
-        } | null;
-    } | null;
-};
+    if (!user || !user.is_jcrc) {
+        return {
+            authorized: false as const,
+            response: NextResponse.json({ error: "Unauthorized" }, { status: 403 }),
+        };
+    }
 
-async function fetchSubsidies(supabase: Awaited<ReturnType<typeof createClient>>): Promise<ApprovalRow[]> {
+    return { authorized: true as const };
+}
+
+/**
+ * Fetch all subsidy declarations with CCA and position information
+ */
+async function fetchAllDeclarations(supabase: SupabaseClient): Promise<SubsidyWithCCAInfo[]> {
     const { data, error } = await supabase
         .from("subsidies")
         .select(
-            `subsidy_status,
-            cca_positions!inner (
-                cca_id,
-                ccas!inner (
-                    id,
-                    name
+            `id, position_id, week_id, hours, justification, subsidy_status,
+            cca_positions (
+                id, name, position_type, cca_id,
+                ccas (
+                    id, name
                 )
             )`
-        )
-        .eq("subsidy_status", "pending");
+        );
 
     if (error) {
         throw new Error(error.message);
     }
 
-    const map = new Map<number, ApprovalRow>();
+    // Sort by status (pending first), then by CCA name
+    const declarations = (data as unknown as SubsidyWithCCAInfo[]) || [];
 
-    (data as SubsidyWithCCA[] | null | undefined)?.forEach((row) => {
-        const ccaId = row.cca_positions?.ccas?.id ?? row.cca_positions?.cca_id;
-        const ccaName = row.cca_positions?.ccas?.name;
+    return declarations.sort((a, b) => {
+        // Status priority: pending > approved > rejected
+        const statusOrder = { pending: 0, approved: 1, rejected: 2 };
+        const statusDiff = statusOrder[a.subsidy_status] - statusOrder[b.subsidy_status];
 
-        if (!ccaId || !ccaName) return;
+        if (statusDiff !== 0) return statusDiff;
 
-        const existing = map.get(ccaId);
-
-        if (existing) {
-            existing.pendingDeclarations += 1;
-        } else {
-            map.set(ccaId, { id: ccaId, name: ccaName, pendingDeclarations: 1 });
-        }
+        // Then sort by CCA name
+        const ccaNameA = a.cca_positions?.ccas?.name || "";
+        const ccaNameB = b.cca_positions?.ccas?.name || "";
+        return ccaNameA.localeCompare(ccaNameB);
     });
-
-    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
 }
 
+/**
+ * Validate update payload structure
+ */
+function validateUpdates(
+    updates: Array<{ subsidyId: number; status: SubsidyStatus }>
+): asserts updates is Array<{ subsidyId: number; status: SubsidyStatus }> {
+    if (!Array.isArray(updates) || updates.length === 0) {
+        throw new Error("No updates provided");
+    }
+
+    for (const update of updates) {
+        if (!update || typeof update.subsidyId !== "number" || !VALID_STATUSES.has(update.status)) {
+            throw new Error("Invalid update payload");
+        }
+    }
+}
+
+/**
+ * GET /api/holidaySubsidy/approvals
+ * Fetch all subsidy declarations for JCRC approval
+ */
 export async function GET() {
     try {
-        const user = await fetchUserInfo();
+        const authResult = await assertJcrcAccess();
 
-        if (!user || !user.is_jcrc) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+        if (!authResult.authorized) {
+            return authResult.response;
         }
 
         const supabase = await createClient();
-        const declarations = await fetchSubsidies(supabase);
+        const declarations = await fetchAllDeclarations(supabase);
 
-        return NextResponse.json({ ccas: declarations });
+        return NextResponse.json({ declarations });
     } catch (error) {
         console.error("Error loading subsidy approvals:", error);
         return NextResponse.json({ error: "Failed to load subsidy approvals" }, { status: 500 });
+    }
+}
+
+/**
+ * PATCH /api/holidaySubsidy/approvals
+ * Bulk update subsidy declaration statuses
+ */
+export async function PATCH(request: Request) {
+    try {
+        const authResult = await assertJcrcAccess();
+
+        if (!authResult.authorized) {
+            return authResult.response;
+        }
+
+        const body = await request.json();
+        const updates = (body?.updates || []) as Array<{ subsidyId: number; status: SubsidyStatus }>;
+
+        try {
+            validateUpdates(updates);
+        } catch (err) {
+            return NextResponse.json(
+                { error: err instanceof Error ? err.message : "Invalid request" },
+                { status: 400 }
+            );
+        }
+
+        const supabase = await createClient();
+
+        // Group updates by status for efficient bulk updates
+        const groupedByStatus = updates.reduce<Record<SubsidyStatus, number[]>>(
+            (acc, { subsidyId, status }) => {
+                acc[status].push(subsidyId);
+                return acc;
+            },
+            { pending: [], approved: [], rejected: [] }
+        );
+
+        // Execute bulk updates
+        for (const [status, ids] of Object.entries(groupedByStatus) as Array<[SubsidyStatus, number[]]>) {
+            if (ids.length === 0) continue;
+
+            const { error } = await supabase
+                .from("subsidies")
+                .update({ subsidy_status: status })
+                .in("id", ids);
+
+            if (error) {
+                throw new Error(error.message);
+            }
+        }
+
+        // Fetch updated records to return
+        const { data, error } = await supabase
+            .from("subsidies")
+            .select(
+                `id, position_id, week_id, hours, justification, subsidy_status,
+                cca_positions(id, name, position_type, cca_id, ccas(id, name))`
+            )
+            .in(
+                "id",
+                updates.map((u) => u.subsidyId)
+            );
+
+        if (error) {
+            throw new Error(error.message);
+        }
+
+        return NextResponse.json({ updated: (data as unknown as SubsidyWithCCAInfo[] | null) || [] });
+    } catch (error) {
+        console.error("Error updating subsidy approvals:", error);
+        return NextResponse.json({ error: "Failed to update approvals" }, { status: 500 });
     }
 }
