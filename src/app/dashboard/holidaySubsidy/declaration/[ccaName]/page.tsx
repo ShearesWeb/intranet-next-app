@@ -15,6 +15,7 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Spinner } from "@/components/ui/spinner";
 import { Separator } from "@/components/ui/separator";
 import { SubsidyDeclarationFormDialog } from "./subsidy-declaration-form-dialog";
@@ -416,29 +417,38 @@ export default function SubsidyDeclarationPage() {
                         </CardContent>
                     </Card>
                 ) : (
-                    <div className="grid gap-6">
+                    <Tabs defaultValue="pending" className="w-full">
+                        <TabsList className="grid w-full grid-cols-3">
+                            {sections.map((section) => (
+                                <TabsTrigger key={section.key} value={section.key}>
+                                    {section.key.charAt(0).toUpperCase() + section.key.slice(1)} ({section.data.length})
+                                </TabsTrigger>
+                            ))}
+                        </TabsList>
                         {sections.map((section) => (
-                            <Card key={section.title} className="border shadow-sm">
-                                <CardHeader className="flex flex-row items-center justify-between">
-                                    <CardTitle>{section.title}</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <SimpleTable
-                                        data={section.data}
-                                        columns={columnsForStatus(section.key)}
-                                        searchColumn="positionName"
-                                        searchPlaceholder="Search position..."
-                                        pageSize={5}
-                                        emptyMessage="No declarations found."
-                                        tableContainerClassName="rounded-md border bg-card/30 overflow-hidden"
-                                        tableClassName="[&_th]:px-5 [&_td]:px-5"
-                                    />
-                                </CardContent>
-                            </Card>
+                            <TabsContent key={section.key} value={section.key} className="mt-4">
+                                <Card className="border shadow-sm">
+                                    <CardHeader className="flex flex-row items-center justify-between">
+                                        <CardTitle>{section.title}</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <SimpleTable
+                                            data={section.data}
+                                            columns={columnsForStatus(section.key)}
+                                            searchColumn="positionName"
+                                            searchPlaceholder="Search position..."
+                                            pageSize={10}
+                                            emptyMessage="No declarations found."
+                                            tableContainerClassName="rounded-md border bg-card/30 overflow-hidden"
+                                            tableClassName="[&_th]:px-5 [&_td]:px-5"
+                                        />
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
                         ))}
-                    </div>
+                    </Tabs>
                 )}
-            </div>
-        </AppLayout>
+            </div >
+        </AppLayout >
     );
 }
