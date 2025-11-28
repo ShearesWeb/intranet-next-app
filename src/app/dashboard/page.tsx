@@ -18,9 +18,18 @@ export default function Dashboard() {
     const { user } = useAuth();
     const { isAuthorized, loading: roleLoading } = useRoleAuth();
     const { phaseInfo } = usePhaseInfo();
-    const [counter, setCounter] = useState(0);
     const [mounted, setMounted] = useState(false);
     const [celebrated, setCelebrated] = useState(false);
+    const [counter, setCounter] = useState(0);
+
+    useEffect(() => {
+        if (!user) return;
+        const interval = setInterval(() => {
+            setCounter(prev => (prev < (user.points || 0) ? prev + 1 : (user.points || 0)));
+        }, 20);
+
+        return () => clearInterval(interval);
+    }, [user]);
 
     // Memoize particle data to prevent random movement on re-renders
     const leftPopperParticles = useMemo(() => {
@@ -72,19 +81,33 @@ export default function Dashboard() {
     }, []);
 
     const streamingCircles = useMemo(() => {
-        return Array.from({ length: 40 }).map((_, i) => {
+        const points = user?.points || 0;
+        const baseParticles = 12;
+        const maxParticlesAtCeiling = 120; // at 300 points
+        const ceiling = 300;
+
+        // Linear interpolation: 0 points -> 12 particles, 300 points -> 120 particles
+        let particleCount = baseParticles + (points / ceiling) * (maxParticlesAtCeiling - baseParticles);
+
+        // Cap it reasonably to prevent lag if points are huge
+        particleCount = Math.min(particleCount, 200);
+
+        return Array.from({ length: Math.floor(particleCount) }).map((_, i) => {
             const angle = Math.random() * 360;
             const distance = 120 + Math.random() * 180;
             const x = Math.cos((angle * Math.PI) / 180) * distance;
             const y = Math.sin((angle * Math.PI) / 180) * distance;
-            const delay = i * 0.1;
+
+            // Spread delays evenly over ~2.5s to ensure consistent stream density
+            const delay = i * (2.5 / particleCount);
+
             const duration = 2 + Math.random() * 1.5;
             const colors = ['#ff6b35', '#f97316', '#fb923c', '#fdba74', '#fbbf24', '#fcd34d', '#ff8c42'];
             const color = colors[Math.floor(Math.random() * colors.length)];
             const size = Math.random() > 0.5 ? '8px' : '12px';
             return { x, y, delay, duration, color, size };
         });
-    }, []);
+    }, [user?.points]);
 
     const ribbons = useMemo(() => {
         return Array.from({ length: 8 }).map((_, i) => {
@@ -118,15 +141,6 @@ export default function Dashboard() {
         return () => clearTimeout(timer);
     }, []);
 
-    useEffect(() => {
-        if (!user) return;
-        const interval = setInterval(() => {
-            setCounter(prev => (prev < user.points ? prev + 1 : user.points));
-        }, 20);
-
-        return () => clearInterval(interval);
-    }, [user]);
-
     const getRankCCAButtonText = () => {
         switch (phaseInfo.phase) {
             case 'maincomm_concurrent_ranking':
@@ -150,13 +164,22 @@ export default function Dashboard() {
         <AppLayout>
             <div className="space-y-4 p-4 md:space-y-6 md:p-6">
                 {/* Welcome Section */}
-                <Card className="border-none shadow-lg">
+                <Card className="border-none shadow-lg bg-gradient-to-r from-orange-50/50 to-white">
                     <CardHeader>
-                        <h2 className="text-2xl font-semibold text-muted-foreground">
-                            Welcome Back,
-                        </h2>
-                        <CardTitle className="text-3xl md:text-4xl">
-                            {user.name || user.email}
+                        <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                            <h2 className="text-xl font-medium">
+                                {(() => {
+                                    const hour = new Date().getHours();
+                                    if (hour < 12) return "Good Morning";
+                                    if (hour < 18) return "Good Afternoon";
+                                    return "Good Evening";
+                                })()}
+                            </h2>
+                        </div>
+                        <CardTitle className="text-3xl md:text-5xl font-[family-name:var(--font-fredoka)] tracking-wide">
+                            <span className="bg-gradient-to-r from-orange-600 via-amber-500 to-orange-600 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient">
+                                {user.name || user.email}
+                            </span>
                         </CardTitle>
                     </CardHeader>
                 </Card>
@@ -168,7 +191,6 @@ export default function Dashboard() {
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <span>Your Points</span>
-                                <span className="text-2xl">🎉</span>
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="flex-1 flex items-center justify-center p-4 md:p-8 relative min-h-[300px] md:min-h-[400px]">
@@ -426,7 +448,7 @@ export default function Dashboard() {
                                                 ease: "easeInOut"
                                             }}
                                         >
-                                            {user.points === undefined ? 0 : user.points}
+                                            {counter}
                                         </motion.span>
                                         <span className="text-sm font-semibold text-white/90 mt-1 tracking-wider uppercase">
                                             Points
@@ -440,7 +462,7 @@ export default function Dashboard() {
                     {/* Activity Section Card */}
                     <Card className="border-none shadow-lg">
                         <CardHeader>
-                            <CardTitle>My Activity</CardTitle>
+                            <CardTitle>My Actions</CardTitle>
                         </CardHeader>
                         <CardContent className="p-4 md:p-6">
                             <div className="grid gap-4">
