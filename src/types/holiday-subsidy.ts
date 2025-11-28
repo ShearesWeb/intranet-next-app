@@ -32,7 +32,7 @@ export interface WeekOption {
     label: string;
 }
 
-// Dashboard view model (ORIGINAL - UNCHANGED)
+// Dashboard view model
 export interface SubsidyDeclaration {
     id: number;
     positionId: number;
@@ -48,24 +48,4 @@ export interface DeclarationSection {
     key: SubsidyStatus;
     title: string;
     data: SubsidyDeclaration[];
-}
-
-// API-specific types with joined CCA data
-export interface SubsidyWithCCAInfo extends SubsidyRow {
-    cca_positions?: {
-        id: number;
-        name: string;
-        position_type: string;
-        cca_id: number;
-        ccas?: {
-            id: number;
-            name: string;
-        } | null;
-    } | null;
-}
-
-// Extended type for approvals page (adds CCA information)
-export interface SubsidyDeclarationWithCCA extends SubsidyDeclaration {
-    ccaId: number;
-    ccaName: string;
 }

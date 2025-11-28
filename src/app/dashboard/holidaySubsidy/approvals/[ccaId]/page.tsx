@@ -12,10 +12,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/context/AuthContext";
-import { WEEK_OPTIONS } from "@/lib/constants/holiday-subsidy";
-import type { SubsidyStatus, SubsidyDeclaration, DeclarationSection } from "@/types/holiday-subsidy";
+
+import { type SubsidyStatus, type SubsidyDeclaration, type DeclarationSection } from "@/types/holiday-subsidy";
 
 type ApprovalPayload = {
     ccaName: string;
@@ -34,6 +36,19 @@ type SubsidyFromApi = {
 };
 
 type UpdateInput = { subsidyId: number; status: SubsidyStatus };
+
+const WEEK_OPTIONS = [
+    { id: 1, label: "Week 1 (Dec 4 - Dec 10)" },
+    { id: 2, label: "Week 2 (Dec 11 - Dec 17)" },
+    { id: 3, label: "Week 3 (Dec 18 - Dec 24)" },
+    { id: 4, label: "Week 4 (Dec 25 - Dec 31)" },
+    { id: 5, label: "Week 5 (Jan 1 - Jan 7)" },
+    { id: 6, label: "Week 6 (Jan 8 - Jan 14)" },
+    { id: 7, label: "Week 7 (Jan 15 - Jan 21)" },
+    { id: 8, label: "Week 8 (Jan 22 - Jan 28)" },
+    { id: 9, label: "Week 9 (Jan 29 - Feb 4)" },
+    { id: 10, label: "Week 10 (Feb 5 - Feb 11)" },
+];
 
 const statusVariant: Record<SubsidyStatus, "default" | "secondary" | "destructive"> = {
     pending: "secondary",
@@ -362,32 +377,41 @@ export default function HolidaySubsidyApprovalDetailsPage() {
                         <AlertDescription>{error}</AlertDescription>
                     </Alert>
                 ) : (
-                    <div className="grid gap-6">
+                    <Tabs defaultValue="pending" className="w-full">
+                        <TabsList className="grid w-full grid-cols-3">
+                            {sections.map((section) => (
+                                <TabsTrigger key={section.key} value={section.key}>
+                                    {section.key.charAt(0).toUpperCase() + section.key.slice(1)} ({section.data.length})
+                                </TabsTrigger>
+                            ))}
+                        </TabsList>
                         {sections.map((section) => (
-                            <Card key={section.title} className="border shadow-sm">
-                                <CardHeader className="flex flex-row items-center justify-between">
-                                    <CardTitle>{section.title}</CardTitle>
-                                    {section.key === "pending" && hasChanges && (
-                                        <span className="text-sm text-muted-foreground">Unsaved changes</span>
-                                    )}
-                                </CardHeader>
-                                <CardContent>
-                                    <SimpleTable
-                                        data={section.data}
-                                        columns={columnsBySection[section.key]}
-                                        searchColumn="positionName"
-                                        searchPlaceholder="Search position..."
-                                        pageSize={5}
-                                        emptyMessage="No declarations found."
-                                        tableContainerClassName="rounded-md border bg-card/30 overflow-hidden"
-                                        tableClassName="[&_th]:px-5 [&_td]:px-5"
-                                    />
-                                </CardContent>
-                            </Card>
+                            <TabsContent key={section.key} value={section.key} className="mt-4">
+                                <Card className="border shadow-sm">
+                                    <CardHeader className="flex flex-row items-center justify-between">
+                                        <CardTitle>{section.title}</CardTitle>
+                                        {section.key === "pending" && hasChanges && (
+                                            <span className="text-sm text-muted-foreground">Unsaved changes</span>
+                                        )}
+                                    </CardHeader>
+                                    <CardContent>
+                                        <SimpleTable
+                                            data={section.data}
+                                            columns={columnsBySection[section.key]}
+                                            searchColumn="positionName"
+                                            searchPlaceholder="Search position..."
+                                            pageSize={10}
+                                            emptyMessage="No declarations found."
+                                            tableContainerClassName="rounded-md border bg-card/30 overflow-hidden"
+                                            tableClassName="[&_th]:px-5 [&_td]:px-5"
+                                        />
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
                         ))}
-                    </div>
+                    </Tabs>
                 )}
-            </div>
-        </AppLayout>
+            </div >
+        </AppLayout >
     );
 }
