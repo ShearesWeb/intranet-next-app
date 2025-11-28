@@ -125,7 +125,7 @@ export function SubsidyDeclarationFormDialog({
                             positionId: formState.positionId,
                             weekId: Number(formState.weekId),
                             hours: Number(formState.hours),
-                            reason: formState.justification,
+                            justification: formState.justification,
                         }),
                     }
                 );

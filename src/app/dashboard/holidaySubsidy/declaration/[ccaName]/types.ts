@@ -28,7 +28,7 @@ export type SubsidyFromApi = {
     position_id: number;
     week_id: number;
     hours: number;
-    reason: string | null;
+    justification: string | null;
     subsidy_status: SubsidyStatus;
     cca_positions?: {
         id: number;

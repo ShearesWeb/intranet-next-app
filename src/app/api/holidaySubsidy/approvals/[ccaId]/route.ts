@@ -28,7 +28,7 @@ type SubsidyFromApi = {
     position_id: number;
     week_id: number;
     hours: number;
-    reason: string | null;
+    justification: string | null;
     subsidy_status: SubsidyStatus;
     cca_positions?: PositionOption & { cca_id: number };
 };
@@ -59,7 +59,7 @@ async function fetchCcaData(ccaId: number, supabase: SupabaseClient) {
         supabase
             .from("subsidies")
             .select(
-                `id, position_id, week_id, hours, reason, subsidy_status,
+                `id, position_id, week_id, hours, justification, subsidy_status,
                 cca_positions!inner(id, name, position_type, cca_id)`
             )
             .eq("cca_positions.cca_id", ccaId),
@@ -203,7 +203,7 @@ export async function PATCH(request: Request, { params }: Params) {
         const { data, error } = await supabase
             .from("subsidies")
             .select(
-                `id, position_id, week_id, hours, reason, subsidy_status,
+                `id, position_id, week_id, hours, justification, subsidy_status,
                 cca_positions!inner(id, name, position_type, cca_id)`
             )
             .in(

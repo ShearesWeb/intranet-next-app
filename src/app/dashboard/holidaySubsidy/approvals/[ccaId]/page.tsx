@@ -29,7 +29,7 @@ type SubsidyFromApi = {
     position_id: number;
     week_id: number;
     hours: number;
-    reason: string | null;
+    justification: string | null;
     subsidy_status: SubsidyStatus;
     cca_positions?: { id: number; name: string; position_type: string } | null;
 };
@@ -147,7 +147,7 @@ export default function HolidaySubsidyApprovalDetailsPage() {
                 positionType: position?.position_type || "",
                 weekId: subsidy.week_id,
                 hours: subsidy.hours,
-                justification: subsidy.reason || "",
+                justification: subsidy.justification || "",
                 status: subsidy.subsidy_status,
             };
         },

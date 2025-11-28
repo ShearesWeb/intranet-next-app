@@ -96,7 +96,7 @@ export async function GET(_request: Request, { params }: Params) {
         const { data: subsidies, error: subsidyError } = await supabase
             .from("subsidies")
             .select(
-                `id, position_id, week_id, hours, reason, subsidy_status,
+                `id, position_id, week_id, hours, justification, subsidy_status,
                 cca_positions!inner (id, name, position_type, cca_id)
             `
             )
@@ -131,9 +131,9 @@ export async function POST(request: Request, { params }: Params) {
         }
 
         const body = await request.json();
-        const { positionId, weekId, hours, reason } = body || {};
+        const { positionId, weekId, hours, justification } = body || {};
 
-        if (!positionId || !weekId || hours === undefined || hours === null || reason === undefined) {
+        if (!positionId || !weekId || hours === undefined || hours === null || justification === undefined) {
             return NextResponse.json({ error: "Position, week, hours, and justification are required" }, { status: 400 });
         }
 
@@ -149,9 +149,9 @@ export async function POST(request: Request, { params }: Params) {
                 position_id: positionId,
                 week_id: weekId,
                 hours,
-                reason,
+                justification,
             })
-            .select("id, position_id, week_id, hours, reason, subsidy_status")
+            .select("id, position_id, week_id, hours, justification, subsidy_status")
             .single();
 
         if (insertError) {
@@ -187,9 +187,9 @@ export async function PATCH(request: Request, { params }: Params) {
         }
 
         const body = await request.json();
-        const { subsidyId, positionId, weekId, hours, reason } = body || {};
+        const { subsidyId, positionId, weekId, hours, justification } = body || {};
 
-        if (!subsidyId || !positionId || !weekId || hours === undefined || hours === null || reason === undefined) {
+        if (!subsidyId || !positionId || !weekId || hours === undefined || hours === null || justification === undefined) {
             return NextResponse.json(
                 { error: "Subsidy ID, position, week, hours, and justification are required" },
                 { status: 400 }
@@ -218,11 +218,11 @@ export async function PATCH(request: Request, { params }: Params) {
                 position_id: positionId,
                 week_id: weekId,
                 hours,
-                reason,
+                justification,
                 subsidy_status: "pending",
             })
             .eq("id", subsidyId)
-            .select("id, position_id, week_id, hours, reason, subsidy_status")
+            .select("id, position_id, week_id, hours, justification, subsidy_status")
             .single();
 
         if (updateError) {

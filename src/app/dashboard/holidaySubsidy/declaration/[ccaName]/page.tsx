@@ -152,7 +152,7 @@ export default function SubsidyDeclarationPage() {
                 positionType: position?.position_type || "",
                 weekId: subsidy.week_id,
                 hours: subsidy.hours,
-                justification: subsidy.reason || "",
+                justification: subsidy.justification || "",
                 status: subsidy.subsidy_status,
             };
         },
@@ -201,7 +201,7 @@ export default function SubsidyDeclarationPage() {
                         positionType: position?.position_type || "",
                         weekId: subsidy.week_id,
                         hours: subsidy.hours,
-                        justification: subsidy.reason || "",
+                        justification: subsidy.justification || "",
                         status: subsidy.subsidy_status,
                     };
                 };
