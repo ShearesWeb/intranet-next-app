@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Spinner } from "@/components/ui/spinner";
-import { Separator } from "@/components/ui/separator";
 import { SubsidyDeclarationFormDialog } from "./subsidy-declaration-form-dialog";
 import {
     DeclarationSection,
@@ -54,8 +53,6 @@ export default function SubsidyDeclarationPage() {
     const ccaName = typeof ccaNameParam === "string" ? decodeURIComponent(ccaNameParam) : "";
 
     const router = useRouter();
-
-    const titleSuffix = ` - ${ccaName}`;
 
     const [positions, setPositions] = useState<PositionOption[]>([]);
     const [declarations, setDeclarations] = useState<SubsidyDeclaration[]>([]);
@@ -367,7 +364,7 @@ export default function SubsidyDeclarationPage() {
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                     <div className="space-y-1">
                         <h1 className="text-2xl font-bold">
-                            Subsidy Declaration{titleSuffix}
+                            Subsidy Declaration - {ccaName}
                         </h1>
                         <p className="text-muted-foreground">
                             Submit and track your weekly subsidy declarations.
@@ -385,7 +382,6 @@ export default function SubsidyDeclarationPage() {
                         </Button>
                         <SubsidyDeclarationFormDialog
                             ccaName={ccaName}
-                            titleSuffix={titleSuffix}
                             positions={positions}
                             weekOptions={WEEK_OPTIONS}
                             open={dialogOpen}
@@ -396,8 +392,6 @@ export default function SubsidyDeclarationPage() {
                         />
                     </div>
                 </div>
-
-                <Separator />
 
                 {loading ? (
                     <div className="flex justify-center items-center py-12">

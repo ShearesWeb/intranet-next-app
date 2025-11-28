@@ -24,7 +24,6 @@ import {
 
 export type SubsidyDeclarationFormDialogProps = {
     ccaName: string;
-    titleSuffix: string;
     positions: PositionOption[];
     weekOptions: WeekOption[];
     open: boolean;
@@ -39,7 +38,6 @@ export type SubsidyDeclarationFormDialogProps = {
 
 export function SubsidyDeclarationFormDialog({
     ccaName,
-    titleSuffix,
     positions,
     weekOptions,
     open,
@@ -179,7 +177,7 @@ export function SubsidyDeclarationFormDialog({
                     <DialogTitle>
                         {editingDeclaration
                             ? "Edit Subsidy Declaration"
-                            : `New Subsidy Declaration${titleSuffix}`}
+                            : `New Subsidy Declaration - ${ccaName}`}
                     </DialogTitle>
                     <DialogDescription>
                         Fill in the details for your subsidy request.
