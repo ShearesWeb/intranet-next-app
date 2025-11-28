@@ -84,8 +84,8 @@ export const navOptions: NavItem[] = [
                 url: "/dashboard/holidaySubsidy/guide",
             },
             {
-                title: "Subsidy Declaration",
-                url: "/dashboard/holidaySubsidy",
+                title: "Chair Declaration",
+                url: "/dashboard/holidaySubsidy?view=declaration",
                 adminOnly: true,
             },
             {
