@@ -347,8 +347,8 @@ export default function SubsidyDeclarationPage() {
                         enableSorting: false,
                         cell: (_value, row) => (
                             <div className="flex justify-start gap-2">
-                                <Button variant="outline" size="sm" type="button" onClick={() => openEditDialog(row)}>
-                                    Edit
+                                <Button size="sm" type="button" onClick={() => openEditDialog(row)}>
+                                    Edit & Resubmit
                                 </Button>
                             </div>
                         ),

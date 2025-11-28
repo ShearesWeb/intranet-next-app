@@ -84,6 +84,11 @@ export const navOptions: NavItem[] = [
                 url: "/dashboard/holidaySubsidy/guide",
             },
             {
+                title: "Subsidy Declaration",
+                url: "/dashboard/holidaySubsidy",
+                adminOnly: true,
+            },
+            {
                 title: "JCRC Approvals",
                 url: "/dashboard/holidaySubsidy/approvals",
                 jcrcOnly: true,
