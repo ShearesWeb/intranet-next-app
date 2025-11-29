@@ -4,8 +4,6 @@ import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { createClient } from "@/utils/supabase/server";
 import { SubsidyStatus } from "@/types/holiday-subsidy";
 
-const VALID_CCAS = new Set(["J Block", "K Block", "R Block", "S Block", "A Block", "B Block"]);
-
 type ApprovalRow = {
     id: number;
     name: string;
@@ -35,7 +33,7 @@ async function fetchSubsidies(supabase: Awaited<ReturnType<typeof createClient>>
                 )
             )`
         )
-        .eq("subsidy_status", "pending");
+        .eq("subsidy_status", SubsidyStatus.PENDING);
 
     if (error) {
         throw new Error(error.message);

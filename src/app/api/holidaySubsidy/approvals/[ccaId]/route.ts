@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
-
 import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { createClient } from "@/utils/supabase/server";
 import { SubsidyStatus, SubsidyWithPosition, PositionOption } from "@/types/holiday-subsidy";
 
-const VALID_STATUSES = new Set(["pending", "approved", "rejected"]);
 
 type Params = {
     params: Promise<{
@@ -68,7 +66,7 @@ function validateUpdates(
     }
 
     for (const update of updates) {
-        if (!update || typeof update.subsidyId !== "number" || !VALID_STATUSES.has(update.status)) {
+        if (!update || typeof update.subsidyId !== "number" || !Object.values(SubsidyStatus).includes(update.status)) {
             throw new Error("Invalid update payload");
         }
     }

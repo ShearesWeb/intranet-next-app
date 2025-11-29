@@ -42,9 +42,9 @@ const WEEK_OPTIONS: WeekOption[] = [
 ];
 
 const statusVariant: Record<SubsidyStatus, "default" | "secondary" | "destructive"> = {
-    pending: "secondary",
-    approved: "default",
-    rejected: "destructive",
+    [SubsidyStatus.PENDING]: "secondary",
+    [SubsidyStatus.APPROVED]: "default",
+    [SubsidyStatus.REJECTED]: "destructive",
 };
 
 export default function SubsidyDeclarationPage() {
@@ -80,7 +80,7 @@ export default function SubsidyDeclarationPage() {
     }, []);
 
     const sections = useMemo((): DeclarationSection[] => {
-        const statusOrder: SubsidyStatus[] = ["pending", "approved", "rejected"];
+        const statusOrder: SubsidyStatus[] = [SubsidyStatus.PENDING, SubsidyStatus.APPROVED, SubsidyStatus.REJECTED];
 
         return statusOrder.map((status) => ({
             key: status,
@@ -286,7 +286,7 @@ export default function SubsidyDeclarationPage() {
 
     const columnsForStatus = useCallback(
         (status: SubsidyStatus): SimpleTableColumn<SubsidyDeclaration>[] => {
-            if (status === "pending") {
+            if (status === SubsidyStatus.PENDING) {
                 return [
                     ...commonColumns,
                     {
@@ -317,7 +317,7 @@ export default function SubsidyDeclarationPage() {
                 ];
             }
 
-            if (status === "rejected") {
+            if (status === SubsidyStatus.REJECTED) {
                 return [
                     ...commonColumns,
                     {
@@ -335,7 +335,7 @@ export default function SubsidyDeclarationPage() {
                 ];
             }
 
-            if (status === "approved") {
+            if (status === SubsidyStatus.APPROVED) {
                 return [
                     ...commonColumns,
                     {
@@ -411,7 +411,7 @@ export default function SubsidyDeclarationPage() {
                         </CardContent>
                     </Card>
                 ) : (
-                    <Tabs defaultValue="pending" className="w-full">
+                    <Tabs defaultValue={SubsidyStatus.PENDING} className="w-full">
                         <TabsList className="grid w-full grid-cols-3">
                             {sections.map((section) => (
                                 <TabsTrigger key={section.key} value={section.key}>

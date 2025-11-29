@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/context/AuthContext";
 
-import { type SubsidyStatus, type SubsidyDeclaration, type DeclarationSection } from "@/types/holiday-subsidy";
+import { SubsidyStatus, type SubsidyDeclaration, type DeclarationSection } from "@/types/holiday-subsidy";
 
 type ApprovalPayload = {
     ccaName: string;
@@ -51,9 +51,9 @@ const WEEK_OPTIONS = [
 ];
 
 const statusVariant: Record<SubsidyStatus, "default" | "secondary" | "destructive"> = {
-    pending: "secondary",
-    approved: "default",
-    rejected: "destructive",
+    [SubsidyStatus.PENDING]: "secondary",
+    [SubsidyStatus.APPROVED]: "default",
+    [SubsidyStatus.REJECTED]: "destructive",
 };
 
 export default function HolidaySubsidyApprovalDetailsPage() {
@@ -79,7 +79,7 @@ export default function HolidaySubsidyApprovalDetailsPage() {
     }, []);
 
     const sections = useMemo((): DeclarationSection[] => {
-        const statusOrder: SubsidyStatus[] = ["pending", "approved", "rejected"];
+        const statusOrder: SubsidyStatus[] = [SubsidyStatus.PENDING, SubsidyStatus.APPROVED, SubsidyStatus.REJECTED];
 
         return statusOrder.map((status) => ({
             key: status,
@@ -249,14 +249,14 @@ export default function HolidaySubsidyApprovalDetailsPage() {
                 enableSorting: false,
                 cell: (_value, row) => (
                     <div className="flex justify-start gap-2">
-                        <Button variant="default" size="sm" type="button" onClick={() => updateStatus(row, "approved")}>
+                        <Button variant="default" size="sm" type="button" onClick={() => updateStatus(row, SubsidyStatus.APPROVED)}>
                             Approve
                         </Button>
                         <Button
                             variant="destructive"
                             size="sm"
                             type="button"
-                            onClick={() => updateStatus(row, "rejected")}
+                            onClick={() => updateStatus(row, SubsidyStatus.REJECTED)}
                         >
                             Reject
                         </Button>
@@ -280,7 +280,7 @@ export default function HolidaySubsidyApprovalDetailsPage() {
                             variant="destructive"
                             size="sm"
                             type="button"
-                            onClick={() => updateStatus(row, "rejected")}
+                            onClick={() => updateStatus(row, SubsidyStatus.REJECTED)}
                         >
                             Reject
                         </Button>
@@ -300,7 +300,7 @@ export default function HolidaySubsidyApprovalDetailsPage() {
                 enableSorting: false,
                 cell: (_value, row) => (
                     <div className="flex justify-start gap-2">
-                        <Button variant="default" size="sm" type="button" onClick={() => updateStatus(row, "approved")}>
+                        <Button variant="default" size="sm" type="button" onClick={() => updateStatus(row, SubsidyStatus.APPROVED)}>
                             Approve
                         </Button>
                     </div>
@@ -312,9 +312,9 @@ export default function HolidaySubsidyApprovalDetailsPage() {
 
     const columnsBySection: Record<SubsidyStatus, SimpleTableColumn<SubsidyDeclaration>[]> = useMemo(
         () => ({
-            pending: pendingColumns,
-            approved: approvedColumns,
-            rejected: rejectedColumns,
+            [SubsidyStatus.PENDING]: pendingColumns,
+            [SubsidyStatus.APPROVED]: approvedColumns,
+            [SubsidyStatus.REJECTED]: rejectedColumns,
         }),
         [approvedColumns, pendingColumns, rejectedColumns]
     );
@@ -377,7 +377,7 @@ export default function HolidaySubsidyApprovalDetailsPage() {
                         <AlertDescription>{error}</AlertDescription>
                     </Alert>
                 ) : (
-                    <Tabs defaultValue="pending" className="w-full">
+                    <Tabs defaultValue={SubsidyStatus.PENDING} className="w-full">
                         <TabsList className="grid w-full grid-cols-3">
                             {sections.map((section) => (
                                 <TabsTrigger key={section.key} value={section.key}>
@@ -390,7 +390,7 @@ export default function HolidaySubsidyApprovalDetailsPage() {
                                 <Card className="border shadow-sm">
                                     <CardHeader className="flex flex-row items-center justify-between">
                                         <CardTitle>{section.title}</CardTitle>
-                                        {section.key === "pending" && hasChanges && (
+                                        {section.key === SubsidyStatus.PENDING && hasChanges && (
                                             <span className="text-sm text-muted-foreground">Unsaved changes</span>
                                         )}
                                     </CardHeader>

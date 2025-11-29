@@ -1,6 +1,6 @@
 // Re-export types from centralized location for backwards compatibility
+export { SubsidyStatus } from "@/types/holiday-subsidy";
 export type {
-    SubsidyStatus,
     SubsidyDeclaration,
     DeclarationSection,
     PositionOption,

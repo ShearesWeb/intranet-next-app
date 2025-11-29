@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
+import { SubsidyStatus } from "@/types/holiday-subsidy";
 import { fetchUserId } from "@/lib/fetch-user-info";
 import { checkCCAChairAuthorization } from "@/lib/lead-auth-service";
 
@@ -216,7 +217,7 @@ export async function PATCH(request: Request, { params }: Params) {
                 week_id: weekId,
                 hours,
                 justification,
-                subsidy_status: "pending",
+                subsidy_status: SubsidyStatus.PENDING,
             })
             .eq("id", subsidyId)
             .select("id, position_id, week_id, hours, justification, subsidy_status")
@@ -271,7 +272,7 @@ export async function DELETE(request: Request, { params }: Params) {
             return NextResponse.json({ error: "Subsidy declaration not found" }, { status: 404 });
         }
 
-        if (existing.subsidy_status !== "pending") {
+        if (existing.subsidy_status !== SubsidyStatus.PENDING) {
             return NextResponse.json({ error: "Only pending declarations can be deleted" }, { status: 400 });
         }
 

@@ -1,5 +1,11 @@
 // Database schema types
-export type SubsidyStatus = "pending" | "approved" | "rejected";
+export const SubsidyStatus = {
+    PENDING: "pending",
+    APPROVED: "approved",
+    REJECTED: "rejected",
+} as const;
+
+export type SubsidyStatus = (typeof SubsidyStatus)[keyof typeof SubsidyStatus];
 
 export interface SubsidyRow {
     id: number;
