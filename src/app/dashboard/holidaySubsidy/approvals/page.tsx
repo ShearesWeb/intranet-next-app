@@ -47,7 +47,7 @@ const columns: SimpleTableColumn<CcaApprovalRow>[] = [
                     </Link>
                 </Button>
                 <Button asChild size="sm" className="gap-2">
-                    <Link href={`/dashboard/holidaySubsidy/weekly`}>
+                    <Link href={`/dashboard/holidaySubsidy/approvals/weekly/${row.id}`}>
                         Approve pending weekly commitments
                         <ShieldCheck className="h-4 w-4" />
                     </Link>
