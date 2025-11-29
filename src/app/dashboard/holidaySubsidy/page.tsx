@@ -51,7 +51,7 @@ const columns: SimpleTableColumn<SubsidyRow>[] = [
             <ArrowRight className="h-4 w-4" />
           </Button>
         </Link>
-        <Link href={`/dashboard/holidaySubsidy/weekly`}>
+        <Link href={`/dashboard/holidaySubsidy/weekly/${encodeURIComponent(row.name)}`}>
           <Button size="sm" className="gap-2 px-3 py-2">
             Weekly Commitment Declaration
             <ArrowRight className="h-4 w-4" />

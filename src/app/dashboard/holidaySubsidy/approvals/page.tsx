@@ -76,14 +76,19 @@ export default function HolidaySubsidyApprovalsPage() {
                 }
 
                 const data = await response.json();
-                const ccas = data.ccas as Array<{ id: number; name: string; pendingDeclarations: number }>;
+                const ccas = data.ccas as Array<{ 
+                    id: number; 
+                    name: string; 
+                    pendingDeclarations: number;
+                    pendingWeekly: number;
+                }>;
 
                 setRows(
-                    (ccas || []).map(({ id, name, pendingDeclarations }) => ({
+                    (ccas || []).map(({ id, name, pendingDeclarations, pendingWeekly }) => ({
                         id,
                         name,
                         pendingDeclarations,
-                        pendingWeekly: 0,
+                        pendingWeekly,
                     }))
                 );
             } catch (err) {

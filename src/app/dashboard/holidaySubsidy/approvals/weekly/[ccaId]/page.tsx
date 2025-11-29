@@ -7,14 +7,15 @@ import { AppLayout } from "@/components/layout/app-layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SelectionTable, type SelectionTableColumn } from "@/components/table/selection-table";
-import { ArrowLeft, Check, X, Info } from "lucide-react";
+import { ArrowLeft, Check, X, Info, AlertCircle } from "lucide-react";
 import { PositionTypeBadge } from "@/components/badges/position-type-badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 
 type WeeklyRow = {
-  id: number;
+  id: string; // Composite ID: "user_id-position_id"
+  user_id: number;
+  position_id: number;
   name: string;
   email: string;
   role: string;
@@ -22,7 +23,7 @@ type WeeklyRow = {
   hours: number;
   justification: string;
   remarks: string;
-  status: "pending" | "accepted" | "rejected";
+  status: "pending" | "approved" | "rejected";
 };
 
 const weekMeta = [
@@ -34,53 +35,18 @@ const weekMeta = [
   { id: 6, label: "Week 6", range: "8 Jan - 14 Jan" },
 ];
 
-// Mock data for now
-const mockRows: WeeklyRow[] = [
-  {
-    id: 1,
-    name: "Alice Tan",
-    email: "alice.tan@sheares.sg",
-    role: "Member",
-    type: "subcomm",
-    hours: 4,
-    justification: "Training on Wed/Fri",
-    remarks: "On time, full attendance",
-    status: "pending",
-  },
-  {
-    id: 2,
-    name: "Ben Lim",
-    email: "ben.lim@sheares.sg",
-    role: "Vice",
-    type: "maincomm",
-    hours: 5,
-    justification: "Planning session + dry run",
-    remarks: "Lead warm-up",
-    status: "pending",
-  },
-  {
-    id: 3,
-    name: "Charmaine Ong",
-    email: "charmaine.ong@sheares.sg",
-    role: "Member",
-    type: "blockcomm",
-    hours: 3,
-    justification: "Thursday scrimmage",
-    remarks: "Missed Monday, informed",
-    status: "pending",
-  },
-];
 
 export default function WeeklyCommitmentApprovalPage() {
   const params = useParams();
-  const { user } = useAuth();
   const ccaIdParam = params?.ccaId;
   const ccaId = typeof ccaIdParam === "string" ? ccaIdParam : "";
   
   const [weekIndex, setWeekIndex] = useState(0);
-  const [rows, setRows] = useState<WeeklyRow[]>(mockRows);
-  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [rows, setRows] = useState<WeeklyRow[]>([]);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [ccaName, setCcaName] = useState("");
 
   // Fetch CCA name
@@ -114,6 +80,39 @@ export default function WeeklyCommitmentApprovalPage() {
 
   const weekInfo = weekMeta[weekIndex];
 
+  // Fetch weekly submissions data
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!ccaId) {
+        setError("CCA ID is required");
+        setIsLoadingData(false);
+        return;
+      }
+
+      setIsLoadingData(true);
+      setError(null);
+
+      try {
+        const response = await fetch(`/api/holidaySubsidy/approvals/weekly/${ccaId}/${weekInfo.id}`);
+        
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || "Failed to load data");
+        }
+
+        const data = await response.json();
+        setRows(data.submissions || []);
+      } catch (err) {
+        console.error("Error fetching weekly approval data:", err);
+        setError(err instanceof Error ? err.message : "Failed to load approval data");
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+
+    fetchData();
+  }, [ccaId, weekInfo.id]);
+
   const handleApprove = async () => {
     if (selected.size === 0) {
       toast.error("Please select at least one member to approve.");
@@ -122,13 +121,31 @@ export default function WeeklyCommitmentApprovalPage() {
 
     setLoading(true);
     try {
-      // TODO: API call to approve selected members
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
+      // Prepare updates array
+      const updates = rows
+        .filter((row) => selected.has(row.id))
+        .map((row) => ({
+          user_id: row.user_id,
+          position_id: row.position_id,
+          status: "approved" as const,
+        }));
+
+      const response = await fetch(`/api/holidaySubsidy/approvals/weekly/${ccaId}/${weekInfo.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ updates }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to approve");
+      }
+
+      // Update UI
       setRows((prev) =>
         prev.map((row) => {
           if (selected.has(row.id)) {
-            return { ...row, status: "accepted" as const };
+            return { ...row, status: "approved" as const };
           }
           return row;
         })
@@ -136,8 +153,9 @@ export default function WeeklyCommitmentApprovalPage() {
 
       toast.success(`Approved ${selected.size} member(s).`);
       setSelected(new Set());
-    } catch {
-      toast.error("Failed to approve. Please try again.");
+    } catch (err) {
+      console.error("Error approving:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to approve. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -151,9 +169,27 @@ export default function WeeklyCommitmentApprovalPage() {
 
     setLoading(true);
     try {
-      // TODO: API call to reject selected members
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
+      // Prepare updates array
+      const updates = rows
+        .filter((row) => selected.has(row.id))
+        .map((row) => ({
+          user_id: row.user_id,
+          position_id: row.position_id,
+          status: "rejected" as const,
+        }));
+
+      const response = await fetch(`/api/holidaySubsidy/approvals/weekly/${ccaId}/${weekInfo.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ updates }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to reject");
+      }
+
+      // Update UI
       setRows((prev) =>
         prev.map((row) => {
           if (selected.has(row.id)) {
@@ -165,8 +201,9 @@ export default function WeeklyCommitmentApprovalPage() {
 
       toast.success(`Rejected ${selected.size} member(s).`);
       setSelected(new Set());
-    } catch {
-      toast.error("Failed to reject. Please try again.");
+    } catch (err) {
+      console.error("Error rejecting:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to reject. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -236,7 +273,7 @@ export default function WeeklyCommitmentApprovalPage() {
         cell: (value) => {
           const status = String(value);
           const colorClass = 
-            status === "accepted" ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" :
+            status === "approved" ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" :
             status === "rejected" ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" :
             "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
           
@@ -253,27 +290,18 @@ export default function WeeklyCommitmentApprovalPage() {
     []
   );
 
-  // Check if user is JCRC
-  if (!user?.is_jcrc) {
-    return (
-      <AppLayout>
-        <div className="flex flex-col gap-4 p-6 max-w-3xl">
-          <h1 className="text-2xl font-bold">Weekly Commitment Approval</h1>
-          <Card>
-            <CardContent className="p-6 space-y-2">
-              <div className="text-lg font-semibold">JCRC access only</div>
-              <p className="text-sm text-muted-foreground">
-                This page is restricted to JCRC members responsible for approving weekly commitments.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </AppLayout>
-    );
-  }
+  // TODO: Re-enable JCRC authorization check after testing
+  // The API route handles authorization for now
+
+  const breadcrumbOverride = ccaName ? [
+    { name: "Dashboard", href: "/dashboard" },
+    { name: "Holiday Subsidy", href: "/dashboard/holidaySubsidy" },
+    { name: "JCRC Approvals", href: "/dashboard/holidaySubsidy/approvals" },
+    { name: ccaName, href: `/dashboard/holidaySubsidy/approvals/weekly/${ccaId}` },
+  ] : undefined;
 
   return (
-    <AppLayout>
+    <AppLayout breadcrumbOverride={breadcrumbOverride}>
       <div className="flex flex-col space-y-6 p-4 md:p-6 lg:p-8 max-w-[1800px] mx-auto">
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -372,30 +400,57 @@ export default function WeeklyCommitmentApprovalPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <SelectionTable<WeeklyRow, number>
-              data={rows}
-              columns={columns}
-              selectionEnabled
-              selectedIds={selected}
-              onSelectionChange={(id) => {
-                setSelected((prev) => {
-                  const next = new Set(prev);
-                  if (next.has(id)) {
-                    next.delete(id);
-                  } else {
-                    next.add(id);
-                  }
-                  return next;
-                });
-              }}
-              idField="id"
-              searchColumn="name"
-              searchPlaceholder="Search members by name..."
-              pageSize={10}
-              emptyMessage="No members found for this week."
-              tableContainerClassName="border-muted"
-              tablePadding="[&_th]:px-3 [&_td]:px-3 py-2"
-            />
+            {isLoadingData ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  <p className="text-sm text-muted-foreground">Loading submissions...</p>
+                </div>
+              </div>
+            ) : error ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="flex flex-col items-center gap-2 text-center max-w-md">
+                  <AlertCircle className="h-10 w-10 text-destructive" />
+                  <p className="text-sm font-semibold">Failed to load data</p>
+                  <p className="text-xs text-muted-foreground">{error}</p>
+                </div>
+              </div>
+            ) : rows.length === 0 ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="flex flex-col items-center gap-2 text-center max-w-md">
+                  <Info className="h-10 w-10 text-muted-foreground" />
+                  <p className="text-sm font-semibold">No submissions yet</p>
+                  <p className="text-xs text-muted-foreground">
+                    There are no pending subsidy declarations for this week.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <SelectionTable<WeeklyRow, string>
+                data={rows}
+                columns={columns}
+                selectionEnabled
+                selectedIds={selected}
+                onSelectionChange={(id) => {
+                  setSelected((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(id)) {
+                      next.delete(id);
+                    } else {
+                      next.add(id);
+                    }
+                    return next;
+                  });
+                }}
+                idField="id"
+                searchColumn="name"
+                searchPlaceholder="Search members by name..."
+                pageSize={10}
+                emptyMessage="No members found for this week."
+                tableContainerClassName="border-muted"
+                tablePadding="[&_th]:px-3 [&_td]:px-3 py-2"
+              />
+            )}
           </CardContent>
         </Card>
       </div>

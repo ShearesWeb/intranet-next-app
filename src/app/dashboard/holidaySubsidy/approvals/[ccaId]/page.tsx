@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 
 import { PositionTypeBadge } from "@/components/badges/position-type-badge";
@@ -195,6 +194,20 @@ export default function HolidaySubsidyApprovalDetailsPage() {
 
     const hasChanges = Object.keys(pendingChanges).length > 0;
 
+    // Warn user before leaving page with unsaved changes
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (hasChanges) {
+                e.preventDefault();
+                e.returnValue = "";
+                return "";
+            }
+        };
+
+        window.addEventListener("beforeunload", handleBeforeUnload);
+        return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+    }, [hasChanges]);
+
     const updateStatus = useCallback((declaration: SubsidyDeclaration, status: SubsidyStatus) => {
         setDeclarations((prev) => prev.map((item) => (item.id === declaration.id ? { ...item, status } : item)));
         setPendingChanges((prev) => ({ ...prev, [declaration.id]: status }));
@@ -361,10 +374,23 @@ export default function HolidaySubsidyApprovalDetailsPage() {
                         </p>
                     </div>
                     <div className="flex gap-2 flex-wrap">
-                        <Link href="/dashboard/holidaySubsidy/approvals">
-                            <Button variant="outline">← Back to approvals</Button>
-                        </Link>
-                        <Button onClick={handleSave} disabled={!hasChanges || saving}>
+                        <Button 
+                            variant="outline" 
+                            onClick={(e) => {
+                                if (hasChanges && !confirm("You have unsaved changes. Leave without saving?")) {
+                                    e.preventDefault();
+                                } else {
+                                    window.location.href = "/dashboard/holidaySubsidy/approvals";
+                                }
+                            }}
+                        >
+                            ← Back to approvals
+                        </Button>
+                        <Button 
+                            onClick={handleSave} 
+                            disabled={!hasChanges || saving}
+                            className={hasChanges ? "bg-orange-500 hover:bg-orange-600 animate-pulse" : ""}
+                        >
                             {saving ? "Saving..." : hasChanges ? "Save all changes" : "No changes"}
                         </Button>
                     </div>

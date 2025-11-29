@@ -1,13 +1,16 @@
 "use client";
 
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useParams } from "next/navigation";
 import { AppLayout } from "@/components/layout/app-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { SelectionTable, type SelectionTableColumn } from "@/components/table/selection-table";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Save } from "lucide-react";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { ArrowLeft, Save, AlertCircle } from "lucide-react";
 import { PositionTypeBadge } from "@/components/badges/position-type-badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
@@ -15,6 +18,8 @@ import { toast } from "sonner";
 
 type WeeklyRow = {
   id: number;
+  user_id: number;
+  position_id: number;
   name: string;
   email: string;
   role: string;
@@ -22,6 +27,8 @@ type WeeklyRow = {
   hours: number;
   justification: string;
   remarks: string;
+  has_approved_subsidy: boolean;
+  submitted: boolean;
 };
 
 const weekMeta = [
@@ -33,47 +40,67 @@ const weekMeta = [
   { id: 6, label: "Week 6", range: "8 Jan - 14 Jan" },
 ];
 
-const mockRows: WeeklyRow[] = [
-  {
-    id: 1,
-    name: "Alice Tan",
-    email: "alice.tan@sheares.sg",
-    role: "Member",
-    type: "subcomm",
-    hours: 4,
-    justification: "Training on Wed/Fri",
-    remarks: "On time, full attendance",
-  },
-  {
-    id: 2,
-    name: "Ben Lim",
-    email: "ben.lim@sheares.sg",
-    role: "Vice",
-    type: "maincomm",
-    hours: 5,
-    justification: "Planning session + dry run",
-    remarks: "Lead warm-up",
-  },
-  {
-    id: 3,
-    name: "Charmaine Ong",
-    email: "charmaine.ong@sheares.sg",
-    role: "Member",
-    type: "blockcomm",
-    hours: 3,
-    justification: "Thursday scrimmage",
-    remarks: "Missed Monday, informed",
-  },
-];
-
 export default function WeeklyCommitmentPage() {
+  const params = useParams();
+  const ccaName = params?.ccaName as string || "";
+  
   const [weekIndex, setWeekIndex] = useState(0);
-  const [rows, setRows] = useState<WeeklyRow[]>(mockRows);
+  const [rows, setRows] = useState<WeeklyRow[]>([]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const weekInfo = weekMeta[weekIndex];
+  
+  // Fetch data when component mounts or week changes
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!ccaName) {
+        setError("CCA name is required");
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch(`/api/holidaySubsidy/weekly/${encodeURIComponent(ccaName)}/${weekInfo.id}`);
+        
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || "Failed to load data");
+        }
+
+        const data = await response.json();
+        setRows(data.members || []);
+        setHasUnsavedChanges(false);
+      } catch (err) {
+        console.error("Error fetching weekly data:", err);
+        setError(err instanceof Error ? err.message : "Failed to load weekly commitment data");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [ccaName, weekInfo.id]);
+
+  // Warn user before leaving page with unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = "";
+        return "";
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   const handleChange = useCallback((id: number, key: keyof WeeklyRow, value: string | number) => {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, [key]: value } : r)));
@@ -81,14 +108,39 @@ export default function WeeklyCommitmentPage() {
   }, []);
 
   const handleSave = async () => {
+    if (!ccaName) {
+      toast.error("CCA name is required");
+      return;
+    }
+
     setIsSaving(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      toast.success("Changes saved successfully!");
+      // Prepare declarations data
+      const declarations = rows.map((row) => ({
+        user_id: row.user_id,
+        position_id: row.position_id,
+        hours: row.hours,
+        justification: row.justification,
+        remarks: row.remarks,
+      }));
+
+      const response = await fetch(`/api/holidaySubsidy/weekly/${encodeURIComponent(ccaName)}/${weekInfo.id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ declarations }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to save");
+      }
+
+      const data = await response.json();
+      toast.success(data.message || "Changes saved successfully!");
       setHasUnsavedChanges(false);
-    } catch {
-      toast.error("Failed to save changes. Please try again.");
+    } catch (err) {
+      console.error("Error saving:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to save changes. Please try again.");
     } finally {
       setIsSaving(false);
     }
@@ -153,6 +205,7 @@ export default function WeeklyCommitmentPage() {
               onMouseDown={(e) => e.stopPropagation()}
               onChange={(e) => handleChange(row.id, "hours", e.target.value === "" ? 0 : Number(e.target.value))}
               placeholder="0"
+              disabled={!row.has_approved_subsidy}
             />
             <span className="text-xs text-muted-foreground">hrs</span>
           </div>
@@ -169,7 +222,8 @@ export default function WeeklyCommitmentPage() {
               onClick={(e) => e.stopPropagation()}
               onMouseDown={(e) => e.stopPropagation()}
               onChange={(e) => handleChange(row.id, "justification", e.target.value)}
-              placeholder="Enter justification for hours worked..."
+              placeholder={row.has_approved_subsidy ? "Enter justification for hours worked..." : "No approved subsidy"}
+              disabled={!row.has_approved_subsidy}
             />
           </div>
         ),
@@ -185,7 +239,8 @@ export default function WeeklyCommitmentPage() {
               onClick={(e) => e.stopPropagation()}
               onMouseDown={(e) => e.stopPropagation()}
               onChange={(e) => handleChange(row.id, "remarks", e.target.value)}
-              placeholder="Add any additional remarks..."
+              placeholder={row.has_approved_subsidy ? "Add any additional remarks..." : "No approved subsidy"}
+              disabled={!row.has_approved_subsidy}
             />
           </div>
         ),
@@ -193,6 +248,34 @@ export default function WeeklyCommitmentPage() {
     ],
     [handleChange]
   );
+
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <LoadingSpinner message="Loading weekly commitment data..." />
+      </AppLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <AppLayout>
+        <div className="flex flex-col gap-4 p-6 max-w-3xl mx-auto">
+          <h1 className="text-2xl font-bold">Weekly Commitment Declaration</h1>
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+          <Link href="/dashboard/holidaySubsidy">
+            <Button variant="outline" className="gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              Back to CCAs
+            </Button>
+          </Link>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
@@ -208,17 +291,30 @@ export default function WeeklyCommitmentPage() {
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
-            <Link href="/dashboard/holidaySubsidy">
-              <Button variant="outline" size="lg" className="gap-2 w-full sm:w-auto">
-                <ArrowLeft className="h-4 w-4" />
-                Back to CCAs
-              </Button>
-            </Link>
+            <Button 
+              variant="outline" 
+              size="lg" 
+              className="gap-2 w-full sm:w-auto"
+              onClick={(e) => {
+                if (hasUnsavedChanges && !confirm("You have unsaved changes. Leave without saving?")) {
+                  e.preventDefault();
+                } else {
+                  window.location.href = "/dashboard/holidaySubsidy";
+                }
+              }}
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to CCAs
+            </Button>
             <Button
               onClick={handleSave}
               disabled={isSaving || !hasUnsavedChanges}
               size="lg"
-              className="bg-green-600 hover:bg-green-700 text-white px-6 shadow-md font-semibold gap-2 disabled:opacity-50 w-full sm:w-auto"
+              className={`px-6 shadow-md font-semibold gap-2 disabled:opacity-50 w-full sm:w-auto ${
+                hasUnsavedChanges 
+                  ? "bg-orange-500 hover:bg-orange-600 text-white animate-pulse" 
+                  : "bg-green-600 hover:bg-green-700 text-white"
+              }`}
             >
               <Save className="h-4 w-4" />
               {isSaving ? "Saving..." : "Save Changes"}

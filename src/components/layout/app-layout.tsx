@@ -27,9 +27,10 @@ const formatSegment = (segment: string) => {
 
 interface AppLayoutProps {
     children: ReactNode;
+    breadcrumbOverride?: { name: string; href: string }[];
 }
 
-export function AppLayout({ children }: AppLayoutProps) {
+export function AppLayout({ children, breadcrumbOverride }: AppLayoutProps) {
     const pathname = usePathname();
     const { user } = useAuth();
 
@@ -112,10 +113,11 @@ export function AppLayout({ children }: AppLayoutProps) {
                         />
                         <Breadcrumb>
                             <BreadcrumbList>
-                                {breadcrumbTrail.map((seg, index) => {
+                                {(breadcrumbOverride || breadcrumbTrail).map((seg, index) => {
+                                    const trail = breadcrumbOverride || breadcrumbTrail;
                                     const isFirst = index === 0;
-                                    const isLast = index === breadcrumbTrail.length - 1;
-                                    const isSingle = breadcrumbTrail.length === 1;
+                                    const isLast = index === trail.length - 1;
+                                    const isSingle = trail.length === 1;
 
                                     if (isSingle) {
                                         // only one item, no separators
