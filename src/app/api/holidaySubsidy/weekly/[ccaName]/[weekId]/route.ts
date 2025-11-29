@@ -24,7 +24,6 @@ async function resolveCCAId(ccaName: string, supabase: Awaited<ReturnType<typeof
     return { ccaId: data.id, error: null };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function authorizeChair(ccaId: number, supabase: Awaited<ReturnType<typeof createClient>>) {
     const {
         data: { user },
@@ -64,11 +63,10 @@ export async function GET(_request: Request, { params }: Params) {
             return NextResponse.json({ error: ccaError || "CCA not found" }, { status: 404 });
         }
 
-        // TODO: Re-enable authorization after testing
-        // const authResult = await authorizeChair(ccaId, supabase);
-        // if (!authResult.authorized) {
-        //     return NextResponse.json({ error: authResult.message }, { status: authResult.status });
-        // }
+        const authResult = await authorizeChair(ccaId, supabase);
+        if (!authResult.authorized) {
+            return NextResponse.json({ error: authResult.message }, { status: authResult.status });
+        }
 
         // Get all appointments (user-position links) for this CCA
         const { data: appointments, error: appointmentsError } = await supabase
@@ -232,11 +230,10 @@ export async function POST(request: Request, { params }: Params) {
             return NextResponse.json({ error: ccaError || "CCA not found" }, { status: 404 });
         }
 
-        // TODO: Re-enable authorization after testing
-        // const authResult = await authorizeChair(ccaId, supabase);
-        // if (!authResult.authorized) {
-        //     return NextResponse.json({ error: authResult.message }, { status: authResult.status });
-        // }
+        const authResult = await authorizeChair(ccaId, supabase);
+        if (!authResult.authorized) {
+            return NextResponse.json({ error: authResult.message }, { status: authResult.status });
+        }
 
         const body = await request.json();
         const { declarations } = body;
