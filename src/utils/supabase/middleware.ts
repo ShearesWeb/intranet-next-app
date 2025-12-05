@@ -28,10 +28,25 @@ export async function updateSession(request: NextRequest) {
     )
 
     // refreshing the auth token
-    const { data } = await supabase.auth.getClaims()
-    const user = data?.claims
+    const { data: { user }, error } = await supabase.auth.getUser()
 
     const path = request.nextUrl.pathname;
+
+    if (error) {
+        // If we are already on an auth page, allow the request to proceed so the user can log in
+        if (path.startsWith('/auth')) {
+            return supabaseResponse
+        }
+
+        // Only log actual errors, not just "session missing" which is expected for unauthenticated users
+        if (!error.message.includes('Auth session missing')) {
+            console.error('Error getting user:', error)
+        }
+
+        const url = request.nextUrl.clone()
+        url.pathname = '/auth/login'
+        return NextResponse.redirect(url)
+    }
 
     if (
         !user &&
