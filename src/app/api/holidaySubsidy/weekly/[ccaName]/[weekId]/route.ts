@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
+import { getWeekLabel, isWeekEditable } from "@/lib/holiday-subsidy-weeks";
 
 type Params = {
     params: Promise<{
@@ -24,29 +25,6 @@ async function resolveCCAId(ccaName: string, supabase: Awaited<ReturnType<typeof
     return { ccaId: data.id, error: null };
 }
 
-async function authorizeChair(ccaId: number, supabase: Awaited<ReturnType<typeof createClient>>) {
-    const {
-        data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-        return { authorized: false, message: "Not authenticated", status: 401 };
-    }
-
-    const { data: position } = await supabase
-        .from("cca_positions")
-        .select("position_type")
-        .eq("cca_id", ccaId)
-        .eq("user_id", user.id)
-        .single();
-
-    if (!position || (position.position_type !== "chair" && position.position_type !== "ic")) {
-        return { authorized: false, message: "Not authorized. Chair/IC access only.", status: 403 };
-    }
-
-    return { authorized: true, message: "", status: 200 };
-}
-
 export async function GET(_request: Request, { params }: Params) {
     try {
         const supabase = await createClient();
@@ -57,15 +35,24 @@ export async function GET(_request: Request, { params }: Params) {
             return NextResponse.json({ error: "Invalid week ID" }, { status: 400 });
         }
 
+        if (!isWeekEditable(weekIdNum)) {
+            return NextResponse.json(
+                { error: `Weekly declarations are closed for ${getWeekLabel(weekIdNum) || "this week"}.` },
+                { status: 403 }
+            );
+        }
+
+        if (!isWeekEditable(weekIdNum)) {
+            return NextResponse.json(
+                { error: `Weekly declarations are closed for ${getWeekLabel(weekIdNum) || "this week"}.` },
+                { status: 403 }
+            );
+        }
+
         const { ccaId, error: ccaError } = await resolveCCAId(ccaName, supabase);
 
         if (!ccaId) {
             return NextResponse.json({ error: ccaError || "CCA not found" }, { status: 404 });
-        }
-
-        const authResult = await authorizeChair(ccaId, supabase);
-        if (!authResult.authorized) {
-            return NextResponse.json({ error: authResult.message }, { status: authResult.status });
         }
 
         // Get all appointments (user-position links) for this CCA
@@ -76,9 +63,9 @@ export async function GET(_request: Request, { params }: Params) {
 
         if (appointmentsError) {
             console.error("Appointments error:", appointmentsError);
-            return NextResponse.json({ 
+            return NextResponse.json({
                 error: `Failed to fetch appointments: ${appointmentsError.message}`,
-                details: appointmentsError 
+                details: appointmentsError
             }, { status: 500 });
         }
 
@@ -117,7 +104,7 @@ export async function GET(_request: Request, { params }: Params) {
         const members = appointments?.map((appointment) => {
             const position = positionMap.get(appointment.position_id);
             const user = userMap.get(appointment.user_id);
-            
+
             return {
                 id: appointment.user_id,
                 user_id: appointment.user_id,
@@ -132,7 +119,7 @@ export async function GET(_request: Request, { params }: Params) {
         // Get approved subsidies and existing submissions in parallel for better performance
         const subsidyPositionIds = appointments?.map((a) => a.position_id) || [];
         const submissionUserIds = appointments?.map((a) => a.user_id) || [];
-        
+
         const [subsidiesResult, submissionsResult] = await Promise.all([
             supabase
                 .from("subsidies")
@@ -178,17 +165,17 @@ export async function GET(_request: Request, { params }: Params) {
                 email: member.user_email || "",
                 role: member.position_name || "Member",
                 type: member.position_type || "",
-                
+
                 // Flags
                 has_approved_subsidy: !!approvedSubsidy,
                 submitted: !!submission,
-                
+
                 // Data priority: submission > approved subsidy > empty
                 hours: submission?.hours ?? approvedSubsidy?.hours ?? 0,
                 justification: submission?.justification ?? approvedSubsidy?.justification ?? "",
                 remarks: submission?.comments ?? "",
                 status: submission?.subsidy_status ?? null,
-                
+
                 // Template data
                 approved_hours: approvedSubsidy?.hours ?? null,
                 approved_justification: approvedSubsidy?.justification ?? null,
@@ -207,7 +194,7 @@ export async function GET(_request: Request, { params }: Params) {
         console.error("=== ERROR in GET ===");
         console.error("Error:", error);
         console.error("Stack:", error instanceof Error ? error.stack : "No stack trace");
-        return NextResponse.json({ 
+        return NextResponse.json({
             error: "Failed to load weekly commitment data",
             message: error instanceof Error ? error.message : String(error)
         }, { status: 500 });
@@ -228,11 +215,6 @@ export async function POST(request: Request, { params }: Params) {
 
         if (!ccaId) {
             return NextResponse.json({ error: ccaError || "CCA not found" }, { status: 404 });
-        }
-
-        const authResult = await authorizeChair(ccaId, supabase);
-        if (!authResult.authorized) {
-            return NextResponse.json({ error: authResult.message }, { status: authResult.status });
         }
 
         const body = await request.json();
@@ -273,9 +255,9 @@ export async function POST(request: Request, { params }: Params) {
             return NextResponse.json({ error: upsertError.message }, { status: 500 });
         }
 
-        return NextResponse.json({ 
-            success: true, 
-            message: `Saved ${declarations.length} member commitment(s)` 
+        return NextResponse.json({
+            success: true,
+            message: `Saved ${declarations.length} member commitment(s)`
         });
     } catch (error) {
         console.error("Error saving weekly commitments:", error);

@@ -15,6 +15,7 @@ import { PositionTypeBadge } from "@/components/badges/position-type-badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import { toast } from "sonner";
+import { getEditableWeekIds, HOLIDAY_WEEKS } from "@/lib/holiday-subsidy-weeks";
 
 type WeeklyRow = {
   id: number;
@@ -31,20 +32,15 @@ type WeeklyRow = {
   submitted: boolean;
 };
 
-const weekMeta = [
-  { id: 1, label: "Week 1", range: "4 Dec - 10 Dec" },
-  { id: 2, label: "Week 2", range: "11 Dec - 17 Dec" },
-  { id: 3, label: "Week 3", range: "18 Dec - 24 Dec" },
-  { id: 4, label: "Week 4", range: "25 Dec - 31 Dec" },
-  { id: 5, label: "Week 5", range: "1 Jan - 7 Jan" },
-  { id: 6, label: "Week 6", range: "8 Jan - 14 Jan" },
-];
-
 export default function WeeklyCommitmentPage() {
   const params = useParams();
   const ccaName = params?.ccaName as string || "";
-  
-  const [weekIndex, setWeekIndex] = useState(0);
+
+  const [editableWeekIds, setEditableWeekIds] = useState<number[]>(() => getEditableWeekIds(new Date()));
+  const [weekIndex, setWeekIndex] = useState(() => {
+    const initialIndex = HOLIDAY_WEEKS.findIndex((week) => editableWeekIds.includes(week.id));
+    return initialIndex >= 0 ? initialIndex : 0;
+  });
   const [rows, setRows] = useState<WeeklyRow[]>([]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [isSaving, setIsSaving] = useState(false);
@@ -52,8 +48,28 @@ export default function WeeklyCommitmentPage() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const weekInfo = weekMeta[weekIndex];
-  
+  const weekInfo = HOLIDAY_WEEKS[weekIndex];
+  const isWeekOpen = editableWeekIds.includes(weekInfo.id);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setEditableWeekIds(getEditableWeekIds(new Date()));
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    setWeekIndex((currentIndex) => {
+      if (editableWeekIds.includes(HOLIDAY_WEEKS[currentIndex]?.id)) {
+        return currentIndex;
+      }
+
+      const nextIndex = HOLIDAY_WEEKS.findIndex((week) => editableWeekIds.includes(week.id));
+      return nextIndex >= 0 ? nextIndex : currentIndex;
+    });
+  }, [editableWeekIds]);
+
   // Fetch data when component mounts or week changes
   useEffect(() => {
     const fetchData = async () => {
@@ -67,8 +83,16 @@ export default function WeeklyCommitmentPage() {
       setError(null);
 
       try {
+        if (!isWeekOpen) {
+          setRows([]);
+          setHasUnsavedChanges(false);
+          setSelected(new Set());
+          setIsLoading(false);
+          return;
+        }
+
         const response = await fetch(`/api/holidaySubsidy/weekly/${encodeURIComponent(ccaName)}/${weekInfo.id}`);
-        
+
         if (!response.ok) {
           const data = await response.json();
           throw new Error(data.error || "Failed to load data");
@@ -86,7 +110,7 @@ export default function WeeklyCommitmentPage() {
     };
 
     fetchData();
-  }, [ccaName, weekInfo.id]);
+  }, [ccaName, editableWeekIds, weekInfo.id]);
 
   // Warn user before leaving page with unsaved changes
   useEffect(() => {
@@ -147,6 +171,11 @@ export default function WeeklyCommitmentPage() {
   };
 
   const handleWeekChange = (newIndex: number) => {
+    if (!editableWeekIds.includes(HOLIDAY_WEEKS[newIndex]?.id)) {
+      toast.error("Weekly declarations are closed for this week.");
+      return;
+    }
+
     if (hasUnsavedChanges) {
       if (confirm("You have unsaved changes. Do you want to discard them?")) {
         setWeekIndex(newIndex);
@@ -205,7 +234,7 @@ export default function WeeklyCommitmentPage() {
               onMouseDown={(e) => e.stopPropagation()}
               onChange={(e) => handleChange(row.id, "hours", e.target.value === "" ? 0 : Number(e.target.value))}
               placeholder="0"
-              disabled={!row.has_approved_subsidy}
+              disabled={!row.has_approved_subsidy || !isWeekOpen}
             />
             <span className="text-xs text-muted-foreground">hrs</span>
           </div>
@@ -223,7 +252,7 @@ export default function WeeklyCommitmentPage() {
               onMouseDown={(e) => e.stopPropagation()}
               onChange={(e) => handleChange(row.id, "justification", e.target.value)}
               placeholder={row.has_approved_subsidy ? "Enter justification for hours worked..." : "No approved subsidy"}
-              disabled={!row.has_approved_subsidy}
+              disabled={!row.has_approved_subsidy || !isWeekOpen}
             />
           </div>
         ),
@@ -240,7 +269,7 @@ export default function WeeklyCommitmentPage() {
               onMouseDown={(e) => e.stopPropagation()}
               onChange={(e) => handleChange(row.id, "remarks", e.target.value)}
               placeholder={row.has_approved_subsidy ? "Add any additional remarks..." : "No approved subsidy"}
-              disabled={!row.has_approved_subsidy}
+              disabled={!row.has_approved_subsidy || !isWeekOpen}
             />
           </div>
         ),
@@ -291,9 +320,9 @@ export default function WeeklyCommitmentPage() {
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-2">
-            <Button 
-              variant="outline" 
-              size="lg" 
+            <Button
+              variant="outline"
+              size="lg"
               className="gap-2 w-full sm:w-auto"
               onClick={(e) => {
                 if (hasUnsavedChanges && !confirm("You have unsaved changes. Leave without saving?")) {
@@ -308,11 +337,11 @@ export default function WeeklyCommitmentPage() {
             </Button>
             <Button
               onClick={handleSave}
-              disabled={isSaving || !hasUnsavedChanges}
+              disabled={isSaving || !hasUnsavedChanges || !isWeekOpen}
               size="lg"
               className={`px-6 shadow-md font-semibold gap-2 disabled:opacity-50 w-full sm:w-auto ${
-                hasUnsavedChanges 
-                  ? "bg-orange-500 hover:bg-orange-600 text-white animate-pulse" 
+                hasUnsavedChanges
+                  ? "bg-orange-500 hover:bg-orange-600 text-white animate-pulse"
                   : "bg-green-600 hover:bg-green-700 text-white"
               }`}
             >
@@ -322,24 +351,35 @@ export default function WeeklyCommitmentPage() {
           </div>
         </div>
 
+        {!isWeekOpen && (
+          <Alert variant="destructive" className="flex items-center gap-3">
+            <AlertCircle className="h-5 w-5" />
+            <AlertDescription>
+              Weekly declarations are closed for {weekInfo.label}. You can only submit for the current
+              week or the previous week until Tuesday 23:59.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Week Selection Tabs */}
         <div className="space-y-3">
           <h2 className="text-lg font-semibold">Select Week</h2>
-          
+
           <Tabs
-            value={weekMeta[weekIndex].label}
+            value={HOLIDAY_WEEKS[weekIndex].label}
             onValueChange={(val) => {
-              const idx = weekMeta.findIndex((w) => w.label === val);
+              const idx = HOLIDAY_WEEKS.findIndex((w) => w.label === val);
               if (idx >= 0) handleWeekChange(idx);
             }}
           >
             <TabsList className="flex flex-wrap gap-2 bg-transparent p-1 border-0 h-auto">
-              {weekMeta.map((week, idx) => {
+              {HOLIDAY_WEEKS.map((week, idx) => {
                 const active = idx === weekIndex;
                 return (
                   <TabsTrigger
                     key={week.id}
                     value={week.label}
+                    disabled={!editableWeekIds.includes(week.id)}
                     className="flex flex-col items-start gap-1 px-4 py-3 rounded-lg border data-[state=inactive]:bg-background data-[state=inactive]:text-foreground data-[state=inactive]:border-border data-[state=inactive]:hover:border-primary/50 data-[state=inactive]:hover:bg-accent data-[state=active]:bg-primary/5 data-[state=active]:text-primary data-[state=active]:border-primary data-[state=active]:shadow-sm data-[state=active]:ring-2 data-[state=active]:ring-primary/20 transition-all"
                   >
                     <span className="text-sm font-semibold">{week.label}</span>
@@ -362,7 +402,7 @@ export default function WeeklyCommitmentPage() {
             <SelectionTable<WeeklyRow, number>
               data={rows}
               columns={columns}
-              selectionEnabled
+              selectionEnabled={isWeekOpen}
               selectedIds={selected}
               onSelectionChange={(id) => {
                 setSelected((prev) => {

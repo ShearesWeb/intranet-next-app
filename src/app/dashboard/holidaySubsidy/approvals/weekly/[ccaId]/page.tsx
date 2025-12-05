@@ -11,6 +11,7 @@ import { ArrowLeft, Check, X, Info, AlertCircle } from "lucide-react";
 import { PositionTypeBadge } from "@/components/badges/position-type-badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { HOLIDAY_WEEKS } from "@/lib/holiday-subsidy-weeks";
 
 type WeeklyRow = {
   id: string; // Composite ID: "user_id-position_id"
@@ -25,16 +26,6 @@ type WeeklyRow = {
   remarks: string;
   status: "pending" | "approved" | "rejected";
 };
-
-const weekMeta = [
-  { id: 1, label: "Week 1", range: "4 Dec - 10 Dec" },
-  { id: 2, label: "Week 2", range: "11 Dec - 17 Dec" },
-  { id: 3, label: "Week 3", range: "18 Dec - 24 Dec" },
-  { id: 4, label: "Week 4", range: "25 Dec - 31 Dec" },
-  { id: 5, label: "Week 5", range: "1 Jan - 7 Jan" },
-  { id: 6, label: "Week 6", range: "8 Jan - 14 Jan" },
-];
-
 
 export default function WeeklyCommitmentApprovalPage() {
   const params = useParams();
@@ -78,7 +69,7 @@ export default function WeeklyCommitmentApprovalPage() {
     };
   }, [ccaId]);
 
-  const weekInfo = weekMeta[weekIndex];
+  const weekInfo = HOLIDAY_WEEKS[weekIndex];
 
   // Fetch weekly submissions data
   useEffect(() => {
@@ -328,9 +319,9 @@ export default function WeeklyCommitmentApprovalPage() {
           <h2 className="text-lg font-semibold">Select Week</h2>
           
           <Tabs
-            value={weekMeta[weekIndex].label}
+            value={HOLIDAY_WEEKS[weekIndex].label}
             onValueChange={(val) => {
-              const idx = weekMeta.findIndex((w) => w.label === val);
+              const idx = HOLIDAY_WEEKS.findIndex((w) => w.label === val);
               if (idx >= 0) {
                 setWeekIndex(idx);
                 setSelected(new Set());
@@ -338,7 +329,7 @@ export default function WeeklyCommitmentApprovalPage() {
             }}
           >
             <TabsList className="flex flex-wrap gap-2 bg-transparent p-1 border-0 h-auto">
-              {weekMeta.map((week, idx) => {
+              {HOLIDAY_WEEKS.map((week, idx) => {
                 const active = idx === weekIndex;
                 return (
                   <TabsTrigger
