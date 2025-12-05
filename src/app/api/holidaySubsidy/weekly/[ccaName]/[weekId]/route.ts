@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
+import { getWeekLabel, isWeekEditable } from "@/lib/holiday-subsidy-weeks";
 
 type Params = {
     params: Promise<{
@@ -55,6 +56,20 @@ export async function GET(_request: Request, { params }: Params) {
 
         if (isNaN(weekIdNum)) {
             return NextResponse.json({ error: "Invalid week ID" }, { status: 400 });
+        }
+
+        if (!isWeekEditable(weekIdNum)) {
+            return NextResponse.json(
+                { error: `Weekly declarations are closed for ${getWeekLabel(weekIdNum) || "this week"}.` },
+                { status: 403 }
+            );
+        }
+
+        if (!isWeekEditable(weekIdNum)) {
+            return NextResponse.json(
+                { error: `Weekly declarations are closed for ${getWeekLabel(weekIdNum) || "this week"}.` },
+                { status: 403 }
+            );
         }
 
         const { ccaId, error: ccaError } = await resolveCCAId(ccaName, supabase);
