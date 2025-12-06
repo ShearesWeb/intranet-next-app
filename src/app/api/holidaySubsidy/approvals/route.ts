@@ -111,6 +111,44 @@ async function fetchPendingWeeklyCommitments(
     return map;
 }
 
+async function fetchCcasWithAnySubsidy(supabase: Awaited<ReturnType<typeof createClient>>): Promise<ApprovalRow[]> {
+    const { data, error } = await supabase
+        .from("subsidies")
+        .select(
+            `cca_positions!inner (
+                cca_id,
+                ccas!inner (
+                    id,
+                    name
+                )
+            )`
+        );
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    const map = new Map<number, ApprovalRow>();
+
+    (data as SubsidyWithCCA[] | null | undefined)?.forEach((row) => {
+        const ccaId = row.cca_positions?.ccas?.id ?? row.cca_positions?.cca_id;
+        const ccaName = row.cca_positions?.ccas?.name;
+
+        if (!ccaId || !ccaName) return;
+
+        if (!map.has(ccaId)) {
+            map.set(ccaId, {
+                id: ccaId,
+                name: ccaName,
+                pendingDeclarations: 0,
+                pendingWeekly: 0,
+            });
+        }
+    });
+
+    return Array.from(map.values());
+}
+
 export async function GET() {
     try {
         const user = await fetchUserInfo();
@@ -120,22 +158,38 @@ export async function GET() {
         }
 
         const supabase = await createClient();
-        
-        // Fetch both pending declarations and weekly commitments
-        const declarations = await fetchSubsidies(supabase);
-        const weeklyMap = await fetchPendingWeeklyCommitments(supabase);
 
-        // Merge the data
+        const [subsidyCcas, declarations, weeklyMap] = await Promise.all([
+            fetchCcasWithAnySubsidy(supabase),
+            fetchSubsidies(supabase),
+            fetchPendingWeeklyCommitments(supabase),
+        ]);
+
         const ccaMap = new Map<number, ApprovalRow>();
+
+        // Seed CCAs that have any subsidy entry (any status)
+        subsidyCcas.forEach((cca) => {
+            ccaMap.set(cca.id, {
+                id: cca.id,
+                name: cca.name,
+                pendingDeclarations: 0,
+                pendingWeekly: 0,
+            });
+        });
 
         // Add declarations
         declarations.forEach((decl) => {
-            ccaMap.set(decl.id, {
-                id: decl.id,
-                name: decl.name,
-                pendingDeclarations: decl.pendingDeclarations,
-                pendingWeekly: 0,
-            });
+            const existing = ccaMap.get(decl.id);
+            if (existing) {
+                existing.pendingDeclarations = decl.pendingDeclarations;
+            } else {
+                ccaMap.set(decl.id, {
+                    id: decl.id,
+                    name: decl.name,
+                    pendingDeclarations: decl.pendingDeclarations,
+                    pendingWeekly: 0,
+                });
+            }
         });
 
         // Add weekly commitments
@@ -143,13 +197,6 @@ export async function GET() {
             const existing = ccaMap.get(ccaId);
             if (existing) {
                 existing.pendingWeekly = weekly.count;
-            } else {
-                ccaMap.set(ccaId, {
-                    id: weekly.id,
-                    name: weekly.name,
-                    pendingDeclarations: 0,
-                    pendingWeekly: weekly.count,
-                });
             }
         });
 

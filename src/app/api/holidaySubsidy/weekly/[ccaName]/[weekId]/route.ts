@@ -55,10 +55,23 @@ export async function GET(_request: Request, { params }: Params) {
             return NextResponse.json({ error: ccaError || "CCA not found" }, { status: 404 });
         }
 
-        // Get all appointments (user-position links) for this CCA
+        // Get all appointments with position and user details in one query
         const { data: appointments, error: appointmentsError } = await supabase
             .from("cca_appointments")
-            .select("user_id, position_id")
+            .select(`
+                user_id,
+                position_id,
+                cca_positions (
+                    id,
+                    position_type,
+                    name
+                ),
+                public_user_info (
+                    id,
+                    name,
+                    email
+                )
+            `)
             .eq("cca_id", ccaId);
 
         if (appointmentsError) {
@@ -69,41 +82,11 @@ export async function GET(_request: Request, { params }: Params) {
             }, { status: 500 });
         }
 
-        // Get position and user details in parallel for better performance
-        const positionIds = appointments?.map((a) => a.position_id) || [];
-        const userIds = appointments?.map((a) => a.user_id) || [];
-
-        const [positionsResult, usersResult] = await Promise.all([
-            supabase
-                .from("cca_positions")
-                .select("id, position_type, name")
-                .in("id", positionIds),
-            supabase
-                .from("public_user_info")
-                .select("id, name, email")
-                .in("id", userIds),
-        ]);
-
-        if (positionsResult.error) {
-            return NextResponse.json({ error: positionsResult.error.message }, { status: 500 });
-        }
-
-        if (usersResult.error) {
-            return NextResponse.json({ error: usersResult.error.message }, { status: 500 });
-        }
-
-        const positions = positionsResult.data;
-        const users = usersResult.data;
-
-        // Create lookup maps
-        const positionMap = new Map(positions?.map((p) => [p.id, p]) || []);
-        const userMap = new Map(users?.map((u) => [u.id, u]) || []);
-
-        // Combine appointments with position and user data
-        // Show all appointments, even if user details are missing
-        const members = appointments?.map((appointment) => {
-            const position = positionMap.get(appointment.position_id);
-            const user = userMap.get(appointment.user_id);
+        // Map the joined data to the expected structure
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const members = appointments?.map((appointment: any) => {
+            const position = appointment.cca_positions;
+            const user = appointment.public_user_info;
 
             return {
                 id: appointment.user_id,
@@ -145,6 +128,7 @@ export async function GET(_request: Request, { params }: Params) {
 
         const subsidies = subsidiesResult.data;
         const userSubmissions = submissionsResult.data;
+        const approvedPositionIds = new Set(subsidies?.map((s) => s.position_id) || []);
 
         // Build response with pre-fill logic
         const subsidyMap = new Map(subsidies?.map((s) => [s.position_id, s]) || []);
@@ -153,34 +137,38 @@ export async function GET(_request: Request, { params }: Params) {
         );
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const membersData = members?.map((member: any) => {
-            const approvedSubsidy = subsidyMap.get(member.position_id);
-            const submission = submissionMap.get(`${member.user_id}-${member.position_id}`);
+        const membersData = members
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ?.map((member: any) => {
+                const approvedSubsidy = subsidyMap.get(member.position_id);
+                const submission = submissionMap.get(`${member.user_id}-${member.position_id}`);
 
-            return {
-                id: member.user_id,
-                user_id: member.user_id,
-                position_id: member.position_id,
-                name: member.user_name || "Unknown",
-                email: member.user_email || "",
-                role: member.position_name || "Member",
-                type: member.position_type || "",
+                return {
+                    id: member.user_id,
+                    user_id: member.user_id,
+                    position_id: member.position_id,
+                    name: member.user_name || "Unknown",
+                    email: member.user_email || "",
+                    role: member.position_name || "Member",
+                    type: member.position_type || "",
 
-                // Flags
-                has_approved_subsidy: !!approvedSubsidy,
-                submitted: !!submission,
+                    // Flags
+                    has_approved_subsidy: !!approvedSubsidy,
+                    submitted: !!submission,
 
-                // Data priority: submission > approved subsidy > empty
-                hours: submission?.hours ?? approvedSubsidy?.hours ?? 0,
-                justification: submission?.justification ?? approvedSubsidy?.justification ?? "",
-                remarks: submission?.comments ?? "",
-                status: submission?.subsidy_status ?? null,
+                    // Data priority: submission > approved subsidy > empty
+                    hours: submission?.hours ?? approvedSubsidy?.hours ?? 0,
+                    justification: submission?.justification ?? approvedSubsidy?.justification ?? "",
+                    remarks: submission?.comments ?? "",
+                    status: submission?.subsidy_status ?? null,
 
-                // Template data
-                approved_hours: approvedSubsidy?.hours ?? null,
-                approved_justification: approvedSubsidy?.justification ?? null,
-            };
-        }) || [];
+                    // Template data
+                    approved_hours: approvedSubsidy?.hours ?? null,
+                    approved_justification: approvedSubsidy?.justification ?? null,
+                };
+            })
+            // Only include members with an approved subsidy for the week
+            .filter((member) => approvedPositionIds.has(member.position_id)) || [];
 
         return NextResponse.json(
             { members: membersData },
@@ -218,10 +206,14 @@ export async function POST(request: Request, { params }: Params) {
         }
 
         const body = await request.json();
-        const { declarations } = body;
+        const { declarations, deletions } = body;
 
-        if (!Array.isArray(declarations) || declarations.length === 0) {
-            return NextResponse.json({ error: "No declarations provided" }, { status: 400 });
+        if (!Array.isArray(declarations) || !Array.isArray(deletions)) {
+            return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
+        }
+
+        if (declarations.length === 0 && deletions.length === 0) {
+            return NextResponse.json({ error: "No changes provided" }, { status: 400 });
         }
 
         // Validate all declarations before inserting
@@ -229,6 +221,16 @@ export async function POST(request: Request, { params }: Params) {
             if (!decl.user_id || !decl.position_id || decl.hours === undefined) {
                 return NextResponse.json(
                     { error: "Each declaration must have user_id, position_id, and hours" },
+                    { status: 400 }
+                );
+            }
+        }
+
+        // Validate deletions
+        for (const del of deletions) {
+            if (!del.user_id || !del.position_id) {
+                return NextResponse.json(
+                    { error: "Each deletion must have user_id and position_id" },
                     { status: 400 }
                 );
             }
@@ -245,23 +247,89 @@ export async function POST(request: Request, { params }: Params) {
             subsidy_status: "pending",
         }));
 
-        const { error: upsertError } = await supabase
-            .from("user_subsidies")
-            .upsert(upsertData, {
-                onConflict: "user_id,position_id,week_id",
-            });
+        const { data: appointments, error: appointmentsError } = await supabase
+            .from("cca_appointments")
+            .select("user_id, position_id")
+            .eq("cca_id", ccaId);
 
-        if (upsertError) {
-            return NextResponse.json({ error: upsertError.message }, { status: 500 });
+        if (appointmentsError) {
+            console.error("Appointments error:", appointmentsError);
+            return NextResponse.json({ error: "Failed to validate members for this CCA" }, { status: 500 });
         }
 
-        return NextResponse.json({
-            success: true,
-            message: `Saved ${declarations.length} member commitment(s)`
-        });
+        const validPairs = new Set(
+            (appointments || []).map((appt) => `${appt.user_id}-${appt.position_id}`)
+        );
+
+        const invalidDeclarations = upsertData.filter(
+            (decl) => !validPairs.has(`${decl.user_id}-${decl.position_id}`)
+        );
+        const invalidDeletions = deletions.filter(
+            (del: { user_id: number; position_id: number }) =>
+                !validPairs.has(`${del.user_id}-${del.position_id}`)
+        );
+
+        if (invalidDeclarations.length > 0 || invalidDeletions.length > 0) {
+            return NextResponse.json(
+                { error: "One or more selections are invalid for this CCA" },
+                { status: 400 }
+            );
+        }
+
+        const operations: PromiseLike<unknown>[] = [];
+
+        if (upsertData.length > 0) {
+            operations.push(
+                supabase
+                    .from("user_subsidies")
+                    .upsert(upsertData, {
+                        onConflict: "user_id,position_id,week_id",
+                    })
+                    .then(({ error }) => {
+                        if (error) throw error;
+                    })
+            );
+        }
+
+        if (deletions.length > 0) {
+            const deletionConditions = deletions
+                .map(
+                    (del) =>
+                        `and(user_id.eq.${del.user_id},position_id.eq.${del.position_id})`
+                )
+                .join(",");
+
+            operations.push(
+                supabase
+                    .from("user_subsidies")
+                    .delete()
+                    .eq("week_id", weekIdNum)
+                    .or(deletionConditions)
+                    .then(({ error }) => {
+                        if (error) throw error;
+                    })
+            );
+        }
+
+        try {
+            await Promise.all(operations);
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : "Failed to save changes";
+            return NextResponse.json({ error: errorMessage }, { status: 500 });
+        }
+
+        const savedCount = upsertData.length;
+        const deletedCount = deletions.length;
+
+        return NextResponse.json(
+            {
+                success: true,
+                message: `Saved ${savedCount} member commitment(s)${deletedCount ? `, deleted ${deletedCount}` : ""}`,
+            },
+            { status: 200 }
+        );
     } catch (error) {
         console.error("Error saving weekly commitments:", error);
         return NextResponse.json({ error: "Failed to save weekly commitments" }, { status: 500 });
     }
 }
-

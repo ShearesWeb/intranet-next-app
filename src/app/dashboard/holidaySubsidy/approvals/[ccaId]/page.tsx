@@ -364,8 +364,8 @@ export default function HolidaySubsidyApprovalDetailsPage() {
                         </p>
                     </div>
                     <div className="flex gap-2 flex-wrap">
-                        <Button 
-                            variant="outline" 
+                        <Button
+                            variant="outline"
                             onClick={(e) => {
                                 if (hasChanges && !confirm("You have unsaved changes. Leave without saving?")) {
                                     e.preventDefault();
@@ -376,10 +376,10 @@ export default function HolidaySubsidyApprovalDetailsPage() {
                         >
                             ← Back to approvals
                         </Button>
-                        <Button 
-                            onClick={handleSave} 
+                        <Button
+                            onClick={handleSave}
                             disabled={!hasChanges || saving}
-                            className={hasChanges ? "bg-orange-500 hover:bg-orange-600 animate-pulse" : ""}
+                            className="px-6 shadow-md font-semibold gap-2 disabled:opacity-50 w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white"
                         >
                             {saving ? "Saving..." : hasChanges ? "Save all changes" : "No changes"}
                         </Button>

@@ -137,8 +137,7 @@ export default function HolidaySubsidyApprovalsPage() {
                 <div className="space-y-1">
                     <h1 className="text-2xl font-bold">Holiday Subsidy Approvals</h1>
                     <p className="text-muted-foreground text-sm">
-                        Review CCAs that have submitted subsidy declarations or weekly commitments and proceed to approve
-                        them.
+                        Review all CCAs and see how many subsidy declarations or weekly commitments are pending approval.
                     </p>
                 </div>
 
@@ -153,7 +152,7 @@ export default function HolidaySubsidyApprovalsPage() {
                         searchColumn="name"
                         searchPlaceholder="Search CCA..."
                         pageSize={10}
-                        emptyMessage="No CCAs with pending subsidy / weekly declarations."
+                        emptyMessage="No CCAs available."
                         tableContainerClassName="rounded-lg border bg-card/40 overflow-hidden"
                         tableClassName="min-w-full [&_th]:px-5 [&_td]:px-5"
                     />

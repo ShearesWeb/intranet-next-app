@@ -82,29 +82,35 @@ export async function GET(_request: Request, { params }: Params) {
             return NextResponse.json({ error: authResult.message }, { status: authResult.status });
         }
 
-        const { data: positions, error: positionError } = await supabase
+        const { data: positionsWithSubsidies, error: positionError } = await supabase
             .from("cca_positions")
-            .select("id, name, position_type, cca_id")
+            .select(`
+                id,
+                name,
+                position_type,
+                cca_id,
+                subsidies (
+                    id,
+                    position_id,
+                    week_id,
+                    hours,
+                    justification,
+                    subsidy_status
+                )
+            `)
             .eq("cca_id", ccaId);
 
         if (positionError) {
             return NextResponse.json({ error: positionError.message }, { status: 500 });
         }
 
-        const { data: subsidies, error: subsidyError } = await supabase
-            .from("subsidies")
-            .select(
-                `id, position_id, week_id, hours, justification, subsidy_status,
-                cca_positions!inner (id, name, position_type, cca_id)
-            `
-            )
-            .eq("cca_positions.cca_id", ccaId);
+        // Flatten subsidies and clean up positions to match previous response structure
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const subsidies = positionsWithSubsidies?.flatMap((p: any) => p.subsidies || []) || [];
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const positions = positionsWithSubsidies?.map(({ subsidies, ...rest }) => rest) || [];
 
-        if (subsidyError) {
-            return NextResponse.json({ error: subsidyError.message }, { status: 500 });
-        }
-
-        return NextResponse.json({ positions: positions || [], subsidies: subsidies || [] });
+        return NextResponse.json({ positions, subsidies });
     } catch (error) {
         console.error("Error fetching subsidy declarations:", error);
         return NextResponse.json({ error: "Failed to load subsidy declarations" }, { status: 500 });

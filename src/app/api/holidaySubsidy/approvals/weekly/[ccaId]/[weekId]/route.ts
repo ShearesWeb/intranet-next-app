@@ -48,31 +48,30 @@ export async function GET(_request: Request, { params }: Params) {
         //     return NextResponse.json({ error: authResult.message }, { status: authResult.status });
         // }
 
-        // Fetch all user_subsidies for this CCA and week
-        // We need to join with cca_appointments to filter by CCA
-        const { data: appointments, error: appointmentsError } = await supabase
-            .from("cca_appointments")
-            .select("user_id, position_id")
-            .eq("cca_id", ccaIdNum);
-
-        if (appointmentsError) {
-            console.error("Appointments error:", appointmentsError);
-            return NextResponse.json({ error: appointmentsError.message }, { status: 500 });
-        }
-
-        if (!appointments || appointments.length === 0) {
-            return NextResponse.json({ submissions: [] });
-        }
-
-        // Get user_subsidies for these appointments and this week
-        const userIds = appointments.map((a) => a.user_id);
-        const positionIds = appointments.map((a) => a.position_id);
-
+        // Fetch all user_subsidies for this CCA and week with details
+        // Use inner join on cca_positions to filter by CCA ID
         const { data: submissions, error: submissionsError } = await supabase
             .from("user_subsidies")
-            .select("user_id, position_id, hours, justification, comments, subsidy_status")
-            .in("user_id", userIds)
-            .in("position_id", positionIds)
+            .select(`
+                user_id,
+                position_id,
+                hours,
+                justification,
+                comments,
+                subsidy_status,
+                cca_positions!inner (
+                    id,
+                    name,
+                    position_type,
+                    cca_id
+                ),
+                public_user_info (
+                    id,
+                    name,
+                    email
+                )
+            `)
+            .eq("cca_positions.cca_id", ccaIdNum)
             .eq("week_id", weekIdNum);
 
         if (submissionsError) {
@@ -80,39 +79,10 @@ export async function GET(_request: Request, { params }: Params) {
             return NextResponse.json({ error: submissionsError.message }, { status: 500 });
         }
 
-        // Fetch user and position details in parallel for better performance
-        const [usersResult, positionsResult] = await Promise.all([
-            supabase
-                .from("public_user_info")
-                .select("id, name, email")
-                .in("id", userIds),
-            supabase
-                .from("cca_positions")
-                .select("id, name, position_type")
-                .in("id", positionIds),
-        ]);
-
-        if (usersResult.error) {
-            console.error("Users error:", usersResult.error);
-            return NextResponse.json({ error: usersResult.error.message }, { status: 500 });
-        }
-
-        if (positionsResult.error) {
-            console.error("Positions error:", positionsResult.error);
-            return NextResponse.json({ error: positionsResult.error.message }, { status: 500 });
-        }
-
-        const users = usersResult.data;
-        const positions = positionsResult.data;
-
-        // Create lookup maps
-        const userMap = new Map(users?.map((u) => [u.id, u]) || []);
-        const positionMap = new Map(positions?.map((p) => [p.id, p]) || []);
-
-        // Combine data
-        const submissionsData = submissions?.map((sub) => {
-            const user = userMap.get(sub.user_id);
-            const position = positionMap.get(sub.position_id);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const submissionsData = submissions?.map((sub: any) => {
+            const user = sub.public_user_info;
+            const position = sub.cca_positions;
 
             return {
                 id: `${sub.user_id}-${sub.position_id}`, // Composite ID for table
@@ -173,15 +143,34 @@ export async function PATCH(request: Request, { params }: Params) {
             return NextResponse.json({ error: "No updates provided" }, { status: 400 });
         }
 
-        // Update each user_subsidy status
-        const updatePromises = updates.map(({ user_id, position_id, status }) =>
-            supabase
-                .from("user_subsidies")
-                .update({ subsidy_status: status })
-                .eq("user_id", user_id)
-                .eq("position_id", position_id)
-                .eq("week_id", weekIdNum)
-        );
+        // Group updates by status to batch them
+        const updatesByStatus = updates.reduce((acc, update) => {
+            if (!acc[update.status]) acc[update.status] = [];
+            acc[update.status].push(update);
+            return acc;
+        }, {} as Record<string, typeof updates>);
+
+        const updatePromises = [];
+
+        for (const [status, statusUpdates] of Object.entries(updatesByStatus)) {
+            // Batch updates to avoid URL length limits
+            const BATCH_SIZE = 20;
+            for (let i = 0; i < statusUpdates.length; i += BATCH_SIZE) {
+                const batch = statusUpdates.slice(i, i + BATCH_SIZE);
+                // Construct OR filter: and(user_id.eq.1,position_id.eq.2),and(user_id.eq.3,position_id.eq.4)
+                const orFilter = batch
+                    .map(u => `and(user_id.eq.${u.user_id},position_id.eq.${u.position_id})`)
+                    .join(',');
+
+                updatePromises.push(
+                    supabase
+                        .from("user_subsidies")
+                        .update({ subsidy_status: status })
+                        .eq("week_id", weekIdNum)
+                        .or(orFilter)
+                );
+            }
+        }
 
         const results = await Promise.all(updatePromises);
 

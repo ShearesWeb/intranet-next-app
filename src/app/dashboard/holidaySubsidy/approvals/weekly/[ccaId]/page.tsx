@@ -31,7 +31,7 @@ export default function WeeklyCommitmentApprovalPage() {
   const params = useParams();
   const ccaIdParam = params?.ccaId;
   const ccaId = typeof ccaIdParam === "string" ? ccaIdParam : "";
-  
+
   const [weekIndex, setWeekIndex] = useState(0);
   const [rows, setRows] = useState<WeeklyRow[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -45,7 +45,7 @@ export default function WeeklyCommitmentApprovalPage() {
     if (!ccaId) return;
 
     let isMounted = true;
-    
+
     fetch(`/api/holidaySubsidy/approvals/${ccaId}`)
       .then(async (res) => {
         const data = await res.json();
@@ -85,7 +85,7 @@ export default function WeeklyCommitmentApprovalPage() {
 
       try {
         const response = await fetch(`/api/holidaySubsidy/approvals/weekly/${ccaId}/${weekInfo.id}`);
-        
+
         if (!response.ok) {
           const data = await response.json();
           throw new Error(data.error || "Failed to load data");
@@ -263,11 +263,11 @@ export default function WeeklyCommitmentApprovalPage() {
         header: "Status",
         cell: (value) => {
           const status = String(value);
-          const colorClass = 
+          const colorClass =
             status === "approved" ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" :
-            status === "rejected" ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" :
-            "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
-          
+              status === "rejected" ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" :
+                "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
+
           return (
             <div className="min-w-[75px]">
               <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${colorClass}`}>
@@ -316,8 +316,6 @@ export default function WeeklyCommitmentApprovalPage() {
 
         {/* Week Selection Tabs */}
         <div className="space-y-3">
-          <h2 className="text-lg font-semibold">Select Week</h2>
-          
           <Tabs
             value={HOLIDAY_WEEKS[weekIndex].label}
             onValueChange={(val) => {

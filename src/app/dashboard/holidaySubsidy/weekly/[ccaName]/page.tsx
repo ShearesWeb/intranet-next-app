@@ -43,6 +43,7 @@ export default function WeeklyCommitmentPage() {
   });
   const [rows, setRows] = useState<WeeklyRow[]>([]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [dirtyRows, setDirtyRows] = useState<Set<number>>(new Set());
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -87,6 +88,7 @@ export default function WeeklyCommitmentPage() {
           setRows([]);
           setHasUnsavedChanges(false);
           setSelected(new Set());
+          setDirtyRows(new Set());
           setIsLoading(false);
           return;
         }
@@ -99,7 +101,10 @@ export default function WeeklyCommitmentPage() {
         }
 
         const data = await response.json();
-        setRows(data.members || []);
+        const fetchedRows: WeeklyRow[] = data.members || [];
+        setRows(fetchedRows);
+        setSelected(new Set(fetchedRows.filter((member) => member.submitted).map((member) => member.id)));
+        setDirtyRows(new Set());
         setHasUnsavedChanges(false);
       } catch (err) {
         console.error("Error fetching weekly data:", err);
@@ -128,8 +133,29 @@ export default function WeeklyCommitmentPage() {
 
   const handleChange = useCallback((id: number, key: keyof WeeklyRow, value: string | number) => {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, [key]: value } : r)));
-    setHasUnsavedChanges(true);
+    setDirtyRows((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
   }, []);
+
+  const { canSave, hasPendingChanges } = useMemo(() => {
+    const selectedDirtyOrNew = rows.some(
+      (row) => selected.has(row.id) && (dirtyRows.has(row.id) || !row.submitted)
+    );
+    const deselectedSubmitted = rows.some((row) => !selected.has(row.id) && row.submitted);
+    const anyDirty = rows.some((row) => dirtyRows.has(row.id));
+
+    return {
+      canSave: selectedDirtyOrNew || deselectedSubmitted,
+      hasPendingChanges: selectedDirtyOrNew || anyDirty || deselectedSubmitted,
+    };
+  }, [rows, selected, dirtyRows]);
+
+  useEffect(() => {
+    setHasUnsavedChanges(hasPendingChanges);
+  }, [hasPendingChanges]);
 
   const handleSave = async () => {
     if (!ccaName) {
@@ -137,21 +163,35 @@ export default function WeeklyCommitmentPage() {
       return;
     }
 
+    const selectedDirtyRows = rows.filter(
+      (row) => selected.has(row.id) && (dirtyRows.has(row.id) || !row.submitted)
+    );
+    const deselectedSubmittedRows = rows.filter((row) => !selected.has(row.id) && row.submitted);
+
+    if (selectedDirtyRows.length === 0 && deselectedSubmittedRows.length === 0) {
+      toast.error("No changes to save. Select members or update their details.");
+      return;
+    }
+
     setIsSaving(true);
     try {
       // Prepare declarations data
-      const declarations = rows.map((row) => ({
+      const declarations = selectedDirtyRows.map((row) => ({
         user_id: row.user_id,
         position_id: row.position_id,
         hours: row.hours,
         justification: row.justification,
         remarks: row.remarks,
       }));
+      const deletions = deselectedSubmittedRows.map((row) => ({
+        user_id: row.user_id,
+        position_id: row.position_id,
+      }));
 
       const response = await fetch(`/api/holidaySubsidy/weekly/${encodeURIComponent(ccaName)}/${weekInfo.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ declarations }),
+        body: JSON.stringify({ declarations, deletions }),
       });
 
       if (!response.ok) {
@@ -161,7 +201,33 @@ export default function WeeklyCommitmentPage() {
 
       const data = await response.json();
       toast.success(data.message || "Changes saved successfully!");
-      setHasUnsavedChanges(false);
+      const updatedRows = rows.map((row) => {
+        const wasSaved = selectedDirtyRows.some(
+          (saved) => saved.user_id === row.user_id && saved.position_id === row.position_id
+        );
+        const wasDeleted = deselectedSubmittedRows.some(
+          (del) => del.user_id === row.user_id && del.position_id === row.position_id
+        );
+
+        if (wasDeleted) {
+          return { ...row, submitted: false, status: null };
+        }
+
+        if (wasSaved) {
+          return { ...row, submitted: true };
+        }
+
+        return row;
+      });
+      setRows(updatedRows);
+
+      const remainingDirtyRows = (() => {
+        const next = new Set(dirtyRows);
+        selectedDirtyRows.forEach((row) => next.delete(row.id));
+        return next;
+      })();
+      setDirtyRows(remainingDirtyRows);
+      setHasUnsavedChanges(remainingDirtyRows.size > 0);
     } catch (err) {
       console.error("Error saving:", err);
       toast.error(err instanceof Error ? err.message : "Failed to save changes. Please try again.");
@@ -181,10 +247,12 @@ export default function WeeklyCommitmentPage() {
         setWeekIndex(newIndex);
         setHasUnsavedChanges(false);
         setSelected(new Set());
+        setDirtyRows(new Set());
       }
     } else {
       setWeekIndex(newIndex);
       setSelected(new Set());
+      setDirtyRows(new Set());
     }
   };
 
@@ -337,13 +405,9 @@ export default function WeeklyCommitmentPage() {
             </Button>
             <Button
               onClick={handleSave}
-              disabled={isSaving || !hasUnsavedChanges || !isWeekOpen}
+              disabled={isSaving || !isWeekOpen || !canSave}
               size="lg"
-              className={`px-6 shadow-md font-semibold gap-2 disabled:opacity-50 w-full sm:w-auto ${
-                hasUnsavedChanges
-                  ? "bg-orange-500 hover:bg-orange-600 text-white animate-pulse"
-                  : "bg-green-600 hover:bg-green-700 text-white"
-              }`}
+              className="px-6 shadow-md font-semibold gap-2 disabled:opacity-50 w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white"
             >
               <Save className="h-4 w-4" />
               {isSaving ? "Saving..." : "Save Changes"}
@@ -363,8 +427,6 @@ export default function WeeklyCommitmentPage() {
 
         {/* Week Selection Tabs */}
         <div className="space-y-3">
-          <h2 className="text-lg font-semibold">Select Week</h2>
-
           <Tabs
             value={HOLIDAY_WEEKS[weekIndex].label}
             onValueChange={(val) => {
@@ -414,12 +476,13 @@ export default function WeeklyCommitmentPage() {
                   }
                   return next;
                 });
+                setHasUnsavedChanges(true);
               }}
               idField="id"
               searchColumn="name"
               searchPlaceholder="Search members by name..."
               pageSize={10}
-              emptyMessage="No members found for this week."
+              emptyMessage="No members with approved subsidies for this week."
               tableContainerClassName="border-muted"
             />
           </CardContent>

@@ -19,8 +19,8 @@ function addDays(date: Date, days: number) {
 }
 
 const HOLIDAY_WEEK_DEFS = [
-    { id: 0, label: "Week 0", range: "1 Dec - 8 Dec", start: sgDate("2025-12-01") },
-    { id: 1, label: "Week 1", range: "8 Dec - 14 Dec", start: sgDate("2025-12-01") },
+    { id: 6, label: "Week (Testing)", range: "1 Dec - 8 Dec", start: sgDate("2025-12-01") },
+    { id: 1, label: "Week 1", range: "8 Dec - 14 Dec", start: sgDate("2025-12-08") },
     { id: 2, label: "Week 2", range: "15 Dec - 21 Dec", start: sgDate("2025-12-15") },
     { id: 3, label: "Week 3", range: "22 Dec - 28 Dec", start: sgDate("2025-12-22") },
     { id: 4, label: "Week 4", range: "29 Dec - 4 Jan", start: sgDate("2025-12-29") },
