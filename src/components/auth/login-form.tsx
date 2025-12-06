@@ -5,6 +5,7 @@ import {
     Card,
     CardContent
 } from "@/components/ui/card"
+import { useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
@@ -13,6 +14,16 @@ export function LoginForm() {
     const { signIn } = useAuth();
     const searchParams = useSearchParams();
     const next = searchParams.get("next") || undefined;
+    const reason = searchParams.get("reason");
+
+    useEffect(() => {
+        if (!reason) return;
+        const message =
+            reason === "user_not_found"
+                ? "Your account isn't registered in the intranet. Please use your correct email or contact an admin."
+                : "There was an error signing you in. Please try again.";
+        toast.error(message);
+    }, [reason]);
 
     const handleSignIn = async () => {
         try {

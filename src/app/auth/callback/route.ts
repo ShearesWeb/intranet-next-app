@@ -21,11 +21,12 @@ export async function GET(request: Request) {
         const userItem = await fetchUserInfo(true);
         if (!userItem) {
             await supabase.auth.signOut();
-            return NextResponse.redirect(`${origin}/auth/auth-error?reason=user_not_found`);
+            return NextResponse.redirect(`${origin}/auth/login?reason=user_not_found`);
         }
     } catch (error) {
         console.error("Error fetching user info:", error);
-        return NextResponse.redirect(`${origin}/auth/auth-error?reason=user_not_found`);
+        await supabase.auth.signOut();
+        return NextResponse.redirect(`${origin}/auth/login?reason=user_not_found`);
     }
 
     // Redirect to the intended path or fallback to homepage

@@ -25,9 +25,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 	const [session, setSession] = useState<Session | null>(null);
 	const [loading, setLoading] = useState(true);
 
-        const fetchUserFromBackend = async (): Promise<User | null> => {
+        const fetchUserFromBackend = async (expectedEmail?: string): Promise<User | null> => {
                 const cached = getFreshUserFromCookie();
-                if (cached) return cached;
+                if (cached && (!expectedEmail || cached.email === expectedEmail)) {
+                        return cached;
+                }
+
+                // Clear stale cache if it does not belong to the current session user
+                if (cached && expectedEmail && cached.email !== expectedEmail) {
+                        clearClientUserCache();
+                }
 
                 try {
                         const res = await fetch("/api/user", { cache: "no-store" });
@@ -77,9 +84,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                                 }
                                 return;
                         }
-                        const fetchedUser = await fetchUserFromBackend();
 
-                        if (!fetchedUser) {
+                        const sessionEmail = session.user.email;
+                        const fetchedUser = await fetchUserFromBackend(sessionEmail);
+
+                        if (!fetchedUser || fetchedUser.email !== sessionEmail) {
                                 toast.error("Please login with your Intranet gmail instead.");
 				router.push("/auth/auth-error?reason=user_not_found");
 				return;
