@@ -46,7 +46,7 @@ const faq: FaqItem[] = [
     {
         id: "faq-3",
         question: "Can I increase a member's actual weekly hours later?",
-        answer: "No. You can only reduce hours based on attendance or performance. Increases are not allowed without JCRC intervention.",
+        answer: "Yes, it is allowed, but do not expect the holiday subsidy to be approved. JCRC may reject it if the increase is unreasonable.",
     },
     {
         id: "faq-4",
@@ -192,6 +192,9 @@ export default function Guide() {
                                 <AlertDescription className="text-sm">
                                     <p>
                                         Submission closes every <strong>Tuesday 23:59</strong>. Missing the deadline automatically voids the subsidy for that week.
+                                    </p>
+                                    <p>
+                                        Example: Week 1's Subsidies are due by Week 2 Tuesday 23:59
                                     </p>
                                 </AlertDescription>
                             </Alert>
