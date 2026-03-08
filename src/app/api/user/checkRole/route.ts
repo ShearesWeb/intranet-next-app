@@ -3,10 +3,14 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { cache } from 'react';
-import { fetchUserId } from "@/lib/fetch-user-info";
+import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { AUTHORIZED_CHAIR_ROLES } from '@/lib/lead-auth-service';
+import { SupabaseClient } from "@supabase/supabase-js";
 
-const getCachedUserRole = cache(async (userId: number, supabase: any) => {
+const getCachedUserRole = cache(async (userId: number, supabase: SupabaseClient) => {
+    // Check if user is admin first (optional optimization, but we need positions anyway)
+    // Actually, we can check admin status in the main handler.
+    
     const { data: appointments, error: appointmentError } = await supabase
         .from('cca_appointments')
         .select('position_id')
@@ -16,7 +20,7 @@ const getCachedUserRole = cache(async (userId: number, supabase: any) => {
         return { isAuthorized: false, positions: [] };
     }
 
-    const positionIds = appointments.map((app: any) => app.position_id);
+    const positionIds = appointments.map((app: { position_id: number }) => app.position_id);
 
     const { data: positions, error: positionError } = await supabase
         .from('cca_positions')
@@ -34,17 +38,26 @@ const getCachedUserRole = cache(async (userId: number, supabase: any) => {
 
     const authorizedRoles = AUTHORIZED_CHAIR_ROLES;
 
-    // ✅ FIXED: Handle ccas as array
-    const userPositions = positions.map((pos: any) => ({
-        position: pos.name,
-        position_type: pos.position_type,
-        cca: pos.ccas?.[0]?.name || 'Unknown'
-    }));
+    // ✅ FIXED: Handle ccas as array or object
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const userPositions = positions.map((pos: any) => {
+        const ccaName = Array.isArray(pos.ccas) 
+            ? pos.ccas[0]?.name 
+            : pos.ccas?.name;
+            
+        return {
+            position: pos.name,
+            position_type: pos.position_type,
+            cca: ccaName || 'Unknown'
+        };
+    });
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const isAuthorized = userPositions.some((pos: any) =>
         authorizedRoles.includes(pos.position_type.toLowerCase())
     );
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return {
         isAuthorized,
         positions: userPositions.map((pos: any) =>
@@ -53,17 +66,18 @@ const getCachedUserRole = cache(async (userId: number, supabase: any) => {
     };
 });
 
-export async function GET(request: Request) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function GET(_request: Request) {
     try {
         const headers = {
             'Cache-Control': 'private, s-maxage=600, stale-while-revalidate=1200',
             'Content-Type': 'application/json',
         };
 
-        // user ID from cookie
-        const userId = await fetchUserId();
+        // Get full user info to check admin status
+        const userInfo = await fetchUserInfo();
 
-        if (!userId) {
+        if (!userInfo) {
             return NextResponse.json({
                 isAuthorized: false,
                 positions: []
@@ -74,7 +88,15 @@ export async function GET(request: Request) {
         }
 
         const supabase = await createClient();
-        const roleResult = await getCachedUserRole(userId, supabase);
+        const roleResult = await getCachedUserRole(userInfo.id, supabase);
+
+        // Allow admins to access chair features
+        if (userInfo.is_admin) {
+            roleResult.isAuthorized = true;
+            if (roleResult.positions.length === 0) {
+                roleResult.positions.push("Administrator Access");
+            }
+        }
 
         return NextResponse.json(roleResult, { headers });
 

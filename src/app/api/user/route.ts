@@ -3,7 +3,8 @@ import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-export async function GET(req: Request) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function GET(_req: Request) {
         try {
                 const user = await fetchUserInfo();
 

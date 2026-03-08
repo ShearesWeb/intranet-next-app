@@ -15,7 +15,7 @@ interface CachedRoleAuth extends RoleAuthResult {
 }
 
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes client-side cache
-const STORAGE_KEY = 'roleAuthCache';
+const STORAGE_KEY = 'roleAuthCache_v2';
 
 export const useRoleAuth = () => {
     const { user } = useAuth();

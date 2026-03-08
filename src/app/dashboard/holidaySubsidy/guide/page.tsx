@@ -10,7 +10,6 @@ import {
     CardContent,
 } from "@/components/ui/card";
 
-import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -20,7 +19,7 @@ import {
     AccordionItem,
     AccordionTrigger,
 } from "@/components/ui/accordion";
-import { AlertCircleIcon, AlertTriangleIcon, CheckCircle2Icon, InfoIcon, FileCheck, CheckCircle, Users, Calculator } from 'lucide-react';
+import { AlertCircleIcon, AlertTriangleIcon, CheckCircle2Icon, FileCheck, CheckCircle, Users, Calculator } from 'lucide-react';
 
 
 // -----------------------------
@@ -194,7 +193,7 @@ export default function Guide() {
                                         Submission closes every <strong>Tuesday 23:59</strong>. Missing the deadline automatically voids the subsidy for that week.
                                     </p>
                                     <p>
-                                        Example: Week 1's Subsidies are due by Week 2 Tuesday 23:59
+                                        Example: Week 1&apos;s Subsidies are due by Week 2 Tuesday 23:59
                                     </p>
                                 </AlertDescription>
                             </Alert>
@@ -219,7 +218,7 @@ export default function Guide() {
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-blue-600 mt-0.5">•</span>
-                                        <span>Modify the number of hours if the member's contributions are less than planned.</span>
+                                        <span>Modify the number of hours if the member&apos;s contributions are less than planned.</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-blue-600 mt-0.5">•</span>

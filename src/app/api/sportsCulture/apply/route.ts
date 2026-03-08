@@ -2,8 +2,6 @@
 // API route to get available sports and culture positions for application
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-import { cookies } from 'next/headers';
-import { phaseService } from '@/lib/phase-service';
 import { fetchUserId } from "@/lib/fetch-user-info";
 
 export async function POST(request: Request) {
@@ -17,15 +15,6 @@ export async function POST(request: Request) {
 
         if (!requestingUserId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        // Check if applications are open
-        const phaseInfo = await phaseService.getCurrentPhaseInfo();
-        const applicationsOpen = await areApplicationsOpen(phaseInfo);
-        if (!applicationsOpen) {
-            return NextResponse.json({
-                error: 'Sports/Culture applications are not currently open'
-            }, { status: 403 });
         }
 
         // Verify position is sports/culture member OR team manager position
@@ -150,15 +139,6 @@ export async function DELETE(request: Request) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // Check if applications are open
-        const phaseInfo = await phaseService.getCurrentPhaseInfo();
-        const applicationsOpen = await areApplicationsOpen(phaseInfo);
-        if (!applicationsOpen) {
-            return NextResponse.json({
-                error: 'Sports/Culture applications are not currently open'
-            }, { status: 403 });
-        }
-
         // Remove application
         const { error: removeError } = await supabase
             .from('cca_appointments')
@@ -189,11 +169,4 @@ export async function DELETE(request: Request) {
         console.error('Error removing sports/culture application:', error);
         return NextResponse.json({ error: 'Server error' }, { status: 500 });
     }
-}
-
-async function areApplicationsOpen(phaseInfo: any): Promise<boolean> {
-    const applicationPhases = [
-        'subcomm_concurrent_ranking'
-    ];
-    return applicationPhases.includes(phaseInfo.phase);
 }

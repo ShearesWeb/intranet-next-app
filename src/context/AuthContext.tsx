@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { toast } from "sonner";
@@ -51,7 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 }
         };
 
-	const signIn = async (next?: string) => {
+	const signIn = useCallback(async (next?: string) => {
 		const { error } = await supabase.auth.signInWithOAuth({
 			provider: 'google',
 			options: {
@@ -60,9 +60,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 			},
 		});
 		if (error) throw error;
-	};
+	}, [supabase.auth]);
 
-        const signOut = async () => {
+        const signOut = useCallback(async () => {
                 await supabase.auth.signOut();
                 await fetch("/api/user", { method: "DELETE" }).catch(() => undefined);
                 clearClientUserCache();
@@ -70,7 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setSession(null);
                 toast.info("Successfully signed out.")
                 router.push("/");
-        };
+        }, [supabase.auth, router]);
 
 	useEffect(() => {
 		let isMounted = true;
@@ -100,7 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 		};
 
 		// Fetch current session once
-		supabase.auth.getSession().then(({ data: { session }, error }) => {
+		supabase.auth.getSession().then(({ data: { session } }) => {
                         fetchUser(session).finally(() => isMounted && setLoading(false));
                 });
 
@@ -113,11 +113,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 			isMounted = false;
 			subscription.unsubscribe();
 		};
-	}, [supabase]);
+	}, [supabase, router]);
 
 	const value = useMemo(
 		() => ({ user, session, loading, signIn, signOut }),
-		[user, session, loading]
+		[user, session, loading, signIn, signOut]
 	);
 
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

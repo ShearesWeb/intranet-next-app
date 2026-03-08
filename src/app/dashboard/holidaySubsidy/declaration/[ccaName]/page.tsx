@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { AppLayout } from "@/components/layout/app-layout";
 import { PositionTypeBadge } from "@/components/badges/position-type-badge";
 import { SimpleTable, type SimpleTableColumn } from "@/components/table/simple-table";
@@ -39,8 +39,10 @@ const statusVariant: Record<SubsidyStatus, "default" | "secondary" | "destructiv
 
 export default function SubsidyDeclarationPage() {
     const params = useParams();
+    const searchParams = useSearchParams();
     const ccaNameParam = params?.ccaName;
     const ccaName = typeof ccaNameParam === "string" ? decodeURIComponent(ccaNameParam) : "";
+    const ccaId = searchParams.get("ccaId");
 
     const router = useRouter();
 
@@ -154,13 +156,15 @@ export default function SubsidyDeclarationPage() {
     }, [ccaName, router]);
 
     useEffect(() => {
-        if (!ccaName) return;
+        if (!ccaId) {
+            return;
+        }
 
         let isMounted = true;
         setLoading(true);
         setError(null);
 
-        fetch(`/api/holidaySubsidy/declarations/${encodeURIComponent(ccaName)}`)
+        fetch(`/api/holidaySubsidy/declarations/${ccaId}`)
             .then(async (res) => {
                 const data = await res.json();
 
@@ -210,11 +214,7 @@ export default function SubsidyDeclarationPage() {
         return () => {
             isMounted = false;
         };
-    }, [ccaName]);
-
-    if (!ccaName) {
-        return null;
-    }
+    }, [ccaId]);
 
     const handleDialogOpenChange = useCallback(
         (open: boolean) => {
@@ -347,6 +347,10 @@ export default function SubsidyDeclarationPage() {
         },
         [commonColumns, handleDelete, openEditDialog]
     );
+
+    if (!ccaName) {
+        return null;
+    }
 
     return (
         <AppLayout>

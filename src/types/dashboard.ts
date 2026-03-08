@@ -51,7 +51,7 @@ export interface Position {
   id: number;
   name: string;
   cca_name: string;
-  total_capacity: number;
+  capacity: number;
   available_capacity: number;
   applied_count: number;
   position_type: string;
@@ -65,19 +65,25 @@ export interface UserSearchResult {
   room?: string | null;
 }
 
+export type CutStatus = 'ivp-ihg-team' | 'ihg-team' | 'final-cut';
+export type CommitmentPeriod = 'semester-1' | 'semester-2' | 'full-year';
+
 export interface Member {
   user_id: number;
   name: string;
   email: string;
   room: string;
+  position_id?: number;
   position_name: string;
   position_type: string;
   points: number;
   appointed_date: string;
   cut?: boolean;
+  cut_status?: CutStatus | null;
+  commitment_period?: CommitmentPeriod | null;
 }
 
-export type PendingChangeType = 'add' | 'remove' | 'cut';
+export type PendingChangeType = 'add' | 'remove' | 'cut' | 'update_status' | 'update_commitment';
 
 export interface PendingChange {
   type: PendingChangeType;
@@ -85,4 +91,8 @@ export interface PendingChange {
   user_name: string;
   user_email: string;
   user_room?: string;
+  new_status?: CutStatus;
+  new_commitment_period?: CommitmentPeriod;
+  position_id?: number;
+  position_name?: string;
 }

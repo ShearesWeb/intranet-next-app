@@ -2,11 +2,11 @@
 // API route to get rankable positions for a user
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-import { phaseService } from '@/lib/phase-service';
 import { fetchUserId } from "@/lib/fetch-user-info";
 import { AUTHORIZED_CHAIR_ROLES } from '@/lib/lead-auth-service';
 
 interface CCAData {
+    id: number;
     name: string;
     cca_type: string;
     description: string;
@@ -24,21 +24,9 @@ interface PositionData {
     ccas: CCAData[];  // Keep as array for consistency
 }
 
-export async function GET(request: Request) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function GET(_request: Request) {
     try {
-        const phaseInfo = await phaseService.getCurrentPhaseInfo();
-        if (!phaseInfo.allowApplicantRanking) {
-            return NextResponse.json({
-                positions: [],
-                error: `Student ranking is not active. Current phase: ${phaseInfo.phase}`,
-                phaseInfo: {
-                    phase: phaseInfo.phase,
-                    round: phaseInfo.round,
-                    userMessage: phaseInfo.userMessage
-                }
-            });
-        }
-
         const supabase = await createClient();
 
         // Get user ID from cookie
@@ -50,18 +38,7 @@ export async function GET(request: Request) {
             }, { status: 401 });
         }
 
-        function getValidPositionTypes(currentRound: string): string[] {
-            switch (currentRound) {
-                case 'maincomm':
-                    return ['maincomm', 'blockcomm'];
-                case 'subcomm':
-                    return ['subcomm', 'blockcomm', 'maincomm'];
-                default:
-                    return [currentRound];
-            }
-        }
-
-        // ✅ Get ALL available positions for the current phase
+        // ✅ Get ALL available positions
         const { data: availablePositions, error: positionsError } = await supabase
             .from('cca_capacity_info')
             .select(`
@@ -72,9 +49,8 @@ export async function GET(request: Request) {
                 available_capacity,
                 applied_count,
                 description,
-                ccas!inner (name, cca_type, description, image_url)
+                ccas!inner (id, name, cca_type, description, image_url)
             `)
-            .in('position_type', getValidPositionTypes(phaseInfo.round))
             .gt('available_capacity', 0)
             .not('position_type', 'in', `("${AUTHORIZED_CHAIR_ROLES.join('","')}")`)
             .order('name', { ascending: true });
@@ -162,12 +138,7 @@ export async function GET(request: Request) {
         // console.log("✅ Sample position with CCA name:", transformedPositions[0]);
 
         return NextResponse.json({
-            positions: transformedPositions,
-            phaseInfo: {
-                phase: phaseInfo.phase,
-                round: phaseInfo.round,
-                userMessage: phaseInfo.userMessage
-            }
+            positions: transformedPositions
         });
 
     } catch (error) {

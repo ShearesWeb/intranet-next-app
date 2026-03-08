@@ -1,35 +1,23 @@
 // src/app/api/chair/positions/forChair/route.ts
 // API route to get positions available for chair ranking along with applicants' info
 import { NextResponse } from "next/server";
-import { phaseService } from '@/lib/phase-service';
 import { cache } from 'react';
 import { createClient } from "@/utils/supabase/server";
 import { fetchUserId } from "@/lib/fetch-user-info";
 import { getUserAuthorizedCCAs } from "@/lib/lead-auth-service";
+import { SupabaseClient } from "@supabase/supabase-js";
 
-const getCachedChairAuthorization = cache(async (userId: number, supabase: any) => {
+const getCachedChairAuthorization = cache(async (userId: number, supabase: SupabaseClient) => {
     return await getUserAuthorizedCCAs(userId, supabase);
 });
 
-function getValidPositionTypes(currentRound: string): string[] {
-    switch (currentRound) {
-        case 'maincomm':
-            return ['maincomm', 'blockcomm'];
-        case 'subcomm':
-            return ['subcomm', 'blockcomm', 'maincomm'];
-        default:
-            return [currentRound];
-    }
-}
-
-const getCachedPositionsForPhase = cache(async (ccaIds: number[], currentRound: string, supabase: any) => {
+const getCachedPositionsForPhase = cache(async (ccaIds: number[], supabase: SupabaseClient) => {
     const { data: allPositions, error: posError } = await supabase
         .from("cca_capacity_info")
         .select("id, name, capacity, available_capacity, applied_count, position_type, cca_id, cca_name")
         .in("cca_id", ccaIds)
         .gt("available_capacity", 0)
-        .not('position_type', 'in', '("lead","vice")')
-        .in('position_type', getValidPositionTypes(currentRound));
+        .not('position_type', 'in', '("lead","vice")');
 
     if (posError || !allPositions?.length) {
         return [];
@@ -38,7 +26,8 @@ const getCachedPositionsForPhase = cache(async (ccaIds: number[], currentRound: 
     return allPositions;
 });
 
-export async function GET(request: Request) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function GET(_request: Request) {
     try {
         const userId = await fetchUserId();
 
@@ -56,20 +45,6 @@ export async function GET(request: Request) {
 
         const supabase = await createClient();
 
-        const phaseInfo = await phaseService.getCurrentPhaseInfo();
-
-        if (!phaseInfo.allowChairRanking) {
-            return NextResponse.json({
-                positions: [],
-                error: `Chair ranking is not active. Current phase: ${phaseInfo.phase}`,
-                phaseInfo: {
-                    phase: phaseInfo.phase,
-                    round: phaseInfo.round,
-                    userMessage: phaseInfo.userMessage
-                }
-            }, { headers });
-        }
-
         const authResult = await getCachedChairAuthorization(userId, supabase);
 
         if (!authResult.authorized) {
@@ -78,7 +53,6 @@ export async function GET(request: Request) {
 
         const allPositions = await getCachedPositionsForPhase(
             authResult.ccaIds,
-            phaseInfo.round,
             supabase
         );
 
@@ -155,12 +129,7 @@ export async function GET(request: Request) {
         }));
 
         return NextResponse.json({
-            positions: result,
-            phaseInfo: {
-                phase: phaseInfo.phase,
-                round: phaseInfo.round,
-                userMessage: phaseInfo.userMessage
-            }
+            positions: result
         }, { headers });
 
     } catch (error) {

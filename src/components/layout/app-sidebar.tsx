@@ -22,7 +22,8 @@ import {
 import Link from "next/link"
 import { Avatar, AvatarImage } from "../ui/avatar"
 import { useAuth } from "@/context/AuthContext"
-import { usePhaseInfo } from "@/hooks/usePhaseInfo"
+import { User } from "@/types/User"
+import { AUTHORIZED_CHAIR_ROLES, ChairRole } from "@/lib/lead-auth-service"
 
 type NavItem = {
     title: string
@@ -31,12 +32,14 @@ type NavItem = {
     isActive?: boolean
     adminOnly?: boolean
     jcrcOnly?: boolean
+    chairOnly?: boolean
     featureFlag?: string
     items?: {
         title: string
         url: string
         adminOnly?: boolean
         jcrcOnly?: boolean
+        chairOnly?: boolean
         featureFlag?: string
     }[]
 }
@@ -49,25 +52,25 @@ export const navOptions: NavItem[] = [
         isActive: true,
     },
     {
-        title: "My CCAs",
-        url: "/dashboard/mycca",
+        title: "Manage CCAs",
+        url: "/dashboard/managecca",
         isActive: true,
         icon: Volleyball,
     },
     {
         title: "CCA Allocation",
-        url: "/dashboard/rank",
+        url: "/dashboard/ccaAllocation",
         icon: FileUser,
         isActive: true,
         items: [
             {
                 title: "Apply For CCAs",
-                url: "/dashboard/rank",
+                url: "/dashboard/ccaAllocation/rank",
             },
             {
                 title: "Rank CCA Applicants",
-                url: "/dashboard/rankApplicants",
-                adminOnly: true,
+                url: "/dashboard/ccaAllocation/rankApplicants",
+                chairOnly: true,
             },
         ],
     },
@@ -84,11 +87,6 @@ export const navOptions: NavItem[] = [
                 url: "/dashboard/holidaySubsidy/guide",
             },
             {
-                title: "Chair Declaration",
-                url: "/dashboard/holidaySubsidy?view=declaration",
-                adminOnly: true,
-            },
-            {
                 title: "JCRC Approvals",
                 url: "/dashboard/holidaySubsidy/approvals",
                 jcrcOnly: true,
@@ -97,13 +95,18 @@ export const navOptions: NavItem[] = [
     },
 ]
 
-export const buildNavItems = (user?: { is_admin?: boolean; is_jcrc?: boolean } | null) => {
-    const allowItem = (item: { adminOnly?: boolean; jcrcOnly?: boolean }) => {
+export const buildNavItems = (user?: User | null) => {
+    const isChair = user?.appointments?.some(appt => 
+        AUTHORIZED_CHAIR_ROLES.includes((appt.position_type || '').toLowerCase() as ChairRole)
+    ) || user?.is_admin || false;
+
+    const allowItem = (item: { adminOnly?: boolean; jcrcOnly?: boolean; chairOnly?: boolean }) => {
         if (item.adminOnly && item.jcrcOnly) {
             return Boolean(user?.is_admin || user?.is_jcrc)
         }
         if (item.adminOnly) return Boolean(user?.is_admin)
         if (item.jcrcOnly) return Boolean(user?.is_jcrc)
+        if (item.chairOnly) return Boolean(isChair)
         return true
     }
 
@@ -117,7 +120,6 @@ export const buildNavItems = (user?: { is_admin?: boolean; is_jcrc?: boolean } |
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const { user } = useAuth();
-    const { phaseInfo } = usePhaseInfo();
 
     const navItems = buildNavItems(user);
 

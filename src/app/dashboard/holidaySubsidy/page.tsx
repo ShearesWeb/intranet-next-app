@@ -11,10 +11,10 @@ import { AUTHORIZED_CHAIR_ROLES, ChairRole } from '@/lib/lead-auth-service';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
-import { Badge } from '@/components/ui/badge';
 import { PositionTypeBadge } from '@/components/badges/position-type-badge';
 
 type SubsidyRow = {
+  id: number;
   name: string;
   position_name: string;
   position_type: string;
@@ -45,13 +45,13 @@ const columns: SimpleTableColumn<SubsidyRow>[] = [
     enableSorting: false,
     cell: (_, row) => (
       <div className="flex flex-col sm:flex-row sm:items-center justify-end sm:justify-start gap-2 w-full sm:w-auto">
-        <Link href={`/dashboard/holidaySubsidy/declaration/${encodeURIComponent(row.name)}`}>
+        <Link href={`/dashboard/holidaySubsidy/declaration/${encodeURIComponent(row.name)}?ccaId=${row.id}`}>
           <Button size="sm" variant="outline" className="gap-2 px-3 py-2">
             Subsidy Declaration
             <ArrowRight className="h-4 w-4" />
           </Button>
         </Link>
-        <Link href={`/dashboard/holidaySubsidy/weekly/${encodeURIComponent(row.name)}`}>
+        <Link href={`/dashboard/holidaySubsidy/weekly/${encodeURIComponent(row.name)}?ccaId=${row.id}`}>
           <Button size="sm" className="gap-2 px-3 py-2">
             Weekly Commitment Declaration
             <ArrowRight className="h-4 w-4" />
@@ -90,6 +90,7 @@ export default function HolidaySubsidyLanding() {
           AUTHORIZED_CHAIR_ROLES.includes((appointment.position_type || '').toLowerCase() as ChairRole)
         )
         .map((appointment) => ({
+          id: appointment.cca_id,
           name: appointment.cca_name,
           position_name: appointment.position_name,
           position_type: appointment.position_type,

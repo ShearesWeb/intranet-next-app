@@ -4,8 +4,9 @@ import { cache } from 'react';
 import { createClient } from "@/utils/supabase/server";
 import { fetchUserId } from "@/lib/fetch-user-info";
 import { getUserAuthorizedCCAs } from "@/lib/lead-auth-service";
+import { SupabaseClient } from "@supabase/supabase-js";
 
-const getCachedChairAuthorization = cache(async (userId: number, supabase: any) => {
+const getCachedChairAuthorization = cache(async (userId: number, supabase: SupabaseClient) => {
     return await getUserAuthorizedCCAs(userId, supabase);
 });
 
