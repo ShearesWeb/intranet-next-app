@@ -14,6 +14,7 @@ import {
 export interface OrderingTableColumn<TData> {
     accessorKey: keyof TData;
     header: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     cell?: (value: any, row: TData, index: number) => React.ReactNode;
 }
 
@@ -25,6 +26,7 @@ interface OrderingTableProps<TData> {
     emptyMessage?: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function OrderingTable<TData extends Record<string, any>>({
     data,
     columns,

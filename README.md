@@ -49,7 +49,7 @@ intranet-next-app/ # Root directory
 │ │ ├── auth/login/ # Authentication pages
 │ │ ├── dashboard/ # Main dashboard area
 │ │ │ ├── home/ # Dashboard home
-│ │ │ ├── mycca/ # User's CCA information
+│ │ │ ├── managecca/ # User's CCA information
 │ │ │ └── rank/ # CCA ranking functionality
 │ │ ├── api/ # API routes
 │ │ │ ├── auth/getUserByEmail/ # User authentication endpoint
@@ -278,7 +278,7 @@ npm run run-script
 - **Consistent styling** across pages
 - **Link integration** with Next.js routing
 
-### MyCCA Page (`src/app/dashboard/mycca/page.tsx`)
+### managecca Page (`src/app/dashboard/managecca/page.tsx`)
 - **Table display** of user's CCA information
 - **Real-time data fetching** with error handling
 - **Points calculation** and total display

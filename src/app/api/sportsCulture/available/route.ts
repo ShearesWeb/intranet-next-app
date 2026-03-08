@@ -2,8 +2,6 @@
 // API route to get available sports and culture positions for application
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-import { cookies } from 'next/headers';
-import { phaseService } from '@/lib/phase-service';
 import { fetchUserId } from "@/lib/fetch-user-info";
 
 interface AvailablePosition {
@@ -20,7 +18,8 @@ interface AvailablePosition {
     can_apply: boolean;
 }
 
-export async function GET(request: Request) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function GET(_request: Request) {
     try {
         const supabase = await createClient();
 
@@ -30,10 +29,6 @@ export async function GET(request: Request) {
         if (!requestingUserId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
-
-        // Check if applications are open
-        const phaseInfo = await phaseService.getCurrentPhaseInfo();
-        const applicationsOpen = await areApplicationsOpen(phaseInfo);
 
         // Get user's current CCA appointments (ALL CCAs, not just sports/culture)
         const { data: userCurrentCCAs, error: currentCCAsError } = await supabase
@@ -57,6 +52,7 @@ export async function GET(request: Request) {
         const userCCAMap = new Map<number, string>(); // cca_id -> position_type (existing roles)
         const userApplicationsByCCA = new Map<number, { positionId: number, positionType: string, positionName: string }>(); // cca_id -> applied position info
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         userCurrentCCAs?.forEach((appointment: any) => {
             const position = appointment.cca_positions;
             if (position && position.ccas) {
@@ -169,22 +165,11 @@ export async function GET(request: Request) {
 
         return NextResponse.json({
             positions: groupedPositions,
-            applicationsOpen,
-            phaseInfo: {
-                phase: phaseInfo.phase,
-                userMessage: phaseInfo.userMessage
-            }
+            applicationsOpen: true
         });
 
     } catch (error) {
         console.error('Error fetching sports/culture positions:', error);
         return NextResponse.json({ positions: { sports: [], culture: [] } });
     }
-}
-
-async function areApplicationsOpen(phaseInfo: any): Promise<boolean> {
-    const applicationPhases = [
-        'subcomm_concurrent_ranking'
-    ];
-    return applicationPhases.includes(phaseInfo.phase);
 }

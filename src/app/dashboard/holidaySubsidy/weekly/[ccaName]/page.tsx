@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { AppLayout } from "@/components/layout/app-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,7 +34,9 @@ type WeeklyRow = {
 
 export default function WeeklyCommitmentPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const ccaName = params?.ccaName as string || "";
+  const ccaId = searchParams.get("ccaId");
 
   const [editableWeekIds, setEditableWeekIds] = useState<number[]>(() => getEditableWeekIds(new Date()));
   const [weekIndex, setWeekIndex] = useState(() => {
@@ -74,8 +76,8 @@ export default function WeeklyCommitmentPage() {
   // Fetch data when component mounts or week changes
   useEffect(() => {
     const fetchData = async () => {
-      if (!ccaName) {
-        setError("CCA name is required");
+      if (!ccaId) {
+        setError("CCA ID is required");
         setIsLoading(false);
         return;
       }
@@ -93,7 +95,7 @@ export default function WeeklyCommitmentPage() {
           return;
         }
 
-        const response = await fetch(`/api/holidaySubsidy/weekly/${encodeURIComponent(ccaName)}/${weekInfo.id}`);
+        const response = await fetch(`/api/holidaySubsidy/weekly/${ccaId}/${weekInfo.id}`);
 
         if (!response.ok) {
           const data = await response.json();
@@ -115,7 +117,7 @@ export default function WeeklyCommitmentPage() {
     };
 
     fetchData();
-  }, [ccaName, editableWeekIds, weekInfo.id]);
+  }, [ccaId, isWeekOpen, weekInfo.id]);
 
   // Warn user before leaving page with unsaved changes
   useEffect(() => {
@@ -158,8 +160,8 @@ export default function WeeklyCommitmentPage() {
   }, [hasPendingChanges]);
 
   const handleSave = async () => {
-    if (!ccaName) {
-      toast.error("CCA name is required");
+    if (!ccaId) {
+      toast.error("CCA ID is required");
       return;
     }
 
@@ -188,7 +190,7 @@ export default function WeeklyCommitmentPage() {
         position_id: row.position_id,
       }));
 
-      const response = await fetch(`/api/holidaySubsidy/weekly/${encodeURIComponent(ccaName)}/${weekInfo.id}`, {
+      const response = await fetch(`/api/holidaySubsidy/weekly/${ccaId}/${weekInfo.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ declarations, deletions }),
@@ -343,7 +345,7 @@ export default function WeeklyCommitmentPage() {
         ),
       },
     ],
-    [handleChange]
+    [handleChange, isWeekOpen]
   );
 
   if (isLoading) {

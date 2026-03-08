@@ -5,19 +5,15 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { motion } from "framer-motion";
 import { useRoleAuth } from "@/hooks/useRoleAuth";
-import { usePhaseInfo } from "@/hooks/usePhaseInfo";
 import { AppLayout } from "@/components/layout/app-layout";
 import { AppLoading } from "@/components/layout/app-loading";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
 import { Users, Trophy, Activity, ClipboardList, ChevronRight } from "lucide-react";
 
 export default function Dashboard() {
     const { user } = useAuth();
     const { isAuthorized, loading: roleLoading } = useRoleAuth();
-    const { phaseInfo } = usePhaseInfo();
     const [mounted, setMounted] = useState(false);
     const [celebrated, setCelebrated] = useState(false);
     const [counter, setCounter] = useState(0);
@@ -141,20 +137,8 @@ export default function Dashboard() {
         return () => clearTimeout(timer);
     }, []);
 
-    const getRankCCAButtonText = () => {
-        switch (phaseInfo.phase) {
-            case 'maincomm_concurrent_ranking':
-                return 'Rank Maincomm';
-            case 'subcomm_concurrent_ranking':
-                return 'Rank Subcomm';
-            default:
-                return 'CCA Ranking';
-        }
-    };
-
-    const isSportsCultureAvailable = () => {
-        return phaseInfo.phase === 'subcomm_concurrent_ranking';
-    };
+    const getRankCCAButtonText = () => 'CCA Ranking';
+    const isSportsCultureAvailable = () => true;
 
     if (!mounted || !user) {
         return <AppLoading />;
@@ -467,7 +451,7 @@ export default function Dashboard() {
                         <CardContent className="p-4 md:p-6">
                             <div className="grid gap-4">
                                 {/* My CCAs Button */}
-                                <Link href="/dashboard/mycca" className="block">
+                                <Link href="/dashboard/managecca" className="block">
                                     <motion.div
                                         whileHover={{ scale: 1.02, y: -2 }}
                                         whileTap={{ scale: 0.98 }}
@@ -489,7 +473,7 @@ export default function Dashboard() {
                                 </Link>
 
                                 {/* Rank CCA Button */}
-                                <Link href="/dashboard/rank" className="block">
+                                <Link href="/dashboard/ccaAllocation/rank" className="block">
                                     <motion.div
                                         whileHover={{ scale: 1.02, y: -2 }}
                                         whileTap={{ scale: 0.98 }}
@@ -536,7 +520,7 @@ export default function Dashboard() {
 
                                 {/* Rank Applicants Button (conditional for authorized users) */}
                                 {!roleLoading && isAuthorized && (
-                                    <Link href="/dashboard/rankApplicants" className="block">
+                                    <Link href="/dashboard/ccaAllocation/rankApplicants" className="block">
                                         <motion.div
                                             whileHover={{ scale: 1.02, y: -2 }}
                                             whileTap={{ scale: 0.98 }}

@@ -41,13 +41,13 @@ const columns: SimpleTableColumn<CcaApprovalRow>[] = [
         cell: (_value, row) => (
             <div className="flex flex-col lg:flex-row gap-2 justify-start w-full">
                 <Button asChild variant="outline" size="sm" className="gap-2">
-                    <Link href={`/dashboard/holidaySubsidy/approvals/${row.id}`}>
+                    <Link href={`/dashboard/holidaySubsidy/approvals/${encodeURIComponent(row.name)}?ccaId=${row.id}`}>
                         Approve pending declarations
                         <ListChecks className="h-4 w-4" />
                     </Link>
                 </Button>
                 <Button asChild size="sm" className="gap-2">
-                    <Link href={`/dashboard/holidaySubsidy/approvals/weekly/${row.id}`}>
+                    <Link href={`/dashboard/holidaySubsidy/approvals/weekly/${encodeURIComponent(row.name)}?ccaId=${row.id}`}>
                         Approve pending weekly commitments
                         <ShieldCheck className="h-4 w-4" />
                     </Link>

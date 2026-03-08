@@ -50,6 +50,7 @@ export async function GET() {
                         const ccaMeta = ccaMap.get(appointment.cca_id);
 
                         return {
+                                id: appointment.cca_id,
                                 name: ccaMeta?.name ?? appointment.cca_name,
                                 role: appointment.position_name || 'Unknown Role',
                                 position_type: appointment.position_type,
