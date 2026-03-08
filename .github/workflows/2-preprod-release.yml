@@ -57,7 +57,7 @@ jobs:
       - name: 4. ⚙️ Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: ${{ steps.detect-pm.outputs.manager }}
 
       - name: 5. ⬇️ Restore Next.js Cache
@@ -71,16 +71,8 @@ jobs:
 
       - name: 6. 📦 Install Dependencies
         run: ${{ steps.detect-pm.outputs.manager }} ${{ steps.detect-pm.outputs.command }}
-    
-      - name: 7. � Setup Pulumi
-        uses: pulumi/setup-pulumi@v2
-        with:
-          pulumi-version: "latest"
-
-      - name: 8. �📦 Install SST Client
-        run: ${{ steps.detect-pm.outputs.manager }} install -g sst
   
-      - name: 9. 🚧 Deploy with SST
+      - name: 8. 🚧 Deploy with SST
         run: npx sst deploy --stage preprod
  
   promote-tag-to-production:
