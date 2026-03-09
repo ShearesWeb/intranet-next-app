@@ -19,7 +19,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-	const supabase = createClient();
+	const [supabase, setSupabase] = useState<ReturnType<typeof createClient> | null>(null);
 	const router = useRouter();
 	const [user, setUser] = useState<User | null>(null);
 	const [session, setSession] = useState<Session | null>(null);
@@ -52,6 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
 
 	const signIn = useCallback(async (next?: string) => {
+		if (!supabase) return;
 		const { error } = await supabase.auth.signInWithOAuth({
 			provider: 'google',
 			options: {
@@ -60,9 +61,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 			},
 		});
 		if (error) throw error;
-	}, [supabase.auth]);
+	}, [supabase]);
 
         const signOut = useCallback(async () => {
+		if (!supabase) return;
                 await supabase.auth.signOut();
                 await fetch("/api/user", { method: "DELETE" }).catch(() => undefined);
                 clearClientUserCache();
@@ -70,9 +72,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setSession(null);
                 toast.info("Successfully signed out.")
                 router.push("/");
-        }, [supabase.auth, router]);
+        }, [supabase, router]);
 
 	useEffect(() => {
+		setSupabase(createClient());
+	}, []);
+
+	useEffect(() => {
+		if (!supabase) return;
 		let isMounted = true;
 
                 const fetchUser = async (session: Session | null, shouldClear = false) => {
