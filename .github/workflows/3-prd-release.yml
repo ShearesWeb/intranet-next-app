@@ -55,7 +55,7 @@ jobs:
       - name: 4. ⚙️ Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "22.22"
           cache: ${{ steps.detect-pm.outputs.manager }}
 
       - name: 5. ⬇️ Restore Next.js Cache
