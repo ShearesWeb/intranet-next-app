@@ -499,23 +499,13 @@ export default function ManageMembersPage() {
     const handleUserButtonClick = (user: UserSearchResult) => {
         if (isUserAdded(user.id)) {
             handleLocalRemoveMember(user.id, user.name);
-        } else {
-            if (isSportsCulture) {
-                handleLocalAddMember(user.id, user.name, user.email, user.room || '');
-            } else {
-                // Select user for configuration
-                setSelectedUser(user);
-                // Default to first available position or "Member"
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const availablePositions = allPositions.filter((p: any) => !['lead', 'vice'].includes(p.position_type));
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const defaultPos = availablePositions.find((p: any) => p.position_type === 'member') || availablePositions[0];
-                setAddForm({
-                    positionId: defaultPos?.id || 0,
-                    commitmentPeriod: 'full-year'
-                });
-            }
+            return;
         }
+        if (!isSportsCulture) {
+            toast.error('Adding members is only available for sports and culture CCAs');
+            return;
+        }
+        handleLocalAddMember(user.id, user.name, user.email, user.room || '');
     };
 
     if (loading) {
@@ -634,7 +624,7 @@ export default function ManageMembersPage() {
                 {/* Group Header */}
                 <div className="flex justify-between items-center mb-4">
                     <h3 className="text-xl font-semibold">{title}</h3>
-                    {canManage && showAddButton && (
+                    {canManage && showAddButton && isSportsCulture && (
                         <Button
                             onClick={() => setShowAddMemberModal(true)}
                             size="sm"
@@ -743,7 +733,7 @@ export default function ManageMembersPage() {
 
 
                 {/* Add Member Modal */}
-                {showAddMemberModal && (
+                {showAddMemberModal && isSportsCulture && (
                     <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
                         <div className="bg-white p-6 rounded-xl w-[90%] max-w-[750px] max-h-[80vh] overflow-auto">
                             <h3 className="text-lg font-bold mb-4">Add Member</h3>
