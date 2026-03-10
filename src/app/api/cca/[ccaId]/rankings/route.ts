@@ -57,6 +57,7 @@ const normalizeTrack = (name?: string) => {
 const UNIVERSAL_EXCLUDED_POSITION_TYPES = new Set(['lead', 'vice']);
 const COMMITTEE_EXCLUDED_POSITION_TYPES = new Set(['lead', 'vice', 'member']);
 const SPORTS_RANKABLE_POSITION_TYPES = new Set(['member', 'team manager', 'teammanager']);
+const PERFORMANCE_REQUIRED_CCA_TYPES = new Set(['committee', 'culture']);
 
 // GET handler to fetch members with their ranking data
 export async function GET(
@@ -285,6 +286,7 @@ export async function POST(
 
     const isCommittee = ccaInfo.cca_type === 'committee';
     const isSports = ccaInfo.cca_type === 'sports';
+    const requiresPerformance = PERFORMANCE_REQUIRED_CCA_TYPES.has(ccaInfo.cca_type || '');
     const isChair = normalizedUserPositions.some((position) => ['lead', 'vice'].includes(position.position_type));
     const isMaincomm = normalizedUserPositions.some((position) => position.position_type === 'maincomm');
     const maincommTracks = normalizedUserPositions
@@ -353,7 +355,7 @@ export async function POST(
         .filter((r) => allowedPositionIds.has(r.position_id))
         .filter((r) => {
             if (r.attendance <= 0) return false;
-            if (isCommittee) return r.performance > 0;
+            if (requiresPerformance) return r.performance > 0;
             return true;
         })
         .map((r) => ({
@@ -361,7 +363,7 @@ export async function POST(
             position_id: r.position_id,
             ranking: r.ranking,
             attendance: r.attendance,
-            performance: isCommittee ? r.performance : (r.performance > 0 ? r.performance : r.attendance),
+            performance: requiresPerformance ? r.performance : (r.performance > 0 ? r.performance : r.attendance),
             remarks: r.remarks,
         }));
 

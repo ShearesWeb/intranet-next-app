@@ -70,15 +70,17 @@ const POSITION_TYPE_ORDER: Record<string, number> = {
 
 const cloneMembers = (items: CCAMember[]): CCAMember[] => items.map((member) => ({ ...member }));
 
+const usesPerformanceScore = (ccaType: string) => ['committee', 'culture'].includes(ccaType);
+
 const hasRankingInputs = (member: CCAMember, ccaType: string) => {
-  if (ccaType === 'committee') {
+  if (usesPerformanceScore(ccaType)) {
     return member.attendance > 0 && member.performance > 0;
   }
   return member.attendance > 0;
 };
 
 const getRankingScore = (member: CCAMember, ccaType: string) => {
-  if (ccaType === 'committee') {
+  if (usesPerformanceScore(ccaType)) {
     return member.attendance + member.performance;
   }
   return member.attendance;
@@ -213,7 +215,7 @@ export default function CCARankingPage() {
 
   const unrankedCount = useMemo(() => {
     return members.filter((member) => {
-      if (ccaType === 'committee') {
+      if (usesPerformanceScore(ccaType)) {
         return member.attendance === 0 || member.performance === 0;
       }
       return member.attendance === 0;
@@ -321,7 +323,7 @@ export default function CCARankingPage() {
             <AlertDescription className="text-yellow-700">
               You have {unrankedCount} member{unrankedCount !== 1 ? 's' : ''} left to rank (
               fill in {ccaType === 'sports' ? "captain's appraisal" : 'attendance and attitude'}
-              {ccaType === 'committee' ? ' and performance' : ''}).
+              {usesPerformanceScore(ccaType) ? ' and performance' : ''}).
             </AlertDescription>
           </Alert>
         )}
@@ -364,7 +366,7 @@ export default function CCARankingPage() {
                           <TableHead>
                             {ccaType === 'sports' ? "Captain's Appraisal (1-10)" : 'Attendance and Attitude (1-10)'}
                           </TableHead>
-                          {ccaType === 'committee' && <TableHead>Performance (1-10)</TableHead>}
+                          {usesPerformanceScore(ccaType) && <TableHead>Performance (1-10)</TableHead>}
                           <TableHead>Remarks</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -398,7 +400,7 @@ export default function CCARankingPage() {
                                 ))}
                               </select>
                             </TableCell>
-                            {ccaType === 'committee' && (
+                            {usesPerformanceScore(ccaType) && (
                               <TableCell>
                                 <select
                                   value={member.performance || 0}

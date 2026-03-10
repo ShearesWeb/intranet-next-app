@@ -72,7 +72,6 @@ jobs:
   
       - name: 7. 🚧 Deploy with SST
         run: |
-          ./node_modules/.bin/sst version
           # Force Pulumi language host resolution to SST-managed binaries.
           mkdir -p "$RUNNER_TEMP/sst-bin"
           if [ -x "$HOME/.config/sst/bin/pulumi-language-nodejs" ]; then
@@ -82,7 +81,4 @@ jobs:
             exit 1
           fi
           export PATH="$RUNNER_TEMP/sst-bin:$HOME/.config/sst/bin:$PATH"
-          command -v pulumi
-          command -v pulumi-language-nodejs
-          pulumi-language-nodejs -help | head -n 20
-          ./node_modules/.bin/sst deploy --stage prd --print-logs
+          ./node_modules/.bin/sst deploy --stage prd
