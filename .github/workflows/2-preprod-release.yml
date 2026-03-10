@@ -74,8 +74,18 @@ jobs:
       - name: 7. 🚧 Deploy with SST
         run: |
           ./node_modules/.bin/sst version
-          # Ensure SST uses its bundled Pulumi language hosts and avoids PATH mismatches.
-          echo "$HOME/.config/sst/bin" >> $GITHUB_PATH
+          # Force Pulumi language host resolution to SST-managed binaries.
+          mkdir -p "$RUNNER_TEMP/sst-bin"
+          if [ -x "$HOME/.config/sst/bin/pulumi-language-nodejs" ]; then
+            ln -sf "$HOME/.config/sst/bin/pulumi-language-nodejs" "$RUNNER_TEMP/sst-bin/pulumi-language-nodejs"
+          else
+            echo "SST pulumi-language-nodejs not found in $HOME/.config/sst/bin"
+            exit 1
+          fi
+          export PATH="$RUNNER_TEMP/sst-bin:$HOME/.config/sst/bin:$PATH"
+          command -v pulumi
+          command -v pulumi-language-nodejs
+          pulumi-language-nodejs -help | head -n 20
           ./node_modules/.bin/sst deploy --stage preprod --print-logs
  
   promote-tag-to-production:
