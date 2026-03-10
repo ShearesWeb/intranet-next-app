@@ -25,10 +25,5 @@ export interface AuthenticatedUser extends UserRoleFlags {
     appointments: UserAppointment[];
 }
 
-export interface CachedAuthenticatedUser {
-    user: AuthenticatedUser;
-    cachedAt: number; // seconds since epoch
-}
-
 // Maintain backward compatibility for legacy imports
 export type User = AuthenticatedUser;

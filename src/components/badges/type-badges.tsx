@@ -8,10 +8,12 @@ type StyleMeta = { bg: string; label?: string; text?: string };
 const positionStyles: Record<string, StyleMeta> = {
     lead: { bg: 'bg-red-600', text: 'text-white' },
     vice: { bg: 'bg-orange-500', text: 'text-white' },
-    maincomm: { bg: 'bg-amber-500', text: 'text-white' },
-    subcomm: { bg: 'bg-green-600', text: 'text-white' },
+    maincomm: { bg: 'bg-purple-600', text: 'text-white' },
+    subcomm: { bg: 'bg-blue-600', text: 'text-white' },
     blockcomm: { bg: 'bg-blue-600', text: 'text-white' },
-    'team manager': { bg: 'bg-cyan-600', text: 'text-white' },
+    'team manager': { bg: 'bg-green-600', text: 'text-white' },
+    teammanager: { bg: 'bg-green-600', text: 'text-white', label: 'TM' },
+    tm: { bg: 'bg-green-600', text: 'text-white', label: 'TM' },
     member: { bg: 'bg-slate-600', text: 'text-white' },
 };
 

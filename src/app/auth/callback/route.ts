@@ -18,7 +18,7 @@ export async function GET(request: Request) {
     if (error) return NextResponse.redirect(`${origin}/auth/auth-error?reason=code_exchange_failed`);
 
     try {
-        const userItem = await fetchUserInfo(true);
+        const userItem = await fetchUserInfo();
         if (!userItem) {
             await supabase.auth.signOut();
             return NextResponse.redirect(`${origin}/auth/login?reason=user_not_found`);

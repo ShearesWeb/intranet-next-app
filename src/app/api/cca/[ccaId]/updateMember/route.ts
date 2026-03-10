@@ -42,15 +42,24 @@ export async function POST(
             return NextResponse.json({ success: true });
         }
 
-        const { error } = await supabase
+        if ((cut_status !== undefined || commitment_period !== undefined) && !position_id) {
+            return NextResponse.json({ error: 'position_id is required for member updates' }, { status: 400 });
+        }
+
+        const { data: updatedRows, error } = await supabase
             .from('cca_appointments')
             .update(updates)
+            .select('user_id, position_id')
             .eq('user_id', user_id)
             .eq('position_id', position_id);
 
         if (error) {
             console.error('Error updating member:', error);
             return NextResponse.json({ error: 'Failed to update member' }, { status: 500 });
+        }
+
+        if (!updatedRows || updatedRows.length === 0) {
+            return NextResponse.json({ error: 'No matching member appointment found for update' }, { status: 404 });
         }
 
         // Upsert ranking

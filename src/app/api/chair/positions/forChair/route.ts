@@ -39,7 +39,7 @@ export async function GET(_request: Request) {
         }
 
         const headers = {
-            'Cache-Control': 'private, s-maxage=300, stale-while-revalidate=600',
+            'Cache-Control': 'no-store, private',
             'Content-Type': 'application/json',
         };
 
@@ -137,7 +137,7 @@ export async function GET(_request: Request) {
         return NextResponse.json({ positions: [] }, {
             status: 500,
             headers: {
-                'Cache-Control': 'no-cache',
+                'Cache-Control': 'no-store, private',
                 'Content-Type': 'application/json',
             }
         });

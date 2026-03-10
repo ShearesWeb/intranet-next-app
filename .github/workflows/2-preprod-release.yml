@@ -75,9 +75,11 @@ jobs:
         run: |
           curl -fsSL https://get.pulumi.com | sh
           echo "$HOME/.pulumi/bin" >> $GITHUB_PATH
-  
+
       - name: 8. 🚧 Deploy with SST
-        run: npx sst deploy --stage preprod
+        run: |
+          ./node_modules/.bin/sst version
+          ./node_modules/.bin/sst deploy --stage preprod --print-logs
  
   promote-tag-to-production:
     name: 🏷️ Promote RC Tag to Production

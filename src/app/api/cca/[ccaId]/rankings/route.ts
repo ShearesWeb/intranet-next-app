@@ -54,6 +54,10 @@ const normalizeTrack = (name?: string) => {
         .trim();
 };
 
+const UNIVERSAL_EXCLUDED_POSITION_TYPES = new Set(['lead', 'vice']);
+const COMMITTEE_EXCLUDED_POSITION_TYPES = new Set(['lead', 'vice', 'member']);
+const SPORTS_RANKABLE_POSITION_TYPES = new Set(['member', 'team manager', 'teammanager']);
+
 // GET handler to fetch members with their ranking data
 export async function GET(
     _request: Request,
@@ -97,7 +101,9 @@ export async function GET(
     }).filter((position): position is AppointmentPositionRow => Boolean(position));
 
     const isCommittee = ccaInfo.cca_type === 'committee';
+    const isSports = ccaInfo.cca_type === 'sports';
     const isChair = normalizedUserPositions.some((position) => ['lead', 'vice'].includes(position.position_type));
+    const isMaincomm = normalizedUserPositions.some((position) => position.position_type === 'maincomm');
     const maincommTracks = normalizedUserPositions
         .filter((position) => position.position_type === 'maincomm')
         .map((position) => normalizeTrack(position.name))
@@ -108,7 +114,7 @@ export async function GET(
         if (!authResult.authorized) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
         }
-    } else if (!isChair && maincommTracks.length === 0) {
+    } else if (!isChair && !isMaincomm) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
@@ -177,16 +183,51 @@ export async function GET(
         };
     });
 
-    const scopedMembers = enrichedMembers.filter((member) => {
+    let scopedMembers = enrichedMembers.filter((member) => {
         if (!isCommittee) return true;
         const position = member.cca_positions;
         if (!position) return false;
         if (isChair) {
             return ['maincomm', 'blockcomm'].includes(position.position_type);
         }
-        if (position.position_type !== 'subcomm') return false;
-        const track = normalizeTrack(position.name);
-        return maincommTracks.includes(track);
+        return position.position_type === 'subcomm';
+    });
+
+    // For committee maincomm users: try track-based scoping first.
+    // If track names do not align between maincomm/subcomm positions, fall back
+    // to all subcomm members so ranking is still possible.
+    if (isCommittee && !isChair) {
+        if (maincommTracks.length > 0) {
+            const matchedSubcomm = scopedMembers.filter((member) => {
+                const position = member.cca_positions;
+                if (!position || position.position_type !== 'subcomm') return false;
+                const track = normalizeTrack(position.name);
+                return maincommTracks.includes(track);
+            });
+
+            if (matchedSubcomm.length > 0) {
+                scopedMembers = matchedSubcomm;
+            }
+        }
+    }
+
+    if (isCommittee) {
+        scopedMembers = scopedMembers.filter((member) => {
+            const positionType = member.cca_positions?.position_type?.toLowerCase() || '';
+            return !COMMITTEE_EXCLUDED_POSITION_TYPES.has(positionType);
+        });
+    }
+
+    if (isSports) {
+        scopedMembers = scopedMembers.filter((member) => {
+            const positionType = member.cca_positions?.position_type?.toLowerCase() || '';
+            return SPORTS_RANKABLE_POSITION_TYPES.has(positionType);
+        });
+    }
+
+    scopedMembers = scopedMembers.filter((member) => {
+        const positionType = member.cca_positions?.position_type?.toLowerCase() || '';
+        return !UNIVERSAL_EXCLUDED_POSITION_TYPES.has(positionType);
     });
 
     scopedMembers.sort((a, b) => {
@@ -243,7 +284,9 @@ export async function POST(
     }).filter((position): position is AppointmentPositionRow => Boolean(position));
 
     const isCommittee = ccaInfo.cca_type === 'committee';
+    const isSports = ccaInfo.cca_type === 'sports';
     const isChair = normalizedUserPositions.some((position) => ['lead', 'vice'].includes(position.position_type));
+    const isMaincomm = normalizedUserPositions.some((position) => position.position_type === 'maincomm');
     const maincommTracks = normalizedUserPositions
         .filter((position) => position.position_type === 'maincomm')
         .map((position) => normalizeTrack(position.name))
@@ -254,7 +297,7 @@ export async function POST(
         if (!authResult.authorized) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
         }
-    } else if (!isChair && maincommTracks.length === 0) {
+    } else if (!isChair && !isMaincomm) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
@@ -268,8 +311,19 @@ export async function POST(
     }
 
     const allowedPositionIds = new Set<number>();
+    const allCommitteeSubcomm = ((positions || []) as AppointmentPositionRow[]).filter(
+        (position) => position.position_type === 'subcomm'
+    );
+
     ((positions || []) as AppointmentPositionRow[]).forEach((position) => {
+        const positionType = position.position_type?.toLowerCase() || '';
+        if (UNIVERSAL_EXCLUDED_POSITION_TYPES.has(positionType)) {
+            return;
+        }
         if (!isCommittee) {
+            if (isSports && !SPORTS_RANKABLE_POSITION_TYPES.has(positionType)) {
+                return;
+            }
             allowedPositionIds.add(position.id);
             return;
         }
@@ -279,22 +333,35 @@ export async function POST(
             }
             return;
         }
-        if (position.position_type !== 'subcomm') return;
-        const track = normalizeTrack(position.name);
-        if (maincommTracks.includes(track)) {
-            allowedPositionIds.add(position.id);
-        }
     });
+
+    if (isCommittee && !isChair) {
+        if (maincommTracks.length === 0) {
+            allCommitteeSubcomm.forEach((position) => allowedPositionIds.add(position.id));
+        } else {
+            const matchedSubcomm = allCommitteeSubcomm.filter((position) => {
+                const track = normalizeTrack(position.name);
+                return maincommTracks.includes(track);
+            });
+
+            const scopedSubcomm = matchedSubcomm.length > 0 ? matchedSubcomm : allCommitteeSubcomm;
+            scopedSubcomm.forEach((position) => allowedPositionIds.add(position.id));
+        }
+    }
 
     const rankingsToUpsert = rankings
         .filter((r) => allowedPositionIds.has(r.position_id))
-        .filter((r) => r.attendance > 0 && r.performance > 0)
+        .filter((r) => {
+            if (r.attendance <= 0) return false;
+            if (isCommittee) return r.performance > 0;
+            return true;
+        })
         .map((r) => ({
             user_id: r.user_id,
             position_id: r.position_id,
             ranking: r.ranking,
             attendance: r.attendance,
-            performance: r.performance,
+            performance: isCommittee ? r.performance : (r.performance > 0 ? r.performance : r.attendance),
             remarks: r.remarks,
         }));
 

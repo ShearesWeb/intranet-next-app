@@ -149,7 +149,9 @@ export default function RankCCA() {
     {
       accessorKey: 'name',
       header: 'Position Name',
-      cell: (value) => <div className="font-medium">{value}</div>,
+      cell: (value, row) => (
+        <PositionTypeBadge value={String(value)} position_type={String(row.position_type)} />
+      ),
     },
     {
       accessorKey: 'cca_name',
@@ -188,7 +190,9 @@ export default function RankCCA() {
     {
       accessorKey: 'name',
       header: 'Position Name',
-      cell: (value) => <div className="font-medium">{value}</div>,
+      cell: (value, row) => (
+        <PositionTypeBadge value={String(value)} position_type={String(row.position_type)} />
+      ),
     },
     {
       accessorKey: 'cca_name',

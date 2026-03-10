@@ -217,9 +217,9 @@ export default function WeeklyCommitmentApprovalPage() {
       {
         accessorKey: "role",
         header: "Role",
-        cell: (value) => (
+        cell: (value, row) => (
           <div className="min-w-[80px]">
-            <PositionTypeBadge value={String(value)} className="text-xs" />
+            <PositionTypeBadge value={String(value)} position_type={String(row.type)} className="text-xs" />
           </div>
         ),
       },
@@ -448,4 +448,3 @@ export default function WeeklyCommitmentApprovalPage() {
     </AppLayout>
   );
 }
-

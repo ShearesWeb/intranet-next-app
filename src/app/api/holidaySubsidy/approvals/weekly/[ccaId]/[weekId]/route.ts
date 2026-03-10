@@ -103,7 +103,7 @@ export async function GET(_request: Request, { params }: Params) {
             { submissions: submissionsData },
             {
                 headers: {
-                    'Cache-Control': 'private, s-maxage=60, stale-while-revalidate=30',
+                    'Cache-Control': 'no-store, private',
                 },
             }
         );
@@ -193,4 +193,3 @@ export async function PATCH(request: Request, { params }: Params) {
         return NextResponse.json({ error: "Failed to update approvals" }, { status: 500 });
     }
 }
-

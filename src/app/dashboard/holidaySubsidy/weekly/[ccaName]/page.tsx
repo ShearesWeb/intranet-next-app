@@ -273,9 +273,9 @@ export default function WeeklyCommitmentPage() {
       {
         accessorKey: "role",
         header: "Role",
-        cell: (value) => (
+        cell: (value, row) => (
           <div className="min-w-[100px]">
-            <PositionTypeBadge value={String(value)} />
+            <PositionTypeBadge value={String(value)} position_type={String(row.type)} />
           </div>
         ),
       },

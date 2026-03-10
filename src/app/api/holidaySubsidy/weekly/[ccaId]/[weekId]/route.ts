@@ -152,7 +152,7 @@ export async function GET(_request: Request, { params }: Params) {
             { members: membersData },
             {
                 headers: {
-                    'Cache-Control': 'private, s-maxage=60, stale-while-revalidate=30',
+                    'Cache-Control': 'no-store, private',
                 },
             }
         );

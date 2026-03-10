@@ -1,12 +1,11 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { toast } from "sonner";
 import { User } from "@/types/User";
 import { useRouter } from "next/navigation";
-import { clearClientUserCache, getFreshUserFromCookie } from "@/lib/auth/user-cache";
 
 interface AuthContextType {
 	user: User | null;
@@ -19,23 +18,13 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-	const [supabase, setSupabase] = useState<ReturnType<typeof createClient> | null>(null);
+	const [supabase] = useState(() => createClient());
 	const router = useRouter();
 	const [user, setUser] = useState<User | null>(null);
 	const [session, setSession] = useState<Session | null>(null);
 	const [loading, setLoading] = useState(true);
 
-        const fetchUserFromBackend = async (expectedEmail?: string): Promise<User | null> => {
-                const cached = getFreshUserFromCookie();
-                if (cached && (!expectedEmail || cached.email === expectedEmail)) {
-                        return cached;
-                }
-
-                // Clear stale cache if it does not belong to the current session user
-                if (cached && expectedEmail && cached.email !== expectedEmail) {
-                        clearClientUserCache();
-                }
-
+        const fetchUserFromBackend = async (): Promise<User | null> => {
                 try {
                         const res = await fetch("/api/user", { cache: "no-store" });
                         if (!res.ok) {
@@ -51,8 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 }
         };
 
-	const signIn = useCallback(async (next?: string) => {
-		if (!supabase) return;
+	const signIn = async (next?: string) => {
 		const { error } = await supabase.auth.signInWithOAuth({
 			provider: 'google',
 			options: {
@@ -61,25 +49,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 			},
 		});
 		if (error) throw error;
-	}, [supabase]);
+	};
 
-        const signOut = useCallback(async () => {
-		if (!supabase) return;
+        const signOut = async () => {
                 await supabase.auth.signOut();
                 await fetch("/api/user", { method: "DELETE" }).catch(() => undefined);
-                clearClientUserCache();
                 setUser(null);
                 setSession(null);
                 toast.info("Successfully signed out.")
                 router.push("/");
-        }, [supabase, router]);
+        };
 
 	useEffect(() => {
-		setSupabase(createClient());
-	}, []);
-
-	useEffect(() => {
-		if (!supabase) return;
 		let isMounted = true;
 
                 const fetchUser = async (session: Session | null, shouldClear = false) => {
@@ -87,15 +68,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                                 if (shouldClear) {
                                         setUser(null);
                                         setSession(null);
-                                        clearClientUserCache();
                                 }
                                 return;
                         }
 
                         const sessionEmail = session.user.email;
-                        const fetchedUser = await fetchUserFromBackend(sessionEmail);
+                        const fetchedUser = await fetchUserFromBackend();
 
-                        if (!fetchedUser || fetchedUser.email !== sessionEmail) {
+                        if (!sessionEmail || !fetchedUser || fetchedUser.email !== sessionEmail) {
                                 toast.error("Please login with your Intranet gmail instead.");
 				router.push("/auth/auth-error?reason=user_not_found");
 				return;
@@ -120,12 +100,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 			isMounted = false;
 			subscription.unsubscribe();
 		};
-	}, [supabase, router]);
+	}, [router, supabase]);
 
-	const value = useMemo(
-		() => ({ user, session, loading, signIn, signOut }),
-		[user, session, loading, signIn, signOut]
-	);
+	const value: AuthContextType = { user, session, loading, signIn, signOut };
 
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

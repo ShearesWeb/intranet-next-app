@@ -27,8 +27,9 @@ export async function updateSession(request: NextRequest) {
         }
     )
 
-    // refreshing the auth token
-    const { data: { user }, error } = await supabase.auth.getUser()
+    // Refreshing and validating the auth token via verified claims.
+    const { data, error } = await supabase.auth.getClaims()
+    const isAuthenticated = Boolean(data?.claims?.sub)
 
     const path = request.nextUrl.pathname;
 
@@ -48,17 +49,14 @@ export async function updateSession(request: NextRequest) {
         return NextResponse.redirect(url)
     }
 
-    if (
-        !user &&
-        path.startsWith('/dashboard')
-    ) {
+    if (!isAuthenticated && path.startsWith('/dashboard')) {
         // no user, respond by redirecting the user to the login page
         const url = request.nextUrl.clone()
         url.pathname = '/auth/login'
         return NextResponse.redirect(url)
     }
 
-    if (user && path.startsWith('/auth')) {
+    if (isAuthenticated && path.startsWith('/auth')) {
         const url = request.nextUrl.clone();
         url.pathname = "/dashboard";
         return NextResponse.redirect(url);

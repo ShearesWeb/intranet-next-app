@@ -15,7 +15,7 @@ export type ChairRole = typeof AUTHORIZED_CHAIR_ROLES[number];
 export async function checkCCAChairAuthorization(
     userId: number,
     ccaId: number,
-    supabase: SupabaseClient
+    supabase: SupabaseClient<any, any, any>
 ): Promise<{ authorized: boolean; error?: string }> {
     try {
         const { data: userAppointments, error } = await supabase
@@ -53,7 +53,7 @@ export async function checkCCAChairAuthorization(
  */
 export async function getUserAuthorizedCCAs(
     userId: number,
-    supabase: SupabaseClient
+    supabase: SupabaseClient<any, any, any>
 ): Promise<{ authorized: boolean; ccaIds: number[]; error?: string }> {
     try {
         const { data: chairAppointments, error } = await supabase
@@ -73,7 +73,6 @@ export async function getUserAuthorizedCCAs(
 
         const ccasSet = new Set<number>();
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (chairAppointments || []).forEach((appointment: any) => {
             if (appointment.cca_positions) {
                 const position = appointment.cca_positions;
@@ -105,7 +104,7 @@ export async function getUserAuthorizedCCAs(
  */
 export async function hasAnyChairAuthorization(
     userId: number,
-    supabase: SupabaseClient
+    supabase: SupabaseClient<any, any, any>
 ): Promise<{ authorized: boolean; error?: string }> {
     try {
         const { data: chairRoles, error } = await supabase

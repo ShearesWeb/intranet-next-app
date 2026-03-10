@@ -70,7 +70,7 @@ const getCachedUserRole = cache(async (userId: number, supabase: SupabaseClient)
 export async function GET(_request: Request) {
     try {
         const headers = {
-            'Cache-Control': 'private, s-maxage=600, stale-while-revalidate=1200',
+            'Cache-Control': 'no-store, private',
             'Content-Type': 'application/json',
         };
 
@@ -104,7 +104,7 @@ export async function GET(_request: Request) {
         console.error("Error checking role:", error);
         return NextResponse.json({ isAuthorized: false, positions: [] }, {
             headers: {
-                'Cache-Control': 'no-cache',
+                'Cache-Control': 'no-store, private',
                 'Content-Type': 'application/json',
             }
         });

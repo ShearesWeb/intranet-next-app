@@ -87,10 +87,7 @@ export default function SubsidyDeclarationPage() {
                 accessorKey: "positionName",
                 header: "Position",
                 cell: (value: string, row) => (
-                    <div className="flex flex-col items-start gap-1">
-                        <span className="font-semibold leading-tight">{value}</span>
-                        <PositionTypeBadge value={row.positionType} />
-                    </div>
+                    <PositionTypeBadge value={value} position_type={row.positionType} />
                 ),
                 enableSorting: false,
             },

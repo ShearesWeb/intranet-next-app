@@ -141,14 +141,15 @@ The application uses a **dual-database approach**:
 ### Authenticated user data flow
 - Source: `authenticated_user_info` view that joins role flags and CCA appointments.
 - Types: `AuthenticatedUser`, `UserAppointment`, and `UserRoleFlags` in `src/types/User.ts` are the single source of truth for user shape across the app.
-- Server cache: `src/lib/fetch-user-info.ts` hydrates data (profile photo URL, roles, appointments) and stores a 10-minute TTL cookie (`authenticated_user`) plus a short-lived `user_id` cookie.
-- API: `GET /api/user` returns the cached-or-fresh user payload and refreshes the cookie; `DELETE /api/user` clears the cache (used during sign out).
-- Client loading: `AuthContext` first reads the cached cookie, falling back to `/api/user` only when stale/missing. Sign-in (`/auth/callback`) refreshes the cache, and sign-out purges both client and server cookies.
+- Server lookup: `src/lib/fetch-user-info.ts` derives identity from verified JWT claims (`supabase.auth.getClaims()`) and hydrates user data by email on demand (no app-level auth cookies).
+- API: `GET /api/user` returns user payload with `Cache-Control: no-store, private`; `DELETE /api/user` is kept only for legacy cookie cleanup during sign out.
+- Client loading: `AuthContext` always calls `/api/user` (`cache: "no-store"`) after session changes and stores data in React state only.
+- Optional optimization: if Supabase access tokens include an internal app user ID claim (`app_user_id` / `intranet_user_id` / `internal_user_id`), `fetchUserId()` skips the DB lookup entirely and reads that claim directly.
 
 **React usage:**
 - Wrap pages with `AuthProvider` (`src/app/layout.tsx`) and access user data via `useAuth()`.
 - Rely on the `user` object returned by the hook; it already includes role flags and appointments without extra API calls.
-- If you need the raw user ID in server routes, call `fetchUserId()` which reuses the same TTL-aware cache.
+- If you need the raw user ID in server routes, call `fetchUserId()`; it resolves from the active Supabase session (not app cookies).
   
 ## Infrastructure Overview
 

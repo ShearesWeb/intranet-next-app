@@ -12,20 +12,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import Link from 'next/link';
 import { CCAData } from '@/types/dashboard';
 import { Users, BarChart3 } from 'lucide-react';
-
-// Helper function to display CCA type with proper capitalization
-const ccaTypeDisplay = (str: string) => {
-  if (!str) return '';
-
-  const typeMapping: Record<string, string> = {
-    'committee': 'Committee',
-    'sports': 'Sports',
-    'culture': 'Culture',
-    'jcrc': 'JCRC',
-  };
-
-  return typeMapping[str] || str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
-};
+import { PositionTypeBadge } from '@/components/badges/position-type-badge';
+import { CcaTypeBadge } from '@/components/badges/cca-type-badge';
 
 // Define table columns
 const ccaTableColumns: SimpleTableColumn<CCAData>[] = [
@@ -46,10 +34,12 @@ const ccaTableColumns: SimpleTableColumn<CCAData>[] = [
   {
     accessorKey: 'role',
     header: 'Role',
-    cell: (value) => (
-      <span className="inline-block px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs font-bold whitespace-nowrap">
-        {value}
-      </span>
+    cell: (value, row) => (
+      <PositionTypeBadge
+        value={String(value)}
+        position_type={String(row.position_type || '')}
+        className="text-xs"
+      />
     ),
     enableSorting: true,
   },
@@ -57,9 +47,7 @@ const ccaTableColumns: SimpleTableColumn<CCAData>[] = [
     accessorKey: 'cca_type',
     header: 'Type',
     cell: (value) => (
-      <span className="inline-block px-2 py-1 bg-green-50 text-green-700 rounded text-xs font-bold whitespace-nowrap">
-        {ccaTypeDisplay(value)}
-      </span>
+      <CcaTypeBadge value={String(value)} className="text-xs" />
     ),
     enableSorting: true,
   },
@@ -176,7 +164,7 @@ export default function ManageCCA() {
                 )}
                 {allowRank && (
                   <Button asChild variant="outline" size="sm" className="gap-2">
-                    <Link href={`/dashboard/managecca/${encodeURIComponent(r.name)}?ccaId=${r.id}`}>
+                    <Link href={`/dashboard/managecca/rankMembers/${encodeURIComponent(r.name)}?ccaId=${r.id}`}>
                       <BarChart3 className="h-4 w-4" />
                       Rank Members
                     </Link>

@@ -33,10 +33,11 @@ const columns: SimpleTableColumn<SubsidyRow>[] = [
     header: 'Your Position',
     enableSorting: false,
     cell: (_, row) => (
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-foreground">{row.position_name}</span>
-        <PositionTypeBadge value={row.position_type} className="capitalize" />
-      </div>
+      <PositionTypeBadge
+        value={row.position_name}
+        position_type={row.position_type}
+        className="capitalize"
+      />
     ),
   },
   {

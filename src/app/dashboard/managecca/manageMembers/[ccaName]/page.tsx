@@ -29,6 +29,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { PositionTypeBadge } from "@/components/badges/position-type-badge";
 
 // Custom table component
 import { SimpleTable, SimpleTableColumn } from "@/components/table/simple-table";
@@ -39,7 +40,17 @@ const memberTableColumns: SimpleTableColumn<Member>[] = [
     { accessorKey: 'name', header: 'Name' },
     { accessorKey: 'email', header: 'Email' },
     { accessorKey: 'room', header: 'Room' },
-    { accessorKey: 'position_name', header: 'Position' },
+    {
+        accessorKey: 'position_name',
+        header: 'Position',
+        cell: (value, row) => (
+            <PositionTypeBadge
+                value={String(value)}
+                position_type={String(row.position_type || '')}
+                className="text-xs"
+            />
+        ),
+    },
 ];
 
 export default function ManageMembersPage() {
@@ -271,6 +282,11 @@ export default function ManageMembersPage() {
 
     // Local update status
     const handleLocalUpdateStatus = (userId: number, memberName: string, newStatus: CutStatus) => {
+        if (!isSports) {
+            toast.error('Status groups are only available for sports CCAs');
+            return;
+        }
+
         // Find member in any group
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const allCurrentMembers = Object.values(currentGroupedMembers).flat() as Member[];
@@ -299,6 +315,7 @@ export default function ManageMembersPage() {
             user_email: member.email,
             user_room: member.room,
             new_status: newStatus,
+            position_id: member.position_id || memberPositionId || undefined,
         };
         setPendingChanges(prev => [...prev, newChange]);
 
@@ -426,12 +443,15 @@ export default function ManageMembersPage() {
                         }
                         successCount++;
                     } else if (change.type === 'update_status') {
+                        if (!change.position_id && !memberPositionId) {
+                            throw new Error('Missing position ID for status update');
+                        }
                         const response = await fetch(`/api/cca/${ccaId}/updateMember`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 user_id: change.user_id,
-                                position_id: memberPositionId,
+                                position_id: change.position_id || memberPositionId,
                                 cut_status: change.new_status
                             })
                         });
@@ -578,7 +598,7 @@ export default function ManageMembersPage() {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     cell: (_value: any, row: Member) => (
                         <div className="flex flex-wrap gap-3">
-                            {isSportsCulture ? (
+                            {isSports ? (
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                         <Button variant="ghost" className="h-8 w-8 p-0">
@@ -654,6 +674,7 @@ export default function ManageMembersPage() {
     };
 
     const leadershipMembers = [...currentGroupedMembers.lead || [], ...currentGroupedMembers.vice || []];
+    const isSports = permissions.ccaType === 'sports';
     const isSportsCulture = ['sports', 'culture'].includes(permissions.ccaType);
     const totalFilteredMembers = Object.values(currentGroupedMembers).flat().length;
 
@@ -719,9 +740,9 @@ export default function ManageMembersPage() {
                         {!isSportsCulture && renderMemberGroup('Sub Committee', currentGroupedMembers.subcomm || [], true, false)}
                         {isSportsCulture && renderMemberGroup('Team Manager', currentGroupedMembers.teamManager || [])}
                         
-                        {isSportsCulture && renderMemberGroup('Final Cut - IHG Team Members (IVP)', currentGroupedMembers.ivpIhgTeam || [], true, false)}
-                        {isSportsCulture && renderMemberGroup('Final Cut - IHG Team Members', currentGroupedMembers.ihgTeam || [], true, false)}
-                        {isSportsCulture && renderMemberGroup('Final Cut Members', currentGroupedMembers.finalCut || [], true, false)}
+                        {isSports && renderMemberGroup('Final Cut - IHG Team Members (IVP)', currentGroupedMembers.ivpIhgTeam || [], true, false)}
+                        {isSports && renderMemberGroup('Final Cut - IHG Team Members', currentGroupedMembers.ihgTeam || [], true, false)}
+                        {isSports && renderMemberGroup('Final Cut Members', currentGroupedMembers.finalCut || [], true, false)}
                         
                         {renderMemberGroup('Members', currentGroupedMembers.members || [], true, true)}
                     </div>

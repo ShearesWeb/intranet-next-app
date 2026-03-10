@@ -74,7 +74,8 @@ jobs:
         run: |
           curl -fsSL https://get.pulumi.com | sh
           echo "$HOME/.pulumi/bin" >> $GITHUB_PATH
-  
+
       - name: 8. 🚧 Deploy with SST
-        run: npx sst deploy --stage prd
- 
+        run: |
+          ./node_modules/.bin/sst version
+          ./node_modules/.bin/sst deploy --stage prd --print-logs
