@@ -70,12 +70,9 @@ jobs:
       - name: 6. 📦 Install Dependencies
         run: ${{ steps.detect-pm.outputs.manager }} ${{ steps.detect-pm.outputs.command }}
   
-      - name: 7. ⚙️ Install Pulumi CLI
-        run: |
-          curl -fsSL https://get.pulumi.com | sh
-          echo "$HOME/.pulumi/bin" >> $GITHUB_PATH
-
-      - name: 8. 🚧 Deploy with SST
+      - name: 7. 🚧 Deploy with SST
         run: |
           ./node_modules/.bin/sst version
+          # Ensure SST uses its bundled Pulumi language hosts and avoids PATH mismatches.
+          echo "$HOME/.config/sst/bin" >> $GITHUB_PATH
           ./node_modules/.bin/sst deploy --stage prd --print-logs
