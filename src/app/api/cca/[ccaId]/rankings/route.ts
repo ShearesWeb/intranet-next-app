@@ -56,8 +56,8 @@ const normalizeTrack = (name?: string) => {
 
 const UNIVERSAL_EXCLUDED_POSITION_TYPES = new Set(['lead', 'vice']);
 const COMMITTEE_EXCLUDED_POSITION_TYPES = new Set(['lead', 'vice', 'member']);
-const RESIDENT_POSITION_TOKENS = new Set(['resident', 'residents', 'member', 'members']);
-const SPORTS_RANKABLE_POSITION_TOKENS = new Set(['teammanager', 'tm']);
+const RESIDENT_POSITION_TOKENS = new Set(['resident', 'residents']);
+const SPORTS_RANKABLE_POSITION_TOKENS = new Set(['teammanager', 'tm', 'member', 'members']);
 const PERFORMANCE_REQUIRED_CCA_TYPES = new Set(['committee', 'culture']);
 
 const normalizePositionToken = (value?: string) =>

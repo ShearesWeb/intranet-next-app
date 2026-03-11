@@ -40,7 +40,7 @@ jobs:
       - name: 3. ⚙️ Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22.22"
           cache: ${{ steps.detect-pm.outputs.manager }}
 
       - name: 4. ⬇️ Restore Next.js Cache
@@ -48,12 +48,17 @@ jobs:
         with:
           path: |
             .next/cache
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json', '**/yarn.lock') }}-${{ hashFiles('**.[jt]s', '**.[jt]sx') }}
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json', '**/yarn.lock') }}
           restore-keys: |
-            ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json', '**/yarn.lock') }}-
+            ${{ runner.os }}-nextjs-
 
       - name: 5. 📦 Install Dependencies
-        run: ${{ steps.detect-pm.outputs.manager }} ${{ steps.detect-pm.outputs.command }}
+        run: |
+          if [ "${{ steps.detect-pm.outputs.manager }}" = "npm" ]; then
+            npm ci --prefer-offline --no-audit --no-fund
+          else
+            yarn install --frozen-lockfile --prefer-offline
+          fi
 
       - name: 6. 🚧 Build with Next.js
         run: ${{ steps.detect-pm.outputs.manager }} run build

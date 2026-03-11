@@ -64,14 +64,30 @@ jobs:
         with:
           path: |
             .next/cache
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json', '**/yarn.lock') }}-${{ hashFiles('**.[jt]s', '**.[jt]sx') }}
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json', '**/yarn.lock') }}
           restore-keys: |
-            ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json', '**/yarn.lock') }}-
+            ${{ runner.os }}-nextjs-
 
-      - name: 6. 📦 Install Dependencies
-        run: ${{ steps.detect-pm.outputs.manager }} ${{ steps.detect-pm.outputs.command }}
+      - name: 6. ⬇️ Restore SST/Pulumi Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.config/sst
+            ~/.sst
+            ~/.pulumi/plugins
+          key: ${{ runner.os }}-sst-pulumi-${{ hashFiles('sst.config.ts', '**/package-lock.json', '**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-sst-pulumi-
+
+      - name: 7. 📦 Install Dependencies
+        run: |
+          if [ "${{ steps.detect-pm.outputs.manager }}" = "npm" ]; then
+            npm ci --prefer-offline --no-audit --no-fund
+          else
+            yarn install --frozen-lockfile --prefer-offline
+          fi
   
-      - name: 7. 🚧 Deploy with SST
+      - name: 8. 🚧 Deploy with SST
         run: |
           # Resolve a compatible pulumi-language-nodejs dynamically (-root flag support required).
           ./node_modules/.bin/sst version
