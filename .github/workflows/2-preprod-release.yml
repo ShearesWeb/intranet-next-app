@@ -73,15 +73,35 @@ jobs:
   
       - name: 7. 🚧 Deploy with SST
         run: |
-          # Force Pulumi language host resolution to SST-managed binaries.
+          # Resolve a compatible pulumi-language-nodejs dynamically (-root flag support required).
+          ./node_modules/.bin/sst version
           mkdir -p "$RUNNER_TEMP/sst-bin"
-          if [ -x "$HOME/.config/sst/bin/pulumi-language-nodejs" ]; then
-            ln -sf "$HOME/.config/sst/bin/pulumi-language-nodejs" "$RUNNER_TEMP/sst-bin/pulumi-language-nodejs"
-          else
-            echo "SST pulumi-language-nodejs not found in $HOME/.config/sst/bin"
+
+          candidates=(
+            "$HOME/.config/sst/bin/pulumi-language-nodejs"
+            "$HOME/.sst/bin/pulumi-language-nodejs"
+            "$HOME/.pulumi/bin/pulumi-language-nodejs"
+          )
+          if command -v pulumi-language-nodejs >/dev/null 2>&1; then
+            candidates+=("$(command -v pulumi-language-nodejs)")
+          fi
+
+          selected=""
+          for cand in "${candidates[@]}"; do
+            if [ -x "$cand" ] && "$cand" -help 2>&1 | grep -q -- "-root"; then
+              selected="$cand"
+              break
+            fi
+          done
+
+          if [ -z "$selected" ]; then
+            echo "No compatible pulumi-language-nodejs found (expected -root support)."
             exit 1
           fi
-          export PATH="$RUNNER_TEMP/sst-bin:$HOME/.config/sst/bin:$PATH"
+
+          ln -sf "$selected" "$RUNNER_TEMP/sst-bin/pulumi-language-nodejs"
+          export PULUMI_LANGUAGE_NODEJS="$RUNNER_TEMP/sst-bin/pulumi-language-nodejs"
+          export PATH="$RUNNER_TEMP/sst-bin:$HOME/.config/sst/bin:$HOME/.sst/bin:$PATH"
           ./node_modules/.bin/sst deploy --stage preprod
  
   promote-tag-to-production:
