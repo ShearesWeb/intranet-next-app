@@ -1,7 +1,7 @@
 // src/app/api/cca/[ccaId]/rankings/route.ts
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-import { fetchUserId } from "@/lib/fetch-user-info";
+import { fetchUserId, fetchUserInfo } from "@/lib/fetch-user-info";
 import { checkCCAChairAuthorization } from "@/lib/lead-auth-service";
 
 type AppointmentPositionRow = {
@@ -56,8 +56,27 @@ const normalizeTrack = (name?: string) => {
 
 const UNIVERSAL_EXCLUDED_POSITION_TYPES = new Set(['lead', 'vice']);
 const COMMITTEE_EXCLUDED_POSITION_TYPES = new Set(['lead', 'vice', 'member']);
-const SPORTS_RANKABLE_POSITION_TYPES = new Set(['member', 'team manager', 'teammanager']);
+const RESIDENT_POSITION_TOKENS = new Set(['resident', 'residents', 'member', 'members']);
+const SPORTS_RANKABLE_POSITION_TOKENS = new Set(['teammanager', 'tm']);
 const PERFORMANCE_REQUIRED_CCA_TYPES = new Set(['committee', 'culture']);
+
+const normalizePositionToken = (value?: string) =>
+    (value || '').toLowerCase().replace(/[\s_-]+/g, '').trim();
+
+const isResidentPosition = (position?: { position_type?: string; name?: string } | null) => {
+    if (!position) return false;
+    const typeToken = normalizePositionToken(position.position_type);
+    const nameToken = normalizePositionToken(position.name);
+    return RESIDENT_POSITION_TOKENS.has(typeToken) || RESIDENT_POSITION_TOKENS.has(nameToken);
+};
+
+const isSportsRankablePosition = (position?: { position_type?: string; name?: string } | null) => {
+    if (!position) return false;
+    if (isResidentPosition(position)) return false;
+    const typeToken = normalizePositionToken(position.position_type);
+    const nameToken = normalizePositionToken(position.name);
+    return SPORTS_RANKABLE_POSITION_TOKENS.has(typeToken) || SPORTS_RANKABLE_POSITION_TOKENS.has(nameToken);
+};
 
 // GET handler to fetch members with their ranking data
 export async function GET(
@@ -66,7 +85,9 @@ export async function GET(
 ) {
     const { ccaId } = await params;
     const supabase = await createClient();
-    const requestingUserId = await fetchUserId();
+    const requestingUser = await fetchUserInfo();
+    const requestingUserId = requestingUser?.id ?? null;
+    const isJcrcViewer = Boolean(requestingUser?.is_jcrc);
 
     if (!requestingUserId) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -82,24 +103,28 @@ export async function GET(
         return NextResponse.json({ error: 'CCA not found' }, { status: 404 });
     }
 
-    const { data: userAppointments, error: userAppointmentsError } = await supabase
-        .from('cca_appointments')
-        .select(`
-            cca_positions!inner(id, name, position_type, cca_id)
-        `)
-        .eq('user_id', requestingUserId)
-        .eq('cca_positions.cca_id', ccaId);
+    let normalizedUserPositions: AppointmentPositionRow[] = [];
 
-    if (userAppointmentsError) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    if (!isJcrcViewer) {
+        const { data: userAppointments, error: userAppointmentsError } = await supabase
+            .from('cca_appointments')
+            .select(`
+                cca_positions!inner(id, name, position_type, cca_id)
+            `)
+            .eq('user_id', requestingUserId)
+            .eq('cca_positions.cca_id', ccaId);
+
+        if (userAppointmentsError) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+        }
+
+        normalizedUserPositions = ((userAppointments || []) as UserAppointmentRow[]).map((appointment) => {
+            const position = Array.isArray(appointment.cca_positions)
+                ? appointment.cca_positions[0]
+                : appointment.cca_positions;
+            return position;
+        }).filter((position): position is AppointmentPositionRow => Boolean(position));
     }
-
-    const normalizedUserPositions = ((userAppointments || []) as UserAppointmentRow[]).map((appointment) => {
-        const position = Array.isArray(appointment.cca_positions)
-            ? appointment.cca_positions[0]
-            : appointment.cca_positions;
-        return position;
-    }).filter((position): position is AppointmentPositionRow => Boolean(position));
 
     const isCommittee = ccaInfo.cca_type === 'committee';
     const isSports = ccaInfo.cca_type === 'sports';
@@ -110,13 +135,15 @@ export async function GET(
         .map((position) => normalizeTrack(position.name))
         .filter((track: string) => track.length > 0);
 
-    if (!isCommittee) {
-        const authResult = await checkCCAChairAuthorization(requestingUserId, parseInt(ccaId), supabase);
-        if (!authResult.authorized) {
+    if (!isJcrcViewer) {
+        if (!isCommittee) {
+            const authResult = await checkCCAChairAuthorization(requestingUserId, parseInt(ccaId), supabase);
+            if (!authResult.authorized) {
+                return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+            }
+        } else if (!isChair && !isMaincomm) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
         }
-    } else if (!isChair && !isMaincomm) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
     const { data: members, error: membersError } = await supabase
@@ -184,30 +211,34 @@ export async function GET(
         };
     });
 
-    let scopedMembers = enrichedMembers.filter((member) => {
-        if (!isCommittee) return true;
-        const position = member.cca_positions;
-        if (!position) return false;
-        if (isChair) {
-            return ['maincomm', 'blockcomm'].includes(position.position_type);
-        }
-        return position.position_type === 'subcomm';
-    });
+    let scopedMembers = enrichedMembers;
 
-    // For committee maincomm users: try track-based scoping first.
-    // If track names do not align between maincomm/subcomm positions, fall back
-    // to all subcomm members so ranking is still possible.
-    if (isCommittee && !isChair) {
-        if (maincommTracks.length > 0) {
-            const matchedSubcomm = scopedMembers.filter((member) => {
-                const position = member.cca_positions;
-                if (!position || position.position_type !== 'subcomm') return false;
-                const track = normalizeTrack(position.name);
-                return maincommTracks.includes(track);
-            });
+    if (!isJcrcViewer) {
+        scopedMembers = scopedMembers.filter((member) => {
+            if (!isCommittee) return true;
+            const position = member.cca_positions;
+            if (!position) return false;
+            if (isChair) {
+                return ['maincomm', 'blockcomm'].includes(position.position_type);
+            }
+            return position.position_type === 'subcomm';
+        });
 
-            if (matchedSubcomm.length > 0) {
-                scopedMembers = matchedSubcomm;
+        // For committee maincomm users: try track-based scoping first.
+        // If track names do not align between maincomm/subcomm positions, fall back
+        // to all subcomm members so ranking is still possible.
+        if (isCommittee && !isChair) {
+            if (maincommTracks.length > 0) {
+                const matchedSubcomm = scopedMembers.filter((member) => {
+                    const position = member.cca_positions;
+                    if (!position || position.position_type !== 'subcomm') return false;
+                    const track = normalizeTrack(position.name);
+                    return maincommTracks.includes(track);
+                });
+
+                if (matchedSubcomm.length > 0) {
+                    scopedMembers = matchedSubcomm;
+                }
             }
         }
     }
@@ -221,14 +252,13 @@ export async function GET(
 
     if (isSports) {
         scopedMembers = scopedMembers.filter((member) => {
-            const positionType = member.cca_positions?.position_type?.toLowerCase() || '';
-            return SPORTS_RANKABLE_POSITION_TYPES.has(positionType);
+            return isSportsRankablePosition(member.cca_positions ?? undefined);
         });
     }
 
     scopedMembers = scopedMembers.filter((member) => {
         const positionType = member.cca_positions?.position_type?.toLowerCase() || '';
-        return !UNIVERSAL_EXCLUDED_POSITION_TYPES.has(positionType);
+        return !UNIVERSAL_EXCLUDED_POSITION_TYPES.has(positionType) && !isResidentPosition(member.cca_positions ?? undefined);
     });
 
     scopedMembers.sort((a, b) => {
@@ -322,8 +352,11 @@ export async function POST(
         if (UNIVERSAL_EXCLUDED_POSITION_TYPES.has(positionType)) {
             return;
         }
+        if (isResidentPosition(position)) {
+            return;
+        }
         if (!isCommittee) {
-            if (isSports && !SPORTS_RANKABLE_POSITION_TYPES.has(positionType)) {
+            if (isSports && !isSportsRankablePosition(position)) {
                 return;
             }
             allowedPositionIds.add(position.id);

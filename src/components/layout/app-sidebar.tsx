@@ -56,6 +56,13 @@ export const navOptions: NavItem[] = [
         url: "/dashboard/managecca",
         isActive: true,
         icon: Volleyball,
+        items: [
+            {
+                title: "JCRC View",
+                url: "/dashboard/managecca/jcrcView",
+                jcrcOnly: true,
+            },
+        ],
     },
     {
         title: "CCA Allocation",

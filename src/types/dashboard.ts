@@ -1,4 +1,5 @@
 export interface CCAData {
+  id: number;
   name: string;
   role: string;
   position_type: string;

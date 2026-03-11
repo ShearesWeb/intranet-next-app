@@ -81,6 +81,7 @@ export default function ManageCCA() {
     }
 
     setLoadingCCAs(true);
+    setError(null);
     fetch('/api/user/getCCAs')
       .then(async (res) => {
         if (!res.ok) {
@@ -146,17 +147,15 @@ export default function ManageCCA() {
         header: 'Actions',
         enableSorting: false,
         cell: (_, row) => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const r = row as any;
-          const allowManage = canManageMembers(r);
-          const allowRank = canRankMembers(r);
+          const allowManage = canManageMembers(row);
+          const allowRank = canRankMembers(row);
           return (
           <div className="flex flex-col lg:flex-row gap-2 justify-start w-full">
             {allowManage || allowRank ? (
               <>
                 {allowManage && (
                   <Button asChild size="sm" className="gap-2">
-                    <Link href={`/dashboard/managecca/manageMembers/${encodeURIComponent(r.name)}?ccaId=${r.id}`}>
+                    <Link href={`/dashboard/managecca/manageMembers/${encodeURIComponent(row.name)}?ccaId=${row.id}`}>
                       <Users className="h-4 w-4" />
                       Manage Members
                     </Link>
@@ -164,7 +163,7 @@ export default function ManageCCA() {
                 )}
                 {allowRank && (
                   <Button asChild variant="outline" size="sm" className="gap-2">
-                    <Link href={`/dashboard/managecca/rankMembers/${encodeURIComponent(r.name)}?ccaId=${r.id}`}>
+                    <Link href={`/dashboard/managecca/rankMembers/${encodeURIComponent(row.name)}?ccaId=${row.id}`}>
                       <BarChart3 className="h-4 w-4" />
                       Rank Members
                     </Link>
