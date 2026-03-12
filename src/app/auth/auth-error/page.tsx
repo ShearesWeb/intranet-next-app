@@ -6,6 +6,7 @@ import { AvatarImage } from "@radix-ui/react-avatar";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from 'react'
+import Image from "next/image";
 
 function AuthErrorContent() {
     const router = useRouter();
@@ -53,9 +54,11 @@ function AuthErrorContent() {
                 </div>
             </div>
             <div className="bg-muted hidden lg:flex bg-primary justify-center items-center relative" style={{ height: '100vh' }}>
-                <img
+                <Image
                     src="/images/shweb-logo.png"
                     alt="Image"
+                    width={480}
+                    height={480}
                     className="w-1/2 object-cover dark:brightness-[0.2] dark:grayscale"
                 />
             </div>

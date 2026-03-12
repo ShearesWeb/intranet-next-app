@@ -4,6 +4,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
+import Image from "next/image";
 
 const Page = async () => {
   const supabase = await createClient();
@@ -16,9 +17,11 @@ const Page = async () => {
   return (
     <section className="flex min-h-screen flex-col items-center lg:justify-center text-center p-24">
       <div className="hidden lg:block absolute inset-x-0 top-0 flex h-full w-full items-center justify-center opacity-100">
-        <img
+        <Image
           alt="background"
           src="https://deifkwefumgah.cloudfront.net/shadcnblocks/block/patterns/square-alt-grid.svg"
+          fill
+          sizes="100vw"
           className="[mask-image:radial-gradient(75%_75%_at_center,white,transparent)] opacity-90"
         />
       </div>
@@ -26,9 +29,11 @@ const Page = async () => {
         <div className="mx-auto flex max-w-5xl flex-col items-center">
           <div className="flex flex-col items-center gap-6 text-center">
             <div className="rounded-xl bg-background/30 p-4 shadow-sm backdrop-blur-sm">
-              <img
+              <Image
                 src="/images/shweb-logo.png"
                 alt="logo"
+                width={64}
+                height={64}
                 className="h-16"
               />
             </div>
@@ -78,9 +83,11 @@ const Page = async () => {
                     "group flex aspect-square h-12 items-center justify-center p-0",
                   )}
                 >
-                  <img
+                  <Image
                     src="https://deifkwefumgah.cloudfront.net/shadcnblocks/block/logos/react-icon.svg"
                     alt="React logo"
+                    width={24}
+                    height={24}
                     className="h-6 saturate-0 transition-all group-hover:saturate-100"
                   />
                 </div>
@@ -90,9 +97,11 @@ const Page = async () => {
                     "group flex aspect-square h-12 items-center justify-center p-0",
                   )}
                 >
-                  <img
+                  <Image
                     src="https://deifkwefumgah.cloudfront.net/shadcnblocks/block/logos/tailwind-icon.svg"
                     alt="Tailwind CSS logo"
+                    width={24}
+                    height={12}
                     className="h-3 saturate-0 transition-all group-hover:saturate-100"
                   />
                 </div>

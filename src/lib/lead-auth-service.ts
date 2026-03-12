@@ -15,7 +15,7 @@ export type ChairRole = typeof AUTHORIZED_CHAIR_ROLES[number];
 export async function checkCCAChairAuthorization(
     userId: number,
     ccaId: number,
-    supabase: SupabaseClient<any, any, any>
+    supabase: SupabaseClient
 ): Promise<{ authorized: boolean; error?: string }> {
     try {
         const { data: userAppointments, error } = await supabase
@@ -53,7 +53,7 @@ export async function checkCCAChairAuthorization(
  */
 export async function getUserAuthorizedCCAs(
     userId: number,
-    supabase: SupabaseClient<any, any, any>
+    supabase: SupabaseClient
 ): Promise<{ authorized: boolean; ccaIds: number[]; error?: string }> {
     try {
         const { data: chairAppointments, error } = await supabase
@@ -73,12 +73,21 @@ export async function getUserAuthorizedCCAs(
 
         const ccasSet = new Set<number>();
 
-        (chairAppointments || []).forEach((appointment: any) => {
+        type ChairAppointment = {
+            cca_positions: { position_type?: string; cca_id?: number } | Array<{ position_type?: string; cca_id?: number }> | null;
+        };
+
+        ((chairAppointments || []) as ChairAppointment[]).forEach((appointment) => {
             if (appointment.cca_positions) {
-                const position = appointment.cca_positions;
+                const position = Array.isArray(appointment.cca_positions)
+                    ? appointment.cca_positions[0]
+                    : appointment.cca_positions;
+                if (!position) return;
                 const positionType = (position.position_type || '').toLowerCase();
                 if (AUTHORIZED_CHAIR_ROLES.includes(positionType as ChairRole)) {
-                    ccasSet.add(position.cca_id);
+                    if (typeof position.cca_id === 'number') {
+                        ccasSet.add(position.cca_id);
+                    }
                 }
             }
         });
@@ -104,7 +113,7 @@ export async function getUserAuthorizedCCAs(
  */
 export async function hasAnyChairAuthorization(
     userId: number,
-    supabase: SupabaseClient<any, any, any>
+    supabase: SupabaseClient
 ): Promise<{ authorized: boolean; error?: string }> {
     try {
         const { data: chairRoles, error } = await supabase

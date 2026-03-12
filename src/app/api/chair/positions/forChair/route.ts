@@ -7,6 +7,31 @@ import { fetchUserId } from "@/lib/fetch-user-info";
 import { getUserAuthorizedCCAs } from "@/lib/lead-auth-service";
 import { SupabaseClient } from "@supabase/supabase-js";
 
+type CapacityInfoRow = {
+    id: number;
+    name: string;
+    capacity: number;
+    available_capacity: number;
+    applied_count: number;
+    position_type: string;
+    cca_id: number;
+    cca_name: string;
+};
+
+type PublicUserInfoRow = {
+    id: number;
+    name: string;
+    email: string;
+    room: string;
+};
+
+type ApplicationRow = {
+    position_id: number;
+    user_id: number;
+    ranking: number;
+    public_user_info: PublicUserInfoRow | PublicUserInfoRow[] | null;
+};
+
 const getCachedChairAuthorization = cache(async (userId: number, supabase: SupabaseClient) => {
     return await getUserAuthorizedCCAs(userId, supabase);
 });
@@ -23,7 +48,7 @@ const getCachedPositionsForPhase = cache(async (ccaIds: number[], supabase: Supa
         return [];
     }
 
-    return allPositions;
+    return (allPositions || []) as CapacityInfoRow[];
 });
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -60,7 +85,7 @@ export async function GET(_request: Request) {
             return NextResponse.json({ positions: [] }, { headers });
         }
 
-        const positionIds = allPositions.map((p: any) => p.id);
+        const positionIds = allPositions.map((p) => p.id);
 
         const { data: applicationsWithUsers, error: appError } = await supabase
             .from("cca_user_ranking")
@@ -84,13 +109,13 @@ export async function GET(_request: Request) {
             ranking: number;
         }>>();
 
-        (applicationsWithUsers || []).forEach((app: any) => {
+        ((applicationsWithUsers || []) as ApplicationRow[]).forEach((app) => {
             if (!applicantsByPosition.has(app.position_id)) {
                 applicantsByPosition.set(app.position_id, []);
             }
 
             // Handle both array and object cases
-            let userData: any = null;
+            let userData: PublicUserInfoRow | null = null;
 
             if (app.public_user_info) {
                 // If it's an array, take the first element
@@ -116,7 +141,7 @@ export async function GET(_request: Request) {
         console.log(allPositions);
 
         // Map the results using the safe helper function
-        const result = allPositions.map((position: any) => ({
+        const result = allPositions.map((position) => ({
             id: position.id,
             name: position.name,
             cca_name: position.cca_name, // Use helper function

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { AppLayout } from "@/components/layout/app-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,9 +33,7 @@ type WeeklyRow = {
 };
 
 export default function WeeklyCommitmentPage() {
-  const params = useParams();
   const searchParams = useSearchParams();
-  const ccaName = params?.ccaName as string || "";
   const ccaId = searchParams.get("ccaId");
 
   const [editableWeekIds, setEditableWeekIds] = useState<number[]>(() => getEditableWeekIds(new Date()));

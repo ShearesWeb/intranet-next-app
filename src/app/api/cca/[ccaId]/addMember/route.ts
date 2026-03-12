@@ -11,7 +11,7 @@ export async function POST(
 ) {
     try {
         const { ccaId } = await params;
-        const { user_id, reason, position_id, commitment_period } = await request.json();
+        const { user_id, position_id, commitment_period } = await request.json();
 
         const supabase = await createClient();
 

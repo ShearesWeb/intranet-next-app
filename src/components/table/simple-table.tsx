@@ -36,7 +36,7 @@ import { cn } from '@/lib/utils';
 export interface SimpleTableColumn<TData> {
     accessorKey: keyof TData;
     header: string;
-    cell?: (value: any, row: TData) => React.ReactNode;
+    cell?: (value: unknown, row: TData) => React.ReactNode;
     enableSorting?: boolean;
     hidden?: boolean;
 }
@@ -54,7 +54,7 @@ interface SimpleTableProps<TData> {
     tablePadding?: string;
 }
 
-export function SimpleTable<TData extends Record<string, any>>({
+export function SimpleTable<TData extends object>({
     data,
     columns,
     searchColumn,

@@ -37,7 +37,7 @@ import { cn } from '@/lib/utils';
 export interface SelectionTableColumn<TData> {
     accessorKey: keyof TData;
     header: string;
-    cell?: (value: any, row: TData) => React.ReactNode;
+    cell?: (value: unknown, row: TData) => React.ReactNode;
     enableSorting?: boolean;
     hidden?: boolean;
 }
@@ -59,7 +59,7 @@ interface SelectionTableProps<TData, TId = number | string> {
     idField?: keyof TData;
 }
 
-export function SelectionTable<TData extends Record<string, any>, TId = number | string>({
+export function SelectionTable<TData extends object, TId = number | string>({
     data,
     columns,
     searchColumn,

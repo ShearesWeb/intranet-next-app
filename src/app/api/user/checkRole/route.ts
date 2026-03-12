@@ -7,6 +7,19 @@ import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { AUTHORIZED_CHAIR_ROLES } from '@/lib/lead-auth-service';
 import { SupabaseClient } from "@supabase/supabase-js";
 
+type PositionWithCcaRow = {
+    name: string;
+    position_type: string;
+    cca_id: number;
+    ccas: { name: string } | Array<{ name: string }> | null;
+};
+
+type UserPositionSummary = {
+    position: string;
+    position_type: string;
+    cca: string;
+};
+
 const getCachedUserRole = cache(async (userId: number, supabase: SupabaseClient) => {
     // Check if user is admin first (optional optimization, but we need positions anyway)
     // Actually, we can check admin status in the main handler.
@@ -39,8 +52,7 @@ const getCachedUserRole = cache(async (userId: number, supabase: SupabaseClient)
     const authorizedRoles = AUTHORIZED_CHAIR_ROLES;
 
     // ✅ FIXED: Handle ccas as array or object
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const userPositions = positions.map((pos: any) => {
+    const userPositions: UserPositionSummary[] = (positions as PositionWithCcaRow[]).map((pos) => {
         const ccaName = Array.isArray(pos.ccas) 
             ? pos.ccas[0]?.name 
             : pos.ccas?.name;
@@ -52,15 +64,13 @@ const getCachedUserRole = cache(async (userId: number, supabase: SupabaseClient)
         };
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const isAuthorized = userPositions.some((pos: any) =>
+    const isAuthorized = userPositions.some((pos) =>
         authorizedRoles.includes(pos.position_type.toLowerCase())
     );
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return {
         isAuthorized,
-        positions: userPositions.map((pos: any) =>
+        positions: userPositions.map((pos) =>
             `${pos.position} (${pos.position_type}) - ${pos.cca}`
         )
     };

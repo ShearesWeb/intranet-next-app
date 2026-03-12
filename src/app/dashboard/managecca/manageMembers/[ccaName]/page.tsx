@@ -53,6 +53,14 @@ const memberTableColumns: SimpleTableColumn<Member>[] = [
     },
 ];
 
+type GroupedMembers = Record<string, Member[]>;
+
+type PositionOption = {
+    id: number;
+    name: string;
+    position_type: string;
+};
+
 export default function ManageMembersPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -60,10 +68,8 @@ export default function ManageMembersPage() {
     const ccaId = searchParams.get('ccaId');
 
     // Original state
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [originalGroupedMembers, setOriginalGroupedMembers] = useState<any>({});
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [currentGroupedMembers, setCurrentGroupedMembers] = useState<any>({});
+    const [originalGroupedMembers, setOriginalGroupedMembers] = useState<GroupedMembers>({});
+    const [currentGroupedMembers, setCurrentGroupedMembers] = useState<GroupedMembers>({});
 
     // UI state
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -85,8 +91,7 @@ export default function ManageMembersPage() {
         positionId: 0,
         commitmentPeriod: ''
     });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [allPositions, setAllPositions] = useState<any[]>([]);
+    const [allPositions, setAllPositions] = useState<PositionOption[]>([]);
     const [saveErrors, setSaveErrors] = useState<string[]>([]);
 
     // Pending changes
@@ -114,10 +119,11 @@ export default function ManageMembersPage() {
             setAllPositions(data.all_positions || []);
             setError(null);
             setPendingChanges([]); // Reset pending changes
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Error fetching members:', error);
-            setError(error.message);
-            if (error.message.includes('Unauthorized')) {
+            const message = error instanceof Error ? error.message : 'Failed to fetch members';
+            setError(message);
+            if (message.includes('Unauthorized')) {
                 toast.error('You are not authorized to manage this CCA');
                 router.push('/dashboard/managecca');
             } else {
@@ -187,8 +193,7 @@ export default function ManageMembersPage() {
         setPendingChanges(prev => [...prev, newChange]);
 
         // Find position name
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const position = allPositions.find((p: any) => p.id === positionId);
+        const position = allPositions.find((p) => p.id === positionId);
         const positionName = position ? position.name : 'Member';
 
         // Add to current members display (for immediate UI feedback)
@@ -205,7 +210,7 @@ export default function ManageMembersPage() {
             position_id: positionId
         };
 
-        setCurrentGroupedMembers((prev: any) => ({
+        setCurrentGroupedMembers((prev: GroupedMembers) => ({
             ...prev,
             members: [...(prev.members || []), newMember]
         }));
@@ -772,11 +777,9 @@ export default function ManageMembersPage() {
                                             value={addForm.positionId}
                                             onChange={(e) => setAddForm({...addForm, positionId: Number(e.target.value)})}
                                         >
-                                            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                                             {allPositions
-                                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                                .filter((pos: any) => !['lead', 'vice'].includes(pos.position_type))
-                                                .map((pos: any) => (
+                                                .filter((pos) => !['lead', 'vice'].includes(pos.position_type))
+                                                .map((pos) => (
                                                 <option key={pos.id} value={pos.id}>{pos.name}</option>
                                             ))}
                                         </select>
