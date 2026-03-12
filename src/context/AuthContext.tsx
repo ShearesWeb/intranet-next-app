@@ -32,7 +32,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                                 return null;
                         }
                         const data = await res.json();
-                        console.log("Fetched user from API:", data);
                         return data as User;
                 } catch (err) {
                         console.error("Error calling /api/user:", err);
@@ -45,7 +44,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 			provider: 'google',
 			options: {
 				redirectTo: `${window.location.origin}/auth/callback${next ? `?next=${encodeURIComponent(next)}` : `?next=${encodeURIComponent('/dashboard')}`
-					}`,
+						}`,
+                                queryParams: {
+                                        prompt: "select_account",
+                                },
 			},
 		});
 		if (error) throw error;
@@ -76,6 +78,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         const fetchedUser = await fetchUserFromBackend();
 
                         if (!sessionEmail || !fetchedUser || fetchedUser.email !== sessionEmail) {
+                                if (isMounted) {
+                                        setUser(null);
+                                        setSession(null);
+                                }
                                 toast.error("Please login with your Intranet gmail instead.");
 				router.push("/auth/auth-error?reason=user_not_found");
 				return;

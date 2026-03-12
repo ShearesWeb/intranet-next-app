@@ -1,8 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-export async function createClient() {
+type CreateClientOptions = {
+    allowCookieWrite?: boolean;
+};
+
+export async function createClient(options: CreateClientOptions = {}) {
     const cookieStore = await cookies();
+    const allowCookieWrite = options.allowCookieWrite === true;
 
     // Create a server's supabase client with newly configured cookie,
     // which could be used to maintain user's session
@@ -15,15 +20,16 @@ export async function createClient() {
                     return cookieStore.getAll();
                 },
                 setAll(cookiesToSet) {
-                    try {
-                        cookiesToSet.forEach(({ name, value, options }) =>
-                            cookieStore.set(name, value, options)
-                        );
-                    } catch {
-                        // The `setAll` method was called from a Server Component.
-                        // This can be ignored if you have middleware refreshing
-                        // user sessions.
+                    if (!allowCookieWrite) {
+                        // Intentionally disabled by default.
+                        // We do not write Supabase auth cookies on the server to avoid
+                        // server-driven cookie state overriding the active browser session.
+                        return;
                     }
+
+                    cookiesToSet.forEach(({ name, value, options }) =>
+                        cookieStore.set(name, value, options)
+                    );
                 },
             },
         }

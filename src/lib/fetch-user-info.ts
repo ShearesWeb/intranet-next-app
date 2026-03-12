@@ -2,6 +2,7 @@
 
 import { AuthenticatedUser } from "@/types/User";
 import { createClient } from "@/utils/supabase/server";
+import { unstable_noStore as noStore } from "next/cache";
 
 type JwtClaims = Record<string, unknown>;
 
@@ -71,6 +72,7 @@ function resolveInternalUserIdFromClaims(claims: JwtClaims | null): number | nul
 }
 
 export async function fetchUserInfo(): Promise<AuthenticatedUser | null> {
+    noStore();
     const supabase = await createClient();
     const claims = await getVerifiedClaims(supabase);
     const userEmail = await resolveAuthenticatedEmail(supabase, claims);
@@ -117,6 +119,7 @@ export async function fetchUserInfo(): Promise<AuthenticatedUser | null> {
  * Get the authenticated user's ID using the active Supabase session.
  */
 export async function fetchUserId(): Promise<number | null> {
+    noStore();
     const supabase = await createClient();
     const claims = await getVerifiedClaims(supabase);
     const internalUserIdFromClaims = resolveInternalUserIdFromClaims(claims);

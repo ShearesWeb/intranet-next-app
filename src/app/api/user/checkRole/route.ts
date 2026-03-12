@@ -2,7 +2,6 @@
 // API route to check if a user has lead/vice roles and return their positions
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-import { cache } from 'react';
 import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { AUTHORIZED_CHAIR_ROLES } from '@/lib/lead-auth-service';
 import { SupabaseClient } from "@supabase/supabase-js";
@@ -20,7 +19,7 @@ type UserPositionSummary = {
     cca: string;
 };
 
-const getCachedUserRole = cache(async (userId: number, supabase: SupabaseClient) => {
+const getUserRole = async (userId: number, supabase: SupabaseClient) => {
     // Check if user is admin first (optional optimization, but we need positions anyway)
     // Actually, we can check admin status in the main handler.
     
@@ -75,7 +74,7 @@ const getCachedUserRole = cache(async (userId: number, supabase: SupabaseClient)
             `${pos.position} (${pos.position_type}) - ${pos.cca}`
         )
     };
-});
+};
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(_request: Request) {
@@ -99,7 +98,7 @@ export async function GET(_request: Request) {
         }
 
         const supabase = await createClient();
-        const roleResult = await getCachedUserRole(userInfo.id, supabase);
+        const roleResult = await getUserRole(userInfo.id, supabase);
 
         // Allow admins to access chair features
         if (userInfo.is_admin) {

@@ -11,7 +11,7 @@ export async function GET(request: Request) {
 
     if (!code) return NextResponse.redirect(`${origin}/auth/auth-error?reason=no_code`);
 
-    const supabase = await createClient();
+    const supabase = await createClient({ allowCookieWrite: true });
 
     // Exchange the auth code for a session
     const { error } = await supabase.auth.exchangeCodeForSession(code);

@@ -1,7 +1,6 @@
 // src/app/api/chair/positions/forChair/route.ts
 // API route to get positions available for chair ranking along with applicants' info
 import { NextResponse } from "next/server";
-import { cache } from 'react';
 import { createClient } from "@/utils/supabase/server";
 import { fetchUserId } from "@/lib/fetch-user-info";
 import { getUserAuthorizedCCAs } from "@/lib/lead-auth-service";
@@ -32,11 +31,7 @@ type ApplicationRow = {
     public_user_info: PublicUserInfoRow | PublicUserInfoRow[] | null;
 };
 
-const getCachedChairAuthorization = cache(async (userId: number, supabase: SupabaseClient) => {
-    return await getUserAuthorizedCCAs(userId, supabase);
-});
-
-const getCachedPositionsForPhase = cache(async (ccaIds: number[], supabase: SupabaseClient) => {
+const getPositionsForPhase = async (ccaIds: number[], supabase: SupabaseClient) => {
     const { data: allPositions, error: posError } = await supabase
         .from("cca_capacity_info")
         .select("id, name, capacity, available_capacity, applied_count, position_type, cca_id, cca_name")
@@ -49,7 +44,7 @@ const getCachedPositionsForPhase = cache(async (ccaIds: number[], supabase: Supa
     }
 
     return (allPositions || []) as CapacityInfoRow[];
-});
+};
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(_request: Request) {
@@ -70,13 +65,13 @@ export async function GET(_request: Request) {
 
         const supabase = await createClient();
 
-        const authResult = await getCachedChairAuthorization(userId, supabase);
+        const authResult = await getUserAuthorizedCCAs(userId, supabase);
 
         if (!authResult.authorized) {
             return NextResponse.json({ positions: [] }, { headers });
         }
 
-        const allPositions = await getCachedPositionsForPhase(
+        const allPositions = await getPositionsForPhase(
             authResult.ccaIds,
             supabase
         );

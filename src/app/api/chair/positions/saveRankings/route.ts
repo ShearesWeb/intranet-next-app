@@ -1,14 +1,8 @@
 // src\app\api\chair\positions\saveRankings\route.ts
 import { NextResponse } from "next/server";
-import { cache } from 'react';
 import { createClient } from "@/utils/supabase/server";
 import { fetchUserId } from "@/lib/fetch-user-info";
 import { getUserAuthorizedCCAs } from "@/lib/lead-auth-service";
-import { SupabaseClient } from "@supabase/supabase-js";
-
-const getCachedChairAuthorization = cache(async (userId: number, supabase: SupabaseClient) => {
-    return await getUserAuthorizedCCAs(userId, supabase);
-});
 
 export async function POST(request: Request) {
     try {
@@ -28,7 +22,7 @@ export async function POST(request: Request) {
 
         const supabase = await createClient();
 
-        const authResult = await getCachedChairAuthorization(userId, supabase);
+        const authResult = await getUserAuthorizedCCAs(userId, supabase);
 
         if (!authResult.authorized) {
             return NextResponse.json({ error: 'Unauthorized: Not a lead/vice' }, { status: 403 });
