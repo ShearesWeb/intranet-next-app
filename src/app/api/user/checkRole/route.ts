@@ -64,9 +64,10 @@ const getCachedUserRole = cache(async (userId: number, supabase: SupabaseClient)
         };
     });
 
-    const isAuthorized = userPositions.some((pos) =>
-        authorizedRoles.includes(pos.position_type.toLowerCase())
-    );
+    const isAuthorized = userPositions.some((pos) => {
+        const normalizedRole = pos.position_type.toLowerCase();
+        return authorizedRoles.some((role) => role === normalizedRole);
+    });
 
     return {
         isAuthorized,

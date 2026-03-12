@@ -37,6 +37,13 @@ const statusVariant: Record<SubsidyStatus, "default" | "secondary" | "destructiv
     [SubsidyStatus.REJECTED]: "destructive",
 };
 
+const coerceSubsidyStatus = (value: unknown): SubsidyStatus => {
+    if (typeof value !== "string") return SubsidyStatus.PENDING;
+    return (Object.values(SubsidyStatus) as string[]).includes(value)
+        ? (value as SubsidyStatus)
+        : SubsidyStatus.PENDING;
+};
+
 export default function SubsidyDeclarationPage() {
     const params = useParams();
     const searchParams = useSearchParams();
@@ -86,29 +93,29 @@ export default function SubsidyDeclarationPage() {
             {
                 accessorKey: "positionName",
                 header: "Position",
-                cell: (value: string, row) => (
-                    <PositionTypeBadge value={value} position_type={row.positionType} />
+                cell: (value, row) => (
+                    <PositionTypeBadge value={String(value)} position_type={row.positionType} />
                 ),
                 enableSorting: false,
             },
             {
                 accessorKey: "weekId",
                 header: "Week",
-                cell: (value: number) => weekLabel(value),
+                cell: (value) => weekLabel(Number(value)),
                 enableSorting: true,
             },
             {
                 accessorKey: "hours",
                 header: "Requested Hours",
-                cell: (value: number) => `${value} hrs`,
+                cell: (value) => `${Number(value)} hrs`,
                 enableSorting: true,
             },
             {
                 accessorKey: "justification",
                 header: "Justification",
-                cell: (value: string) => (
+                cell: (value) => (
                     <div className="text-sm text-muted-foreground whitespace-pre-line break-words max-w-[320px] max-h-32 overflow-y-auto pr-1 line-clamp-3">
-                        {value}
+                        {String(value ?? "")}
                     </div>
                 ),
                 enableSorting: false,
@@ -116,11 +123,13 @@ export default function SubsidyDeclarationPage() {
             {
                 accessorKey: "status",
                 header: "Status",
-                cell: (value: SubsidyStatus) => (
-                    <Badge variant={statusVariant[value]}>
-                        {formatStatus(value)}
+                cell: (value) => {
+                    const status = coerceSubsidyStatus(value);
+                    return (
+                    <Badge variant={statusVariant[status]}>
+                        {formatStatus(status)}
                     </Badge>
-                ),
+                )},
                 enableSorting: false,
             },
         ],

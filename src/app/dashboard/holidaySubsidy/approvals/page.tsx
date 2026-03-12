@@ -22,17 +22,17 @@ const columns: SimpleTableColumn<CcaApprovalRow>[] = [
     {
         accessorKey: "name",
         header: "CCA",
-        cell: value => <span className="font-semibold text-sm md:text-base">{value}</span>,
+        cell: value => <span className="font-semibold text-sm md:text-base">{String(value)}</span>,
     },
     {
         accessorKey: "pendingDeclarations",
         header: "Pending Declarations",
-        cell: value => <span className="text-sm md:text-base font-medium">{value}</span>,
+        cell: value => <span className="text-sm md:text-base font-medium">{Number(value)}</span>,
     },
     {
         accessorKey: "pendingWeekly",
         header: "Pending Weekly Commitments",
-        cell: value => <span className="text-sm md:text-base font-medium">{value}</span>,
+        cell: value => <span className="text-sm md:text-base font-medium">{Number(value)}</span>,
     },
     {
         accessorKey: "actions" as keyof CcaApprovalRow,

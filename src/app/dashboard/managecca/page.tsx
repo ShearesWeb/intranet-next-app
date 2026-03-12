@@ -22,7 +22,7 @@ const ccaTableColumns: SimpleTableColumn<CCAData>[] = [
     header: 'CCA',
     cell: (value, row) => (
       <div className="flex flex-col gap-2 pr-4">
-        <strong className="font-semibold text-sm md:text-base">{value}</strong>
+        <strong className="font-semibold text-sm md:text-base">{String(value)}</strong>
         {row.description && (
           <div className="text-xs md:text-sm text-gray-600 break-words whitespace-normal text-justify leading-relaxed line-clamp-5">
             {row.description}
@@ -55,7 +55,7 @@ const ccaTableColumns: SimpleTableColumn<CCAData>[] = [
     accessorKey: 'points',
     header: 'Points',
     cell: (value) => (
-      <div className="font-semibold text-center text-sm md:text-base">{value}</div>
+      <div className="font-semibold text-center text-sm md:text-base">{String(value)}</div>
     ),
     enableSorting: true,
   },

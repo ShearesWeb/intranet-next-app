@@ -179,7 +179,7 @@ export default function RankCCA() {
       accessorKey: 'description',
       header: 'Description',
       cell: (value) => (
-        <div className="max-w-xs truncate text-gray-500">{value || '-'}</div>
+        <div className="max-w-xs truncate text-gray-500">{String(value ?? '-')}</div>
       ),
       hidden: true,
     },

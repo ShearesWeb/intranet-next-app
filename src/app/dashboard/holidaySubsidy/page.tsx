@@ -25,7 +25,7 @@ const columns: SimpleTableColumn<SubsidyRow>[] = [
     accessorKey: 'name',
     header: 'CCA',
     cell: (value) => (
-      <div className="font-semibold">{value}</div>
+      <div className="font-semibold">{String(value)}</div>
     ),
   },
   {
