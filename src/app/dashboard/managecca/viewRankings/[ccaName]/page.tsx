@@ -150,12 +150,17 @@ export default function AdminViewRankingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [members, setMembers] = useState<CCAMember[]>([]);
   const [ccaType, setCcaType] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
 
   const loadRankings = useCallback(async (id: string) => {
     setIsLoading(true);
+    setError(null);
     try {
       const response = await fetch(`/api/cca/${id}/rankings`);
-      if (!response.ok) throw new Error('Failed to fetch rankings');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to fetch rankings');
+      }
 
       const data = (await response.json()) as RankingsApiResponse;
       const formattedMembers: CCAMember[] = data.members.map((member) => ({
@@ -177,15 +182,18 @@ export default function AdminViewRankingsPage() {
       setMembers(normalizedMembers);
       setCcaType(data.cca_type || '');
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to load rankings';
       console.error('Error loading rankings:', error);
-      toast.error('Failed to load rankings');
+      setMembers([]);
+      setError(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (!user || !ccaId || (!user.is_jcrc && !user.is_admin)) {
+    if (!user || !ccaId) {
       setIsLoading(false);
       return;
     }
@@ -224,28 +232,11 @@ export default function AdminViewRankingsPage() {
 
   if (!user) return <AppLoading />;
 
-  if (!user.is_jcrc && !user.is_admin) {
-    return (
-      <AppLayout>
-        <div className="flex flex-col space-y-4 p-4">
-          <h1 className="text-2xl font-semibold">Admin Rankings</h1>
-          <Alert className="bg-yellow-50 border-yellow-200">
-            <AlertCircle className="h-4 w-4 text-yellow-600" />
-            <AlertTitle className="text-yellow-800">Restricted access</AlertTitle>
-            <AlertDescription className="text-yellow-700">
-              This page is restricted to JCRC members and administrators.
-            </AlertDescription>
-          </Alert>
-        </div>
-      </AppLayout>
-    );
-  }
-
   return (
     <AppLayout>
       <div className="flex flex-col space-y-4 p-4">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-semibold">Admin Rankings (Read Only)</h1>
+          <h1 className="text-2xl font-semibold">CCA Rankings (Read Only)</h1>
           <Link href="/dashboard/managecca">
             <Button variant="outline" size="lg" className="px-6 py-4">
               <ArrowLeft className="h-4 w-4" /> Back to Manage CCAs
@@ -255,6 +246,14 @@ export default function AdminViewRankingsPage() {
 
         {isLoading ? (
           <div className="flex justify-center py-8"><LoadingSpinner /></div>
+        ) : error ? (
+          <Alert className="bg-yellow-50 border-yellow-200">
+            <AlertCircle className="h-4 w-4 text-yellow-600" />
+            <AlertTitle className="text-yellow-800">Unable to load rankings</AlertTitle>
+            <AlertDescription className="text-yellow-700">
+              {error}
+            </AlertDescription>
+          </Alert>
         ) : positionGroups.length > 0 ? (
           <div className="space-y-6">
             {positionGroups.map((group) => (

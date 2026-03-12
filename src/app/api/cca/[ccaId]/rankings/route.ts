@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { fetchUserId, fetchUserInfo } from "@/lib/fetch-user-info";
 import { checkCCAChairAuthorization } from "@/lib/lead-auth-service";
+import { canJcrcAccessCca } from "@/lib/jcrc-cca-access";
 
 type AppointmentPositionRow = {
     id: number;
@@ -46,12 +47,18 @@ type RankingPayload = {
     remarks?: string | null;
 };
 
-const normalizeTrack = (name?: string) => {
+const normalizeCommitteePositionName = (name?: string) => {
     return (name || '')
         .toLowerCase()
-        .replace(/\b(main\s*comm|maincomm|sub\s*comm|subcomm|sub\s*committee|subcommittee)\b/g, '')
+        .replace(/[^a-z0-9]+/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
+};
+
+const getCommitteeFirstWord = (name?: string) => {
+    const normalized = normalizeCommitteePositionName(name);
+    if (!normalized) return '';
+    return normalized.split(' ')[0] || '';
 };
 
 const UNIVERSAL_EXCLUDED_POSITION_TYPES = new Set(['lead', 'vice']);
@@ -78,6 +85,23 @@ const isSportsRankablePosition = (position?: { position_type?: string; name?: st
     return SPORTS_RANKABLE_POSITION_TOKENS.has(typeToken) || SPORTS_RANKABLE_POSITION_TOKENS.has(nameToken);
 };
 
+const getMatchedCommitteeSubcommPositions = (
+    positions: AppointmentPositionRow[],
+    maincommFirstWords: string[]
+) => {
+    if (maincommFirstWords.length === 0) {
+        return [] as AppointmentPositionRow[];
+    }
+
+    return positions.filter((position) => {
+        if (position.position_type !== 'subcomm') return false;
+        const normalizedName = normalizeCommitteePositionName(position.name);
+        return maincommFirstWords.some((firstWord) =>
+            normalizedName === firstWord || normalizedName.startsWith(`${firstWord} `)
+        );
+    });
+};
+
 // GET handler to fetch members with their ranking data
 export async function GET(
     _request: Request,
@@ -96,7 +120,7 @@ export async function GET(
 
     const { data: ccaInfo, error: ccaError } = await supabase
         .from('ccas')
-        .select('cca_type')
+        .select('name, cca_type')
         .eq('id', ccaId)
         .single();
 
@@ -104,52 +128,52 @@ export async function GET(
         return NextResponse.json({ error: 'CCA not found' }, { status: 404 });
     }
 
-    let normalizedUserPositions: AppointmentPositionRow[] = [];
+    const { data: userAppointments, error: userAppointmentsError } = await supabase
+        .from('cca_appointments')
+        .select(`
+            cca_positions!inner(id, name, position_type, cca_id)
+        `)
+        .eq('user_id', requestingUserId)
+        .eq('cca_positions.cca_id', ccaId);
 
-    if (!isJcrcViewer) {
-        const { data: userAppointments, error: userAppointmentsError } = await supabase
-            .from('cca_appointments')
-            .select(`
-                cca_positions!inner(id, name, position_type, cca_id)
-            `)
-            .eq('user_id', requestingUserId)
-            .eq('cca_positions.cca_id', ccaId);
-
-        if (userAppointmentsError) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-        }
-
-        normalizedUserPositions = ((userAppointments || []) as UserAppointmentRow[]).map((appointment) => {
-            const position = Array.isArray(appointment.cca_positions)
-                ? appointment.cca_positions[0]
-                : appointment.cca_positions;
-            return position;
-        }).filter((position): position is AppointmentPositionRow => Boolean(position));
+    if (userAppointmentsError) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
+
+    const normalizedUserPositions = ((userAppointments || []) as UserAppointmentRow[]).map((appointment) => {
+        const position = Array.isArray(appointment.cca_positions)
+            ? appointment.cca_positions[0]
+            : appointment.cca_positions;
+        return position;
+    }).filter((position): position is AppointmentPositionRow => Boolean(position));
 
     const isCommittee = ccaInfo.cca_type === 'committee';
     const isSports = ccaInfo.cca_type === 'sports';
     const isChair = normalizedUserPositions.some((position) => ['lead', 'vice'].includes(position.position_type));
     const isMaincomm = normalizedUserPositions.some((position) => position.position_type === 'maincomm');
-    const maincommTracks = normalizedUserPositions
+    const maincommFirstWords = normalizedUserPositions
         .filter((position) => position.position_type === 'maincomm')
-        .map((position) => normalizeTrack(position.name))
-        .filter((track: string) => track.length > 0);
+        .map((position) => getCommitteeFirstWord(position.name))
+        .filter((firstWord: string) => firstWord.length > 0);
 
-    if (!isJcrcViewer) {
-        if (isAdminViewer) {
-            // Admins can only view rankings for CCAs they are appointed to.
-            if (normalizedUserPositions.length === 0) {
-                return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-            }
-        } else if (!isCommittee) {
-            const authResult = await checkCCAChairAuthorization(requestingUserId, parseInt(ccaId), supabase);
-            if (!authResult.authorized) {
-                return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-            }
-        } else if (!isChair && !isMaincomm) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-        }
+    const hasJcrcMappedAccess = Boolean(
+        requestingUser && isJcrcViewer && canJcrcAccessCca(requestingUser, ccaInfo.name)
+    );
+    const hasAdminAppointmentAccess = isAdminViewer && normalizedUserPositions.length > 0;
+
+    let hasChairAccess = false;
+    if (isCommittee) {
+        hasChairAccess = isChair || isMaincomm;
+    } else {
+        const authResult = await checkCCAChairAuthorization(requestingUserId, parseInt(ccaId), supabase);
+        hasChairAccess = authResult.authorized;
+    }
+
+    if (!hasJcrcMappedAccess && !hasAdminAppointmentAccess && !hasChairAccess) {
+        return NextResponse.json(
+            { error: 'You are not authorized to view rankings for this CCA' },
+            { status: 403 }
+        );
     }
 
     const { data: members, error: membersError } = await supabase
@@ -219,34 +243,15 @@ export async function GET(
 
     let scopedMembers = enrichedMembers;
 
-    if (!isJcrcViewer && !isAdminViewer) {
+    if (isCommittee && (isChair || isMaincomm)) {
         scopedMembers = scopedMembers.filter((member) => {
-            if (!isCommittee) return true;
             const position = member.cca_positions;
             if (!position) return false;
             if (isChair) {
                 return ['maincomm', 'blockcomm'].includes(position.position_type);
             }
-            return position.position_type === 'subcomm';
+            return getMatchedCommitteeSubcommPositions([position], maincommFirstWords).length > 0;
         });
-
-        // For committee maincomm users: try track-based scoping first.
-        // If track names do not align between maincomm/subcomm positions, fall back
-        // to all subcomm members so ranking is still possible.
-        if (isCommittee && !isChair) {
-            if (maincommTracks.length > 0) {
-                const matchedSubcomm = scopedMembers.filter((member) => {
-                    const position = member.cca_positions;
-                    if (!position || position.position_type !== 'subcomm') return false;
-                    const track = normalizeTrack(position.name);
-                    return maincommTracks.includes(track);
-                });
-
-                if (matchedSubcomm.length > 0) {
-                    scopedMembers = matchedSubcomm;
-                }
-            }
-        }
     }
 
     if (isCommittee) {
@@ -325,10 +330,10 @@ export async function POST(
     const requiresPerformance = PERFORMANCE_REQUIRED_CCA_TYPES.has(ccaInfo.cca_type || '');
     const isChair = normalizedUserPositions.some((position) => ['lead', 'vice'].includes(position.position_type));
     const isMaincomm = normalizedUserPositions.some((position) => position.position_type === 'maincomm');
-    const maincommTracks = normalizedUserPositions
+    const maincommFirstWords = normalizedUserPositions
         .filter((position) => position.position_type === 'maincomm')
-        .map((position) => normalizeTrack(position.name))
-        .filter((track: string) => track.length > 0);
+        .map((position) => getCommitteeFirstWord(position.name))
+        .filter((firstWord: string) => firstWord.length > 0);
 
     if (!isCommittee) {
         const authResult = await checkCCAChairAuthorization(requestingUserId, parseInt(ccaId), supabase);
@@ -349,11 +354,9 @@ export async function POST(
     }
 
     const allowedPositionIds = new Set<number>();
-    const allCommitteeSubcomm = ((positions || []) as AppointmentPositionRow[]).filter(
-        (position) => position.position_type === 'subcomm'
-    );
+    const committeePositions = (positions || []) as AppointmentPositionRow[];
 
-    ((positions || []) as AppointmentPositionRow[]).forEach((position) => {
+    committeePositions.forEach((position) => {
         const positionType = position.position_type?.toLowerCase() || '';
         if (UNIVERSAL_EXCLUDED_POSITION_TYPES.has(positionType)) {
             return;
@@ -377,17 +380,8 @@ export async function POST(
     });
 
     if (isCommittee && !isChair) {
-        if (maincommTracks.length === 0) {
-            allCommitteeSubcomm.forEach((position) => allowedPositionIds.add(position.id));
-        } else {
-            const matchedSubcomm = allCommitteeSubcomm.filter((position) => {
-                const track = normalizeTrack(position.name);
-                return maincommTracks.includes(track);
-            });
-
-            const scopedSubcomm = matchedSubcomm.length > 0 ? matchedSubcomm : allCommitteeSubcomm;
-            scopedSubcomm.forEach((position) => allowedPositionIds.add(position.id));
-        }
+        const matchedSubcomm = getMatchedCommitteeSubcommPositions(committeePositions, maincommFirstWords);
+        matchedSubcomm.forEach((position) => allowedPositionIds.add(position.id));
     }
 
     const rankingsToUpsert = rankings

@@ -172,12 +172,17 @@ export default function CCARankingPage() {
   const [members, setMembers] = useState<CCAMember[]>([]);
   const [initialMembers, setInitialMembers] = useState<CCAMember[]>([]);
   const [ccaType, setCcaType] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
 
   const loadRankings = useCallback(async (id: string) => {
     setIsLoading(true);
+    setError(null);
     try {
       const response = await fetch(`/api/cca/${id}/rankings`);
-      if (!response.ok) throw new Error('Failed to fetch rankings');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to fetch rankings');
+      }
 
       const data = (await response.json()) as RankingsApiResponse;
       const formattedMembers: CCAMember[] = data.members.map((member) => ({
@@ -200,8 +205,12 @@ export default function CCARankingPage() {
       setInitialMembers(cloneMembers(normalizedMembers));
       setCcaType(data.cca_type || '');
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to fetch rankings';
       console.error('Error loading rankings:', error);
-      toast.error('Failed to load rankings');
+      setMembers([]);
+      setInitialMembers([]);
+      setError(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
@@ -286,12 +295,16 @@ export default function CCARankingPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(rankingsToSave),
       });
-      if (!res.ok) throw new Error('Failed to save rankings');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to save rankings');
+      }
       toast.success('Rankings saved successfully!');
       setInitialMembers(cloneMembers(members));
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to save rankings';
       console.error('Error saving rankings:', error);
-      toast.error('Failed to save rankings');
+      toast.error(message);
     } finally {
       setIsSaving(false);
     }
@@ -330,6 +343,14 @@ export default function CCARankingPage() {
 
         {isLoading ? (
           <div className="flex justify-center py-8"><LoadingSpinner /></div>
+        ) : error ? (
+          <Alert className="mb-4 bg-yellow-50 border-yellow-200">
+            <AlertCircle className="h-4 w-4 text-yellow-600" />
+            <AlertTitle className="text-yellow-800">Unable to load rankings</AlertTitle>
+            <AlertDescription className="text-yellow-700">
+              {error}
+            </AlertDescription>
+          </Alert>
         ) : positionGroups.length > 0 ? (
           <div className="space-y-6">
             {positionGroups.map((group) => (
