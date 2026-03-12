@@ -9,15 +9,29 @@ export async function GET() {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        if (!user.is_jcrc) {
+        if (!user.is_jcrc && !user.is_admin) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
         const supabase = await createClient();
-        const { data, error } = await supabase
+        let ccasQuery = supabase
             .from("ccas")
-            .select("id, name, cca_type, description")
-            .order("name", { ascending: true });
+            .select("id, name, cca_type, description");
+
+        // JCRC can view all CCAs; admins can only view CCAs they are appointed to.
+        if (!user.is_jcrc) {
+            const appointmentCcaIds = Array.from(
+                new Set((user.appointments || []).map((appointment) => appointment.cca_id))
+            );
+
+            if (appointmentCcaIds.length === 0) {
+                return NextResponse.json({ data: [] });
+            }
+
+            ccasQuery = ccasQuery.in("id", appointmentCcaIds);
+        }
+
+        const { data, error } = await ccasQuery.order("name", { ascending: true });
 
         if (error) {
             console.error("Error fetching CCA ranking list:", error);
@@ -27,8 +41,8 @@ export async function GET() {
         const transformed = (data || []).map((cca) => ({
             id: cca.id,
             name: cca.name,
-            role: "JCRC Viewer",
-            position_type: "jcrc",
+            role: user.is_jcrc ? "JCRC Viewer" : "Admin Viewer",
+            position_type: user.is_jcrc ? "jcrc" : "admin",
             cca_type: cca.cca_type,
             description: cca.description ?? "",
             points: 0,

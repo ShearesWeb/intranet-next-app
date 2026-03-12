@@ -58,8 +58,9 @@ export const navOptions: NavItem[] = [
         icon: Volleyball,
         items: [
             {
-                title: "JCRC View",
-                url: "/dashboard/managecca/jcrcView",
+                title: "Admin View",
+                url: "/dashboard/managecca/adminView",
+                adminOnly: true,
                 jcrcOnly: true,
             },
         ],

@@ -88,6 +88,7 @@ export async function GET(
     const requestingUser = await fetchUserInfo();
     const requestingUserId = requestingUser?.id ?? null;
     const isJcrcViewer = Boolean(requestingUser?.is_jcrc);
+    const isAdminViewer = Boolean(requestingUser?.is_admin);
 
     if (!requestingUserId) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -136,7 +137,12 @@ export async function GET(
         .filter((track: string) => track.length > 0);
 
     if (!isJcrcViewer) {
-        if (!isCommittee) {
+        if (isAdminViewer) {
+            // Admins can only view rankings for CCAs they are appointed to.
+            if (normalizedUserPositions.length === 0) {
+                return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+            }
+        } else if (!isCommittee) {
             const authResult = await checkCCAChairAuthorization(requestingUserId, parseInt(ccaId), supabase);
             if (!authResult.authorized) {
                 return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
@@ -213,7 +219,7 @@ export async function GET(
 
     let scopedMembers = enrichedMembers;
 
-    if (!isJcrcViewer) {
+    if (!isJcrcViewer && !isAdminViewer) {
         scopedMembers = scopedMembers.filter((member) => {
             if (!isCommittee) return true;
             const position = member.cca_positions;

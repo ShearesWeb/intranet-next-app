@@ -16,17 +16,17 @@ import { CCAData } from '@/types/dashboard';
 import { SelectionTable, SelectionTableColumn } from '@/components/table/selection-table';
 import { CcaTypeBadge } from '@/components/badges/cca-type-badge';
 
-type JcrcCcaRow = CCAData & {
+type AdminCcaRow = CCAData & {
   search_text: string;
 };
 
-const jcrcColumns: SelectionTableColumn<JcrcCcaRow>[] = [
+const adminColumns: SelectionTableColumn<AdminCcaRow>[] = [
   {
     accessorKey: 'name',
     header: 'CCA',
     cell: (value, row) => (
       <div className="flex flex-col gap-2 pr-4">
-        <strong className="font-semibold text-sm md:text-base">{value}</strong>
+        <strong className="font-semibold text-sm md:text-base">{String(value)}</strong>
         {row.description && (
           <div className="text-xs md:text-sm text-gray-600 break-words whitespace-normal text-justify leading-relaxed line-clamp-5">
             {row.description}
@@ -47,7 +47,7 @@ const jcrcColumns: SelectionTableColumn<JcrcCcaRow>[] = [
     hidden: true,
   },
   {
-    accessorKey: 'actions' as keyof JcrcCcaRow,
+    accessorKey: 'actions' as keyof AdminCcaRow,
     header: 'Actions',
     enableSorting: false,
     cell: (_, row) => (
@@ -63,9 +63,9 @@ const jcrcColumns: SelectionTableColumn<JcrcCcaRow>[] = [
   },
 ];
 
-export default function JcrcRankingsListPage() {
+export default function AdminViewRankingsPage() {
   const { user } = useAuth();
-  const [ccas, setCCAs] = useState<JcrcCcaRow[]>([]);
+  const [ccas, setCCAs] = useState<AdminCcaRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -75,7 +75,7 @@ export default function JcrcRankingsListPage() {
       return;
     }
 
-    if (!user.is_jcrc) {
+    if (!user.is_jcrc && !user.is_admin) {
       setLoading(false);
       return;
     }
@@ -86,21 +86,21 @@ export default function JcrcRankingsListPage() {
       .then(async (res) => {
         if (!res.ok) {
           const errorData = await res.json().catch(() => ({}));
-          throw new Error(errorData.error || 'Failed to fetch JCRC CCA data');
+          throw new Error(errorData.error || 'Failed to fetch rankings view data');
         }
         return res.json();
       })
       .then((data) => {
-        const mappedRows: JcrcCcaRow[] = ((data.data || []) as CCAData[]).map((row) => ({
+        const mappedRows: AdminCcaRow[] = ((data.data || []) as CCAData[]).map((row) => ({
           ...row,
           search_text: [row.name, row.cca_type].filter(Boolean).join(' '),
         }));
         setCCAs(mappedRows);
       })
       .catch((fetchError: Error) => {
-        console.error('Error fetching JCRC rankings list:', fetchError.message);
+        console.error('Error fetching admin view rankings list:', fetchError.message);
         toast.error(fetchError.message);
-        setError('Failed to load JCRC rankings list');
+        setError('Failed to load rankings list');
       })
       .finally(() => {
         setLoading(false);
@@ -109,16 +109,16 @@ export default function JcrcRankingsListPage() {
 
   if (!user) return <AppLoading />;
 
-  if (!user.is_jcrc) {
+  if (!user.is_jcrc && !user.is_admin) {
     return (
       <AppLayout>
         <div className="flex flex-col space-y-4 p-4">
-          <h1 className="text-2xl font-bold">JCRC Rankings</h1>
+          <h1 className="text-2xl font-bold">Admin View</h1>
           <Alert className="bg-yellow-50 border-yellow-200">
             <AlertCircle className="h-4 w-4 text-yellow-600" />
-            <AlertTitle className="text-yellow-800">JCRC access only</AlertTitle>
+            <AlertTitle className="text-yellow-800">Restricted access</AlertTitle>
             <AlertDescription className="text-yellow-700">
-              This page is restricted to JCRC members.
+              This page is restricted to JCRC members and administrators.
             </AlertDescription>
           </Alert>
         </div>
@@ -129,7 +129,7 @@ export default function JcrcRankingsListPage() {
   if (loading) {
     return (
       <AppLayout>
-        <LoadingSpinner message="Loading JCRC rankings..." />
+        <LoadingSpinner message="Loading rankings view..." />
       </AppLayout>
     );
   }
@@ -138,7 +138,7 @@ export default function JcrcRankingsListPage() {
     return (
       <AppLayout>
         <div className="flex flex-col space-y-4 p-4">
-          <h1 className="text-2xl font-bold">JCRC Rankings</h1>
+          <h1 className="text-2xl font-bold">Admin View</h1>
           <Card className="bg-red-50 border-red-200">
             <CardContent className="flex flex-col items-center p-6 gap-4">
               <p className="text-red-700 font-medium text-center">⚠️ {error}</p>
@@ -158,7 +158,7 @@ export default function JcrcRankingsListPage() {
   return (
     <AppLayout>
       <div className="flex flex-col space-y-4 p-4">
-        <h1 className="text-2xl font-bold">JCRC Rankings</h1>
+        <h1 className="text-2xl font-bold">Admin View</h1>
         {ccas.length === 0 ? (
           <Card className="bg-gray-50 border-2 border-dashed border-gray-300">
             <CardContent className="flex flex-col items-center justify-center py-16 text-center">
@@ -169,9 +169,9 @@ export default function JcrcRankingsListPage() {
             </CardContent>
           </Card>
         ) : (
-          <SelectionTable<JcrcCcaRow>
+          <SelectionTable<AdminCcaRow>
             data={ccas}
-            columns={jcrcColumns}
+            columns={adminColumns}
             searchColumn="search_text"
             searchPlaceholder="Search by CCA name or type..."
             pageSize={10}

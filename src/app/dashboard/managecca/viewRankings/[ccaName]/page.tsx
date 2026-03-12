@@ -142,7 +142,7 @@ const formatCommitmentPeriod = (period: CommitmentPeriod | null | undefined): st
 
 const displayScore = (value: number) => (value > 0 ? value : '-');
 
-export default function JcrcViewRankingsPage() {
+export default function AdminViewRankingsPage() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
   const ccaId = searchParams.get('ccaId');
@@ -185,7 +185,7 @@ export default function JcrcViewRankingsPage() {
   }, []);
 
   useEffect(() => {
-    if (!user || !ccaId || !user.is_jcrc) {
+    if (!user || !ccaId || (!user.is_jcrc && !user.is_admin)) {
       setIsLoading(false);
       return;
     }
@@ -224,16 +224,16 @@ export default function JcrcViewRankingsPage() {
 
   if (!user) return <AppLoading />;
 
-  if (!user.is_jcrc) {
+  if (!user.is_jcrc && !user.is_admin) {
     return (
       <AppLayout>
         <div className="flex flex-col space-y-4 p-4">
-          <h1 className="text-2xl font-semibold">JCRC Rankings</h1>
+          <h1 className="text-2xl font-semibold">Admin Rankings</h1>
           <Alert className="bg-yellow-50 border-yellow-200">
             <AlertCircle className="h-4 w-4 text-yellow-600" />
-            <AlertTitle className="text-yellow-800">JCRC access only</AlertTitle>
+            <AlertTitle className="text-yellow-800">Restricted access</AlertTitle>
             <AlertDescription className="text-yellow-700">
-              This page is restricted to JCRC members.
+              This page is restricted to JCRC members and administrators.
             </AlertDescription>
           </Alert>
         </div>
@@ -245,7 +245,7 @@ export default function JcrcViewRankingsPage() {
     <AppLayout>
       <div className="flex flex-col space-y-4 p-4">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-semibold">JCRC Rankings (Read Only)</h1>
+          <h1 className="text-2xl font-semibold">Admin Rankings (Read Only)</h1>
           <Link href="/dashboard/managecca">
             <Button variant="outline" size="lg" className="px-6 py-4">
               <ArrowLeft className="h-4 w-4" /> Back to Manage CCAs
