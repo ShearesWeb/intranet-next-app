@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { PositionTypeBadge } from '@/components/badges/position-type-badge';
 import { CutStatus, CommitmentPeriod } from '@/types/dashboard';
+import { getRankingScore, hasRequiredRankingInputs, isResidentPositionType } from '@/lib/cca-ranking-metrics';
 
 type CCAMember = {
   row_key: string;
@@ -29,6 +30,7 @@ type CCAMember = {
   commitment_period?: CommitmentPeriod | null;
   attendance: number;
   performance: number;
+  initiative: number;
 };
 
 type RankingsApiMember = {
@@ -41,6 +43,7 @@ type RankingsApiMember = {
     ranking?: number | null;
     attendance?: number | null;
     performance?: number | null;
+    initiative?: number | null;
     remarks?: string | null;
   }>;
 };
@@ -65,37 +68,19 @@ const POSITION_TYPE_ORDER: Record<string, number> = {
   subcomm: 5,
   'team manager': 6,
   member: 7,
+  resident: 8,
 };
-
-const hasRankingInputs = (member: CCAMember, ccaType: string) => {
-  if (ccaType === 'sports') {
-    return member.attendance > 0;
-  }
-  if (ccaType === 'culture') {
-    return member.attendance > 0 && member.performance > 0;
-  }
-  return member.attendance > 0 && member.performance > 0;
-};
-
-const getRankingScore = (member: CCAMember, ccaType: string) => {
-  if (ccaType === 'sports') {
-    return member.attendance;
-  }
-  if (ccaType === 'culture') {
-    return member.attendance + member.performance;
-  }
-  return member.attendance + member.performance;
-};
+const INITIATIVE_LABEL = 'Helpfulness, Initiative & Attitude';
 
 const rankMembersWithinPosition = (members: CCAMember[], ccaType: string): CCAMember[] => {
   const sorted = [...members].sort((a, b) => {
-    const aHasInputs = hasRankingInputs(a, ccaType);
-    const bHasInputs = hasRankingInputs(b, ccaType);
+    const aHasInputs = hasRequiredRankingInputs(a, { ccaType, positionType: a.position_type });
+    const bHasInputs = hasRequiredRankingInputs(b, { ccaType, positionType: b.position_type });
 
     if (aHasInputs !== bHasInputs) return aHasInputs ? -1 : 1;
 
-    const aScore = getRankingScore(a, ccaType);
-    const bScore = getRankingScore(b, ccaType);
+    const aScore = getRankingScore(a, { ccaType, positionType: a.position_type });
+    const bScore = getRankingScore(b, { ccaType, positionType: b.position_type });
     if (aScore !== bScore) return bScore - aScore;
 
     return a.name.localeCompare(b.name);
@@ -180,6 +165,7 @@ export default function AdminViewRankingsPage() {
         ranking: member.cca_member_rankings?.[0]?.ranking ?? 0,
         attendance: member.cca_member_rankings?.[0]?.attendance ?? 0,
         performance: member.cca_member_rankings?.[0]?.performance ?? 0,
+        initiative: member.cca_member_rankings?.[0]?.initiative ?? 0,
         remarks: member.cca_member_rankings?.[0]?.remarks ?? '',
       }));
 
@@ -261,7 +247,10 @@ export default function AdminViewRankingsPage() {
           </Alert>
         ) : positionGroups.length > 0 ? (
           <div className="space-y-6">
-            {positionGroups.map((group) => (
+            {positionGroups.map((group) => {
+              const isResidentGroup = isResidentPositionType(group.position_type);
+
+              return (
               <Card key={group.position_id}>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">
@@ -285,15 +274,17 @@ export default function AdminViewRankingsPage() {
                         <TableRow>
                           <TableHead className="w-[88px]">Rank</TableHead>
                           <TableHead>Name</TableHead>
-                          {ccaType === 'sports' ? (
+                          {!isResidentGroup && (ccaType === 'sports' ? (
                             <TableHead>Status</TableHead>
                           ) : (
                             <TableHead>Commitment</TableHead>
-                          )}
+                          ))}
                           <TableHead>
-                            {ccaType === 'sports' ? "Captain's Appraisal" : 'Attendance and Attitude'}
+                            {isResidentGroup
+                              ? INITIATIVE_LABEL
+                              : (ccaType === 'sports' ? "Captain's Appraisal" : 'Attendance and Attitude')}
                           </TableHead>
-                          {ccaType !== 'sports' && <TableHead>Performance</TableHead>}
+                          {!isResidentGroup && ccaType !== 'sports' && <TableHead>Performance</TableHead>}
                           <TableHead>Remarks</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -306,13 +297,13 @@ export default function AdminViewRankingsPage() {
                               </div>
                             </TableCell>
                             <TableCell className="font-medium">{member.name}</TableCell>
-                            {ccaType === 'sports' ? (
+                            {!isResidentGroup && (ccaType === 'sports' ? (
                               <TableCell className="text-sm">{formatCutStatus(member.cut_status)}</TableCell>
                             ) : (
                               <TableCell className="text-sm">{formatCommitmentPeriod(member.commitment_period)}</TableCell>
-                            )}
-                            <TableCell>{displayScore(member.attendance)}</TableCell>
-                            {ccaType !== 'sports' && (
+                            ))}
+                            <TableCell>{displayScore(isResidentGroup ? member.initiative : member.attendance)}</TableCell>
+                            {!isResidentGroup && ccaType !== 'sports' && (
                               <TableCell>{displayScore(member.performance)}</TableCell>
                             )}
                             <TableCell className="min-w-[220px] whitespace-pre-wrap">
@@ -325,7 +316,8 @@ export default function AdminViewRankingsPage() {
                   </div>
                 </CardContent>
               </Card>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="p-4 border border-dashed border-gray-300 rounded-md text-gray-500 text-center">No ranked members found</div>

@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { buildRankingComments, extractRankingCommentFields } from "@/lib/cca-ranking-comments";
+import { getRankingMetricKeys, hasRequiredRankingInputs, isResidentPositionType } from "@/lib/cca-ranking-metrics";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
 import {
     checkCcaAuthorization,
@@ -36,6 +37,7 @@ type RankingPayload = {
     ranking: number;
     attendance: number;
     performance: number;
+    initiative: number;
     remarks?: string | null;
 };
 
@@ -148,13 +150,20 @@ export async function GET(
         return NextResponse.json({ error: "Failed to fetch rankings." }, { status: 500 });
     }
 
-    const rankingsMap = new Map<string, { ranking?: number | null; attendance?: number | null; performance?: number | null; remarks?: string | null }>();
+    const rankingsMap = new Map<string, {
+        ranking?: number | null;
+        attendance?: number | null;
+        performance?: number | null;
+        initiative?: number | null;
+        remarks?: string | null;
+    }>();
     (rankings as RankingRow[] | null | undefined)?.forEach((ranking) => {
         const parsedComments = extractRankingCommentFields(ranking.comments);
         rankingsMap.set(`${ranking.user_id}:${ranking.position_id}`, {
             ranking: ranking.ranking,
             attendance: parsedComments.attendance,
             performance: parsedComments.performance,
+            initiative: parsedComments.initiative,
             remarks: parsedComments.remarks,
         });
     });
@@ -225,28 +234,54 @@ export async function POST(
                 .filter((position) => position.canRank)
                 .map((position) => position.id)
         );
+    const positionTypeById = new Map<number, string | null>(
+        ((positions || []) as AppointmentPositionRow[]).map((position) => [position.id, position.position_type || null])
+    );
 
     const rankingsToUpsert = rankings
         .filter((ranking) => allowedPositionIds.has(ranking.position_id))
         .filter((ranking) => {
-            if (ranking.attendance <= 0) return false;
-            if (accessResult.data.requiresPerformance && ranking.performance <= 0) return false;
-            return true;
+            const positionType = positionTypeById.get(ranking.position_id);
+
+            return hasRequiredRankingInputs(
+                {
+                    attendance: ranking.attendance,
+                    performance: ranking.performance,
+                    initiative: ranking.initiative,
+                },
+                {
+                    ccaType: cca.cca_type,
+                    positionType,
+                }
+            );
         })
         .map((ranking) => {
+            const positionType = positionTypeById.get(ranking.position_id);
+            const rankingMetricKeys = getRankingMetricKeys({
+                ccaType: cca.cca_type,
+                positionType,
+            });
             const normalizedPerformance = accessResult.data.requiresPerformance
                 ? ranking.performance
                 : (ranking.performance > 0 ? ranking.performance : ranking.attendance);
+            const comments = isResidentPositionType(positionType)
+                ? buildRankingComments({
+                    initiative: ranking.initiative,
+                    remarks: ranking.remarks,
+                })
+                : buildRankingComments({
+                    attendance: ranking.attendance,
+                    performance: rankingMetricKeys.includes("performance")
+                        ? ranking.performance
+                        : normalizedPerformance,
+                    remarks: ranking.remarks,
+                });
 
             return {
                 user_id: ranking.user_id,
                 position_id: ranking.position_id,
                 ranking: ranking.ranking,
-                comments: buildRankingComments({
-                    attendance: ranking.attendance,
-                    performance: normalizedPerformance,
-                    remarks: ranking.remarks,
-                }),
+                comments,
             };
         });
 

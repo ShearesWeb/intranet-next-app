@@ -17,6 +17,7 @@ import { PositionTypeBadge } from '@/components/badges/position-type-badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { buildCcaPositionAccess, RankingAccessPosition } from '@/lib/cca-rankings-access';
+import { getRankingScore, hasRequiredRankingInputs, isResidentPositionType } from '@/lib/cca-ranking-metrics';
 
 export interface CCAMember {
   row_key: string;
@@ -31,6 +32,7 @@ export interface CCAMember {
   commitment_period?: CommitmentPeriod | null;
   attendance: number;
   performance: number;
+  initiative: number;
 }
 
 type RankingsApiMember = {
@@ -43,6 +45,7 @@ type RankingsApiMember = {
     ranking?: number | null;
     attendance?: number | null;
     performance?: number | null;
+    initiative?: number | null;
     remarks?: string | null;
   }>;
 };
@@ -67,40 +70,22 @@ const POSITION_TYPE_ORDER: Record<string, number> = {
   subcomm: 5,
   'team manager': 6,
   member: 7,
+  resident: 8,
 };
 
 const cloneMembers = (items: CCAMember[]): CCAMember[] => items.map((member) => ({ ...member }));
-
-const hasRankingInputs = (member: CCAMember, ccaType: string) => {
-  if (ccaType === 'sports') {
-    return member.attendance > 0;
-  }
-  if (ccaType === 'culture') {
-    return member.attendance > 0 && member.performance > 0;
-  }
-  return member.attendance > 0 && member.performance > 0;
-};
-
-const getRankingScore = (member: CCAMember, ccaType: string) => {
-  if (ccaType === 'sports') {
-    return member.attendance;
-  }
-  if (ccaType === 'culture') {
-    return member.attendance + member.performance;
-  }
-  return member.attendance + member.performance;
-};
+const INITIATIVE_LABEL = 'Helpfulness, Initiative & Attitude';
 
 const rankMembersWithinPosition = (members: CCAMember[], ccaType: string): CCAMember[] => {
   const sorted = [...members].sort((a, b) => {
-    const aHasInputs = hasRankingInputs(a, ccaType);
-    const bHasInputs = hasRankingInputs(b, ccaType);
+    const aHasInputs = hasRequiredRankingInputs(a, { ccaType, positionType: a.position_type });
+    const bHasInputs = hasRequiredRankingInputs(b, { ccaType, positionType: b.position_type });
 
     // Incomplete rows (empty score inputs) stay at bottom.
     if (aHasInputs !== bHasInputs) return aHasInputs ? -1 : 1;
 
-    const aScore = getRankingScore(a, ccaType);
-    const bScore = getRankingScore(b, ccaType);
+    const aScore = getRankingScore(a, { ccaType, positionType: a.position_type });
+    const bScore = getRankingScore(b, { ccaType, positionType: b.position_type });
     if (aScore !== bScore) return bScore - aScore;
 
     return a.name.localeCompare(b.name);
@@ -139,6 +124,7 @@ const buildComparisonSnapshot = (items: CCAMember[]) => {
         ranking: member.ranking,
         attendance: member.attendance,
         performance: member.performance,
+        initiative: member.initiative,
         remarks: member.remarks || '',
       }))
   );
@@ -203,6 +189,7 @@ export default function CCARankingPage() {
         ranking: member.cca_member_rankings?.[0]?.ranking ?? 0,
         attendance: member.cca_member_rankings?.[0]?.attendance ?? 0,
         performance: member.cca_member_rankings?.[0]?.performance ?? 0,
+        initiative: member.cca_member_rankings?.[0]?.initiative ?? 0,
         remarks: member.cca_member_rankings?.[0]?.remarks ?? '',
       }));
 
@@ -264,15 +251,9 @@ export default function CCARankingPage() {
   }, [user, ccaId, loadRankings]);
 
   const unrankedCount = useMemo(() => {
-    return members.filter((member) => {
-      if (ccaType === 'sports') {
-        return member.attendance === 0;
-      }
-      if (ccaType === 'culture') {
-        return member.attendance === 0 || member.performance === 0;
-      }
-      return member.attendance === 0 || member.performance === 0;
-    }).length;
+    return members.filter(
+      (member) => !hasRequiredRankingInputs(member, { ccaType, positionType: member.position_type })
+    ).length;
   }, [members, ccaType]);
 
   const hasChanges = useMemo(() => {
@@ -330,6 +311,7 @@ export default function CCARankingPage() {
         ranking: member.ranking,
         attendance: member.attendance,
         performance: member.performance,
+        initiative: member.initiative,
         remarks: member.remarks,
       }));
 
@@ -378,9 +360,8 @@ export default function CCARankingPage() {
             <AlertCircle className="h-4 w-4 text-yellow-600" />
             <AlertTitle className="text-yellow-800">Pending Rankings</AlertTitle>
             <AlertDescription className="text-yellow-700">
-              You have {unrankedCount} member{unrankedCount !== 1 ? 's' : ''} left to rank (
-              fill in {ccaType === 'sports' ? "captain's appraisal" : 'attendance and attitude'}
-              {ccaType === 'sports' ? '' : ' and performance'}).
+              You have {unrankedCount} member{unrankedCount !== 1 ? 's' : ''} left to rank.
+              Complete the required score inputs for each member to finalize the order.
             </AlertDescription>
           </Alert>
         )}
@@ -397,7 +378,10 @@ export default function CCARankingPage() {
           </Alert>
         ) : positionGroups.length > 0 ? (
           <div className="space-y-6">
-            {positionGroups.map((group) => (
+            {positionGroups.map((group) => {
+              const isResidentGroup = isResidentPositionType(group.position_type);
+
+              return (
                 <Card key={group.position_id}>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">
@@ -423,15 +407,17 @@ export default function CCARankingPage() {
                         <TableRow>
                           <TableHead className="w-[88px]">Rank</TableHead>
                           <TableHead>Name</TableHead>
-                          {ccaType === 'sports' ? (
+                          {!isResidentGroup && (ccaType === 'sports' ? (
                             <TableHead>Status</TableHead>
                           ) : (
                             <TableHead>Commitment</TableHead>
-                          )}
+                          ))}
                           <TableHead>
-                            {ccaType === 'sports' ? "Captain's Appraisal (1-10)" : 'Attendance and Attitude (1-10)'}
+                            {isResidentGroup
+                              ? `${INITIATIVE_LABEL} (1-10)`
+                              : (ccaType === 'sports' ? "Captain's Appraisal (1-10)" : 'Attendance and Attitude (1-10)')}
                           </TableHead>
-                          {ccaType !== 'sports' && <TableHead>Performance (1-10)</TableHead>}
+                          {!isResidentGroup && ccaType !== 'sports' && <TableHead>Performance (1-10)</TableHead>}
                           <TableHead>Remarks</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -444,17 +430,21 @@ export default function CCARankingPage() {
                               </div>
                             </TableCell>
                             <TableCell className="font-medium">{member.name}</TableCell>
-                            {ccaType === 'sports' ? (
+                            {!isResidentGroup && (ccaType === 'sports' ? (
                               <TableCell className="text-sm">{formatCutStatus(member.cut_status)}</TableCell>
                             ) : (
                               <TableCell className="text-sm">
                                 {formatCommitmentPeriod(member.commitment_period)}
                               </TableCell>
-                            )}
+                            ))}
                             <TableCell>
                               <select
-                                value={member.attendance || 0}
-                                onChange={(e) => handleFieldChange(member.row_key, 'attendance', parseInt(e.target.value, 10))}
+                                value={isResidentGroup ? member.initiative || 0 : member.attendance || 0}
+                                onChange={(e) => handleFieldChange(
+                                  member.row_key,
+                                  isResidentGroup ? 'initiative' : 'attendance',
+                                  parseInt(e.target.value, 10)
+                                )}
                                 className="w-20 p-2 border rounded-md bg-background text-sm"
                               >
                                 <option value={0}>-</option>
@@ -465,7 +455,7 @@ export default function CCARankingPage() {
                                 ))}
                               </select>
                             </TableCell>
-                            {ccaType !== 'sports' && (
+                            {!isResidentGroup && ccaType !== 'sports' && (
                               <TableCell>
                                 <select
                                   value={member.performance || 0}
@@ -496,7 +486,8 @@ export default function CCARankingPage() {
                   </div>
                 </CardContent>
               </Card>
-            ))}
+              );
+            })}
             <div className="text-sm text-muted-foreground">
               Ranking updates automatically based on score.
             </div>
