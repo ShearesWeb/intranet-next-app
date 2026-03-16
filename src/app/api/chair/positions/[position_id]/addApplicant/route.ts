@@ -2,47 +2,47 @@
 // API route to add an applicant to rank
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-import { fetchUserId } from "@/lib/fetch-user-info";
-import { checkCCAChairAuthorization } from "@/lib/lead-auth-service";
+import { fetchUserInfo } from "@/lib/fetch-user-info";
+import { checkCcaAuthorization } from "@/lib/cca-rankings-access";
+
+const NON_APPLICANT_POSITION_TYPES = new Set(["lead", "vice", "resident"]);
 
 export async function POST(request: Request, { params }: { params: Promise<{ position_id: string }> }) {
     try {
         const { position_id } = await params;
         const supabase = await createClient();
 
-        // Verify authentication and get user ID
-        const requestingUserId = await fetchUserId();
-
-        if (!requestingUserId) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        const requestingUser = await fetchUserInfo();
 
         const positionId = parseInt(position_id, 10);
-        if (!positionId) {
-            return NextResponse.json({ error: 'Invalid position_id' }, { status: 400 });
-        }
-
         const { user_id } = await request.json();
         if (!user_id) {
             return NextResponse.json({ error: 'Missing user_id' }, { status: 400 });
         }
 
-        // Check if user has lead/vice appointment for this CCA
-        const { data: targetPosition } = await supabase
-            .from('cca_positions')
-            .select('cca_id')
-            .eq('id', positionId)
+        const { data: position, error: positionError } = await supabase
+            .from("cca_positions")
+            .select("id, position_type, ccas!inner(id, name, cca_type)")
+            .eq("id", positionId)
             .single();
 
-        if (!targetPosition) {
-            return NextResponse.json({ error: 'Position not found' }, { status: 404 });
+        if (positionError || !position) {
+            return NextResponse.json({ error: "Position not found" }, { status: 404 });
         }
 
-        const authResult = await checkCCAChairAuthorization(requestingUserId, targetPosition.cca_id, supabase);
-        if (!authResult.authorized) {
-            return NextResponse.json({
-                error: 'Unauthorized: You are not a lead/vice for this CCA'
-            }, { status: 403 });
+        if (NON_APPLICANT_POSITION_TYPES.has((position.position_type || "").toLowerCase())) {
+            return NextResponse.json({ error: "This position cannot be ranked" }, { status: 403 });
+        }
+
+        const cca = Array.isArray(position.ccas) ? position.ccas[0] : position.ccas;
+        const accessResult = checkCcaAuthorization({
+            requestingUser,
+            cca,
+            require: "chair",
+        });
+
+        if (!accessResult.ok) {
+            return NextResponse.json({ error: accessResult.error }, { status: accessResult.status });
         }
 
         // Check if applicant already exists

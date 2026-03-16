@@ -2,18 +2,16 @@
 // API route to get positions available for chair ranking along with applicants' info
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-import { fetchUserId } from "@/lib/fetch-user-info";
-import { getUserAuthorizedCCAs } from "@/lib/lead-auth-service";
+import { fetchUserInfo } from "@/lib/fetch-user-info";
+import { RankingAccessPosition, checkCcaAuthorization } from "@/lib/cca-rankings-access";
 import { SupabaseClient } from "@supabase/supabase-js";
 
-type CapacityInfoRow = {
-    id: number;
-    name: string;
+const NON_APPLICANT_POSITION_TYPES = "(lead,vice,resident)";
+
+type CapacityInfoRow = RankingAccessPosition & {
     capacity: number;
     available_capacity: number;
     applied_count: number;
-    position_type: string;
-    cca_id: number;
     cca_name: string;
 };
 
@@ -37,7 +35,7 @@ const getPositionsForPhase = async (ccaIds: number[], supabase: SupabaseClient) 
         .select("id, name, capacity, available_capacity, applied_count, position_type, cca_id, cca_name")
         .in("cca_id", ccaIds)
         .gt("available_capacity", 0)
-        .not('position_type', 'in', '("lead","vice")');
+        .not('position_type', 'in', NON_APPLICANT_POSITION_TYPES);
 
     if (posError || !allPositions?.length) {
         return [];
@@ -49,30 +47,21 @@ const getPositionsForPhase = async (ccaIds: number[], supabase: SupabaseClient) 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(_request: Request) {
     try {
-        const userId = await fetchUserId();
-
-        if (!userId) {
-            return NextResponse.json({
-                positions: [],
-                error: 'Unauthorized'
-            }, { status: 401 });
-        }
-
         const headers = {
             'Cache-Control': 'no-store, private',
             'Content-Type': 'application/json',
         };
 
         const supabase = await createClient();
+        const requestingUser = await fetchUserInfo();
+        const accessResult = checkCcaAuthorization({ requestingUser });
 
-        const authResult = await getUserAuthorizedCCAs(userId, supabase);
-
-        if (!authResult.authorized) {
+        if (!accessResult.ok) {
             return NextResponse.json({ positions: [] }, { headers });
         }
 
         const allPositions = await getPositionsForPhase(
-            authResult.ccaIds,
+            accessResult.data.authorizedCcaIds,
             supabase
         );
 
@@ -132,9 +121,6 @@ export async function GET(_request: Request) {
                 }
             }
         });
-
-        console.log(allPositions);
-
         // Map the results using the safe helper function
         const result = allPositions.map((position) => ({
             id: position.id,

@@ -3,7 +3,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { fetchUserId } from "@/lib/fetch-user-info";
-import { AUTHORIZED_CHAIR_ROLES } from '@/lib/lead-auth-service';
+
+const NON_RANKABLE_POSITION_TYPES = "(lead,vice,resident)";
 
 interface CCAData {
     id: number;
@@ -52,7 +53,7 @@ export async function GET(_request: Request) {
                 ccas!inner (id, name, cca_type, description, image_url)
             `)
             .gt('available_capacity', 0)
-            .not('position_type', 'in', `("${AUTHORIZED_CHAIR_ROLES.join('","')}")`)
+            .not('position_type', 'in', NON_RANKABLE_POSITION_TYPES)
             .order('name', { ascending: true });
 
         if (positionsError) {

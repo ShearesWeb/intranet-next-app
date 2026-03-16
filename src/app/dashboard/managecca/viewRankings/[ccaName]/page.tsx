@@ -67,20 +67,24 @@ const POSITION_TYPE_ORDER: Record<string, number> = {
   member: 7,
 };
 
-const usesPerformanceScore = (ccaType: string) => ['committee', 'culture'].includes(ccaType);
-
 const hasRankingInputs = (member: CCAMember, ccaType: string) => {
-  if (usesPerformanceScore(ccaType)) {
+  if (ccaType === 'sports') {
+    return member.attendance > 0;
+  }
+  if (ccaType === 'culture') {
     return member.attendance > 0 && member.performance > 0;
   }
-  return member.attendance > 0;
+  return member.attendance > 0 && member.performance > 0;
 };
 
 const getRankingScore = (member: CCAMember, ccaType: string) => {
-  if (usesPerformanceScore(ccaType)) {
+  if (ccaType === 'sports') {
+    return member.attendance;
+  }
+  if (ccaType === 'culture') {
     return member.attendance + member.performance;
   }
-  return member.attendance;
+  return member.attendance + member.performance;
 };
 
 const rankMembersWithinPosition = (members: CCAMember[], ccaType: string): CCAMember[] => {
@@ -288,7 +292,7 @@ export default function AdminViewRankingsPage() {
                           <TableHead>
                             {ccaType === 'sports' ? "Captain's Appraisal" : 'Attendance and Attitude'}
                           </TableHead>
-                          {usesPerformanceScore(ccaType) && <TableHead>Performance</TableHead>}
+                          {ccaType !== 'sports' && <TableHead>Performance</TableHead>}
                           <TableHead>Remarks</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -307,7 +311,7 @@ export default function AdminViewRankingsPage() {
                               <TableCell className="text-sm">{formatCommitmentPeriod(member.commitment_period)}</TableCell>
                             )}
                             <TableCell>{displayScore(member.attendance)}</TableCell>
-                            {usesPerformanceScore(ccaType) && (
+                            {ccaType !== 'sports' && (
                               <TableCell>{displayScore(member.performance)}</TableCell>
                             )}
                             <TableCell className="min-w-[220px] whitespace-pre-wrap">

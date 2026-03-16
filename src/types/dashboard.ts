@@ -1,18 +1,22 @@
+import { CcaType, PositionType } from "./User";
+
 export interface CCAData {
   id: number;
   name: string;
   role: string;
-  position_type: string;
-  cca_type: string;
+  position_type: PositionType;
+  cca_type: CcaType;
   description: string;
   points: number;
+  can_manage_members?: boolean;
+  can_rank_members?: boolean;
 }
 
 export interface RankablePosition {
   id: number;
   name: string;
   cca_name: string;
-  position_type: 'maincomm' | 'subcomm' | 'blockcomm';
+  position_type: PositionType;
   capacity: number;
   available_capacity: number;
   applied_count: number;
@@ -55,7 +59,7 @@ export interface Position {
   capacity: number;
   available_capacity: number;
   applied_count: number;
-  position_type: string;
+  position_type: PositionType;
   applicants: Applicant[];
 }
 
@@ -76,7 +80,7 @@ export interface Member {
   room: string;
   position_id?: number;
   position_name: string;
-  position_type: string;
+  position_type: PositionType;
   points: number;
   appointed_date: string;
   cut?: boolean;

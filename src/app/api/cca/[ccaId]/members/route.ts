@@ -2,8 +2,8 @@
 // API route to get members of a lead/vice's CCA
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-import { fetchUserId } from "@/lib/fetch-user-info";
-import { checkCCAChairAuthorization } from "@/lib/lead-auth-service";
+import { fetchUserInfo } from "@/lib/fetch-user-info";
+import { checkCcaAuthorization } from "@/lib/cca-rankings-access";
 
 interface TransformedMember {
     user_id: number;
@@ -15,10 +15,8 @@ interface TransformedMember {
     position_type: string;
     points: number;
     appointed_date: string;
-    cut?: boolean;
     cut_status?: string;
     commitment_period?: string;
-    comments?: string;
 }
 
 export async function GET(
@@ -30,9 +28,9 @@ export async function GET(
         const supabase = await createClient();
 
         // Verify authentication and get user ID
-        const requestingUserId = await fetchUserId();
+        const requestingUser = await fetchUserInfo();
 
-        if (!requestingUserId) {
+        if (!requestingUser) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
@@ -62,8 +60,13 @@ export async function GET(
             .order('name');
 
         // Authorization - Check if user is lead/vice for THIS specific CCA
-        const authResult = await checkCCAChairAuthorization(requestingUserId, ccaData.id, supabase);
-        if (!authResult.authorized) {
+        const authResult = checkCcaAuthorization({
+            requestingUser,
+            cca: ccaData,
+            require: "chair",
+        });
+
+        if (!authResult.ok) {
             return NextResponse.json({
                 error: 'Unauthorized: You are not a lead/vice for this CCA'
             }, { status: 403 });
@@ -76,7 +79,6 @@ export async function GET(
                 user_id,
                 points,
                 created_at,
-                comments,
                 cut_status,
                 commitment_period,
                 public_user_info!inner(id, name, email, room),
@@ -114,10 +116,8 @@ export async function GET(
                     position_type: positionData.position_type,
                     points: member.points || 0,
                     appointed_date: member.created_at,
-                    cut: member.comments?.toLowerCase() === 'cut' ? true : false,
                     cut_status: member.cut_status,
                     commitment_period: member.commitment_period,
-                    comments: member.comments
                 });
             }
         });
@@ -150,12 +150,8 @@ export async function GET(
                 .sort((a, b) => a.name.localeCompare(b.name)),
 
             members: transformedMembers
-                .filter(member => member.position_type === 'member' && !member.cut && !member.cut_status)
+                .filter(member => member.position_type === 'member' && !member.cut_status)
                 .sort((a, b) => a.name.localeCompare(b.name)),
-            
-            cut: transformedMembers
-                .filter(member => member.position_type === 'member' && member.cut && !member.cut_status)
-                .sort((a, b) => a.name.localeCompare(b.name))
         };
 
         return NextResponse.json({

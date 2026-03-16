@@ -75,7 +75,7 @@ export default function AdminViewRankingsPage() {
       return;
     }
 
-    if (!user.is_jcrc && !user.is_admin) {
+    if (!user.is_jcrc) {
       setLoading(false);
       return;
     }
@@ -109,7 +109,7 @@ export default function AdminViewRankingsPage() {
 
   if (!user) return <AppLoading />;
 
-  if (!user.is_jcrc && !user.is_admin) {
+  if (!user.is_jcrc) {
     return (
       <AppLayout>
         <div className="flex flex-col space-y-4 p-4">
@@ -118,7 +118,7 @@ export default function AdminViewRankingsPage() {
             <AlertCircle className="h-4 w-4 text-yellow-600" />
             <AlertTitle className="text-yellow-800">Restricted access</AlertTitle>
             <AlertDescription className="text-yellow-700">
-              This page is restricted to JCRC members and administrators.
+              This page is restricted to JCRC members.
             </AlertDescription>
           </Alert>
         </div>

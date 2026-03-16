@@ -23,7 +23,7 @@ import Link from "next/link"
 import { Avatar, AvatarImage } from "../ui/avatar"
 import { useAuth } from "@/context/AuthContext"
 import { User } from "@/types/User"
-import { AUTHORIZED_CHAIR_ROLES, ChairRole } from "@/lib/lead-auth-service"
+import { checkCcaAuthorization } from "@/lib/cca-rankings-access"
 
 type NavItem = {
     title: string
@@ -60,7 +60,6 @@ export const navOptions: NavItem[] = [
             {
                 title: "Admin View",
                 url: "/dashboard/managecca/adminView",
-                adminOnly: true,
                 jcrcOnly: true,
             },
         ],
@@ -104,9 +103,8 @@ export const navOptions: NavItem[] = [
 ]
 
 export const buildNavItems = (user?: User | null) => {
-    const isChair = user?.appointments?.some(appt => 
-        AUTHORIZED_CHAIR_ROLES.includes((appt.position_type || '').toLowerCase() as ChairRole)
-    ) || user?.is_admin || false;
+    const authResult = checkCcaAuthorization({ requestingUser: user });
+    const isChair = Boolean(user?.is_admin || (authResult.ok && authResult.data.hasChairAccess));
 
     const allowItem = (item: { adminOnly?: boolean; jcrcOnly?: boolean; chairOnly?: boolean }) => {
         if (item.adminOnly && item.jcrcOnly) {

@@ -7,11 +7,12 @@ import Link from 'next/link';
 import { SimpleTable, type SimpleTableColumn } from '@/components/table/simple-table';
 import { ArrowRight, Info } from 'lucide-react';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import { AUTHORIZED_CHAIR_ROLES, ChairRole } from '@/lib/lead-auth-service';
 import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import { PositionTypeBadge } from '@/components/badges/position-type-badge';
+
+const CHAIR_POSITION_TYPES = new Set(['lead', 'vice']);
 
 type SubsidyRow = {
   id: number;
@@ -86,10 +87,8 @@ export default function HolidaySubsidyLanding() {
     setError(null);
 
     try {
-      const chairCCAs = user.appointments
-        .filter((appointment) =>
-          AUTHORIZED_CHAIR_ROLES.includes((appointment.position_type || '').toLowerCase() as ChairRole)
-        )
+      const chairCCAs = (user.appointments || [])
+        .filter((appointment) => CHAIR_POSITION_TYPES.has((appointment.position_type || '').toLowerCase()))
         .map((appointment) => ({
           id: appointment.cca_id,
           name: appointment.cca_name,

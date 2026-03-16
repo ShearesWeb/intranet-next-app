@@ -35,6 +35,11 @@ import { PositionTypeBadge } from "@/components/badges/position-type-badge";
 import { SimpleTable, SimpleTableColumn } from "@/components/table/simple-table";
 import Link from 'next/link';
 
+const isChairPositionType = (value: string | null | undefined) => {
+    const normalized = (value || '').trim().replace(/\s+/g, ' ').toLowerCase();
+    return normalized === 'lead' || normalized === 'vice';
+};
+
 // Define member table columns
 const memberTableColumns: SimpleTableColumn<Member>[] = [
     { accessorKey: 'name', header: 'Name' },
@@ -778,7 +783,7 @@ export default function ManageMembersPage() {
                                             onChange={(e) => setAddForm({...addForm, positionId: Number(e.target.value)})}
                                         >
                                             {allPositions
-                                                .filter((pos) => !['lead', 'vice'].includes(pos.position_type))
+                                                .filter((pos) => !isChairPositionType(pos.position_type))
                                                 .map((pos) => (
                                                 <option key={pos.id} value={pos.id}>{pos.name}</option>
                                             ))}

@@ -3,12 +3,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
+import { buildManageCcaView } from "@/lib/cca-rankings-access";
+import { CcaType } from "@/types/User";
 
-// ✅ TypeScript interfaces with union types
 type CCAMeta = {
         id: number;
         name: string;
-        cca_type: string;
+        cca_type: CcaType;
         description: string;
         image_url: string | null;
 };
@@ -46,18 +47,9 @@ export async function GET() {
 
                 const ccaMap = new Map<number, CCAMeta>((ccas || []).map((cca) => [cca.id, cca as CCAMeta]));
 
-                const transformedData = appointments.map((appointment) => {
-                        const ccaMeta = ccaMap.get(appointment.cca_id);
-
-                        return {
-                                id: appointment.cca_id,
-                                name: ccaMeta?.name ?? appointment.cca_name,
-                                role: appointment.position_name || 'Unknown Role',
-                                position_type: appointment.position_type,
-                                cca_type: ccaMeta?.cca_type ?? 'Unknown',
-                                description: ccaMeta?.description ?? '',
-                                points: appointment.points || 0,
-                        };
+                const transformedData = buildManageCcaView({
+                        requestingUser: user,
+                        ccas: Array.from(ccaMap.values()),
                 });
 
                 return NextResponse.json({

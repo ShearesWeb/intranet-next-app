@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { SubsidyStatus } from "@/types/holiday-subsidy";
-import { fetchUserId } from "@/lib/fetch-user-info";
-import { checkCCAChairAuthorization } from "@/lib/lead-auth-service";
+import { fetchUserInfo } from "@/lib/fetch-user-info";
+import { checkCcaAuthorization } from "@/lib/cca-rankings-access";
 
 
 type Params = {
@@ -11,21 +11,21 @@ type Params = {
     }>;
 };
 
-async function authorizeChair(ccaId: number, supabase: Awaited<ReturnType<typeof createClient>>) {
-    const userId = await fetchUserId();
+async function authorizeChair(ccaId: number) {
+    const user = await fetchUserInfo();
 
-    if (!userId) {
+    if (!user) {
         return { authorized: false, status: 401, message: "Unauthorized" };
     }
 
-    const { authorized, error } = await checkCCAChairAuthorization(userId, ccaId, supabase);
+    const authResult = checkCcaAuthorization({
+        requestingUser: user,
+        cca: { id: ccaId, name: null, cca_type: null },
+        require: "chair",
+    });
 
-    if (error) {
-        return { authorized: false, status: 500, message: error };
-    }
-
-    if (!authorized) {
-        return { authorized: false, status: 403, message: "You are not authorized to manage this CCA" };
+    if (!authResult.ok) {
+        return { authorized: false, status: authResult.status, message: authResult.error };
     }
 
     return { authorized: true, status: 200 };
@@ -60,7 +60,7 @@ export async function GET(_request: Request, { params }: Params) {
             return NextResponse.json({ error: "Invalid CCA ID" }, { status: 400 });
         }
 
-        const authResult = await authorizeChair(ccaId, supabase);
+        const authResult = await authorizeChair(ccaId);
 
         if (!authResult.authorized) {
             return NextResponse.json({ error: authResult.message }, { status: authResult.status });
@@ -112,7 +112,7 @@ export async function POST(request: Request, { params }: Params) {
             return NextResponse.json({ error: "Invalid CCA ID" }, { status: 400 });
         }
 
-        const authResult = await authorizeChair(ccaId, supabase);
+        const authResult = await authorizeChair(ccaId);
 
         if (!authResult.authorized) {
             return NextResponse.json({ error: authResult.message }, { status: authResult.status });
@@ -168,7 +168,7 @@ export async function PATCH(request: Request, { params }: Params) {
             return NextResponse.json({ error: "Invalid CCA ID" }, { status: 400 });
         }
 
-        const authResult = await authorizeChair(ccaId, supabase);
+        const authResult = await authorizeChair(ccaId);
 
         if (!authResult.authorized) {
             return NextResponse.json({ error: authResult.message }, { status: authResult.status });
@@ -239,7 +239,7 @@ export async function DELETE(request: Request, { params }: Params) {
             return NextResponse.json({ error: "Invalid CCA ID" }, { status: 400 });
         }
 
-        const authResult = await authorizeChair(ccaId, supabase);
+        const authResult = await authorizeChair(ccaId);
 
         if (!authResult.authorized) {
             return NextResponse.json({ error: authResult.message }, { status: authResult.status });

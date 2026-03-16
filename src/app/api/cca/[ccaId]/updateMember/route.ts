@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-import { fetchUserId } from "@/lib/fetch-user-info";
-import { checkCCAChairAuthorization } from "@/lib/lead-auth-service";
+import { fetchUserInfo } from "@/lib/fetch-user-info";
+import { checkCcaAuthorization } from "@/lib/cca-rankings-access";
 
 export async function POST(
     request: Request,
@@ -12,9 +12,9 @@ export async function POST(
         const { user_id, position_id, cut_status, commitment_period, comments, ranking, attendance_rating, performance_rating } = await request.json();
 
         const supabase = await createClient();
-        const requestingUserId = await fetchUserId();
+        const requestingUser = await fetchUserInfo();
 
-        if (!requestingUserId) {
+        if (!requestingUser) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
@@ -23,8 +23,13 @@ export async function POST(
             return NextResponse.json({ error: 'Invalid CCA ID' }, { status: 400 });
         }
 
-        const authResult = await checkCCAChairAuthorization(requestingUserId, ccaIdNum, supabase);
-        if (!authResult.authorized) {
+        const authResult = checkCcaAuthorization({
+            requestingUser,
+            cca: { id: ccaIdNum, name: null, cca_type: null },
+            require: "chair",
+        });
+
+        if (!authResult.ok) {
             return NextResponse.json({
                 error: 'Unauthorized: You are not a lead/vice for this CCA'
             }, { status: 403 });

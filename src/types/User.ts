@@ -1,6 +1,17 @@
 import { CCAPosition } from "./CCAPosition";
 
-export type PositionType = "maincomm" | "subcomm" | "blockcomm" | string;
+export type PositionType =
+    | "lead"
+    | "vice"
+    | "blockcomm"
+    | "maincomm"
+    | "subcomm"
+    | "team manager"
+    | "member"
+    | "resident"
+    | string;
+
+export type CcaType = "sports" | "culture" | "committee" | string;
 
 export interface UserAppointment extends CCAPosition {
     position_type: PositionType;

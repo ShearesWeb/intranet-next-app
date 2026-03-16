@@ -1,9 +1,9 @@
-import { AuthenticatedUser } from "@/types/User";
+import { AuthenticatedUser, UserAppointment } from "@/types/User";
 
 const JCRC_APPOINTMENT_NAME_PATTERN = /(jcrc|junior common room committee)/i;
 
 const JCRC_POSITION_TO_CCA_NAMES = {
-    President: [
+    "President": [
         "Receive And Give (RAG)",
         "Sheares Web",
     ],
@@ -37,6 +37,7 @@ const JCRC_POSITION_TO_CCA_NAMES = {
         "Consheares",
     ],
     "Director of Cultural Affairs": [
+        "Cultural Management Board (CMB)",
         "Band",
         "Danshers",
         "Geyao",
@@ -80,38 +81,31 @@ const JCRC_POSITION_TO_CCA_NAMES = {
     ],
 } as const satisfies Record<string, readonly string[]>;
 
-const normalizedPositionToCcaNames = new Map<string, readonly string[]>(
+const normalizedJcrcPositionToCcaNames = new Map<string, readonly string[]>(
     Object.entries(JCRC_POSITION_TO_CCA_NAMES).map(([positionName, ccaNames]) => [
-        normalizeAccessToken(positionName),
+        positionName.trim().replace(/\s+/g, " ").toLowerCase(),
         ccaNames,
     ])
 );
 
-function normalizeAccessToken(value: string | null | undefined) {
-    return (value || "").trim().replace(/\s+/g, " ").toLowerCase();
-}
-
-function getRelevantAppointments(user: Pick<AuthenticatedUser, "appointments">) {
-    const appointments = user.appointments || [];
-    const explicitJcrcAppointments = appointments.filter((appointment) =>
-        JCRC_APPOINTMENT_NAME_PATTERN.test(appointment.cca_name || "")
-    );
-
-    return explicitJcrcAppointments.length > 0 ? explicitJcrcAppointments : appointments;
-}
-
-export function getJcrcManagedCcaNames(
-    user: Pick<AuthenticatedUser, "is_jcrc" | "appointments">
+export function getJcrcManagedCcaNamesFromAppointments(
+    user: Pick<AuthenticatedUser, "is_jcrc" | "appointments"> | null | undefined
 ) {
-    if (!user.is_jcrc) {
+    if (!user?.is_jcrc) {
         return [] as string[];
     }
 
     const allowedCcaNames = new Set<string>();
+    const explicitJcrcAppointments = (user.appointments || []).filter((appointment) =>
+        JCRC_APPOINTMENT_NAME_PATTERN.test(appointment.cca_name || "")
+    );
+    const relevantAppointments = explicitJcrcAppointments.length > 0
+        ? explicitJcrcAppointments
+        : (user.appointments || []);
 
-    getRelevantAppointments(user).forEach((appointment) => {
-        const mappedCcaNames = normalizedPositionToCcaNames.get(
-            normalizeAccessToken(appointment.position_name)
+    relevantAppointments.forEach((appointment) => {
+        const mappedCcaNames = normalizedJcrcPositionToCcaNames.get(
+            (appointment.position_name || "").trim().replace(/\s+/g, " ").toLowerCase()
         );
 
         mappedCcaNames?.forEach((ccaName) => {
@@ -123,15 +117,15 @@ export function getJcrcManagedCcaNames(
 }
 
 export function canJcrcAccessCca(
-    user: Pick<AuthenticatedUser, "is_jcrc" | "appointments">,
+    jcrcManagedCcaNames: string[],
     ccaName: string | null | undefined
 ) {
-    if (!user.is_jcrc || !ccaName) {
+    if (!ccaName) {
         return false;
     }
 
-    const normalizedTargetName = normalizeAccessToken(ccaName);
-    return getJcrcManagedCcaNames(user).some(
-        (allowedName) => normalizeAccessToken(allowedName) === normalizedTargetName
+    const normalizedTargetName = ccaName.trim().replace(/\s+/g, " ").toLowerCase();
+    return jcrcManagedCcaNames.some(
+        (allowedName) => allowedName.trim().replace(/\s+/g, " ").toLowerCase() === normalizedTargetName
     );
 }

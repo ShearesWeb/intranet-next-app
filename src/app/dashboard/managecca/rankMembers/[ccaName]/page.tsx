@@ -16,6 +16,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { PositionTypeBadge } from '@/components/badges/position-type-badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { buildCcaPositionAccess, RankingAccessPosition } from '@/lib/cca-rankings-access';
 
 export interface CCAMember {
   row_key: string;
@@ -70,20 +71,24 @@ const POSITION_TYPE_ORDER: Record<string, number> = {
 
 const cloneMembers = (items: CCAMember[]): CCAMember[] => items.map((member) => ({ ...member }));
 
-const usesPerformanceScore = (ccaType: string) => ['committee', 'culture'].includes(ccaType);
-
 const hasRankingInputs = (member: CCAMember, ccaType: string) => {
-  if (usesPerformanceScore(ccaType)) {
+  if (ccaType === 'sports') {
+    return member.attendance > 0;
+  }
+  if (ccaType === 'culture') {
     return member.attendance > 0 && member.performance > 0;
   }
-  return member.attendance > 0;
+  return member.attendance > 0 && member.performance > 0;
 };
 
 const getRankingScore = (member: CCAMember, ccaType: string) => {
-  if (usesPerformanceScore(ccaType)) {
+  if (ccaType === 'sports') {
+    return member.attendance;
+  }
+  if (ccaType === 'culture') {
     return member.attendance + member.performance;
   }
-  return member.attendance;
+  return member.attendance + member.performance;
 };
 
 const rankMembersWithinPosition = (members: CCAMember[], ccaType: string): CCAMember[] => {
@@ -200,7 +205,42 @@ export default function CCARankingPage() {
         remarks: member.cca_member_rankings?.[0]?.remarks ?? '',
       }));
 
-      const normalizedMembers = recalculateRankings(formattedMembers, data.cca_type || '');
+      const availablePositions = Array.from(
+        new Map(
+          formattedMembers.map((member) => [
+            member.position_id,
+            {
+              id: member.position_id,
+              cca_id: Number(id),
+              name: member.position,
+              position_type: member.position_type,
+            } satisfies RankingAccessPosition,
+          ])
+        ).values()
+      );
+
+      const visiblePositionIds = new Set(
+        buildCcaPositionAccess({
+          requestingUser: user,
+          cca: { id: Number(id), cca_type: data.cca_type || null },
+          positions: availablePositions,
+        })
+          .filter((position) => position.canRank)
+          .map((position) => position.id)
+      );
+
+      const visibleMembers = formattedMembers.filter((member) => {
+        if (!visiblePositionIds.has(member.position_id)) {
+          return false;
+        }
+
+        if (data.cca_type === 'sports' && member.position_type === 'member') {
+          return member.cut_status !== null;
+        }
+
+        return true;
+      });
+      const normalizedMembers = recalculateRankings(visibleMembers, data.cca_type || '');
       setMembers(normalizedMembers);
       setInitialMembers(cloneMembers(normalizedMembers));
       setCcaType(data.cca_type || '');
@@ -214,7 +254,7 @@ export default function CCARankingPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (user && ccaId) {
@@ -224,10 +264,13 @@ export default function CCARankingPage() {
 
   const unrankedCount = useMemo(() => {
     return members.filter((member) => {
-      if (usesPerformanceScore(ccaType)) {
+      if (ccaType === 'sports') {
+        return member.attendance === 0;
+      }
+      if (ccaType === 'culture') {
         return member.attendance === 0 || member.performance === 0;
       }
-      return member.attendance === 0;
+      return member.attendance === 0 || member.performance === 0;
     }).length;
   }, [members, ccaType]);
 
@@ -336,7 +379,7 @@ export default function CCARankingPage() {
             <AlertDescription className="text-yellow-700">
               You have {unrankedCount} member{unrankedCount !== 1 ? 's' : ''} left to rank (
               fill in {ccaType === 'sports' ? "captain's appraisal" : 'attendance and attitude'}
-              {usesPerformanceScore(ccaType) ? ' and performance' : ''}).
+              {ccaType === 'sports' ? '' : ' and performance'}).
             </AlertDescription>
           </Alert>
         )}
@@ -387,7 +430,7 @@ export default function CCARankingPage() {
                           <TableHead>
                             {ccaType === 'sports' ? "Captain's Appraisal (1-10)" : 'Attendance and Attitude (1-10)'}
                           </TableHead>
-                          {usesPerformanceScore(ccaType) && <TableHead>Performance (1-10)</TableHead>}
+                          {ccaType !== 'sports' && <TableHead>Performance (1-10)</TableHead>}
                           <TableHead>Remarks</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -421,7 +464,7 @@ export default function CCARankingPage() {
                                 ))}
                               </select>
                             </TableCell>
-                            {usesPerformanceScore(ccaType) && (
+                            {ccaType !== 'sports' && (
                               <TableCell>
                                 <select
                                   value={member.performance || 0}

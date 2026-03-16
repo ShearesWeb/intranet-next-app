@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import toast from 'react-hot-toast';
-import { AUTHORIZED_CHAIR_ROLES, type ChairRole } from '@/lib/lead-auth-service';
 import { AppLayout } from '@/components/layout/app-layout';
 import { Button } from '@/components/ui/button';
 import { SimpleTable, SimpleTableColumn } from '@/components/table/simple-table';
@@ -132,14 +131,7 @@ export default function ManageCCA() {
     );
   }
 
-  // Build dynamic columns based on user permissions
-  const canManageMembers = (cca: CCAData) =>
-    AUTHORIZED_CHAIR_ROLES.includes(cca.position_type as ChairRole);
-
-  const canRankMembers = (cca: CCAData) =>
-    canManageMembers(cca) || (cca.cca_type === 'committee' && cca.position_type === 'maincomm');
-
-  const dynamicColumns: SimpleTableColumn<CCAData>[] = ccas.some(canRankMembers)
+  const dynamicColumns: SimpleTableColumn<CCAData>[] = ccas.some((cca) => cca.can_rank_members)
     ? [
       ...ccaTableColumns,
       {
@@ -147,8 +139,8 @@ export default function ManageCCA() {
         header: 'Actions',
         enableSorting: false,
         cell: (_, row) => {
-          const allowManage = canManageMembers(row);
-          const allowRank = canRankMembers(row);
+          const allowManage = Boolean(row.can_manage_members);
+          const allowRank = Boolean(row.can_rank_members);
           return (
           <div className="flex flex-col lg:flex-row gap-2 justify-start w-full">
             {allowManage || allowRank ? (

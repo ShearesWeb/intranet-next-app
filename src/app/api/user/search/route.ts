@@ -2,15 +2,14 @@
 // API route to search for users by name, email, or room
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-import { fetchUserId } from "@/lib/fetch-user-info";
-import { hasAnyChairAuthorization } from "@/lib/lead-auth-service";
+import { fetchUserInfo } from "@/lib/fetch-user-info";
+import { checkCcaAuthorization } from "@/lib/cca-rankings-access";
 
 export async function GET(request: Request) {
     try {
         // Added authentication check to prevent unauthorized searches by non-leads/vices
-        const userId = await fetchUserId();
-
-        if (!userId) {
+        const user = await fetchUserInfo();
+        if (!user) {
             return NextResponse.json({
                 success: false,
                 message: 'Unauthorized'
@@ -19,8 +18,9 @@ export async function GET(request: Request) {
 
         const supabase = await createClient();
 
-        const authResult = await hasAnyChairAuthorization(userId, supabase);
-        if (!authResult.authorized) {
+        const authResult = checkCcaAuthorization({ requestingUser: user });
+
+        if (!authResult.ok || !authResult.data.hasChairAccess) {
             return NextResponse.json({
                 success: false,
                 message: 'Forbidden: Only CCA leads/vices can search users'
