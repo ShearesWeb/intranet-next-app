@@ -66,6 +66,16 @@ type PositionOption = {
     position_type: string;
 };
 
+const SPORTS_STATUS_OPTIONS: Array<{ status: CutStatus; label: string }> = [
+    { status: 'ivp-ihg-team', label: 'Move to IHG Team (IVP)' },
+    { status: 'ihg-team', label: 'Move to IHG Team' },
+    { status: 'final-cut', label: 'Move to Final Cut' },
+];
+
+const CULTURE_STATUS_OPTIONS: Array<{ status: CutStatus; label: string }> = [
+    { status: 'first-cut', label: 'Promote to IVP' },
+];
+
 export default function ManageMembersPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -592,7 +602,7 @@ export default function ManageMembersPage() {
         const columnsToUse: SimpleTableColumn<Member>[] = (showActionsColumn && canManage)
             ? [
                 ...memberTableColumns,
-                ...(!isSportsCulture ? [{
+                ...(!isSports ? [{
                     accessorKey: 'commitment_period' as keyof Member,
                     header: 'Commitment',
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -626,15 +636,21 @@ export default function ManageMembersPage() {
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                         <DropdownMenuSeparator />
-                                        <DropdownMenuItem onClick={() => handleLocalUpdateStatus(row.user_id, row.name, 'ivp-ihg-team')}>
-                                            Move to IHG Team (IVP)
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => handleLocalUpdateStatus(row.user_id, row.name, 'ihg-team')}>
-                                            Move to IHG Team
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => handleLocalUpdateStatus(row.user_id, row.name, 'final-cut')}>
-                                            Move to Final Cut
-                                        </DropdownMenuItem>
+                                        {row.cut_status && (
+                                            <DropdownMenuItem onClick={() => handleLocalUpdateStatus(row.user_id, row.name, null)}>
+                                                Move to Members
+                                            </DropdownMenuItem>
+                                        )}
+                                        {SPORTS_STATUS_OPTIONS
+                                            .filter((option) => option.status !== row.cut_status)
+                                            .map((option) => (
+                                                <DropdownMenuItem
+                                                    key={option.status}
+                                                    onClick={() => handleLocalUpdateStatus(row.user_id, row.name, option.status)}
+                                                >
+                                                    {option.label}
+                                                </DropdownMenuItem>
+                                            ))}
                                         <DropdownMenuSeparator />
                                         <DropdownMenuItem onClick={() => handleLocalRemoveMember(row.user_id, row.name)} className="text-red-600">
                                             Remove Member
@@ -652,15 +668,21 @@ export default function ManageMembersPage() {
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                         <DropdownMenuSeparator />
-                                        {row.cut_status === 'first-cut' ? (
+                                        {row.cut_status ? (
                                             <DropdownMenuItem onClick={() => handleLocalUpdateStatus(row.user_id, row.name, null)}>
                                                 Move to Members
                                             </DropdownMenuItem>
-                                        ) : (
-                                            <DropdownMenuItem onClick={() => handleLocalUpdateStatus(row.user_id, row.name, 'first-cut')}>
-                                                Promote to IVP
-                                            </DropdownMenuItem>
-                                        )}
+                                        ) : null}
+                                        {CULTURE_STATUS_OPTIONS
+                                            .filter((option) => option.status !== row.cut_status)
+                                            .map((option) => (
+                                                <DropdownMenuItem
+                                                    key={option.status}
+                                                    onClick={() => handleLocalUpdateStatus(row.user_id, row.name, option.status)}
+                                                >
+                                                    {option.label}
+                                                </DropdownMenuItem>
+                                            ))}
                                         <DropdownMenuSeparator />
                                         <DropdownMenuItem onClick={() => handleLocalRemoveMember(row.user_id, row.name)} className="text-red-600">
                                             Remove Member
