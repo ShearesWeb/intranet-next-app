@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { buildRankingComments } from "@/lib/cca-ranking-comments";
 import { createClient } from "@/utils/supabase/server";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { checkCcaAuthorization } from "@/lib/cca-rankings-access";
@@ -99,9 +100,11 @@ export async function POST(
                  user_id,
                  position_id,
                  ranking: ranking || 999,
-                 attendance: Math.max(1, attendance_rating || 0),
-                 performance: Math.max(1, performance_rating || 0),
-                 remarks: comments || '',
+                 comments: buildRankingComments({
+                     attendance: Math.max(1, attendance_rating || 0),
+                     performance: Math.max(1, performance_rating || 0),
+                     remarks: typeof comments === 'string' ? comments : null,
+                 }),
                  updated_at: new Date().toISOString()
              };
              

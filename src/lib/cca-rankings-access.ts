@@ -18,11 +18,8 @@ export type CcaPositionAccess = RankingAccessPosition & {
     canRank: boolean;
 };
 
-const UNIVERSAL_EXCLUDED_POSITION_TYPES = new Set(["lead", "vice"]);
-const COMMITTEE_EXCLUDED_POSITION_TYPES = new Set(["lead", "vice"]);
-const COMMITTEE_CHAIR_RANKABLE_POSITION_TYPES = new Set(["maincomm", "blockcomm", "member"]);
-const RESIDENT_POSITION_TOKENS = new Set(["resident"]);
-const SPORTS_RANKABLE_POSITION_TOKENS = new Set(["teammanager", "member"]);
+const COMMITTEE_CHAIR_RANKABLE_POSITION_TYPES = new Set(["maincomm", "blockcomm", "member", "resident"]);
+const SPORTS_RANKABLE_POSITION_TYPES = new Set(["teammanager", "member"]);
 
 const getCommitteeFirstWord = (name?: string) => {
     const normalized = (name || "")
@@ -37,16 +34,15 @@ const getCommitteeFirstWord = (name?: string) => {
 const normalizePositionToken = (value?: string) =>
     (value || "").toLowerCase().replace(/[\s_-]+/g, "").trim();
 
-const isResidentPosition = (position?: { position_type?: string; name?: string } | null) => {
-    if (!position) return false;
-    const typeToken = normalizePositionToken(position.position_type);
-    return RESIDENT_POSITION_TOKENS.has(typeToken);
+const isChairPositionType = (positionType?: string | null) => {
+    const normalized = (positionType || "").toLowerCase().trim();
+    return normalized === "lead" || normalized === "vice";
 };
 
 const isSportsRankablePosition = (position?: { position_type?: string; name?: string } | null) => {
-    if (!position || isResidentPosition(position)) return false;
+    if (!position) return false;
     const typeToken = normalizePositionToken(position.position_type);
-    return SPORTS_RANKABLE_POSITION_TOKENS.has(typeToken);
+    return SPORTS_RANKABLE_POSITION_TYPES.has(typeToken);
 };
 
 function getAppointmentsByCca(
@@ -75,8 +71,7 @@ export function buildManageCcaView({
 
     return Array.from(appointmentsByCca.values()).flatMap((appointment) => {
         const cca = ccasById.get(appointment.cca_id);
-        const canManageMembers =
-            appointment.position_type === "lead" || appointment.position_type === "vice";
+        const canManageMembers = isChairPositionType(appointment.position_type);
         const canRankMembers =
             canManageMembers ||
             (appointment.position_type === "maincomm" && cca?.cca_type === "committee");
@@ -121,7 +116,7 @@ export function buildCcaPositionAccess({
     const isCommittee = cca.cca_type === "committee";
     const isSports = cca.cca_type === "sports";
     const appointmentPositionType = appointment.position_type?.toLowerCase();
-    const hasChairRole = appointmentPositionType === "lead" || appointmentPositionType === "vice";
+    const hasChairRole = isChairPositionType(appointmentPositionType);
     const maincommFirstWord =
         appointmentPositionType === "maincomm"
             ? getCommitteeFirstWord(appointment.position_name)
@@ -145,15 +140,7 @@ export function buildCcaPositionAccess({
             };
         }
 
-        if (UNIVERSAL_EXCLUDED_POSITION_TYPES.has(positionType) || isResidentPosition(position)) {
-            return {
-                ...position,
-                canAccess: false,
-                canRank: false,
-            };
-        }
-
-        if (isCommittee && COMMITTEE_EXCLUDED_POSITION_TYPES.has(positionType)) {
+        if (isChairPositionType(positionType)) {
             return {
                 ...position,
                 canAccess: false,
@@ -223,7 +210,7 @@ export function checkCcaAuthorization({
     const authorizedCcaIds = Array.from(
         new Set(
             Array.from(appointmentsByCca.values())
-                .filter((appointment) => appointment.position_type === "lead" || appointment.position_type === "vice")
+                .filter((appointment) => isChairPositionType(appointment.position_type))
                 .map((appointment) => appointment.cca_id)
         )
     );

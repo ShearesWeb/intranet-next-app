@@ -1,6 +1,7 @@
 // src/app/api/cca/[ccaId]/rankings/route.ts
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
+import { buildRankingComments, extractRankingCommentFields } from "@/lib/cca-ranking-comments";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
 import {
     checkCcaAuthorization,
@@ -26,9 +27,7 @@ type RankingRow = {
     user_id: number;
     position_id: number;
     ranking: number | null;
-    attendance: number | null;
-    performance: number | null;
-    remarks: string | null;
+    comments: unknown | null;
 };
 
 type RankingPayload = {
@@ -117,7 +116,7 @@ export async function GET(
     }
 
     if (!members || members.length === 0) {
-        return NextResponse.json({ members: [] });
+        return NextResponse.json({ members: [], cca_type: cca.cca_type });
     }
 
     const normalizedMembers = ((members || []) as AppointmentRow[]).map((member) => {
@@ -140,7 +139,7 @@ export async function GET(
 
     const { data: rankings, error: rankingsError } = await supabase
         .from('cca_member_rankings')
-        .select('user_id, position_id, ranking, attendance, performance, remarks')
+        .select('user_id, position_id, ranking, comments')
         .in('position_id', positionIds)
         .in('user_id', userIds);
 
@@ -151,7 +150,13 @@ export async function GET(
 
     const rankingsMap = new Map<string, { ranking?: number | null; attendance?: number | null; performance?: number | null; remarks?: string | null }>();
     (rankings as RankingRow[] | null | undefined)?.forEach((ranking) => {
-        rankingsMap.set(`${ranking.user_id}:${ranking.position_id}`, ranking);
+        const parsedComments = extractRankingCommentFields(ranking.comments);
+        rankingsMap.set(`${ranking.user_id}:${ranking.position_id}`, {
+            ranking: ranking.ranking,
+            attendance: parsedComments.attendance,
+            performance: parsedComments.performance,
+            remarks: parsedComments.remarks,
+        });
     });
 
     const enrichedMembers = normalizedMembers.map((member) => {
@@ -225,19 +230,25 @@ export async function POST(
         .filter((ranking) => allowedPositionIds.has(ranking.position_id))
         .filter((ranking) => {
             if (ranking.attendance <= 0) return false;
-            if (accessResult.data.requiresPerformance) return ranking.performance > 0;
+            if (accessResult.data.requiresPerformance && ranking.performance <= 0) return false;
             return true;
         })
-        .map((ranking) => ({
-            user_id: ranking.user_id,
-            position_id: ranking.position_id,
-            ranking: ranking.ranking,
-            attendance: ranking.attendance,
-            performance: accessResult.data.requiresPerformance
+        .map((ranking) => {
+            const normalizedPerformance = accessResult.data.requiresPerformance
                 ? ranking.performance
-                : (ranking.performance > 0 ? ranking.performance : ranking.attendance),
-            remarks: ranking.remarks,
-        }));
+                : (ranking.performance > 0 ? ranking.performance : ranking.attendance);
+
+            return {
+                user_id: ranking.user_id,
+                position_id: ranking.position_id,
+                ranking: ranking.ranking,
+                comments: buildRankingComments({
+                    attendance: ranking.attendance,
+                    performance: normalizedPerformance,
+                    remarks: ranking.remarks,
+                }),
+            };
+        });
 
     if (rankingsToUpsert.length === 0) {
         return NextResponse.json({ success: true, message: "No valid rankings to save" });
