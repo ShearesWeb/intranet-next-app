@@ -19,7 +19,8 @@ export type CcaPositionAccess = RankingAccessPosition & {
 };
 
 const UNIVERSAL_EXCLUDED_POSITION_TYPES = new Set(["lead", "vice"]);
-const COMMITTEE_EXCLUDED_POSITION_TYPES = new Set(["lead", "vice", "member"]);
+const COMMITTEE_EXCLUDED_POSITION_TYPES = new Set(["lead", "vice"]);
+const COMMITTEE_CHAIR_RANKABLE_POSITION_TYPES = new Set(["maincomm", "blockcomm", "member"]);
 const RESIDENT_POSITION_TOKENS = new Set(["resident"]);
 const SPORTS_RANKABLE_POSITION_TOKENS = new Set(["teammanager", "member"]);
 
@@ -79,10 +80,6 @@ export function buildManageCcaView({
         const canRankMembers =
             canManageMembers ||
             (appointment.position_type === "maincomm" && cca?.cca_type === "committee");
-
-        if (!canManageMembers && !canRankMembers) {
-            return [];
-        }
 
         return [{
             id: appointment.cca_id,
@@ -179,8 +176,7 @@ export function buildCcaPositionAccess({
             canAccess = hasChairRole;
             canRank = hasChairRole;
         } else if (hasChairRole) {
-            const isChairRankableCommitteePosition =
-                position.position_type === "maincomm" || position.position_type === "blockcomm";
+            const isChairRankableCommitteePosition = COMMITTEE_CHAIR_RANKABLE_POSITION_TYPES.has(positionType);
             canAccess = isChairRankableCommitteePosition;
             canRank = isChairRankableCommitteePosition;
         } else {
@@ -233,7 +229,9 @@ export function checkCcaAuthorization({
     );
     const jcrcManagedCcaNames = getJcrcManagedCcaNamesFromAppointments(requestingUser);
     const positionAccess = cca ? buildCcaPositionAccess({ requestingUser, cca, positions }) : [];
-    const canChairAccess = Boolean(cca && authorizedCcaIds.includes(cca.id));
+    const canChairAccess = cca
+        ? authorizedCcaIds.includes(cca.id)
+        : authorizedCcaIds.length > 0;
     const canAccess = Boolean(
         requestingUser.is_admin ||
         canChairAccess ||

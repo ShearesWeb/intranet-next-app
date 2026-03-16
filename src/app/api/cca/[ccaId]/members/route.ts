@@ -148,6 +148,9 @@ export async function GET(
             finalCut: transformedMembers
                 .filter(member => member.cut_status === 'final-cut')
                 .sort((a, b) => a.name.localeCompare(b.name)),
+            firstCut: transformedMembers
+                .filter(member => member.cut_status === 'first-cut')
+                .sort((a, b) => a.name.localeCompare(b.name)),
 
             members: transformedMembers
                 .filter(member => member.position_type === 'member' && !member.cut_status)

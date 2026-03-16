@@ -155,10 +155,15 @@ export default function ManageMembersPage() {
         try {
             const response = await fetch(`/api/user/search?query=${encodeURIComponent(query)}`);
             const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to search users');
+            }
             setUserSearchResults(data.data || []);
         } catch (error) {
             console.error('Error searching users:', error);
-            toast.error('Failed to search users');
+            const message = error instanceof Error ? error.message : 'Failed to search users';
+            toast.error(message);
+            setUserSearchResults([]);
         } finally {
             setIsSearching(false);
         }
@@ -277,6 +282,7 @@ export default function ManageMembersPage() {
             case 'ivp-ihg-team': return 'ivpIhgTeam';
             case 'ihg-team': return 'ihgTeam';
             case 'final-cut': return 'finalCut';
+            case 'first-cut': return 'firstCut';
             default: return 'members';
         }
     };
@@ -286,14 +292,15 @@ export default function ManageMembersPage() {
             case 'ivp-ihg-team': return 'Final Cut - IHG Team Members (IVP)';
             case 'ihg-team': return 'Final Cut - IHG Team Members';
             case 'final-cut': return 'Final Cut Members';
+            case 'first-cut': return 'IVP Members';
             default: return 'Members';
         }
     };
 
     // Local update status
-    const handleLocalUpdateStatus = (userId: number, memberName: string, newStatus: CutStatus) => {
-        if (!isSports) {
-            toast.error('Status groups are only available for sports CCAs');
+    const handleLocalUpdateStatus = (userId: number, memberName: string, newStatus: CutStatus | null) => {
+        if (!isSports && !isCulture) {
+            toast.error('Status groups are only available for sports and culture CCAs');
             return;
         }
 
@@ -634,6 +641,32 @@ export default function ManageMembersPage() {
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
+                            ) : isCulture ? (
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" className="h-8 w-8 p-0">
+                                            <span className="sr-only">Open menu</span>
+                                            <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                        <DropdownMenuSeparator />
+                                        {row.cut_status === 'first-cut' ? (
+                                            <DropdownMenuItem onClick={() => handleLocalUpdateStatus(row.user_id, row.name, null)}>
+                                                Move to Members
+                                            </DropdownMenuItem>
+                                        ) : (
+                                            <DropdownMenuItem onClick={() => handleLocalUpdateStatus(row.user_id, row.name, 'first-cut')}>
+                                                Promote to IVP
+                                            </DropdownMenuItem>
+                                        )}
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem onClick={() => handleLocalRemoveMember(row.user_id, row.name)} className="text-red-600">
+                                            Remove Member
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             ) : (
                                 <Button
                                     size="sm"
@@ -685,6 +718,7 @@ export default function ManageMembersPage() {
 
     const leadershipMembers = [...currentGroupedMembers.lead || [], ...currentGroupedMembers.vice || []];
     const isSports = permissions.ccaType === 'sports';
+    const isCulture = permissions.ccaType === 'culture';
     const isSportsCulture = ['sports', 'culture'].includes(permissions.ccaType);
     const totalFilteredMembers = Object.values(currentGroupedMembers).flat().length;
 
@@ -753,6 +787,7 @@ export default function ManageMembersPage() {
                         {isSports && renderMemberGroup('Final Cut - IHG Team Members (IVP)', currentGroupedMembers.ivpIhgTeam || [], true, false)}
                         {isSports && renderMemberGroup('Final Cut - IHG Team Members', currentGroupedMembers.ihgTeam || [], true, false)}
                         {isSports && renderMemberGroup('Final Cut Members', currentGroupedMembers.finalCut || [], true, false)}
+                        {isCulture && renderMemberGroup('IVP Members', currentGroupedMembers.firstCut || [], true, false)}
                         
                         {renderMemberGroup('Members', currentGroupedMembers.members || [], true, true)}
                     </div>

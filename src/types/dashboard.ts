@@ -70,7 +70,7 @@ export interface UserSearchResult {
   room?: string | null;
 }
 
-export type CutStatus = 'ivp-ihg-team' | 'ihg-team' | 'final-cut';
+export type CutStatus = 'ivp-ihg-team' | 'ihg-team' | 'final-cut' | 'first-cut';
 export type CommitmentPeriod = 'semester-1' | 'semester-2' | 'full-year';
 
 export interface Member {
@@ -96,7 +96,7 @@ export interface PendingChange {
   user_name: string;
   user_email: string;
   user_room?: string;
-  new_status?: CutStatus;
+  new_status?: CutStatus | null;
   new_commitment_period?: CommitmentPeriod;
   position_id?: number;
   position_name?: string;

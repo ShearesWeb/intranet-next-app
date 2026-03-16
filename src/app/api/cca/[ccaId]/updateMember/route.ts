@@ -3,6 +3,11 @@ import { createClient } from "@/utils/supabase/server";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { checkCcaAuthorization } from "@/lib/cca-rankings-access";
 
+const CUT_STATUSES_BY_CCA_TYPE = {
+    sports: new Set(["ivp-ihg-team", "ihg-team", "final-cut"]),
+    culture: new Set(["first-cut"]),
+} as const;
+
 export async function POST(
     request: Request,
     { params }: { params: Promise<{ ccaId: string }> }
@@ -23,9 +28,19 @@ export async function POST(
             return NextResponse.json({ error: 'Invalid CCA ID' }, { status: 400 });
         }
 
+        const { data: ccaData, error: ccaError } = await supabase
+            .from('ccas')
+            .select('id, name, cca_type')
+            .eq('id', ccaIdNum)
+            .single();
+
+        if (ccaError || !ccaData) {
+            return NextResponse.json({ error: 'CCA not found' }, { status: 404 });
+        }
+
         const authResult = checkCcaAuthorization({
             requestingUser,
-            cca: { id: ccaIdNum, name: null, cca_type: null },
+            cca: ccaData,
             require: "chair",
         });
 
@@ -36,6 +51,17 @@ export async function POST(
         }
 
         console.log('Updating member:', { user_id, position_id, cut_status, commitment_period, comments });
+
+        if (cut_status !== undefined && cut_status !== null) {
+            if (typeof cut_status !== 'string') {
+                return NextResponse.json({ error: 'Invalid cut status' }, { status: 400 });
+            }
+
+            const allowedStatuses = CUT_STATUSES_BY_CCA_TYPE[ccaData.cca_type as keyof typeof CUT_STATUSES_BY_CCA_TYPE];
+            if (!allowedStatuses?.has(cut_status)) {
+                return NextResponse.json({ error: 'Cut status is not allowed for this CCA type' }, { status: 400 });
+            }
+        }
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const updates: any = {};

@@ -151,6 +151,7 @@ const formatCutStatus = (status: unknown): string => {
     'ivp-ihg-team': 'IVP & IHG Team',
     'ihg-team': 'IHG Team Only',
     'final-cut': 'Final Cut',
+    'first-cut': 'IVP',
   };
 
   if (statusMap[normalized]) return statusMap[normalized];

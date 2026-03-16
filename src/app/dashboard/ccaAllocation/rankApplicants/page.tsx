@@ -59,15 +59,16 @@ function PositionSearchBox({
         setIsSearching(true);
         try {
             const res = await fetch(`/api/user/search?query=${encodeURIComponent(searchTerm)}`);
-            if (!res.ok) {
-                throw new Error(`HTTP error: ${res.status}`);
-            }
             const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.message || `HTTP error: ${res.status}`);
+            }
             setSearchResults(data.data || []);
         } catch (error) {
             console.error('Search error:', error);
             setSearchResults([]);
-            toast.error('Search failed. Please try again.');
+            const message = error instanceof Error ? error.message : 'Search failed. Please try again.';
+            toast.error(message);
         } finally {
             setIsSearching(false);
         }

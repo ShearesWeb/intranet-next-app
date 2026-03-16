@@ -4,7 +4,7 @@ const JCRC_APPOINTMENT_NAME_PATTERN = /(jcrc|junior common room committee)/i;
 
 const JCRC_POSITION_TO_CCA_NAMES = {
     "President": [
-        "Receive And Give (RAG)",
+        "Receive And Give (RAG) - Outgoing",
         "Sheares Web",
     ],
     "Vice President (Admin)": [],
@@ -27,12 +27,12 @@ const JCRC_POSITION_TO_CCA_NAMES = {
         "Overseas Community Service Project (OCSP)",
     ],
     "Director of Internal Affairs": [
-        "Sheares Welcome Orientation Committee (SWOC)",
+        "Sheares Welcome Orientation Committee (SWOC) - Outgoing",
         "Sheares Hall Voluntary Corps (SHVC)",
-        "Sheares Flag",
+        "Sheares Flag - Outgoing",
     ],
     "Director of External Affairs": [
-        "Sheares Engagement Camp Committee (SECC)",
+        "Sheares Engagement Camp Committee (SECC) - Outgoing",
         "External Relations Committee (ERC)",
         "Consheares",
     ],
