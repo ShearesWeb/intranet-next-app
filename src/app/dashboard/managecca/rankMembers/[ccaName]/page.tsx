@@ -313,9 +313,9 @@ export default function CCARankingPage() {
   return (
     <AppLayout>
       <div className="flex flex-col space-y-4 p-4">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h1 className="text-2xl font-semibold">Chair / Maincomm Ranking</h1>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             <Button onClick={handleSave} disabled={isSaving || !hasChanges} size="lg" className="bg-green-500 text-white hover:bg-green-400 px-6 py-4 shadow-md font-bold cursor-pointer">
               {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : <><Save className="mr-2 h-4 w-4" />Save Rankings</>}
             </Button>
