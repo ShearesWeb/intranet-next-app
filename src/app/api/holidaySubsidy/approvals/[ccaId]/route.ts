@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { createClient } from "@/utils/supabase/server";
+import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 import { SubsidyStatus, SubsidyWithPosition, PositionOption } from "@/types/holiday-subsidy";
 
 
@@ -97,6 +98,12 @@ async function ensureSubsidiesBelongToCca(
 }
 
 export async function GET(_request: Request, { params }: Params) {
+    const disabledResponse = getCoreServiceDisabledApiResponse("holidaySubsidy");
+
+    if (disabledResponse) {
+        return disabledResponse;
+    }
+
     try {
         const authResult = await assertJcrcAccess();
 
@@ -128,6 +135,12 @@ export async function GET(_request: Request, { params }: Params) {
 }
 
 export async function PATCH(request: Request, { params }: Params) {
+    const disabledResponse = getCoreServiceDisabledApiResponse("holidaySubsidy");
+
+    if (disabledResponse) {
+        return disabledResponse;
+    }
+
     try {
         const authResult = await assertJcrcAccess();
 

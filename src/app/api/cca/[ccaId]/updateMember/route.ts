@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { buildRankingComments } from "@/lib/cca-ranking-comments";
 import { createClient } from "@/utils/supabase/server";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
-import { checkCcaAuthorization } from "@/lib/cca-rankings-access";
+import { checkCcaAuthorization } from "@/lib/cca-chair-access";
 
 const CUT_STATUSES_BY_CCA_TYPE = {
     sports: new Set(["ivp-ihg-team", "ihg-team", "final-cut"]),

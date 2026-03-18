@@ -2,7 +2,8 @@
 // API route to check if a user has lead/vice roles and return their positions
 import { NextResponse } from "next/server";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
-import { checkCcaAuthorization } from '@/lib/cca-rankings-access';
+import { checkCcaAuthorization } from '@/lib/cca-chair-access';
+import { isCoreServiceEnabled } from "@/lib/feature-flags";
 
 type UserPositionSummary = {
     position: string;
@@ -17,6 +18,10 @@ export async function GET(_request: Request) {
             'Cache-Control': 'no-store, private',
             'Content-Type': 'application/json',
         };
+
+        if (!isCoreServiceEnabled("ccaApplications")) {
+            return NextResponse.json({ isAuthorized: false, positions: [] }, { headers });
+        }
 
         // Get full user info to check admin status
         const userInfo = await fetchUserInfo();

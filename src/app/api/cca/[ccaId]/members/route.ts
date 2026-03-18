@@ -3,7 +3,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
-import { checkCcaAuthorization } from "@/lib/cca-rankings-access";
+import { checkCcaAuthorization } from "@/lib/cca-chair-access";
 
 interface TransformedMember {
     user_id: number;

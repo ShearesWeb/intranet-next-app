@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
+import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 
 type Params = {
     params: Promise<{
@@ -32,6 +33,12 @@ async function authorizeJCRC(supabase: Awaited<ReturnType<typeof createClient>>)
 }
 
 export async function GET(_request: Request, { params }: Params) {
+    const disabledResponse = getCoreServiceDisabledApiResponse("holidaySubsidy");
+
+    if (disabledResponse) {
+        return disabledResponse;
+    }
+
     try {
         const supabase = await createClient();
         const { ccaId, weekId } = await params;
@@ -114,6 +121,12 @@ export async function GET(_request: Request, { params }: Params) {
 }
 
 export async function PATCH(request: Request, { params }: Params) {
+    const disabledResponse = getCoreServiceDisabledApiResponse("holidaySubsidy");
+
+    if (disabledResponse) {
+        return disabledResponse;
+    }
+
     try {
         const supabase = await createClient();
         const { ccaId, weekId } = await params;

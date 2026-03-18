@@ -23,7 +23,8 @@ import Link from "next/link"
 import { Avatar, AvatarImage } from "../ui/avatar"
 import { useAuth } from "@/context/AuthContext"
 import { User } from "@/types/User"
-import { checkCcaAuthorization } from "@/lib/cca-rankings-access"
+import { checkCcaAuthorization } from "@/lib/cca-chair-access"
+import { CoreServiceKey, isFeatureFlaggedItemEnabled } from "@/lib/feature-flags"
 
 type NavItem = {
     title: string
@@ -33,14 +34,14 @@ type NavItem = {
     adminOnly?: boolean
     jcrcOnly?: boolean
     chairOnly?: boolean
-    featureFlag?: string
+    featureFlag?: CoreServiceKey
     items?: {
         title: string
         url: string
         adminOnly?: boolean
         jcrcOnly?: boolean
         chairOnly?: boolean
-        featureFlag?: string
+        featureFlag?: CoreServiceKey
     }[]
 }
 
@@ -58,9 +59,10 @@ export const navOptions: NavItem[] = [
         icon: Volleyball,
         items: [
             {
-                title: "Admin View",
-                url: "/dashboard/managecca/adminView",
+                title: "View Rankings",
+                url: "/dashboard/managecca/viewRankings",
                 jcrcOnly: true,
+                featureFlag: "memberRanking",
             },
         ],
     },
@@ -69,15 +71,18 @@ export const navOptions: NavItem[] = [
         url: "/dashboard/ccaAllocation",
         icon: FileUser,
         isActive: true,
+        featureFlag: "ccaApplications",
         items: [
             {
                 title: "Apply For CCAs",
                 url: "/dashboard/ccaAllocation/rank",
+                featureFlag: "ccaApplications",
             },
             {
                 title: "Rank CCA Applicants",
                 url: "/dashboard/ccaAllocation/rankApplicants",
                 chairOnly: true,
+                featureFlag: "ccaApplications",
             },
         ],
     },
@@ -88,15 +93,18 @@ export const navOptions: NavItem[] = [
         isActive: true,
         adminOnly: true,
         jcrcOnly: true,
+        featureFlag: "holidaySubsidy",
         items: [
             {
                 title: "Guide and FAQ",
                 url: "/dashboard/holidaySubsidy/guide",
+                featureFlag: "holidaySubsidy",
             },
             {
                 title: "JCRC Approvals",
                 url: "/dashboard/holidaySubsidy/approvals",
                 jcrcOnly: true,
+                featureFlag: "holidaySubsidy",
             },
         ],
     },
@@ -106,7 +114,13 @@ export const buildNavItems = (user?: User | null) => {
     const authResult = checkCcaAuthorization({ requestingUser: user });
     const isChair = Boolean(user?.is_admin || (authResult.ok && authResult.data.hasChairAccess));
 
-    const allowItem = (item: { adminOnly?: boolean; jcrcOnly?: boolean; chairOnly?: boolean }) => {
+    const allowItem = (item: {
+        adminOnly?: boolean;
+        jcrcOnly?: boolean;
+        chairOnly?: boolean;
+        featureFlag?: CoreServiceKey;
+    }) => {
+        if (!isFeatureFlaggedItemEnabled(item)) return false;
         if (item.adminOnly && item.jcrcOnly) {
             return Boolean(user?.is_admin || user?.is_jcrc)
         }

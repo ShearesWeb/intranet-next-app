@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
+import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 import { getWeekLabel, isWeekEditable } from "@/lib/holiday-subsidy-weeks";
 
 type Params = {
@@ -12,6 +13,12 @@ type Params = {
 
 
 export async function GET(_request: Request, { params }: Params) {
+    const disabledResponse = getCoreServiceDisabledApiResponse("holidaySubsidy");
+
+    if (disabledResponse) {
+        return disabledResponse;
+    }
+
     try {
         const supabase = await createClient();
         const { ccaId: ccaIdStr, weekId } = await params;
@@ -168,6 +175,12 @@ export async function GET(_request: Request, { params }: Params) {
 }
 
 export async function POST(request: Request, { params }: Params) {
+    const disabledResponse = getCoreServiceDisabledApiResponse("holidaySubsidy");
+
+    if (disabledResponse) {
+        return disabledResponse;
+    }
+
     try {
         const supabase = await createClient();
         const { ccaId: ccaIdStr, weekId } = await params;

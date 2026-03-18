@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { createClient } from "@/utils/supabase/server";
 import { SubsidyStatus } from "@/types/holiday-subsidy";
@@ -150,6 +151,12 @@ async function fetchCcasWithAnySubsidy(supabase: Awaited<ReturnType<typeof creat
 }
 
 export async function GET() {
+    const disabledResponse = getCoreServiceDisabledApiResponse("holidaySubsidy");
+
+    if (disabledResponse) {
+        return disabledResponse;
+    }
+
     try {
         const user = await fetchUserInfo();
 

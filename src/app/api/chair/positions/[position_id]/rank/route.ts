@@ -3,11 +3,18 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
-import { checkCcaAuthorization } from "@/lib/cca-rankings-access";
+import { checkCcaAuthorization } from "@/lib/cca-chair-access";
+import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 
 const NON_APPLICANT_POSITION_TYPES = new Set(["lead", "vice", "resident"]);
 
 export async function POST(request: Request, { params }: { params: Promise<{ position_id: string }> }) {
+    const disabledResponse = getCoreServiceDisabledApiResponse("ccaApplications");
+
+    if (disabledResponse) {
+        return disabledResponse;
+    }
+
     try {
         const { position_id } = await params;
         const supabase = await createClient();

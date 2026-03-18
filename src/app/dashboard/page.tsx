@@ -8,12 +8,14 @@ import { useRoleAuth } from "@/hooks/useRoleAuth";
 import { AppLayout } from "@/components/layout/app-layout";
 import { AppLoading } from "@/components/layout/app-loading";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { getCoreServiceFlags } from "@/lib/feature-flags";
 import Link from "next/link";
 import { Users, Trophy, Activity, ClipboardList, ChevronRight } from "lucide-react";
 
 export default function Dashboard() {
     const { user } = useAuth();
     const { isAuthorized, loading: roleLoading } = useRoleAuth();
+    const featureFlags = getCoreServiceFlags();
     const [mounted, setMounted] = useState(false);
     const [celebrated, setCelebrated] = useState(false);
     const [counter, setCounter] = useState(0);
@@ -138,7 +140,7 @@ export default function Dashboard() {
     }, []);
 
     const getRankCCAButtonText = () => 'CCA Ranking';
-    const isSportsCultureAvailable = () => true;
+    const isSportsCultureAvailable = () => featureFlags.ccaApplications;
 
     if (!mounted || !user) {
         return <AppLoading />;
@@ -473,26 +475,28 @@ export default function Dashboard() {
                                 </Link>
 
                                 {/* Rank CCA Button */}
-                                <Link href="/dashboard/ccaAllocation/rank" className="block">
-                                    <motion.div
-                                        whileHover={{ scale: 1.02, y: -2 }}
-                                        whileTap={{ scale: 0.98 }}
-                                        transition={{ duration: 0.2 }}
-                                        className="group relative overflow-hidden rounded-xl border border-orange-100 bg-white p-4 shadow-sm transition-all hover:border-orange-300 hover:shadow-md"
-                                    >
-                                        <div className="absolute inset-0 bg-gradient-to-r from-orange-50 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
-                                        <div className="relative flex items-center gap-4">
-                                            <div className="flex h-10 w-10 md:h-12 md:w-12 shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-600 transition-colors group-hover:bg-orange-500 group-hover:text-white">
-                                                <Trophy className="h-5 w-5 md:h-6 md:w-6" />
+                                {featureFlags.ccaApplications && (
+                                    <Link href="/dashboard/ccaAllocation/rank" className="block">
+                                        <motion.div
+                                            whileHover={{ scale: 1.02, y: -2 }}
+                                            whileTap={{ scale: 0.98 }}
+                                            transition={{ duration: 0.2 }}
+                                            className="group relative overflow-hidden rounded-xl border border-orange-100 bg-white p-4 shadow-sm transition-all hover:border-orange-300 hover:shadow-md"
+                                        >
+                                            <div className="absolute inset-0 bg-gradient-to-r from-orange-50 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+                                            <div className="relative flex items-center gap-4">
+                                                <div className="flex h-10 w-10 md:h-12 md:w-12 shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-600 transition-colors group-hover:bg-orange-500 group-hover:text-white">
+                                                    <Trophy className="h-5 w-5 md:h-6 md:w-6" />
+                                                </div>
+                                                <div className="flex-1">
+                                                    <h3 className="font-bold text-gray-900 group-hover:text-orange-700 transition-colors">{getRankCCAButtonText()}</h3>
+                                                    <p className="text-sm text-gray-500 group-hover:text-orange-600/80 transition-colors">Rank your CCA preferences</p>
+                                                </div>
+                                                <ChevronRight className="h-5 w-5 text-gray-300 transition-colors group-hover:text-orange-500" />
                                             </div>
-                                            <div className="flex-1">
-                                                <h3 className="font-bold text-gray-900 group-hover:text-orange-700 transition-colors">{getRankCCAButtonText()}</h3>
-                                                <p className="text-sm text-gray-500 group-hover:text-orange-600/80 transition-colors">Rank your CCA preferences</p>
-                                            </div>
-                                            <ChevronRight className="h-5 w-5 text-gray-300 transition-colors group-hover:text-orange-500" />
-                                        </div>
-                                    </motion.div>
-                                </Link>
+                                        </motion.div>
+                                    </Link>
+                                )}
 
                                 {/* Sports & Culture Button (conditional) */}
                                 {isSportsCultureAvailable() && (
@@ -519,7 +523,7 @@ export default function Dashboard() {
                                 )}
 
                                 {/* Rank Applicants Button (conditional for authorized users) */}
-                                {!roleLoading && isAuthorized && (
+                                {featureFlags.ccaApplications && !roleLoading && isAuthorized && (
                                     <Link href="/dashboard/ccaAllocation/rankApplicants" className="block">
                                         <motion.div
                                             whileHover={{ scale: 1.02, y: -2 }}

@@ -3,6 +3,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { fetchUserId } from "@/lib/fetch-user-info";
+import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 
 const NON_RANKABLE_POSITION_TYPES = "(lead,vice,resident)";
 
@@ -27,6 +28,12 @@ interface PositionData {
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(_request: Request) {
+    const disabledResponse = getCoreServiceDisabledApiResponse("ccaApplications");
+
+    if (disabledResponse) {
+        return disabledResponse;
+    }
+
     try {
         const supabase = await createClient();
 

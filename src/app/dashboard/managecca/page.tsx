@@ -131,17 +131,17 @@ export default function ManageCCA() {
     );
   }
 
-  const dynamicColumns: SimpleTableColumn<CCAData>[] = ccas.some((cca) => cca.can_rank_members)
-    ? [
-      ...ccaTableColumns,
-      {
-        accessorKey: 'actions' as keyof CCAData,
-        header: 'Actions',
-        enableSorting: false,
-        cell: (_, row) => {
-          const allowManage = Boolean(row.can_manage_members);
-          const allowRank = Boolean(row.can_rank_members);
-          return (
+  const dynamicColumns: SimpleTableColumn<CCAData>[] = [
+    ...ccaTableColumns,
+    {
+      accessorKey: 'actions' as keyof CCAData,
+      header: 'Actions',
+      enableSorting: false,
+      cell: (_, row) => {
+        const allowManage = Boolean(row.can_manage_members);
+        const allowRank = Boolean(row.can_rank_members);
+
+        return (
           <div className="flex flex-col lg:flex-row gap-2 justify-start w-full">
             {allowManage || allowRank ? (
               <>
@@ -169,10 +169,10 @@ export default function ManageCCA() {
               </Button>
             )}
           </div>
-        )},
+        );
       },
-    ]
-    : ccaTableColumns;
+    },
+  ];
 
   return (
     <AppLayout>

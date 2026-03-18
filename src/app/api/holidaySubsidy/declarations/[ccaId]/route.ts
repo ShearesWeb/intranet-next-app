@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { SubsidyStatus } from "@/types/holiday-subsidy";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
-import { checkCcaAuthorization } from "@/lib/cca-rankings-access";
+import { checkCcaAuthorization } from "@/lib/cca-chair-access";
+import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 
 
 type Params = {
@@ -50,6 +51,12 @@ async function validatePosition(
 }
 
 export async function GET(_request: Request, { params }: Params) {
+    const disabledResponse = getCoreServiceDisabledApiResponse("holidaySubsidy");
+
+    if (disabledResponse) {
+        return disabledResponse;
+    }
+
     try {
         const supabase = await createClient();
 
@@ -102,6 +109,12 @@ export async function GET(_request: Request, { params }: Params) {
 }
 
 export async function POST(request: Request, { params }: Params) {
+    const disabledResponse = getCoreServiceDisabledApiResponse("holidaySubsidy");
+
+    if (disabledResponse) {
+        return disabledResponse;
+    }
+
     try {
         const supabase = await createClient();
 
@@ -158,6 +171,12 @@ export async function POST(request: Request, { params }: Params) {
 }
 
 export async function PATCH(request: Request, { params }: Params) {
+    const disabledResponse = getCoreServiceDisabledApiResponse("holidaySubsidy");
+
+    if (disabledResponse) {
+        return disabledResponse;
+    }
+
     try {
         const supabase = await createClient();
 
@@ -229,6 +248,12 @@ export async function PATCH(request: Request, { params }: Params) {
 }
 
 export async function DELETE(request: Request, { params }: Params) {
+    const disabledResponse = getCoreServiceDisabledApiResponse("holidaySubsidy");
+
+    if (disabledResponse) {
+        return disabledResponse;
+    }
+
     try {
         const supabase = await createClient();
 

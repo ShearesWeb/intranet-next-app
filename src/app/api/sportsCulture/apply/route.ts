@@ -3,8 +3,15 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { fetchUserId } from "@/lib/fetch-user-info";
+import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 
 export async function POST(request: Request) {
+    const disabledResponse = getCoreServiceDisabledApiResponse("ccaApplications");
+
+    if (disabledResponse) {
+        return disabledResponse;
+    }
+
     try {
         const { position_id } = await request.json();
 
@@ -127,6 +134,12 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+    const disabledResponse = getCoreServiceDisabledApiResponse("ccaApplications");
+
+    if (disabledResponse) {
+        return disabledResponse;
+    }
+
     try {
         const { position_id } = await request.json();
 

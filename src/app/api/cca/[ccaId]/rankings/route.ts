@@ -4,8 +4,10 @@ import { createClient } from "@/utils/supabase/server";
 import { buildRankingComments, extractRankingCommentFields } from "@/lib/cca-ranking-comments";
 import { getRankingMetricKeys, hasRequiredRankingInputs, isResidentPositionType } from "@/lib/cca-ranking-metrics";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
+import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 import {
-    checkCcaAuthorization,
+    getManagedCcaPositions,
+    getManagedPositionIds,
     RankingAccessPosition,
 } from "@/lib/cca-rankings-access";
 
@@ -57,16 +59,53 @@ async function loadCcaContext(supabase: Awaited<ReturnType<typeof createClient>>
     return { cca, ccaError, positions, positionsError };
 }
 
+async function loadManagedRankingAccess({
+    supabase,
+    requestingUser,
+    ccaId,
+}: {
+    supabase: Awaited<ReturnType<typeof createClient>>;
+    requestingUser: Awaited<ReturnType<typeof fetchUserInfo>>;
+    ccaId: number;
+}) {
+    if (!requestingUser) {
+        return { ok: false as const, status: 401, error: "Unauthorized" };
+    }
+
+    const managedCca = await getManagedCcaPositions({ supabase, ccaId });
+    const allowedPositionIds = getManagedPositionIds(managedCca);
+
+    if (allowedPositionIds.length === 0) {
+        return {
+            ok: false as const,
+            status: 403,
+            error: "You are not authorized to view rankings for this CCA",
+        };
+    }
+
+    return {
+        ok: true as const,
+        allowedPositionIds,
+        managedCca,
+    };
+}
+
 // GET handler to fetch members with their ranking data
 export async function GET(
     _request: Request,
     { params }: { params: Promise<{ ccaId: string }> }
 ) {
+    const disabledResponse = getCoreServiceDisabledApiResponse("memberRanking");
+
+    if (disabledResponse) {
+        return disabledResponse;
+    }
+
     const { ccaId: ccaIdParam } = await params;
     const ccaId = Number(ccaIdParam);
     const supabase = await createClient();
     const requestingUser = await fetchUserInfo();
-    const { cca, ccaError, positions, positionsError } = await loadCcaContext(supabase, ccaId);
+    const { cca, ccaError, positionsError } = await loadCcaContext(supabase, ccaId);
 
     if (ccaError || !cca) {
         return NextResponse.json({ error: "CCA not found" }, { status: 404 });
@@ -76,24 +115,17 @@ export async function GET(
         return NextResponse.json({ error: "Failed to load positions" }, { status: 500 });
     }
 
-    const accessResult = checkCcaAuthorization({
+    const accessResult = await loadManagedRankingAccess({
+        supabase,
         requestingUser,
-        cca,
-        positions: (positions || []) as AppointmentPositionRow[],
-        require: "access",
+        ccaId,
     });
 
     if (!accessResult.ok) {
         return NextResponse.json({ error: accessResult.error }, { status: accessResult.status });
     }
 
-    const rankablePositionIds = accessResult.data.positions
-        .filter((position) => position.canRank)
-        .map((position) => position.id);
-
-    if (!requestingUser?.is_admin && !requestingUser?.is_jcrc && rankablePositionIds.length === 0) {
-        return NextResponse.json({ members: [], cca_type: cca.cca_type });
-    }
+    const rankablePositionIds = accessResult.allowedPositionIds;
 
     let membersQuery = supabase
         .from('cca_appointments')
@@ -106,9 +138,7 @@ export async function GET(
         `)
         .eq('cca_positions.cca_id', ccaId);
 
-    if (!requestingUser?.is_admin && !requestingUser?.is_jcrc) {
-        membersQuery = membersQuery.in('position_id', rankablePositionIds);
-    }
+    membersQuery = membersQuery.in('position_id', rankablePositionIds);
 
     const { data: members, error: membersError } = await membersQuery;
 
@@ -118,7 +148,7 @@ export async function GET(
     }
 
     if (!members || members.length === 0) {
-        return NextResponse.json({ members: [], cca_type: cca.cca_type });
+        return NextResponse.json({ members: [], cca_type: cca.cca_type, cca_name: cca.name });
     }
 
     const normalizedMembers = ((members || []) as AppointmentRow[]).map((member) => {
@@ -179,12 +209,10 @@ export async function GET(
         };
     });
 
-    const scopedMembers = (!requestingUser?.is_admin && !requestingUser?.is_jcrc)
-        ? enrichedMembers.filter((member) => {
-            const positionId = member.cca_positions?.id;
-            return typeof positionId === "number" && rankablePositionIds.includes(positionId);
-        })
-        : enrichedMembers;
+    const scopedMembers = enrichedMembers.filter((member) => {
+        const positionId = member.cca_positions?.id;
+        return typeof positionId === "number" && rankablePositionIds.includes(positionId);
+    });
 
     scopedMembers.sort((a, b) => {
         const aRanking = a.cca_member_rankings?.[0]?.ranking ?? Number.MAX_SAFE_INTEGER;
@@ -193,7 +221,11 @@ export async function GET(
         return a.public_user_info?.name?.localeCompare(b.public_user_info?.name || '') ?? 0;
     });
 
-    return NextResponse.json({ members: scopedMembers, cca_type: cca.cca_type });
+    return NextResponse.json({
+        members: scopedMembers,
+        cca_type: cca.cca_type,
+        cca_name: accessResult.managedCca?.cca_name || cca.name,
+    });
 }
 
 // POST handler to save (upsert) member rankings
@@ -201,6 +233,12 @@ export async function POST(
     request: Request,
     { params }: { params: Promise<{ ccaId: string }> }
 ) {
+    const disabledResponse = getCoreServiceDisabledApiResponse("memberRanking");
+
+    if (disabledResponse) {
+        return disabledResponse;
+    }
+
     const { ccaId: ccaIdParam } = await params;
     const ccaId = Number(ccaIdParam);
     const rankings = (await request.json()) as RankingPayload[];
@@ -216,24 +254,17 @@ export async function POST(
         return NextResponse.json({ error: 'Failed to load positions' }, { status: 500 });
     }
 
-    const accessResult = checkCcaAuthorization({
+    const accessResult = await loadManagedRankingAccess({
+        supabase,
         requestingUser,
-        cca,
-        positions: (positions || []) as AppointmentPositionRow[],
-        require: "rank",
+        ccaId,
     });
 
     if (!accessResult.ok) {
         return NextResponse.json({ error: accessResult.error }, { status: accessResult.status });
     }
 
-    const allowedPositionIds = requestingUser?.is_admin
-        ? new Set(((positions || []) as AppointmentPositionRow[]).map((position) => position.id))
-        : new Set(
-            accessResult.data.positions
-                .filter((position) => position.canRank)
-                .map((position) => position.id)
-        );
+    const allowedPositionIds = new Set(accessResult.allowedPositionIds);
     const positionTypeById = new Map<number, string | null>(
         ((positions || []) as AppointmentPositionRow[]).map((position) => [position.id, position.position_type || null])
     );
@@ -261,7 +292,7 @@ export async function POST(
                 ccaType: cca.cca_type,
                 positionType,
             });
-            const normalizedPerformance = accessResult.data.requiresPerformance
+            const normalizedPerformance = cca.cca_type !== "sports"
                 ? ranking.performance
                 : (ranking.performance > 0 ? ranking.performance : ranking.attendance);
             const comments = isResidentPositionType(positionType)

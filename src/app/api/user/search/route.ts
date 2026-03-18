@@ -3,9 +3,16 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
-import { checkCcaAuthorization } from "@/lib/cca-rankings-access";
+import { checkCcaAuthorization } from "@/lib/cca-chair-access";
+import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 
 export async function GET(request: Request) {
+    const disabledResponse = getCoreServiceDisabledApiResponse("ccaApplications");
+
+    if (disabledResponse) {
+        return disabledResponse;
+    }
+
     try {
         // Added authentication check to prevent unauthorized searches by non-leads/vices
         const user = await fetchUserInfo();

@@ -3,7 +3,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
-import { RankingAccessPosition, checkCcaAuthorization } from "@/lib/cca-rankings-access";
+import { RankingAccessPosition } from "@/lib/cca-rankings-access";
+import { checkCcaAuthorization } from "@/lib/cca-chair-access";
+import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 import { SupabaseClient } from "@supabase/supabase-js";
 
 const NON_APPLICANT_POSITION_TYPES = "(lead,vice,resident)";
@@ -46,6 +48,12 @@ const getPositionsForPhase = async (ccaIds: number[], supabase: SupabaseClient) 
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(_request: Request) {
+    const disabledResponse = getCoreServiceDisabledApiResponse("ccaApplications");
+
+    if (disabledResponse) {
+        return disabledResponse;
+    }
+
     try {
         const headers = {
             'Cache-Control': 'no-store, private',

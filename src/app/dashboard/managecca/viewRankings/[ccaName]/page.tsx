@@ -189,6 +189,11 @@ export default function AdminViewRankingsPage() {
       return;
     }
 
+    if (!user.is_jcrc) {
+      setIsLoading(false);
+      return;
+    }
+
     void loadRankings(ccaId);
   }, [user, ccaId, loadRankings]);
 
@@ -223,14 +228,31 @@ export default function AdminViewRankingsPage() {
 
   if (!user) return <AppLoading />;
 
+  if (!user.is_jcrc) {
+    return (
+      <AppLayout>
+        <div className="flex flex-col space-y-4 p-4">
+          <h1 className="text-2xl font-semibold">CCA Rankings (Read Only)</h1>
+          <Alert className="bg-yellow-50 border-yellow-200">
+            <AlertCircle className="h-4 w-4 text-yellow-600" />
+            <AlertTitle className="text-yellow-800">Restricted access</AlertTitle>
+            <AlertDescription className="text-yellow-700">
+              This page is restricted to JCRC members.
+            </AlertDescription>
+          </Alert>
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout>
       <div className="flex flex-col space-y-4 p-4">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-semibold">CCA Rankings (Read Only)</h1>
-          <Link href="/dashboard/managecca">
+          <Link href="/dashboard/managecca/viewRankings">
             <Button variant="outline" size="lg" className="px-6 py-4">
-              <ArrowLeft className="h-4 w-4" /> Back to Manage CCAs
+              <ArrowLeft className="h-4 w-4" /> Back to View Rankings
             </Button>
           </Link>
         </div>

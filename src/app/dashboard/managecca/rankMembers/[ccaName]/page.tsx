@@ -16,7 +16,6 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { PositionTypeBadge } from '@/components/badges/position-type-badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { buildCcaPositionAccess, RankingAccessPosition } from '@/lib/cca-rankings-access';
 import { getRankingScore, hasRequiredRankingInputs, isResidentPositionType } from '@/lib/cca-ranking-metrics';
 
 export interface CCAMember {
@@ -53,6 +52,7 @@ type RankingsApiMember = {
 type RankingsApiResponse = {
   members: RankingsApiMember[];
   cca_type?: string | null;
+  cca_name?: string | null;
 };
 
 type PositionGroup = {
@@ -193,35 +193,7 @@ export default function CCARankingPage() {
         remarks: member.cca_member_rankings?.[0]?.remarks ?? '',
       }));
 
-      const availablePositions = Array.from(
-        new Map(
-          formattedMembers.map((member) => [
-            member.position_id,
-            {
-              id: member.position_id,
-              cca_id: Number(id),
-              name: member.position,
-              position_type: member.position_type,
-            } satisfies RankingAccessPosition,
-          ])
-        ).values()
-      );
-
-      const visiblePositionIds = new Set(
-        buildCcaPositionAccess({
-          requestingUser: user,
-          cca: { id: Number(id), cca_type: data.cca_type || null },
-          positions: availablePositions,
-        })
-          .filter((position) => position.canRank)
-          .map((position) => position.id)
-      );
-
       const visibleMembers = formattedMembers.filter((member) => {
-        if (!visiblePositionIds.has(member.position_id)) {
-          return false;
-        }
-
         if (data.cca_type === 'sports' && member.position_type === 'member') {
           return member.cut_status !== null;
         }
@@ -242,7 +214,7 @@ export default function CCARankingPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [user]);
+  }, []);
 
   useEffect(() => {
     if (user && ccaId) {
