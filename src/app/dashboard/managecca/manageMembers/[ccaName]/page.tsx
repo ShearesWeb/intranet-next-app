@@ -707,7 +707,7 @@ export default function ManageMembersPage() {
         return (
             <div className="mb-8">
                 {/* Group Header */}
-                <div className="flex justify-between items-center mb-4">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
                     <h3 className="text-xl font-semibold">{title}</h3>
                     {canManage && showAddButton && isSportsCulture && (
                         <Button
@@ -747,9 +747,9 @@ export default function ManageMembersPage() {
     return (
         <AppLayout>
             <div className="flex flex-col space-y-4 p-4">
-                <div className="flex justify-between items-center">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <h1 className="text-2xl font-semibold">CCA Members - {cca?.name}</h1>
-                    <div className="flex items-center gap-4">
+                    <div className="flex flex-wrap items-center gap-4">
                         {pendingChanges.length > 0 && (
                             <Button
                                 onClick={handleSaveMembers}

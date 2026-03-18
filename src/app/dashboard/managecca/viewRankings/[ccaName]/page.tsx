@@ -248,7 +248,7 @@ export default function AdminViewRankingsPage() {
   return (
     <AppLayout>
       <div className="flex flex-col space-y-4 p-4">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h1 className="text-2xl font-semibold">CCA Rankings (Read Only)</h1>
           <Link href="/dashboard/managecca/viewRankings">
             <Button variant="outline" size="lg" className="px-6 py-4">
