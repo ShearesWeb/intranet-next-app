@@ -53,15 +53,15 @@ export const navOptions: NavItem[] = [
         isActive: true,
     },
     {
-        title: "Manage CCAs",
-        url: "/dashboard/managecca",
+        title: "My CCAs",
+        url: "/dashboard/mycca",
         isActive: true,
         icon: Volleyball,
         items: [
             {
-                title: "View Rankings",
-                url: "/dashboard/managecca/viewRankings",
-                jcrcOnly: true,
+                title: "CCA Admin",
+                url: "/dashboard/mycca/admin",
+                chairOnly: true,
                 featureFlag: "memberRanking",
             },
         ],

@@ -453,7 +453,7 @@ export default function Dashboard() {
                         <CardContent className="p-4 md:p-6">
                             <div className="grid gap-4">
                                 {/* My CCAs Button */}
-                                <Link href="/dashboard/managecca" className="block">
+                                <Link href="/dashboard/mycca" className="block">
                                     <motion.div
                                         whileHover={{ scale: 1.02, y: -2 }}
                                         whileTap={{ scale: 0.98 }}

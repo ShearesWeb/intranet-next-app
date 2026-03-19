@@ -5,11 +5,14 @@ import { buildRankingComments, extractRankingCommentFields } from "@/lib/cca-ran
 import { getRankingMetricKeys, hasRequiredRankingInputs, isResidentPositionType } from "@/lib/cca-ranking-metrics";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
-import {
-    getManagedCcaPositions,
-    getManagedPositionIds,
-    RankingAccessPosition,
-} from "@/lib/cca-rankings-access";
+import { PositionType, UserAppointment } from "@/types/User";
+
+export type RankingAccessPosition = {
+    id: UserAppointment["position_id"];
+    cca_id: UserAppointment["cca_id"];
+    name: UserAppointment["position_name"];
+    position_type: PositionType;
+};
 
 type AppointmentPositionRow = RankingAccessPosition;
 
@@ -60,11 +63,11 @@ async function loadCcaContext(supabase: Awaited<ReturnType<typeof createClient>>
 }
 
 async function loadManagedRankingAccess({
-    supabase,
+    request,
     requestingUser,
     ccaId,
 }: {
-    supabase: Awaited<ReturnType<typeof createClient>>;
+    request: Request;
     requestingUser: Awaited<ReturnType<typeof fetchUserInfo>>;
     ccaId: number;
 }) {
@@ -72,8 +75,22 @@ async function loadManagedRankingAccess({
         return { ok: false as const, status: 401, error: "Unauthorized" };
     }
 
-    const managedCca = await getManagedCcaPositions({ supabase, ccaId });
-    const allowedPositionIds = getManagedPositionIds(managedCca);
+    const fetchUrl = new URL('/api/user/getManagedCCAs', request.url);
+    const apiRes = await fetch(fetchUrl, {
+        headers: {
+            cookie: request.headers.get("cookie") || "",
+        },
+    });
+
+    if (!apiRes.ok) {
+        return { ok: false as const, status: apiRes.status, error: "Failed to verify access" };
+    }
+
+    const apiData = await apiRes.json();
+    const rows = apiData.data || [];
+    const managedCca = rows.find((r: any) => r.cca_id === ccaId);
+
+    const allowedPositionIds = managedCca?.positions?.map((position: any) => position.position_id) || [];
 
     if (allowedPositionIds.length === 0) {
         return {
@@ -90,9 +107,8 @@ async function loadManagedRankingAccess({
     };
 }
 
-// GET handler to fetch members with their ranking data
 export async function GET(
-    _request: Request,
+    request: Request,
     { params }: { params: Promise<{ ccaId: string }> }
 ) {
     const disabledResponse = getCoreServiceDisabledApiResponse("memberRanking");
@@ -116,7 +132,7 @@ export async function GET(
     }
 
     const accessResult = await loadManagedRankingAccess({
-        supabase,
+        request,
         requestingUser,
         ccaId,
     });
@@ -255,7 +271,7 @@ export async function POST(
     }
 
     const accessResult = await loadManagedRankingAccess({
-        supabase,
+        request,
         requestingUser,
         ccaId,
     });

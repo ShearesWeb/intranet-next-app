@@ -4,7 +4,6 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { isCoreServiceEnabled } from "@/lib/feature-flags";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
-import { listManagedCcaPositions } from "@/lib/cca-rankings-access";
 import { isChairPositionType } from "@/lib/cca-chair-access";
 import { CcaType } from "@/types/User";
 
@@ -16,7 +15,7 @@ type CCAMeta = {
         image_url: string | null;
 };
 
-export async function GET() {
+export async function GET(request: Request) {
         try {
                 const supabase = await createClient();
 
@@ -53,12 +52,19 @@ export async function GET() {
 
                 try {
                         if (isCoreServiceEnabled("memberRanking")) {
-                                const managedCcas = await listManagedCcaPositions({ supabase });
-                                managedCcas.forEach((managedCca) => {
-                                        if ((managedCca.positions || []).length > 0) {
-                                                rankableCcaIds.add(managedCca.cca_id);
-                                        }
+                                const fetchUrl = new URL('/api/user/getManagedCCAs', request.url);
+                                const apiRes = await fetch(fetchUrl, {
+                                        headers: { cookie: request.headers.get("cookie") || "" },
                                 });
+                                if (apiRes.ok) {
+                                        const apiData = await apiRes.json();
+                                        const managedCcas = apiData.data || [];
+                                        managedCcas.forEach((managedCca: any) => {
+                                                if ((managedCca.positions || []).length > 0) {
+                                                        rankableCcaIds.add(managedCca.cca_id);
+                                                }
+                                        });
+                                }
                         }
                 } catch (managedCcaError) {
                         console.error("Error fetching managed CCA positions:", managedCcaError);
@@ -89,7 +95,7 @@ export async function GET() {
                 });
 
         } catch (error) {
-		console.error("Error fetching user CCAs:", error);
-		return NextResponse.json({ data: [] });
-	}
+                console.error("Error fetching user CCAs:", error);
+                return NextResponse.json({ data: [] });
+        }
 }

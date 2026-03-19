@@ -1,23 +1,24 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
-import toast from 'react-hot-toast';
-import { ArrowLeft, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import toast from 'react-hot-toast';
 import { AppLayout } from '@/components/layout/app-layout';
 import { AppLoading } from '@/components/layout/app-loading';
 import { Button } from '@/components/ui/button';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
+import { Save, Loader2, ArrowLeft, AlertCircle } from 'lucide-react';
+import { CutStatus, CommitmentPeriod } from '@/types/dashboard';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { PositionTypeBadge } from '@/components/badges/position-type-badge';
-import { CutStatus, CommitmentPeriod } from '@/types/dashboard';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { getRankingScore, hasRequiredRankingInputs, isResidentPositionType } from '@/lib/cca-ranking-metrics';
 
-type CCAMember = {
+export interface CCAMember {
   row_key: string;
   user_id: number;
   name: string;
@@ -31,7 +32,7 @@ type CCAMember = {
   attendance: number;
   performance: number;
   initiative: number;
-};
+}
 
 type RankingsApiMember = {
   user_id: number;
@@ -51,6 +52,7 @@ type RankingsApiMember = {
 type RankingsApiResponse = {
   members: RankingsApiMember[];
   cca_type?: string | null;
+  cca_name?: string | null;
 };
 
 type PositionGroup = {
@@ -70,6 +72,8 @@ const POSITION_TYPE_ORDER: Record<string, number> = {
   member: 7,
   resident: 8,
 };
+
+const cloneMembers = (items: CCAMember[]): CCAMember[] => items.map((member) => ({ ...member }));
 const INITIATIVE_LABEL = 'Helpfulness, Initiative & Attitude';
 
 const rankMembersWithinPosition = (members: CCAMember[], ccaType: string): CCAMember[] => {
@@ -77,6 +81,7 @@ const rankMembersWithinPosition = (members: CCAMember[], ccaType: string): CCAMe
     const aHasInputs = hasRequiredRankingInputs(a, { ccaType, positionType: a.position_type });
     const bHasInputs = hasRequiredRankingInputs(b, { ccaType, positionType: b.position_type });
 
+    // Incomplete rows (empty score inputs) stay at bottom.
     if (aHasInputs !== bHasInputs) return aHasInputs ? -1 : 1;
 
     const aScore = getRankingScore(a, { ccaType, positionType: a.position_type });
@@ -108,6 +113,23 @@ const recalculateRankings = (items: CCAMember[], ccaType: string): CCAMember[] =
   return ranked;
 };
 
+const buildComparisonSnapshot = (items: CCAMember[]) => {
+  return JSON.stringify(
+    [...items]
+      .sort((a, b) => a.position_id - b.position_id || a.ranking - b.ranking || a.user_id - b.user_id)
+      .map((member) => ({
+        row_key: member.row_key,
+        user_id: member.user_id,
+        position_id: member.position_id,
+        ranking: member.ranking,
+        attendance: member.attendance,
+        performance: member.performance,
+        initiative: member.initiative,
+        remarks: member.remarks || '',
+      }))
+  );
+};
+
 const formatCutStatus = (status: unknown): string => {
   if (typeof status !== 'string' || status.trim().length === 0) return '-';
   const normalized = status.toLowerCase().trim().replace(/[_\s]+/g, '-');
@@ -117,7 +139,9 @@ const formatCutStatus = (status: unknown): string => {
     'final-cut': 'Final Cut',
     'first-cut': 'IVP',
   };
-  return statusMap[normalized] || status;
+
+  if (statusMap[normalized]) return statusMap[normalized];
+  return status;
 };
 
 const formatCommitmentPeriod = (period: CommitmentPeriod | null | undefined): string => {
@@ -130,15 +154,15 @@ const formatCommitmentPeriod = (period: CommitmentPeriod | null | undefined): st
   return commitmentMap[period] || '-';
 };
 
-const displayScore = (value: number) => (value > 0 ? value : '-');
-
-export default function AdminViewRankingsPage() {
+export default function CCARankingPage() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
   const ccaId = searchParams.get('ccaId');
 
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [members, setMembers] = useState<CCAMember[]>([]);
+  const [initialMembers, setInitialMembers] = useState<CCAMember[]>([]);
   const [ccaType, setCcaType] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
 
@@ -169,13 +193,22 @@ export default function AdminViewRankingsPage() {
         remarks: member.cca_member_rankings?.[0]?.remarks ?? '',
       }));
 
-      const normalizedMembers = recalculateRankings(formattedMembers, data.cca_type || '');
+      const visibleMembers = formattedMembers.filter((member) => {
+        if (data.cca_type === 'sports' && member.position_type === 'member') {
+          return member.cut_status !== null;
+        }
+
+        return true;
+      });
+      const normalizedMembers = recalculateRankings(visibleMembers, data.cca_type || '');
       setMembers(normalizedMembers);
+      setInitialMembers(cloneMembers(normalizedMembers));
       setCcaType(data.cca_type || '');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to load rankings';
+      const message = error instanceof Error ? error.message : 'Failed to fetch rankings';
       console.error('Error loading rankings:', error);
       setMembers([]);
+      setInitialMembers([]);
       setError(message);
       toast.error(message);
     } finally {
@@ -184,18 +217,20 @@ export default function AdminViewRankingsPage() {
   }, []);
 
   useEffect(() => {
-    if (!user || !ccaId) {
-      setIsLoading(false);
-      return;
+    if (user && ccaId) {
+      void loadRankings(ccaId);
     }
-
-    if (!user.is_jcrc) {
-      setIsLoading(false);
-      return;
-    }
-
-    void loadRankings(ccaId);
   }, [user, ccaId, loadRankings]);
+
+  const unrankedCount = useMemo(() => {
+    return members.filter(
+      (member) => !hasRequiredRankingInputs(member, { ccaType, positionType: member.position_type })
+    ).length;
+  }, [members, ccaType]);
+
+  const hasChanges = useMemo(() => {
+    return buildComparisonSnapshot(members) !== buildComparisonSnapshot(initialMembers);
+  }, [members, initialMembers]);
 
   const positionGroups = useMemo<PositionGroup[]>(() => {
     const groups = new Map<number, PositionGroup>();
@@ -216,7 +251,9 @@ export default function AdminViewRankingsPage() {
     return Array.from(groups.values())
       .map((group) => ({
         ...group,
-        members: [...group.members].sort((a, b) => a.ranking - b.ranking || a.name.localeCompare(b.name)),
+        members: [...group.members].sort(
+          (a, b) => a.ranking - b.ranking || a.name.localeCompare(b.name)
+        ),
       }))
       .sort((a, b) => {
         const orderA = POSITION_TYPE_ORDER[(a.position_type || '').toLowerCase()] ?? 99;
@@ -226,41 +263,85 @@ export default function AdminViewRankingsPage() {
       });
   }, [members]);
 
-  if (!user) return <AppLoading />;
+  const handleFieldChange = useCallback(<K extends keyof CCAMember>(rowKey: string, field: K, value: CCAMember[K]) => {
+    setMembers((prev) => {
+      const updated = prev.map((member) =>
+        member.row_key === rowKey ? { ...member, [field]: value } : member
+      );
+      return recalculateRankings(updated, ccaType);
+    });
+  }, [ccaType]);
 
-  if (!user.is_jcrc) {
-    return (
-      <AppLayout>
-        <div className="flex flex-col space-y-4 p-4">
-          <h1 className="text-2xl font-semibold">CCA Rankings (Read Only)</h1>
-          <Alert className="bg-yellow-50 border-yellow-200">
-            <AlertCircle className="h-4 w-4 text-yellow-600" />
-            <AlertTitle className="text-yellow-800">Restricted access</AlertTitle>
-            <AlertDescription className="text-yellow-700">
-              This page is restricted to JCRC members.
-            </AlertDescription>
-          </Alert>
-        </div>
-      </AppLayout>
-    );
-  }
+  const handleSave = async () => {
+    if (!ccaId) return;
+    setIsSaving(true);
+    const rankingsToSave = [...members]
+      .sort((a, b) => a.position_id - b.position_id || a.ranking - b.ranking || a.user_id - b.user_id)
+      .map((member) => ({
+        user_id: member.user_id,
+        position_id: member.position_id,
+        ranking: member.ranking,
+        attendance: member.attendance,
+        performance: member.performance,
+        initiative: member.initiative,
+        remarks: member.remarks,
+      }));
+
+    try {
+      const res = await fetch(`/api/cca/${ccaId}/rankings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(rankingsToSave),
+      });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to save rankings');
+      }
+      toast.success('Rankings saved successfully!');
+      setInitialMembers(cloneMembers(members));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to save rankings';
+      console.error('Error saving rankings:', error);
+      toast.error(message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (!user) return <AppLoading />;
 
   return (
     <AppLayout>
       <div className="flex flex-col space-y-4 p-4">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h1 className="text-2xl font-semibold">CCA Rankings (Read Only)</h1>
-          <Link href="/dashboard/managecca/viewRankings">
-            <Button variant="outline" size="lg" className="px-6 py-4">
-              <ArrowLeft className="h-4 w-4" /> Back to View Rankings
+          <h1 className="text-2xl font-semibold">Chair / Maincomm Ranking</h1>
+          <div className="flex flex-wrap items-center gap-4">
+            <Button onClick={handleSave} disabled={isSaving || !hasChanges} size="lg" className="bg-green-500 text-white hover:bg-green-400 px-6 py-4 shadow-md font-bold cursor-pointer">
+              {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : <><Save className="mr-2 h-4 w-4" />Save Rankings</>}
             </Button>
-          </Link>
+            <Link href="/dashboard/mycca/admin">
+              <Button variant="outline" size="lg" className="px-6 py-4">
+                <ArrowLeft className="h-4 w-4" /> Back to my CCAs
+              </Button>
+            </Link>
+          </div>
         </div>
+
+        {unrankedCount > 0 && (
+          <Alert className="mb-4 bg-yellow-50 border-yellow-200">
+            <AlertCircle className="h-4 w-4 text-yellow-600" />
+            <AlertTitle className="text-yellow-800">Pending Rankings</AlertTitle>
+            <AlertDescription className="text-yellow-700">
+              You have {unrankedCount} member{unrankedCount !== 1 ? 's' : ''} left to rank.
+              Complete the required score inputs for each member to finalize the order.
+            </AlertDescription>
+          </Alert>
+        )}
 
         {isLoading ? (
           <div className="flex justify-center py-8"><LoadingSpinner /></div>
         ) : error ? (
-          <Alert className="bg-yellow-50 border-yellow-200">
+          <Alert className="mb-4 bg-yellow-50 border-yellow-200">
             <AlertCircle className="h-4 w-4 text-yellow-600" />
             <AlertTitle className="text-yellow-800">Unable to load rankings</AlertTitle>
             <AlertDescription className="text-yellow-700">
@@ -273,16 +354,18 @@ export default function AdminViewRankingsPage() {
               const isResidentGroup = isResidentPositionType(group.position_type);
 
               return (
-              <Card key={group.position_id}>
+                <Card key={group.position_id}>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">
                     <div className="flex items-center gap-2">
                       <span className="text-xl">{group.position}</span>
-                      <PositionTypeBadge
-                        value={(group.position_type || 'unknown').replace(/_/g, ' ').toLowerCase()}
-                        position_type={group.position_type}
-                        className="h-5 px-2 py-0 text-[11px] lowercase"
-                      />
+                      <span className="flex items-center gap-1 text-sm font-normal text-muted-foreground">
+                        <PositionTypeBadge
+                          value={(group.position_type || 'unknown').replace(/_/g, ' ').toLowerCase()}
+                          position_type={group.position_type}
+                          className="h-5 px-2 py-0 text-[11px] lowercase"
+                        />
+                      </span>
                     </div>
                   </CardTitle>
                   <CardDescription>
@@ -303,10 +386,10 @@ export default function AdminViewRankingsPage() {
                           ))}
                           <TableHead>
                             {isResidentGroup
-                              ? INITIATIVE_LABEL
-                              : (ccaType === 'sports' ? "Captain's Appraisal" : 'Attendance and Attitude')}
+                              ? `${INITIATIVE_LABEL} (1-10)`
+                              : (ccaType === 'sports' ? "Captain's Appraisal (1-10)" : 'Attendance and Attitude (1-10)')}
                           </TableHead>
-                          {!isResidentGroup && ccaType !== 'sports' && <TableHead>Performance</TableHead>}
+                          {!isResidentGroup && ccaType !== 'sports' && <TableHead>Performance (1-10)</TableHead>}
                           <TableHead>Remarks</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -322,14 +405,51 @@ export default function AdminViewRankingsPage() {
                             {!isResidentGroup && (ccaType === 'sports' ? (
                               <TableCell className="text-sm">{formatCutStatus(member.cut_status)}</TableCell>
                             ) : (
-                              <TableCell className="text-sm">{formatCommitmentPeriod(member.commitment_period)}</TableCell>
+                              <TableCell className="text-sm">
+                                {formatCommitmentPeriod(member.commitment_period)}
+                              </TableCell>
                             ))}
-                            <TableCell>{displayScore(isResidentGroup ? member.initiative : member.attendance)}</TableCell>
+                            <TableCell>
+                              <select
+                                value={isResidentGroup ? member.initiative || 0 : member.attendance || 0}
+                                onChange={(e) => handleFieldChange(
+                                  member.row_key,
+                                  isResidentGroup ? 'initiative' : 'attendance',
+                                  parseInt(e.target.value, 10)
+                                )}
+                                className="w-20 p-2 border rounded-md bg-background text-sm"
+                              >
+                                <option value={0}>-</option>
+                                {[...Array(10)].map((_, i) => (
+                                  <option key={i + 1} value={i + 1}>
+                                    {i + 1}
+                                  </option>
+                                ))}
+                              </select>
+                            </TableCell>
                             {!isResidentGroup && ccaType !== 'sports' && (
-                              <TableCell>{displayScore(member.performance)}</TableCell>
+                              <TableCell>
+                                <select
+                                  value={member.performance || 0}
+                                  onChange={(e) => handleFieldChange(member.row_key, 'performance', parseInt(e.target.value, 10))}
+                                  className="w-20 p-2 border rounded-md bg-background text-sm"
+                                >
+                                  <option value={0}>-</option>
+                                  {[...Array(10)].map((_, i) => (
+                                    <option key={i + 1} value={i + 1}>
+                                      {i + 1}
+                                    </option>
+                                  ))}
+                                </select>
+                              </TableCell>
                             )}
-                            <TableCell className="min-w-[220px] whitespace-pre-wrap">
-                              {member.remarks?.trim() || '-'}
+                            <TableCell className="min-w-[220px]">
+                              <Textarea
+                                value={member.remarks || ''}
+                                onChange={(e) => handleFieldChange(member.row_key, 'remarks', e.target.value)}
+                                placeholder="Enter remarks"
+                                className="min-h-[60px] text-sm"
+                              />
                             </TableCell>
                           </TableRow>
                         ))}
@@ -340,9 +460,12 @@ export default function AdminViewRankingsPage() {
               </Card>
               );
             })}
+            <div className="text-sm text-muted-foreground">
+              Ranking updates automatically based on score.
+            </div>
           </div>
         ) : (
-          <div className="p-4 border border-dashed border-gray-300 rounded-md text-gray-500 text-center">No ranked members found</div>
+          <div className="p-4 border border-dashed border-gray-300 rounded-md text-gray-500 text-center">No members found</div>
         )}
       </div>
     </AppLayout>

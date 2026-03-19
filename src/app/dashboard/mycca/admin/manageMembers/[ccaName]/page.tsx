@@ -1,4 +1,4 @@
-// src/app/dashboard/managecca/manageMembers/[cca_name]/page.tsx
+// src/app/dashboard/mycca/admin/manageMembers/[ccaName]/page.tsx
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -140,7 +140,7 @@ export default function ManageMembersPage() {
             setError(message);
             if (message.includes('Unauthorized')) {
                 toast.error('You are not authorized to manage this CCA');
-                router.push('/dashboard/managecca');
+                router.push('/dashboard/mycca/admin');
             } else {
                 toast.error('Failed to load members');
             }
@@ -577,7 +577,7 @@ export default function ManageMembersPage() {
                             <Button
                                 variant="default"
                                 className="bg-blue-500 text-white hover:bg-blue-400 px-6 py-4 shadow-md font-bold cursor-pointer"
-                                onClick={() => router.push("/dashboard/managecca")}
+                                onClick={() => router.push("/dashboard/mycca/admin")}
                             >
                                 Back to My CCAs
                             </Button>
@@ -760,7 +760,7 @@ export default function ManageMembersPage() {
                                 {saving ? 'Saving...' : `Save Members (${pendingChanges.length})`}
                             </Button>
                         )}
-                        <Link href="/dashboard/managecca">
+                        <Link href="/dashboard/mycca/admin">
                             <Button variant="outline" size="lg" className="px-6 py-4" >
                                 <ArrowLeft className="h-4 w-4" />
                                 Back to my CCAs
