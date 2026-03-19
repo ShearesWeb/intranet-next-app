@@ -93,12 +93,20 @@ export async function POST(
             }, { status: 400 });
         }
 
-        // Check capacity
-        const { data: positionInfo } = await supabase
+        // Validate the target position and check capacity
+        const { data: positionInfo, error: positionInfoError } = await supabase
             .from('cca_positions')
-            .select('capacity')
+            .select('id, cca_id, capacity')
             .eq('id', targetPositionId)
             .single();
+
+        if (positionInfoError || !positionInfo) {
+            return NextResponse.json({ error: 'Position not found' }, { status: 404 });
+        }
+
+        if (positionInfo.cca_id !== ccaData.id) {
+            return NextResponse.json({ error: 'Position does not belong to this CCA' }, { status: 400 });
+        }
 
         if (positionInfo && positionInfo.capacity > 0) {
             const { count } = await supabase
@@ -120,7 +128,6 @@ export async function POST(
                 user_id: user_id,
                 position_id: targetPositionId,
                 points: 0,
-                cca_id: ccaData.id,
                 commitment_period: commitment_period
             });
 
@@ -129,7 +136,7 @@ export async function POST(
             return NextResponse.json({ error: 'Failed to add member' }, { status: 500 });
         }
 
-        return NextResponse.json({ success: true });
+        return NextResponse.json({ success: true, position_id: targetPositionId });
 
     } catch (error) {
         console.error('Error adding member:', error);

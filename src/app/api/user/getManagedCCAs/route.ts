@@ -92,8 +92,9 @@ export async function GET() {
 
         return NextResponse.json({ data: transformedData });
 
-    } catch (error: any) {
-        console.error("Error in getManagedCCAs:", error.message || error);
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : error;
+        console.error("Error in getManagedCCAs:", message);
         return NextResponse.json({ error: "Failed to fetch managed CCAs" }, { status: 500 });
     }
 }

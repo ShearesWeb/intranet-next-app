@@ -36,17 +36,17 @@ export interface CCAMember {
 
 type RankingsApiMember = {
   user_id: number;
+  name: string;
+  position_id: number;
+  position: string;
+  position_type: string;
   cut_status: CutStatus | null;
   commitment_period: CommitmentPeriod | null;
-  public_user_info: { id: number; name: string };
-  cca_positions: { id: number; name: string; position_type?: string };
-  cca_member_rankings?: Array<{
-    ranking?: number | null;
-    attendance?: number | null;
-    performance?: number | null;
-    initiative?: number | null;
-    remarks?: string | null;
-  }>;
+  ranking: number;
+  attendance: number;
+  performance: number;
+  initiative: number;
+  remarks?: string | null;
 };
 
 type RankingsApiResponse = {
@@ -62,6 +62,16 @@ type PositionGroup = {
   members: CCAMember[];
 };
 
+type RankingSavePayload = {
+  user_id: number;
+  position_id: number;
+  ranking: number;
+  attendance: number;
+  performance: number;
+  initiative: number;
+  remarks: string;
+};
+
 const POSITION_TYPE_ORDER: Record<string, number> = {
   lead: 1,
   vice: 2,
@@ -75,6 +85,8 @@ const POSITION_TYPE_ORDER: Record<string, number> = {
 
 const cloneMembers = (items: CCAMember[]): CCAMember[] => items.map((member) => ({ ...member }));
 const INITIATIVE_LABEL = 'Helpfulness, Initiative & Attitude';
+const MAX_SAVE_PAYLOAD_BYTES = 4_500_000;
+const textEncoder = new TextEncoder();
 
 const rankMembersWithinPosition = (members: CCAMember[], ccaType: string): CCAMember[] => {
   const sorted = [...members].sort((a, b) => {
@@ -130,6 +142,67 @@ const buildComparisonSnapshot = (items: CCAMember[]) => {
   );
 };
 
+const toRankingSavePayload = (member: CCAMember): RankingSavePayload => ({
+  user_id: member.user_id,
+  position_id: member.position_id,
+  ranking: member.ranking,
+  attendance: member.attendance,
+  performance: member.performance,
+  initiative: member.initiative,
+  remarks: member.remarks,
+});
+
+const buildMemberComparisonSnapshot = (member: CCAMember) => JSON.stringify({
+  user_id: member.user_id,
+  position_id: member.position_id,
+  ranking: member.ranking,
+  attendance: member.attendance,
+  performance: member.performance,
+  initiative: member.initiative,
+  remarks: member.remarks || '',
+});
+
+const getChangedRankingPayloads = (members: CCAMember[], initialMembers: CCAMember[]) => {
+  const initialSnapshots = new Map(
+    initialMembers.map((member) => [member.row_key, buildMemberComparisonSnapshot(member)])
+  );
+
+  return [...members]
+    .sort((a, b) => a.position_id - b.position_id || a.ranking - b.ranking || a.user_id - b.user_id)
+    .filter((member) => initialSnapshots.get(member.row_key) !== buildMemberComparisonSnapshot(member))
+    .map(toRankingSavePayload);
+};
+
+const chunkRankingPayloads = (payloads: RankingSavePayload[], maxBytes: number) => {
+  const chunks: RankingSavePayload[][] = [];
+  let currentChunk: RankingSavePayload[] = [];
+  let currentChunkSize = 2;
+
+  payloads.forEach((payload) => {
+    const payloadSize = textEncoder.encode(JSON.stringify(payload)).length;
+    if (payloadSize > maxBytes) {
+      throw new Error(`Ranking for user ${payload.user_id} is too large to save in a single request`);
+    }
+
+    const nextChunkSize = currentChunkSize + (currentChunk.length > 0 ? 1 : 0) + payloadSize;
+    if (currentChunk.length > 0 && nextChunkSize > maxBytes) {
+      chunks.push(currentChunk);
+      currentChunk = [payload];
+      currentChunkSize = 2 + payloadSize;
+      return;
+    }
+
+    currentChunk.push(payload);
+    currentChunkSize = nextChunkSize;
+  });
+
+  if (currentChunk.length > 0) {
+    chunks.push(currentChunk);
+  }
+
+  return chunks;
+};
+
 const formatCutStatus = (status: unknown): string => {
   if (typeof status !== 'string' || status.trim().length === 0) return '-';
   const normalized = status.toLowerCase().trim().replace(/[_\s]+/g, '-');
@@ -178,29 +251,22 @@ export default function CCARankingPage() {
 
       const data = (await response.json()) as RankingsApiResponse;
       const formattedMembers: CCAMember[] = data.members.map((member) => ({
-        row_key: `${member.user_id}:${member.cca_positions.id}`,
+        row_key: `${member.user_id}:${member.position_id}`,
         user_id: member.user_id,
-        name: member.public_user_info.name,
-        position: member.cca_positions.name,
-        position_type: member.cca_positions.position_type || '',
-        position_id: member.cca_positions.id,
+        name: member.name,
+        position: member.position,
+        position_type: member.position_type || '',
+        position_id: member.position_id,
         cut_status: member.cut_status,
         commitment_period: member.commitment_period,
-        ranking: member.cca_member_rankings?.[0]?.ranking ?? 0,
-        attendance: member.cca_member_rankings?.[0]?.attendance ?? 0,
-        performance: member.cca_member_rankings?.[0]?.performance ?? 0,
-        initiative: member.cca_member_rankings?.[0]?.initiative ?? 0,
-        remarks: member.cca_member_rankings?.[0]?.remarks ?? '',
+        ranking: member.ranking ?? 0,
+        attendance: member.attendance ?? 0,
+        performance: member.performance ?? 0,
+        initiative: member.initiative ?? 0,
+        remarks: member.remarks ?? '',
       }));
 
-      const visibleMembers = formattedMembers.filter((member) => {
-        if (data.cca_type === 'sports' && member.position_type === 'member') {
-          return member.cut_status !== null;
-        }
-
-        return true;
-      });
-      const normalizedMembers = recalculateRankings(visibleMembers, data.cca_type || '');
+      const normalizedMembers = recalculateRankings(formattedMembers, data.cca_type || '');
       setMembers(normalizedMembers);
       setInitialMembers(cloneMembers(normalizedMembers));
       setCcaType(data.cca_type || '');
@@ -275,29 +341,34 @@ export default function CCARankingPage() {
   const handleSave = async () => {
     if (!ccaId) return;
     setIsSaving(true);
-    const rankingsToSave = [...members]
-      .sort((a, b) => a.position_id - b.position_id || a.ranking - b.ranking || a.user_id - b.user_id)
-      .map((member) => ({
-        user_id: member.user_id,
-        position_id: member.position_id,
-        ranking: member.ranking,
-        attendance: member.attendance,
-        performance: member.performance,
-        initiative: member.initiative,
-        remarks: member.remarks,
-      }));
+    const changedRankings = getChangedRankingPayloads(members, initialMembers);
 
     try {
-      const res = await fetch(`/api/cca/${ccaId}/rankings`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(rankingsToSave),
-      });
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to save rankings');
+      if (changedRankings.length === 0) {
+        toast.success('No ranking changes to save.');
+        return;
       }
-      toast.success('Rankings saved successfully!');
+
+      const rankingChunks = chunkRankingPayloads(changedRankings, MAX_SAVE_PAYLOAD_BYTES);
+
+      for (const rankingChunk of rankingChunks) {
+        const res = await fetch(`/api/cca/${ccaId}/rankings`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(rankingChunk),
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Failed to save rankings');
+        }
+      }
+
+      toast.success(
+        rankingChunks.length > 1
+          ? `Saved ${changedRankings.length} rankings in ${rankingChunks.length} batches.`
+          : 'Rankings saved successfully!'
+      );
       setInitialMembers(cloneMembers(members));
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to save rankings';

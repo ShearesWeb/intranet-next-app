@@ -3,6 +3,10 @@ import { NextResponse } from "next/server";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
 
+type ManagedPositionRow = {
+    cca_id: number;
+};
+
 export async function GET(request: Request) {
     const disabledResponse = getCoreServiceDisabledApiResponse("memberRanking");
 
@@ -29,7 +33,7 @@ export async function GET(request: Request) {
         }
 
         const apiData = await apiRes.json();
-        const rows = apiData.data || [];
+        const rows = (apiData.data || []) as ManagedPositionRow[];
 
         const { searchParams } = new URL(request.url);
         const ccaIdParam = searchParams.get("ccaId");
@@ -41,7 +45,7 @@ export async function GET(request: Request) {
                 return NextResponse.json({ error: "Invalid CCA ID" }, { status: 400 });
             }
 
-            const row = rows.find((r: any) => r.cca_id === ccaId);
+            const row = rows.find((r) => r.cca_id === ccaId);
 
             if (!row) {
                 return NextResponse.json({ error: "Managed CCA positions not found" }, { status: 404 });

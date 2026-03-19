@@ -15,6 +15,11 @@ type CCAMeta = {
         image_url: string | null;
 };
 
+type ManagedCcaSummary = {
+        cca_id: number;
+        positions?: unknown[] | null;
+};
+
 export async function GET(request: Request) {
         try {
                 const supabase = await createClient();
@@ -58,8 +63,8 @@ export async function GET(request: Request) {
                                 });
                                 if (apiRes.ok) {
                                         const apiData = await apiRes.json();
-                                        const managedCcas = apiData.data || [];
-                                        managedCcas.forEach((managedCca: any) => {
+                                        const managedCcas = (apiData.data || []) as ManagedCcaSummary[];
+                                        managedCcas.forEach((managedCca) => {
                                                 if ((managedCca.positions || []).length > 0) {
                                                         rankableCcaIds.add(managedCca.cca_id);
                                                 }
