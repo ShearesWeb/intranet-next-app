@@ -3,12 +3,19 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
-import { RankingAccessPosition } from "@/lib/cca-rankings-access";
+import { PositionType, UserAppointment } from "@/types/User";
 import { checkCcaAuthorization } from "@/lib/cca-chair-access";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 import { SupabaseClient } from "@supabase/supabase-js";
 
 const NON_APPLICANT_POSITION_TYPES = "(lead,vice,resident)";
+
+export type RankingAccessPosition = {
+    id: UserAppointment["position_id"];
+    cca_id: UserAppointment["cca_id"];
+    name: UserAppointment["position_name"];
+    position_type: PositionType;
+};
 
 type CapacityInfoRow = RankingAccessPosition & {
     capacity: number;

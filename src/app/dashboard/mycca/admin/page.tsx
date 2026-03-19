@@ -10,11 +10,10 @@ import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { Card, CardContent } from '@/components/ui/card';
 import Link from 'next/link';
 import { CCAData } from '@/types/dashboard';
-import { Users, BarChart3 } from 'lucide-react';
+import { Users, BarChart3, ArrowLeft } from 'lucide-react';
 import { PositionTypeBadge } from '@/components/badges/position-type-badge';
 import { CcaTypeBadge } from '@/components/badges/cca-type-badge';
 
-// Define table columns
 const ccaTableColumns: SimpleTableColumn<CCAData>[] = [
   {
     accessorKey: 'name',
@@ -60,7 +59,7 @@ const ccaTableColumns: SimpleTableColumn<CCAData>[] = [
   },
 ];
 
-export default function ManageCCA() {
+export default function CCAAdmin() {
   const { user } = useAuth();
   const [ccas, setCCAs] = useState<CCAData[]>([]);
   const [loadingCCAs, setLoadingCCAs] = useState(true);
@@ -81,16 +80,16 @@ export default function ManageCCA() {
 
     setLoadingCCAs(true);
     setError(null);
-    fetch('/api/user/getCCAs')
+    fetch('/api/user/getManagedCCAs')
       .then(async (res) => {
         if (!res.ok) {
           const errorData = await res.json();
-          throw new Error(errorData.error || "Failed to fetch user CCA data");
+          throw new Error(errorData.error || "Failed to fetch managed CCA data");
         }
         return res.json();
       })
       .then((data) => {
-        setCCAs(data.data);
+        setCCAs(data.data as CCAData[]);
       })
       .catch((error) => {
         console.error("Error fetching CCAs:", error.message);
@@ -114,7 +113,7 @@ export default function ManageCCA() {
     return (
       <AppLayout>
         <div className="flex flex-col space-y-4 p-4">
-          <h1 className="text-2xl font-bold">Manage CCAs</h1>
+          <h1 className="text-2xl font-bold">CCA Admin</h1>
           <Card className="bg-red-50 border-red-200">
             <CardContent className="flex flex-col items-center p-6 gap-4">
               <p className="text-red-700 font-medium text-center">⚠️ {error}</p>
@@ -143,29 +142,20 @@ export default function ManageCCA() {
 
         return (
           <div className="flex flex-col lg:flex-row gap-2 justify-start w-full">
-            {allowManage || allowRank ? (
-              <>
-                {allowManage && (
-                  <Button asChild size="sm" className="gap-2">
-                    <Link href={`/dashboard/managecca/manageMembers/${encodeURIComponent(row.name)}?ccaId=${row.id}`}>
-                      <Users className="h-4 w-4" />
-                      Manage Members
-                    </Link>
-                  </Button>
-                )}
-                {allowRank && (
-                  <Button asChild variant="outline" size="sm" className="gap-2">
-                    <Link href={`/dashboard/managecca/rankMembers/${encodeURIComponent(row.name)}?ccaId=${row.id}`}>
-                      <BarChart3 className="h-4 w-4" />
-                      Rank Members
-                    </Link>
-                  </Button>
-                )}
-              </>
-            ) : (
-              <Button size="sm" variant="outline" disabled className="gap-2">
-                <Users className="h-4 w-4" />
-                No Actions Available
+            {allowManage && (
+              <Button asChild size="sm" className="gap-2">
+                <Link href={`/dashboard/mycca/admin/manageMembers/${encodeURIComponent(row.name)}?ccaId=${row.id}`}>
+                  <Users className="h-4 w-4" />
+                  Manage Members
+                </Link>
+              </Button>
+            )}
+            {allowRank && (
+              <Button asChild variant="outline" size="sm" className="gap-2">
+                <Link href={`/dashboard/mycca/admin/rankMembers/${encodeURIComponent(row.name)}?ccaId=${row.id}`}>
+                  <BarChart3 className="h-4 w-4" />
+                  Rank Members
+                </Link>
               </Button>
             )}
           </div>
@@ -177,14 +167,21 @@ export default function ManageCCA() {
   return (
     <AppLayout>
       <div className="flex flex-col space-y-4 p-4">
-        <h1 className="text-2xl font-bold">Manage CCAs</h1>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <h1 className="text-2xl font-bold">CCA Admin</h1>
+          <Link href="/dashboard/mycca">
+            <Button variant="outline" size="lg" className="px-6 py-4">
+              <ArrowLeft className="h-4 w-4" /> Back to My CCAs
+            </Button>
+          </Link>
+        </div>
 
         {ccas.length === 0 ? (
           <Card className="bg-gray-50 border-2 border-dashed border-gray-300">
             <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-              <p className="text-lg text-gray-600 mb-2">📋 No CCA appointments found.</p>
+              <p className="text-lg text-gray-600 mb-2">📋 No manageable CCAs found.</p>
               <p className="text-sm text-gray-500">
-                You have not been assigned to any CCAs yet. Check back later or contact your CCA chairs/ICs.
+                You do not have admin permissions for any CCAs.
               </p>
             </CardContent>
           </Card>

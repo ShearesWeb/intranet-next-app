@@ -5,16 +5,18 @@ import { buildRankingComments, extractRankingCommentFields } from "@/lib/cca-ran
 import { getRankingMetricKeys, hasRequiredRankingInputs, isResidentPositionType } from "@/lib/cca-ranking-metrics";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
-import {
-    getManagedCcaPositions,
-    getManagedPositionIds,
-    RankingAccessPosition,
-} from "@/lib/cca-rankings-access";
+import { PositionType, UserAppointment } from "@/types/User";
+
+export type RankingAccessPosition = {
+    id: UserAppointment["position_id"];
+    cca_id: UserAppointment["cca_id"];
+    name: UserAppointment["position_name"];
+    position_type: PositionType;
+};
 
 type AppointmentPositionRow = RankingAccessPosition;
 
 type AppointmentUserRow = {
-    id: number;
     name: string;
 };
 
@@ -41,6 +43,29 @@ type RankingPayload = {
     performance: number;
     initiative: number;
     remarks?: string | null;
+};
+
+type ManagedRankingAccessRow = {
+    cca_id: number;
+    cca_name: string | null;
+    positions: Array<{
+        position_id: number;
+    }> | null;
+};
+
+type RankingResponseMember = {
+    user_id: number;
+    name: string;
+    position_id: number;
+    position: string;
+    position_type: string;
+    cut_status: string | null;
+    commitment_period: string | null;
+    ranking: number;
+    attendance: number;
+    performance: number;
+    initiative: number;
+    remarks: string | null;
 };
 
 async function loadCcaContext(supabase: Awaited<ReturnType<typeof createClient>>, ccaId: number) {
@@ -72,8 +97,20 @@ async function loadManagedRankingAccess({
         return { ok: false as const, status: 401, error: "Unauthorized" };
     }
 
-    const managedCca = await getManagedCcaPositions({ supabase, ccaId });
-    const allowedPositionIds = getManagedPositionIds(managedCca);
+    const { data: managedCca, error } = await supabase
+        .from("managed_cca_positions")
+        .select("cca_id, cca_name, positions")
+        .eq("cca_id", ccaId)
+        .maybeSingle();
+
+    if (error) {
+        console.error("Error loading ranking access:", error);
+        return { ok: false as const, status: 500, error: "Failed to verify access" };
+    }
+
+    const allowedPositionIds = ((managedCca as ManagedRankingAccessRow | null)?.positions || [])
+        .map((position) => position.position_id)
+        .filter((positionId): positionId is number => typeof positionId === "number");
 
     if (allowedPositionIds.length === 0) {
         return {
@@ -86,13 +123,12 @@ async function loadManagedRankingAccess({
     return {
         ok: true as const,
         allowedPositionIds,
-        managedCca,
+        managedCca: managedCca as ManagedRankingAccessRow | null,
     };
 }
 
-// GET handler to fetch members with their ranking data
 export async function GET(
-    _request: Request,
+    request: Request,
     { params }: { params: Promise<{ ccaId: string }> }
 ) {
     const disabledResponse = getCoreServiceDisabledApiResponse("memberRanking");
@@ -133,8 +169,8 @@ export async function GET(
             user_id,
             cut_status,
             commitment_period,
-            public_user_info!inner(id, name),
-            cca_positions!inner(id, name, position_type, cca_id)
+            public_user_info!inner(name),
+            cca_positions!inner(id, name, position_type)
         `)
         .eq('cca_positions.cca_id', ccaId);
 
@@ -198,27 +234,49 @@ export async function GET(
         });
     });
 
-    const enrichedMembers = normalizedMembers.map((member) => {
+    const flattenedMembers = normalizedMembers.map((member) => {
         const positionId = member.cca_positions?.id;
         const rankingKey = `${member.user_id}:${positionId}`;
         const ranking = rankingsMap.get(rankingKey);
+        const memberName = member.public_user_info?.name;
+        const positionName = member.cca_positions?.name;
+        const positionType = member.cca_positions?.position_type || "";
+
+        if (typeof positionId !== "number" || !memberName || !positionName) {
+            return null;
+        }
 
         return {
-            ...member,
-            cca_member_rankings: ranking ? [ranking] : [],
+            user_id: member.user_id,
+            name: memberName,
+            position_id: positionId,
+            position: positionName,
+            position_type: positionType,
+            cut_status: member.cut_status,
+            commitment_period: member.commitment_period,
+            ranking: ranking?.ranking ?? 0,
+            attendance: ranking?.attendance ?? 0,
+            performance: ranking?.performance ?? 0,
+            initiative: ranking?.initiative ?? 0,
+            remarks: ranking?.remarks ?? null,
         };
-    });
+    }).filter((member): member is RankingResponseMember => member !== null);
 
-    const scopedMembers = enrichedMembers.filter((member) => {
-        const positionId = member.cca_positions?.id;
-        return typeof positionId === "number" && rankablePositionIds.includes(positionId);
+    const scopedMembers = flattenedMembers.filter((member) => {
+        if (!rankablePositionIds.includes(member.position_id)) return false;
+
+        if (cca.cca_type === "sports" && member.position_type === "member") {
+            return member.cut_status !== null;
+        }
+
+        return true;
     });
 
     scopedMembers.sort((a, b) => {
-        const aRanking = a.cca_member_rankings?.[0]?.ranking ?? Number.MAX_SAFE_INTEGER;
-        const bRanking = b.cca_member_rankings?.[0]?.ranking ?? Number.MAX_SAFE_INTEGER;
+        const aRanking = a.ranking || Number.MAX_SAFE_INTEGER;
+        const bRanking = b.ranking || Number.MAX_SAFE_INTEGER;
         if (aRanking !== bRanking) return aRanking - bRanking;
-        return a.public_user_info?.name?.localeCompare(b.public_user_info?.name || '') ?? 0;
+        return a.name.localeCompare(b.name);
     });
 
     return NextResponse.json({

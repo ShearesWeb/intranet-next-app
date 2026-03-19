@@ -1,4 +1,4 @@
-// src/app/dashboard/managecca/manageMembers/[cca_name]/page.tsx
+// src/app/dashboard/mycca/admin/manageMembers/[ccaName]/page.tsx
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -140,7 +140,7 @@ export default function ManageMembersPage() {
             setError(message);
             if (message.includes('Unauthorized')) {
                 toast.error('You are not authorized to manage this CCA');
-                router.push('/dashboard/managecca');
+                router.push('/dashboard/mycca/admin');
             } else {
                 toast.error('Failed to load members');
             }
@@ -155,6 +155,12 @@ export default function ManageMembersPage() {
 
     const handleSearchUsers = async () => {
         const query = userSearchQuery.trim();
+        if (!ccaId) {
+            toast.error('CCA ID is required to search users');
+            setUserSearchResults([]);
+            return;
+        }
+
         if (query.length < 2) {
             toast.error('Please enter at least 2 characters to search');
             setUserSearchResults([]);
@@ -163,10 +169,10 @@ export default function ManageMembersPage() {
 
         setIsSearching(true);
         try {
-            const response = await fetch(`/api/user/search?query=${encodeURIComponent(query)}`);
+            const response = await fetch(`/api/cca/${ccaId}/searchUsers?query=${encodeURIComponent(query)}`);
             const data = await response.json();
             if (!response.ok) {
-                throw new Error(data.message || 'Failed to search users');
+                throw new Error(data.message || data.error || 'Failed to search users');
             }
             setUserSearchResults(data.data || []);
         } catch (error) {
@@ -247,23 +253,17 @@ export default function ManageMembersPage() {
 
     // Local remove member
     const handleLocalRemoveMember = (userId: number, memberName: string) => {
-        // Remove from pending adds or cut if exists
-        setPendingChanges(prev =>
-            prev.filter(
-                change =>
-                    !(
-                        (change.type === 'add' || change.type === 'cut') &&
-                        change.user_id === userId
-                    )
-            )
-        );
-
         // Check if this is an original member (needs API removal)
         const allOriginalMembers = Object.values(originalGroupedMembers).flat() as Member[];
         const member = allOriginalMembers.find(m => m.user_id === userId);
 
-        if (member) {
-            // Add to pending removes
+        setPendingChanges(prev => {
+            const remainingChanges = prev.filter(change => change.user_id !== userId);
+
+            if (!member) {
+                return remainingChanges;
+            }
+
             const newChange: PendingChange = {
                 type: 'remove',
                 user_id: userId,
@@ -271,8 +271,9 @@ export default function ManageMembersPage() {
                 user_email: '',
                 position_id: member.position_id
             };
-            setPendingChanges(prev => [...prev, newChange]);
-        }
+
+            return [...remainingChanges, newChange];
+        });
 
         // Remove from current display
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -329,22 +330,43 @@ export default function ManageMembersPage() {
             return;
         }
 
-        // Remove from pending adds if exists
-        setPendingChanges(prev =>
-            prev.filter(change => !(change.type === 'add' && change.user_id === userId))
-        );
+        const resolvedPositionId = member.position_id || memberPositionId || undefined;
 
-        // Add status change
-        const newChange: PendingChange = {
-            type: 'update_status',
-            user_id: userId,
-            user_name: memberName,
-            user_email: member.email,
-            user_room: member.room,
-            new_status: newStatus,
-            position_id: member.position_id || memberPositionId || undefined,
-        };
-        setPendingChanges(prev => [...prev, newChange]);
+        setPendingChanges(prev => {
+            const withoutExistingStatusChanges = prev.filter(
+                change => !(change.type === 'update_status' && change.user_id === userId)
+            );
+
+            const pendingAdd = withoutExistingStatusChanges.find(
+                change => change.type === 'add' && change.user_id === userId
+            );
+
+            if (pendingAdd) {
+                return withoutExistingStatusChanges.map((change) => {
+                    if (change.type === 'add' && change.user_id === userId) {
+                        return {
+                            ...change,
+                            new_status: newStatus,
+                            position_id: change.position_id || resolvedPositionId,
+                        };
+                    }
+
+                    return change;
+                });
+            }
+
+            const newChange: PendingChange = {
+                type: 'update_status',
+                user_id: userId,
+                user_name: memberName,
+                user_email: member.email,
+                user_room: member.room,
+                new_status: newStatus,
+                position_id: resolvedPositionId,
+            };
+
+            return [...withoutExistingStatusChanges, newChange];
+        });
 
         // Update currentGroupedMembers locally
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -386,22 +408,42 @@ export default function ManageMembersPage() {
 
         if (member.commitment_period === newPeriod) return;
 
-        // Add pending change
-        const newChange: PendingChange = {
-            type: 'update_commitment',
-            user_id: userId,
-            user_name: member.name,
-            user_email: member.email,
-            new_commitment_period: newPeriod,
-            position_id: member.position_id
-        };
-        
-        // If we don't have position_id on member, try fallback
-        if (!newChange.position_id && memberPositionId) {
-             newChange.position_id = memberPositionId;
-        }
+        const resolvedPositionId = member.position_id || memberPositionId || undefined;
 
-        setPendingChanges(prev => [...prev, newChange]);
+        setPendingChanges(prev => {
+            const withoutExistingCommitmentChanges = prev.filter(
+                change => !(change.type === 'update_commitment' && change.user_id === userId)
+            );
+
+            const pendingAdd = withoutExistingCommitmentChanges.find(
+                change => change.type === 'add' && change.user_id === userId
+            );
+
+            if (pendingAdd) {
+                return withoutExistingCommitmentChanges.map((change) => {
+                    if (change.type === 'add' && change.user_id === userId) {
+                        return {
+                            ...change,
+                            new_commitment_period: newPeriod,
+                            position_id: change.position_id || resolvedPositionId,
+                        };
+                    }
+
+                    return change;
+                });
+            }
+
+            const newChange: PendingChange = {
+                type: 'update_commitment',
+                user_id: userId,
+                user_name: member.name,
+                user_email: member.email,
+                new_commitment_period: newPeriod,
+                position_id: resolvedPositionId
+            };
+
+            return [...withoutExistingCommitmentChanges, newChange];
+        });
 
         // Update local state
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -448,9 +490,27 @@ export default function ManageMembersPage() {
                             })
                         });
 
+                        const responseData = await response.json().catch(() => ({}));
                         if (!response.ok) {
-                            const errorData = await response.json();
-                            throw new Error(errorData.error || 'Failed to add member');
+                            throw new Error(responseData.error || 'Failed to add member');
+                        }
+
+                        if (change.new_status !== undefined) {
+                            const resolvedPositionId = responseData.position_id || change.position_id || memberPositionId;
+                            const statusResponse = await fetch(`/api/cca/${ccaId}/updateMember`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    user_id: change.user_id,
+                                    position_id: resolvedPositionId,
+                                    cut_status: change.new_status
+                                })
+                            });
+
+                            const statusResponseData = await statusResponse.json().catch(() => ({}));
+                            if (!statusResponse.ok) {
+                                throw new Error(statusResponseData.error || 'Member added but failed to update status');
+                            }
                         }
                         successCount++;
                     } else if (change.type === 'remove') {
@@ -577,7 +637,7 @@ export default function ManageMembersPage() {
                             <Button
                                 variant="default"
                                 className="bg-blue-500 text-white hover:bg-blue-400 px-6 py-4 shadow-md font-bold cursor-pointer"
-                                onClick={() => router.push("/dashboard/managecca")}
+                                onClick={() => router.push("/dashboard/mycca/admin")}
                             >
                                 Back to My CCAs
                             </Button>
@@ -760,7 +820,7 @@ export default function ManageMembersPage() {
                                 {saving ? 'Saving...' : `Save Members (${pendingChanges.length})`}
                             </Button>
                         )}
-                        <Link href="/dashboard/managecca">
+                        <Link href="/dashboard/mycca/admin">
                             <Button variant="outline" size="lg" className="px-6 py-4" >
                                 <ArrowLeft className="h-4 w-4" />
                                 Back to my CCAs

@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
-import { getManagedCcaPositions, listManagedCcaPositions } from "@/lib/cca-rankings-access";
-import { createClient } from "@/utils/supabase/server";
+
+type ManagedPositionRow = {
+    cca_id: number;
+};
 
 export async function GET(request: Request) {
     const disabledResponse = getCoreServiceDisabledApiResponse("memberRanking");
@@ -19,7 +21,20 @@ export async function GET(request: Request) {
     }
 
     try {
-        const supabase = await createClient();
+        const fetchUrl = new URL('/api/user/getManagedCCAs', request.url);
+        const apiRes = await fetch(fetchUrl, {
+            headers: {
+                cookie: request.headers.get("cookie") || "",
+            },
+        });
+
+        if (!apiRes.ok) {
+            return NextResponse.json({ error: "Failed to load managed CCA positions" }, { status: apiRes.status });
+        }
+
+        const apiData = await apiRes.json();
+        const rows = (apiData.data || []) as ManagedPositionRow[];
+
         const { searchParams } = new URL(request.url);
         const ccaIdParam = searchParams.get("ccaId");
 
@@ -30,7 +45,7 @@ export async function GET(request: Request) {
                 return NextResponse.json({ error: "Invalid CCA ID" }, { status: 400 });
             }
 
-            const row = await getManagedCcaPositions({ supabase, ccaId });
+            const row = rows.find((r) => r.cca_id === ccaId);
 
             if (!row) {
                 return NextResponse.json({ error: "Managed CCA positions not found" }, { status: 404 });
@@ -39,7 +54,6 @@ export async function GET(request: Request) {
             return NextResponse.json(row);
         }
 
-        const rows = await listManagedCcaPositions({ supabase });
         return NextResponse.json(rows);
     } catch (error) {
         console.error("Error fetching managed CCA positions:", error);
