@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { buildRankingComments, extractRankingCommentFields } from "@/lib/cca-ranking-comments";
 import { getRankingMetricKeys, hasRequiredRankingInputs, isResidentPositionType } from "@/lib/cca-ranking-metrics";
+import { getManagedCcaAccess } from "@/lib/cca-management-access";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 import { PositionType, UserAppointment } from "@/types/User";
@@ -91,30 +92,35 @@ async function loadCcaContext(supabase: Awaited<ReturnType<typeof createClient>>
 async function loadManagedRankingAccess({
     supabase,
     requestingUser,
-    ccaId,
+    cca,
+    positions,
 }: {
     supabase: Awaited<ReturnType<typeof createClient>>;
     requestingUser: Awaited<ReturnType<typeof fetchUserInfo>>;
-    ccaId: number;
+    cca: { id: number; name?: string | null; cca_type?: string | null };
+    positions: AppointmentPositionRow[] | null;
 }) {
     if (!requestingUser) {
         return { ok: false as const, status: 401, error: "Unauthorized" };
     }
 
-    const { data: managedCca, error } = await supabase
-        .from("managed_cca_positions")
-        .select("cca_id, cca_name, positions")
-        .eq("cca_id", ccaId)
-        .maybeSingle();
+    const managedAccessResult = await getManagedCcaAccess({
+        supabase,
+        requestingUser,
+        cca,
+    });
 
-    if (error) {
-        console.error("Error loading ranking access:", error);
-        return { ok: false as const, status: 500, error: "Failed to verify access" };
+    if (!managedAccessResult.ok) {
+        return managedAccessResult;
     }
 
-    const allowedPositionIds = ((managedCca as ManagedRankingAccessRow | null)?.positions || [])
-        .map((position) => position.position_id)
-        .filter((positionId): positionId is number => typeof positionId === "number");
+    const { hasChairAccess, managedPositionIds, managedCca } = managedAccessResult.data;
+
+    const allowedPositionIds = hasChairAccess
+        ? ((positions || [])
+            .map((position) => position.id)
+            .filter((positionId): positionId is number => typeof positionId === "number"))
+        : managedPositionIds;
 
     if (allowedPositionIds.length === 0) {
         return {
@@ -145,7 +151,7 @@ export async function GET(
     const ccaId = Number(ccaIdParam);
     const supabase = await createClient();
     const requestingUser = await fetchUserInfo();
-    const { cca, ccaError, positionsError } = await loadCcaContext(supabase, ccaId);
+    const { cca, ccaError, positions, positionsError } = await loadCcaContext(supabase, ccaId);
 
     if (ccaError || !cca) {
         return NextResponse.json({ error: "CCA not found" }, { status: 404 });
@@ -158,7 +164,8 @@ export async function GET(
     const accessResult = await loadManagedRankingAccess({
         supabase,
         requestingUser,
-        ccaId,
+        cca,
+        positions: (positions || []) as AppointmentPositionRow[],
     });
 
     if (!accessResult.ok) {
@@ -325,7 +332,8 @@ export async function POST(
     const accessResult = await loadManagedRankingAccess({
         supabase,
         requestingUser,
-        ccaId,
+        cca,
+        positions: (positions || []) as AppointmentPositionRow[],
     });
 
     if (!accessResult.ok) {

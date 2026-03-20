@@ -3,7 +3,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
-import { checkCcaAuthorization } from "@/lib/cca-chair-access";
+import { getManagedCcaAccess } from "@/lib/cca-management-access";
 
 export async function POST(
     request: Request,
@@ -34,16 +34,16 @@ export async function POST(
         }
 
         // Verify requesting user has lead/vice role for this CCA
-        const authResult = checkCcaAuthorization({
+        const authResult = await getManagedCcaAccess({
+            supabase,
             requestingUser,
             cca: ccaData,
-            require: "chair",
         });
 
         if (!authResult.ok) {
             return NextResponse.json({
-                error: 'Unauthorized: You are not a lead/vice for this CCA'
-            }, { status: 403 });
+                error: authResult.error
+            }, { status: authResult.status });
         }
 
         let targetPositionId = position_id;

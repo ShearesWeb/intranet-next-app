@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
-import { checkCcaAuthorization } from "@/lib/cca-chair-access";
+import { getManagedCcaAccess } from "@/lib/cca-management-access";
 
 export async function GET(
     request: Request,
@@ -42,10 +42,10 @@ export async function GET(
             );
         }
 
-        const authResult = checkCcaAuthorization({
+        const authResult = await getManagedCcaAccess({
+            supabase,
             requestingUser,
             cca: ccaData,
-            require: "chair",
         });
 
         if (!authResult.ok) {

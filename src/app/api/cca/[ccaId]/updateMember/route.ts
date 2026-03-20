@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { buildRankingComments } from "@/lib/cca-ranking-comments";
 import { createClient } from "@/utils/supabase/server";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
-import { checkCcaAuthorization } from "@/lib/cca-chair-access";
+import { getManagedCcaAccess } from "@/lib/cca-management-access";
 
 const CUT_STATUSES_BY_CCA_TYPE = {
     sports: new Set(["ivp-ihg-team", "ihg-team", "final-cut"]),
@@ -39,16 +39,16 @@ export async function POST(
             return NextResponse.json({ error: 'CCA not found' }, { status: 404 });
         }
 
-        const authResult = checkCcaAuthorization({
+        const authResult = await getManagedCcaAccess({
+            supabase,
             requestingUser,
             cca: ccaData,
-            require: "chair",
         });
 
         if (!authResult.ok) {
             return NextResponse.json({
-                error: 'Unauthorized: You are not a lead/vice for this CCA'
-            }, { status: 403 });
+                error: authResult.error
+            }, { status: authResult.status });
         }
 
         console.log('Updating member:', { user_id, position_id, cut_status, commitment_period, comments });
