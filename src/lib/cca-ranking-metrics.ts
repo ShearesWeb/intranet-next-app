@@ -1,4 +1,9 @@
-export type RankingMetricKey = "attendance" | "performance" | "initiative";
+export type RankingMetricKey =
+    | "attendance"
+    | "performance"
+    | "helpfulness"
+    | "initiative"
+    | "attitude";
 
 type RankingMetricInput = Partial<Record<RankingMetricKey, number | null>>;
 
@@ -21,7 +26,7 @@ export function getRankingMetricKeys({
     positionType?: string | null;
 }): RankingMetricKey[] {
     if (isResidentPositionType(positionType)) {
-        return ["initiative"];
+        return ["helpfulness", "initiative", "attitude"];
     }
 
     if (ccaType === "sports") {

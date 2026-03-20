@@ -31,7 +31,9 @@ export interface CCAMember {
   commitment_period?: CommitmentPeriod | null;
   attendance: number;
   performance: number;
+  helpfulness: number;
   initiative: number;
+  attitude: number;
 }
 
 type RankingsApiMember = {
@@ -45,7 +47,9 @@ type RankingsApiMember = {
   ranking: number;
   attendance: number;
   performance: number;
+  helpfulness: number;
   initiative: number;
+  attitude: number;
   remarks?: string | null;
 };
 
@@ -68,7 +72,9 @@ type RankingSavePayload = {
   ranking: number;
   attendance: number;
   performance: number;
+  helpfulness: number;
   initiative: number;
+  attitude: number;
   remarks: string;
 };
 
@@ -84,9 +90,15 @@ const POSITION_TYPE_ORDER: Record<string, number> = {
 };
 
 const cloneMembers = (items: CCAMember[]): CCAMember[] => items.map((member) => ({ ...member }));
-const INITIATIVE_LABEL = 'Helpfulness, Initiative & Attitude';
 const MAX_SAVE_PAYLOAD_BYTES = 4_500_000;
 const textEncoder = new TextEncoder();
+const SCORE_OPTIONS = Array.from({ length: 10 }, (_, index) => index + 1);
+const RESIDENT_METRICS = [
+  { field: 'helpfulness', label: 'Helpfulness' },
+  { field: 'initiative', label: 'Initiative' },
+  { field: 'attitude', label: 'Attitude' },
+] as const;
+type ScoreField = 'attendance' | 'performance' | 'helpfulness' | 'initiative' | 'attitude';
 
 const rankMembersWithinPosition = (members: CCAMember[], ccaType: string): CCAMember[] => {
   const sorted = [...members].sort((a, b) => {
@@ -136,7 +148,9 @@ const buildComparisonSnapshot = (items: CCAMember[]) => {
         ranking: member.ranking,
         attendance: member.attendance,
         performance: member.performance,
+        helpfulness: member.helpfulness,
         initiative: member.initiative,
+        attitude: member.attitude,
         remarks: member.remarks || '',
       }))
   );
@@ -148,7 +162,9 @@ const toRankingSavePayload = (member: CCAMember): RankingSavePayload => ({
   ranking: member.ranking,
   attendance: member.attendance,
   performance: member.performance,
+  helpfulness: member.helpfulness,
   initiative: member.initiative,
+  attitude: member.attitude,
   remarks: member.remarks,
 });
 
@@ -158,7 +174,9 @@ const buildMemberComparisonSnapshot = (member: CCAMember) => JSON.stringify({
   ranking: member.ranking,
   attendance: member.attendance,
   performance: member.performance,
+  helpfulness: member.helpfulness,
   initiative: member.initiative,
+  attitude: member.attitude,
   remarks: member.remarks || '',
 });
 
@@ -262,7 +280,9 @@ export default function CCARankingPage() {
         ranking: member.ranking ?? 0,
         attendance: member.attendance ?? 0,
         performance: member.performance ?? 0,
+        helpfulness: member.helpfulness ?? 0,
         initiative: member.initiative ?? 0,
+        attitude: member.attitude ?? 0,
         remarks: member.remarks ?? '',
       }));
 
@@ -379,6 +399,21 @@ export default function CCARankingPage() {
     }
   };
 
+  const renderScoreSelect = (member: CCAMember, field: ScoreField) => (
+    <select
+      value={member[field] || 0}
+      onChange={(e) => handleFieldChange(member.row_key, field, parseInt(e.target.value, 10))}
+      className="w-20 p-2 border rounded-md bg-background text-sm"
+    >
+      <option value={0}>-</option>
+      {SCORE_OPTIONS.map((score) => (
+        <option key={score} value={score}>
+          {score}
+        </option>
+      ))}
+    </select>
+  );
+
   if (!user) return <AppLoading />;
 
   return (
@@ -455,11 +490,15 @@ export default function CCARankingPage() {
                           ) : (
                             <TableHead>Commitment</TableHead>
                           ))}
-                          <TableHead>
-                            {isResidentGroup
-                              ? `${INITIATIVE_LABEL} (1-10)`
-                              : (ccaType === 'sports' ? "Captain's Appraisal (1-10)" : 'Attendance and Attitude (1-10)')}
-                          </TableHead>
+                          {isResidentGroup ? (
+                            RESIDENT_METRICS.map((metric) => (
+                              <TableHead key={metric.field}>{metric.label} (1-10)</TableHead>
+                            ))
+                          ) : (
+                            <TableHead>
+                              {ccaType === 'sports' ? "Captain's Appraisal (1-10)" : 'Attendance and Attitude (1-10)'}
+                            </TableHead>
+                          )}
                           {!isResidentGroup && ccaType !== 'sports' && <TableHead>Performance (1-10)</TableHead>}
                           <TableHead>Remarks</TableHead>
                         </TableRow>
@@ -480,38 +519,20 @@ export default function CCARankingPage() {
                                 {formatCommitmentPeriod(member.commitment_period)}
                               </TableCell>
                             ))}
-                            <TableCell>
-                              <select
-                                value={isResidentGroup ? member.initiative || 0 : member.attendance || 0}
-                                onChange={(e) => handleFieldChange(
-                                  member.row_key,
-                                  isResidentGroup ? 'initiative' : 'attendance',
-                                  parseInt(e.target.value, 10)
-                                )}
-                                className="w-20 p-2 border rounded-md bg-background text-sm"
-                              >
-                                <option value={0}>-</option>
-                                {[...Array(10)].map((_, i) => (
-                                  <option key={i + 1} value={i + 1}>
-                                    {i + 1}
-                                  </option>
-                                ))}
-                              </select>
-                            </TableCell>
+                            {isResidentGroup ? (
+                              RESIDENT_METRICS.map((metric) => (
+                                <TableCell key={metric.field}>
+                                  {renderScoreSelect(member, metric.field)}
+                                </TableCell>
+                              ))
+                            ) : (
+                              <TableCell>
+                                {renderScoreSelect(member, 'attendance')}
+                              </TableCell>
+                            )}
                             {!isResidentGroup && ccaType !== 'sports' && (
                               <TableCell>
-                                <select
-                                  value={member.performance || 0}
-                                  onChange={(e) => handleFieldChange(member.row_key, 'performance', parseInt(e.target.value, 10))}
-                                  className="w-20 p-2 border rounded-md bg-background text-sm"
-                                >
-                                  <option value={0}>-</option>
-                                  {[...Array(10)].map((_, i) => (
-                                    <option key={i + 1} value={i + 1}>
-                                      {i + 1}
-                                    </option>
-                                  ))}
-                                </select>
+                                {renderScoreSelect(member, 'performance')}
                               </TableCell>
                             )}
                             <TableCell className="min-w-[220px]">

@@ -41,7 +41,9 @@ type RankingPayload = {
     ranking: number;
     attendance: number;
     performance: number;
+    helpfulness: number;
     initiative: number;
+    attitude: number;
     remarks?: string | null;
 };
 
@@ -64,7 +66,9 @@ type RankingResponseMember = {
     ranking: number;
     attendance: number;
     performance: number;
+    helpfulness: number;
     initiative: number;
+    attitude: number;
     remarks: string | null;
 };
 
@@ -220,7 +224,9 @@ export async function GET(
         ranking?: number | null;
         attendance?: number | null;
         performance?: number | null;
+        helpfulness?: number | null;
         initiative?: number | null;
+        attitude?: number | null;
         remarks?: string | null;
     }>();
     (rankings as RankingRow[] | null | undefined)?.forEach((ranking) => {
@@ -229,7 +235,9 @@ export async function GET(
             ranking: ranking.ranking,
             attendance: parsedComments.attendance,
             performance: parsedComments.performance,
+            helpfulness: parsedComments.helpfulness,
             initiative: parsedComments.initiative,
+            attitude: parsedComments.attitude,
             remarks: parsedComments.remarks,
         });
     });
@@ -257,7 +265,9 @@ export async function GET(
             ranking: ranking?.ranking ?? 0,
             attendance: ranking?.attendance ?? 0,
             performance: ranking?.performance ?? 0,
+            helpfulness: ranking?.helpfulness ?? 0,
             initiative: ranking?.initiative ?? 0,
+            attitude: ranking?.attitude ?? 0,
             remarks: ranking?.remarks ?? null,
         };
     }).filter((member): member is RankingResponseMember => member !== null);
@@ -336,7 +346,9 @@ export async function POST(
                 {
                     attendance: ranking.attendance,
                     performance: ranking.performance,
+                    helpfulness: ranking.helpfulness,
                     initiative: ranking.initiative,
+                    attitude: ranking.attitude,
                 },
                 {
                     ccaType: cca.cca_type,
@@ -355,7 +367,9 @@ export async function POST(
                 : (ranking.performance > 0 ? ranking.performance : ranking.attendance);
             const comments = isResidentPositionType(positionType)
                 ? buildRankingComments({
+                    helpfulness: ranking.helpfulness,
                     initiative: ranking.initiative,
+                    attitude: ranking.attitude,
                     remarks: ranking.remarks,
                 })
                 : buildRankingComments({
