@@ -30,18 +30,6 @@ const ccaTableColumns: SimpleTableColumn<CCAData>[] = [
     ),
   },
   {
-    accessorKey: 'role',
-    header: 'Role',
-    cell: (value, row) => (
-      <PositionTypeBadge
-        value={String(value)}
-        position_type={String(row.position_type || '')}
-        className="text-xs"
-      />
-    ),
-    enableSorting: true,
-  },
-  {
     accessorKey: 'cca_type',
     header: 'Type',
     cell: (value) => (
@@ -50,12 +38,33 @@ const ccaTableColumns: SimpleTableColumn<CCAData>[] = [
     enableSorting: true,
   },
   {
-    accessorKey: 'points',
-    header: 'Points',
-    cell: (value) => (
-      <div className="font-semibold text-center text-sm md:text-base">{String(value)}</div>
-    ),
-    enableSorting: true,
+    accessorKey: 'positions',
+    header: 'Managed Positions',
+    cell: (_, row) => {
+      const positions = row.positions ?? [];
+
+      if (positions.length === 0) {
+        return (
+          <div className="text-xs text-muted-foreground">
+            No managed positions
+          </div>
+        );
+      }
+
+      return (
+        <div className="flex min-w-[12rem] flex-col items-start gap-2">
+          {positions.map((position) => (
+            <PositionTypeBadge
+              key={position.position_id}
+              value={position.position_name}
+              position_type={position.position_type}
+              className="text-xs"
+            />
+          ))}
+        </div>
+      );
+    },
+    enableSorting: false,
   },
 ];
 
