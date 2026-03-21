@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { getManagedCcaAccess } from "@/lib/cca-management-access";
+import { normalizeCutStatusForCca } from "@/lib/cca-cut-status";
 
 interface TransformedMember {
     user_id: number;
@@ -116,7 +117,7 @@ export async function GET(
                     position_type: positionData.position_type,
                     points: member.points || 0,
                     appointed_date: member.created_at,
-                    cut_status: member.cut_status,
+                    cut_status: normalizeCutStatusForCca(member.cut_status, ccaData.cca_type),
                     commitment_period: member.commitment_period,
                 });
             }

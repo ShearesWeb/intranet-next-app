@@ -3,6 +3,7 @@ import { buildRankingComments } from "@/lib/cca-ranking-comments";
 import { createClient } from "@/utils/supabase/server";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { getManagedCcaAccess } from "@/lib/cca-management-access";
+import { normalizeCutStatusForCca } from "@/lib/cca-cut-status";
 
 const CUT_STATUSES_BY_CCA_TYPE = {
     sports: new Set(["ivp-ihg-team", "ihg-team", "final-cut"]),
@@ -51,7 +52,11 @@ export async function POST(
             }, { status: authResult.status });
         }
 
-        console.log('Updating member:', { user_id, position_id, cut_status, commitment_period, comments });
+        const normalizedCutStatus = typeof cut_status === "string"
+            ? normalizeCutStatusForCca(cut_status, ccaData.cca_type)
+            : cut_status;
+
+        console.log('Updating member:', { user_id, position_id, cut_status: normalizedCutStatus, commitment_period, comments });
 
         if (cut_status !== undefined && cut_status !== null) {
             if (typeof cut_status !== 'string') {
@@ -59,14 +64,14 @@ export async function POST(
             }
 
             const allowedStatuses = CUT_STATUSES_BY_CCA_TYPE[ccaData.cca_type as keyof typeof CUT_STATUSES_BY_CCA_TYPE];
-            if (!allowedStatuses?.has(cut_status)) {
+            if (!allowedStatuses?.has(normalizedCutStatus)) {
                 return NextResponse.json({ error: 'Cut status is not allowed for this CCA type' }, { status: 400 });
             }
         }
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const updates: any = {};
-        if (cut_status !== undefined) updates.cut_status = cut_status;
+        if (cut_status !== undefined) updates.cut_status = normalizedCutStatus;
         if (commitment_period !== undefined) updates.commitment_period = commitment_period;
         if (comments !== undefined) updates.comments = comments;
 

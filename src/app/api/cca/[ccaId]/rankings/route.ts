@@ -4,6 +4,7 @@ import { createClient } from "@/utils/supabase/server";
 import { buildRankingComments, extractRankingCommentFields } from "@/lib/cca-ranking-comments";
 import { getRankingMetricKeys, hasRequiredRankingInputs, isResidentPositionType } from "@/lib/cca-ranking-metrics";
 import { getManagedCcaAccess } from "@/lib/cca-management-access";
+import { normalizeCutStatusForCca } from "@/lib/cca-cut-status";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 import { PositionType, UserAppointment } from "@/types/User";
@@ -267,7 +268,7 @@ export async function GET(
             position_id: positionId,
             position: positionName,
             position_type: positionType,
-            cut_status: member.cut_status,
+            cut_status: normalizeCutStatusForCca(member.cut_status, cca.cca_type),
             commitment_period: member.commitment_period,
             ranking: ranking?.ranking ?? 0,
             attendance: ranking?.attendance ?? 0,
