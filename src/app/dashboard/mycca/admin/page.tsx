@@ -198,6 +198,8 @@ export default function CCAAdmin() {
           <SimpleTable<CCAData>
             data={ccas}
             columns={dynamicColumns}
+            searchColumn="name"
+            searchPlaceholder="Search CCA..."
             pageSize={10}
             emptyMessage="No CCAs found"
           />
