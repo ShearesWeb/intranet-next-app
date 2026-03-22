@@ -94,12 +94,10 @@ async function loadManagedRankingAccess({
     supabase,
     requestingUser,
     cca,
-    positions,
 }: {
     supabase: Awaited<ReturnType<typeof createClient>>;
     requestingUser: Awaited<ReturnType<typeof fetchUserInfo>>;
     cca: { id: number; name?: string | null; cca_type?: string | null };
-    positions: AppointmentPositionRow[] | null;
 }) {
     if (!requestingUser) {
         return { ok: false as const, status: 401, error: "Unauthorized" };
@@ -115,15 +113,9 @@ async function loadManagedRankingAccess({
         return managedAccessResult;
     }
 
-    const { hasChairAccess, managedPositionIds, managedCca } = managedAccessResult.data;
+    const { managedPositionIds, managedCca } = managedAccessResult.data;
 
-    const allowedPositionIds = hasChairAccess
-        ? ((positions || [])
-            .map((position) => position.id)
-            .filter((positionId): positionId is number => typeof positionId === "number"))
-        : managedPositionIds;
-
-    if (allowedPositionIds.length === 0) {
+    if (managedPositionIds.length === 0) {
         return {
             ok: false as const,
             status: 403,
@@ -133,7 +125,7 @@ async function loadManagedRankingAccess({
 
     return {
         ok: true as const,
-        allowedPositionIds,
+        allowedPositionIds: managedPositionIds,
         managedCca: managedCca as ManagedRankingAccessRow | null,
     };
 }
@@ -152,7 +144,7 @@ export async function GET(
     const ccaId = Number(ccaIdParam);
     const supabase = await createClient();
     const requestingUser = await fetchUserInfo();
-    const { cca, ccaError, positions, positionsError } = await loadCcaContext(supabase, ccaId);
+    const { cca, ccaError, positionsError } = await loadCcaContext(supabase, ccaId);
 
     if (ccaError || !cca) {
         return NextResponse.json({ error: "CCA not found" }, { status: 404 });
@@ -166,7 +158,6 @@ export async function GET(
         supabase,
         requestingUser,
         cca,
-        positions: (positions || []) as AppointmentPositionRow[],
     });
 
     if (!accessResult.ok) {
@@ -334,7 +325,6 @@ export async function POST(
         supabase,
         requestingUser,
         cca,
-        positions: (positions || []) as AppointmentPositionRow[],
     });
 
     if (!accessResult.ok) {

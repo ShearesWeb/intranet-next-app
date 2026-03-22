@@ -17,7 +17,7 @@ type CCAMeta = {
 
 type ManagedCcaSummary = {
         cca_id: number;
-        positions?: unknown[] | null;
+        can_rank_members?: boolean;
 };
 
 export async function GET(request: Request) {
@@ -65,7 +65,7 @@ export async function GET(request: Request) {
                                         const apiData = await apiRes.json();
                                         const managedCcas = (apiData.data || []) as ManagedCcaSummary[];
                                         managedCcas.forEach((managedCca) => {
-                                                if ((managedCca.positions || []).length > 0) {
+                                                if (managedCca.can_rank_members) {
                                                         rankableCcaIds.add(managedCca.cca_id);
                                                 }
                                         });

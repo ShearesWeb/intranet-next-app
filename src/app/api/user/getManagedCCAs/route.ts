@@ -35,13 +35,6 @@ type ChairAppointment = {
     position_type: PositionType;
 };
 
-type CcaPositionRow = {
-    cca_id: number;
-    id: number;
-    name: string;
-    position_type: PositionType;
-};
-
 export async function GET() {
     try {
         const user = await fetchUserInfo();
@@ -97,37 +90,12 @@ export async function GET() {
 
         const ccasById = new Map((ccasData || []).map((cca) => [cca.id, cca]));
 
-        const { data: positionsData, error: positionsError } = await supabase
-            .from("cca_positions")
-            .select("cca_id, id, name, position_type")
-            .in("cca_id", managedCcaIds);
-
-        if (positionsError) {
-            throw positionsError;
-        }
-
-        const fallbackPositionsByCcaId = new Map<number, ManagedCcaPosition[]>();
-        ((positionsData || []) as CcaPositionRow[]).forEach((position) => {
-            const existing = fallbackPositionsByCcaId.get(position.cca_id) || [];
-            existing.push({
-                position_id: position.id,
-                position_name: position.name,
-                position_type: position.position_type,
-                description: null,
-                access_depth: 0,
-            });
-            fallbackPositionsByCcaId.set(position.cca_id, existing);
-        });
-
         // 3. Transform and extend the data
         const transformedData: ManagedCcaPositionsRow[] = managedCcaIds.map((ccaId) => {
             const managedCca = managedCcaById.get(ccaId);
             const chairAppointment = chairAppointmentsByCcaId.get(ccaId);
             const ccaMeta = ccasById.get(ccaId);
             const managedPositions = managedCca?.positions || [];
-            const positions = managedPositions.length > 0
-                ? managedPositions
-                : (fallbackPositionsByCcaId.get(ccaId) || []);
             const primaryPosition = chairAppointment || managedPositions[0];
             const hasChairAccess = Boolean(chairAppointment);
             const hasManagedPositions = managedPositions.length > 0;
@@ -136,7 +104,7 @@ export async function GET() {
                 // Keep the original fields intact
                 cca_id: ccaId,
                 cca_name: managedCca?.cca_name || chairAppointment?.cca_name || ccaMeta?.name || "Unknown CCA",
-                positions,
+                positions: managedPositions,
                 
                 // Add the flattened fields required by the CCAData table structure
                 id: ccaId,
@@ -147,7 +115,7 @@ export async function GET() {
                 description: ccaMeta?.description ?? "",
                 points: 0, // Admin view doesn't need personal points here
                 can_manage_members: hasChairAccess || hasManagedPositions,
-                can_rank_members: hasChairAccess || hasManagedPositions,
+                can_rank_members: hasManagedPositions,
             };
         });
 
