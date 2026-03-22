@@ -16,8 +16,8 @@ interface TransformedMember {
     position_type: string;
     points: number;
     appointed_date: string;
-    cut_status?: string;
-    commitment_period?: string;
+    cut_status?: string | null;
+    commitment_period?: string | null;
 }
 
 export async function GET(
