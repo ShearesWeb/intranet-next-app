@@ -1,5 +1,5 @@
 export const CORE_SERVICE_FLAGS = {
-    memberRanking: true,
+    memberRanking: false,
     ccaApplications: false,
     holidaySubsidy: false,
 };
