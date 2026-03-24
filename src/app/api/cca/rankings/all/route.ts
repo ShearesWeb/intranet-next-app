@@ -3,7 +3,6 @@ import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { getCoreServiceDisabledApiResponse, isCoreServiceEnabled } from "@/lib/feature-flags";
 
 type ManagedCcaRankingRow = {
-    cca_name?: string | null;
     can_rank_members?: boolean;
 };
 
@@ -29,9 +28,7 @@ export async function GET(request: Request) {
         const data = await apiRes.json();
         const rows = (data.data || []) as ManagedCcaRankingRow[];
         const disabledResponse = getCoreServiceDisabledApiResponse("memberRanking", {
-            ccaName: rows.find((row) => isCoreServiceEnabled("memberRanking", {
-                ccaName: row.cca_name,
-            }))?.cca_name,
+            isJcrc: user.is_jcrc,
         });
 
         if (disabledResponse) {
@@ -39,7 +36,7 @@ export async function GET(request: Request) {
         }
 
         const visibleRows = rows.filter((row) => isCoreServiceEnabled("memberRanking", {
-            ccaName: row.cca_name,
+            isJcrc: user.is_jcrc && Boolean(row.can_rank_members),
         }));
 
         return NextResponse.json({ data: visibleRows });

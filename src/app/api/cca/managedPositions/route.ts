@@ -5,7 +5,6 @@ import { fetchUserInfo } from "@/lib/fetch-user-info";
 
 type ManagedPositionRow = {
     cca_id: number;
-    cca_name?: string | null;
     can_rank_members?: boolean;
 };
 
@@ -31,9 +30,7 @@ export async function GET(request: Request) {
         const apiData = await apiRes.json();
         const rows = (apiData.data || []) as ManagedPositionRow[];
         const disabledResponse = getCoreServiceDisabledApiResponse("memberRanking", {
-            ccaName: rows.find((row) => isCoreServiceEnabled("memberRanking", {
-                ccaName: row.cca_name,
-            }))?.cca_name,
+            isJcrc: user.is_jcrc,
         });
 
         if (disabledResponse) {
@@ -41,7 +38,7 @@ export async function GET(request: Request) {
         }
 
         const visibleRows = rows.filter((row) => isCoreServiceEnabled("memberRanking", {
-            ccaName: row.cca_name,
+            isJcrc: user.is_jcrc && Boolean(row.can_rank_members),
         }));
 
         const { searchParams } = new URL(request.url);

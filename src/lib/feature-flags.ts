@@ -6,13 +6,9 @@ export const CORE_SERVICE_FLAGS = {
 
 export type CoreServiceKey = keyof typeof CORE_SERVICE_FLAGS;
 export type CoreServiceFlags = typeof CORE_SERVICE_FLAGS;
-const MEMBER_RANKING_ALLOWED_CCA_NAMES = new Set([
-    "president",
-    "sheares hall",
-]);
 
 export type CoreServiceFlagContext = {
-    ccaName?: string | null;
+    isJcrc?: boolean;
 };
 
 export function getCoreServiceFlags(): CoreServiceFlags {
@@ -31,8 +27,7 @@ export function getCoreServiceTitle(service: CoreServiceKey) {
 
 function isCoreServicePositionOverrideEnabled(service: CoreServiceKey, context?: CoreServiceFlagContext) {
     if (service === "memberRanking") {
-        const normalizedCcaName = context?.ccaName?.trim().toLowerCase();
-        return Boolean(normalizedCcaName && MEMBER_RANKING_ALLOWED_CCA_NAMES.has(normalizedCcaName));
+        return Boolean(context?.isJcrc);
     }
 
     return false;

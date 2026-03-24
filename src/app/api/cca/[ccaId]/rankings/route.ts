@@ -160,7 +160,7 @@ export async function GET(
 
     const rankablePositionIds = accessResult.allowedPositionIds;
     const disabledResponse = getCoreServiceDisabledApiResponse("memberRanking", {
-        ccaName: cca.name,
+        isJcrc: requestingUser?.is_jcrc,
     });
 
     if (disabledResponse) {
@@ -328,7 +328,7 @@ export async function POST(
 
     const allowedPositionIds = new Set(accessResult.allowedPositionIds);
     const disabledResponse = getCoreServiceDisabledApiResponse("memberRanking", {
-        ccaName: cca.name,
+        isJcrc: requestingUser?.is_jcrc,
     });
 
     if (disabledResponse) {

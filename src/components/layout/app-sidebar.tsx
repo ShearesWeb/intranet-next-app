@@ -24,7 +24,7 @@ import { Avatar, AvatarImage } from "../ui/avatar"
 import { useAuth } from "@/context/AuthContext"
 import { User } from "@/types/User"
 import { checkCcaAuthorization } from "@/lib/cca-chair-access"
-import { CoreServiceKey, isFeatureFlaggedItemEnabled } from "@/lib/feature-flags"
+import { CoreServiceKey, isCoreServiceEnabled, isFeatureFlaggedItemEnabled } from "@/lib/feature-flags"
 
 type NavItem = {
     title: string
@@ -113,6 +113,9 @@ export const navOptions: NavItem[] = [
 export const buildNavItems = (user?: User | null) => {
     const authResult = checkCcaAuthorization({ requestingUser: user });
     const isChair = Boolean(user?.is_admin || (authResult.ok && authResult.data.hasChairAccess));
+    const hasMemberRankingAccess = isCoreServiceEnabled("memberRanking", {
+        isJcrc: user?.is_jcrc,
+    });
 
     const allowItem = (item: {
         adminOnly?: boolean;
@@ -120,13 +123,15 @@ export const buildNavItems = (user?: User | null) => {
         chairOnly?: boolean;
         featureFlag?: CoreServiceKey;
     }) => {
-        if (!isFeatureFlaggedItemEnabled(item)) return false;
+        if (!isFeatureFlaggedItemEnabled(item, { isJcrc: user?.is_jcrc })) return false;
         if (item.adminOnly && item.jcrcOnly) {
             return Boolean(user?.is_admin || user?.is_jcrc)
         }
         if (item.adminOnly) return Boolean(user?.is_admin)
         if (item.jcrcOnly) return Boolean(user?.is_jcrc)
-        if (item.chairOnly) return Boolean(isChair)
+        if (item.chairOnly) {
+            return Boolean(isChair || (item.featureFlag === "memberRanking" && hasMemberRankingAccess))
+        }
         return true
     }
 
