@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
-import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
+import { getCoreServiceDisabledApiResponse, isCoreServiceEnabled } from "@/lib/feature-flags";
+
+type ManagedCcaRankingRow = {
+    cca_name?: string | null;
+    can_rank_members?: boolean;
+};
 
 export async function GET(request: Request) {
-    const disabledResponse = getCoreServiceDisabledApiResponse("memberRanking");
-
-    if (disabledResponse) {
-        return disabledResponse;
-    }
-
     try {
         const user = await fetchUserInfo();
         if (!user) {
@@ -28,7 +27,22 @@ export async function GET(request: Request) {
         }
 
         const data = await apiRes.json();
-        return NextResponse.json({ data: data.data || [] });
+        const rows = (data.data || []) as ManagedCcaRankingRow[];
+        const disabledResponse = getCoreServiceDisabledApiResponse("memberRanking", {
+            ccaName: rows.find((row) => isCoreServiceEnabled("memberRanking", {
+                ccaName: row.cca_name,
+            }))?.cca_name,
+        });
+
+        if (disabledResponse) {
+            return disabledResponse;
+        }
+
+        const visibleRows = rows.filter((row) => isCoreServiceEnabled("memberRanking", {
+            ccaName: row.cca_name,
+        }));
+
+        return NextResponse.json({ data: visibleRows });
     } catch (error) {
         console.error("Error fetching CCA ranking list:", error);
         return NextResponse.json({ error: "Failed to load CCAs" }, { status: 500 });

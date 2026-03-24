@@ -1,19 +1,15 @@
 import { NextResponse } from "next/server";
 
-import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
+import { getCoreServiceDisabledApiResponse, isCoreServiceEnabled } from "@/lib/feature-flags";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
 
 type ManagedPositionRow = {
     cca_id: number;
+    cca_name?: string | null;
+    can_rank_members?: boolean;
 };
 
 export async function GET(request: Request) {
-    const disabledResponse = getCoreServiceDisabledApiResponse("memberRanking");
-
-    if (disabledResponse) {
-        return disabledResponse;
-    }
-
     const user = await fetchUserInfo();
 
     if (!user) {
@@ -34,6 +30,19 @@ export async function GET(request: Request) {
 
         const apiData = await apiRes.json();
         const rows = (apiData.data || []) as ManagedPositionRow[];
+        const disabledResponse = getCoreServiceDisabledApiResponse("memberRanking", {
+            ccaName: rows.find((row) => isCoreServiceEnabled("memberRanking", {
+                ccaName: row.cca_name,
+            }))?.cca_name,
+        });
+
+        if (disabledResponse) {
+            return disabledResponse;
+        }
+
+        const visibleRows = rows.filter((row) => isCoreServiceEnabled("memberRanking", {
+            ccaName: row.cca_name,
+        }));
 
         const { searchParams } = new URL(request.url);
         const ccaIdParam = searchParams.get("ccaId");
@@ -45,7 +54,7 @@ export async function GET(request: Request) {
                 return NextResponse.json({ error: "Invalid CCA ID" }, { status: 400 });
             }
 
-            const row = rows.find((r) => r.cca_id === ccaId);
+            const row = visibleRows.find((r) => r.cca_id === ccaId);
 
             if (!row) {
                 return NextResponse.json({ error: "Managed CCA positions not found" }, { status: 404 });
@@ -54,7 +63,7 @@ export async function GET(request: Request) {
             return NextResponse.json(row);
         }
 
-        return NextResponse.json(rows);
+        return NextResponse.json(visibleRows);
     } catch (error) {
         console.error("Error fetching managed CCA positions:", error);
         return NextResponse.json({ error: "Failed to load managed CCA positions" }, { status: 500 });

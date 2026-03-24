@@ -134,12 +134,6 @@ export async function GET(
     request: Request,
     { params }: { params: Promise<{ ccaId: string }> }
 ) {
-    const disabledResponse = getCoreServiceDisabledApiResponse("memberRanking");
-
-    if (disabledResponse) {
-        return disabledResponse;
-    }
-
     const { ccaId: ccaIdParam } = await params;
     const ccaId = Number(ccaIdParam);
     const supabase = await createClient();
@@ -165,6 +159,13 @@ export async function GET(
     }
 
     const rankablePositionIds = accessResult.allowedPositionIds;
+    const disabledResponse = getCoreServiceDisabledApiResponse("memberRanking", {
+        ccaName: cca.name,
+    });
+
+    if (disabledResponse) {
+        return disabledResponse;
+    }
 
     let membersQuery = supabase
         .from('cca_appointments')
@@ -300,12 +301,6 @@ export async function POST(
     request: Request,
     { params }: { params: Promise<{ ccaId: string }> }
 ) {
-    const disabledResponse = getCoreServiceDisabledApiResponse("memberRanking");
-
-    if (disabledResponse) {
-        return disabledResponse;
-    }
-
     const { ccaId: ccaIdParam } = await params;
     const ccaId = Number(ccaIdParam);
     const rankings = (await request.json()) as RankingPayload[];
@@ -332,6 +327,14 @@ export async function POST(
     }
 
     const allowedPositionIds = new Set(accessResult.allowedPositionIds);
+    const disabledResponse = getCoreServiceDisabledApiResponse("memberRanking", {
+        ccaName: cca.name,
+    });
+
+    if (disabledResponse) {
+        return disabledResponse;
+    }
+
     const positionTypeById = new Map<number, string | null>(
         ((positions || []) as AppointmentPositionRow[]).map((position) => [position.id, position.position_type || null])
     );

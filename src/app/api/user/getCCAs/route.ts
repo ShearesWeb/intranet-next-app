@@ -17,6 +17,7 @@ type CCAMeta = {
 
 type ManagedCcaSummary = {
         cca_id: number;
+        cca_name?: string | null;
         can_rank_members?: boolean;
 };
 
@@ -56,20 +57,20 @@ export async function GET(request: Request) {
                 const rankableCcaIds = new Set<number>();
 
                 try {
-                        if (isCoreServiceEnabled("memberRanking")) {
-                                const fetchUrl = new URL('/api/user/getManagedCCAs', request.url);
-                                const apiRes = await fetch(fetchUrl, {
-                                        headers: { cookie: request.headers.get("cookie") || "" },
+                        const fetchUrl = new URL('/api/user/getManagedCCAs', request.url);
+                        const apiRes = await fetch(fetchUrl, {
+                                headers: { cookie: request.headers.get("cookie") || "" },
+                        });
+                        if (apiRes.ok) {
+                                const apiData = await apiRes.json();
+                                const managedCcas = (apiData.data || []) as ManagedCcaSummary[];
+                                managedCcas.forEach((managedCca) => {
+                                        if (isCoreServiceEnabled("memberRanking", {
+                                                ccaName: managedCca.cca_name,
+                                        })) {
+                                                rankableCcaIds.add(managedCca.cca_id);
+                                        }
                                 });
-                                if (apiRes.ok) {
-                                        const apiData = await apiRes.json();
-                                        const managedCcas = (apiData.data || []) as ManagedCcaSummary[];
-                                        managedCcas.forEach((managedCca) => {
-                                                if (managedCca.can_rank_members) {
-                                                        rankableCcaIds.add(managedCca.cca_id);
-                                                }
-                                        });
-                                }
                         }
                 } catch (managedCcaError) {
                         console.error("Error fetching managed CCA positions:", managedCcaError);
