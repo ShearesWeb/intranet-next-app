@@ -2,6 +2,7 @@
 // API route to get members of a lead/vice's CCA
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
+import { canManageCcaMembers, getCcaMemberManagementDisabledMessage } from "@/lib/cca-member-management";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { getManagedCcaAccess } from "@/lib/cca-management-access";
 import { normalizeCutStatusForCca } from "@/lib/cca-cut-status";
@@ -170,8 +171,9 @@ export async function GET(
             all_positions: allPositions,
             total_members: transformedMembers.length,
             permissions: {
-                canManageMembers: true,
-                ccaType: ccaData.cca_type
+                canManageMembers: canManageCcaMembers(ccaData.cca_type),
+                ccaType: ccaData.cca_type,
+                managementMessage: getCcaMemberManagementDisabledMessage(ccaData.cca_type),
             }
         });
 

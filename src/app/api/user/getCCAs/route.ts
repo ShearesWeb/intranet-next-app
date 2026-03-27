@@ -78,6 +78,28 @@ export async function GET(request: Request) {
                 const appointmentsByCca = new Map(
                         appointments.map((appointment) => [appointment.cca_id, appointment])
                 );
+                const appointmentPositionIds = appointments
+                        .map((appointment) => appointment.position_id)
+                        .filter((positionId): positionId is number => typeof positionId === "number");
+                const appointmentStatusByPositionId = new Map<number, string | null>();
+
+                if (appointmentPositionIds.length > 0) {
+                        const { data: appointmentStatuses, error: appointmentStatusesError } = await supabase
+                                .from("cca_appointments")
+                                .select("position_id, cut_status")
+                                .eq("user_id", user.id)
+                                .in("position_id", appointmentPositionIds);
+
+                        if (appointmentStatusesError) {
+                                console.error("Error fetching appointment cut statuses:", appointmentStatusesError);
+                        } else {
+                                (appointmentStatuses || []).forEach((row) => {
+                                        if (typeof row.position_id === "number") {
+                                                appointmentStatusByPositionId.set(row.position_id, row.cut_status ?? null);
+                                        }
+                                });
+                        }
+                }
 
                 const transformedData = Array.from(appointmentsByCca.values()).map((appointment) => {
                         const cca = ccaMap.get(appointment.cca_id);
@@ -90,6 +112,7 @@ export async function GET(request: Request) {
                                 cca_type: cca?.cca_type || "committee",
                                 description: cca?.description || "",
                                 points: appointment.points || 0,
+                                cut_status: appointmentStatusByPositionId.get(appointment.position_id) ?? null,
                                 can_manage_members: isChairPositionType(appointment.position_type),
                                 can_rank_members: rankableCcaIds.has(appointment.cca_id),
                         };

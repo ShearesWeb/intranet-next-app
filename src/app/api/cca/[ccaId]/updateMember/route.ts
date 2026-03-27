@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { canManageCcaMembers, getCcaMemberManagementDisabledMessage } from "@/lib/cca-member-management";
 import { buildRankingComments } from "@/lib/cca-ranking-comments";
 import { createClient } from "@/utils/supabase/server";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
@@ -38,6 +39,10 @@ export async function POST(
 
         if (ccaError || !ccaData) {
             return NextResponse.json({ error: 'CCA not found' }, { status: 404 });
+        }
+
+        if (!canManageCcaMembers(ccaData.cca_type) && (cut_status !== undefined || commitment_period !== undefined)) {
+            return NextResponse.json({ error: getCcaMemberManagementDisabledMessage(ccaData.cca_type) }, { status: 403 });
         }
 
         const authResult = await getManagedCcaAccess({

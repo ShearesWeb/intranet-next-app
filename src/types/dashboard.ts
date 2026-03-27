@@ -16,6 +16,7 @@ export interface CCAData {
   cca_type: CcaType;
   description: string;
   points: number;
+  cut_status?: CutStatus | null;
   positions?: ManagedCcaPosition[];
   can_manage_members?: boolean;
   can_rank_members?: boolean;

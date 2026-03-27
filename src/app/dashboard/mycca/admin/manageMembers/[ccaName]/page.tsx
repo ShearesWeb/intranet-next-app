@@ -15,19 +15,19 @@ import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircleIcon, ArrowLeft, Volleyball, MoreHorizontal } from "lucide-react";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
 } from "@/components/ui/dialog"
 import { PositionTypeBadge } from "@/components/badges/position-type-badge";
 
@@ -76,6 +76,19 @@ const CULTURE_STATUS_OPTIONS: Array<{ status: CutStatus; label: string }> = [
     { status: 'first-cut', label: 'Promote to IVP' },
 ];
 
+const formatCommitmentPeriod = (value: CommitmentPeriod | null | undefined) => {
+    switch (value) {
+        case 'semester-1':
+            return 'Semester 1';
+        case 'semester-2':
+            return 'Semester 2';
+        case 'full-year':
+            return 'Full Year';
+        default:
+            return '-';
+    }
+};
+
 export default function ManageMembersPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -90,7 +103,7 @@ export default function ManageMembersPage() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [cca, setCCA] = useState<any>(null);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [permissions, setPermissions] = useState<any>({ canManageMembers: false, ccaType: '' });
+    const [permissions, setPermissions] = useState<any>({ canManageMembers: false, ccaType: '', managementMessage: '' });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [memberPositionId, setMemberPositionId] = useState<number | null>(null);
@@ -129,7 +142,7 @@ export default function ManageMembersPage() {
             setOriginalGroupedMembers(data.groupedMembers || {});
             setCurrentGroupedMembers(data.groupedMembers || {});
             setCCA(data.cca);
-            setPermissions(data.permissions || { canManageMembers: false, ccaType: '' });
+            setPermissions(data.permissions || { canManageMembers: false, ccaType: '', managementMessage: '' });
             setMemberPositionId(data.member_position_id || 0);
             setAllPositions(data.all_positions || []);
             setError(null);
@@ -193,6 +206,11 @@ export default function ManageMembersPage() {
 
     // Local add member (doesn't call API yet)
     const handleLocalAddMember = (userId: number, userName: string, userEmail: string, userRoom?: string, positionId?: number, commitmentPeriod?: CommitmentPeriod) => {
+        if (!permissions.canManageMembers) {
+            toast.error(permissions.managementMessage || 'Member management is not available.');
+            return;
+        }
+
         // Check if user is already a member or pending add
         const allCurrentMembers = Object.values(currentGroupedMembers).flat() as Member[];
         const isAlreadyMember = allCurrentMembers.some(member => member.user_id === userId);
@@ -253,6 +271,11 @@ export default function ManageMembersPage() {
 
     // Local remove member
     const handleLocalRemoveMember = (userId: number, memberName: string) => {
+        if (!permissions.canManageMembers) {
+            toast.error(permissions.managementMessage || 'Member management is not available.');
+            return;
+        }
+
         // Check if this is an original member (needs API removal)
         const allOriginalMembers = Object.values(originalGroupedMembers).flat() as Member[];
         const member = allOriginalMembers.find(m => m.user_id === userId);
@@ -310,6 +333,11 @@ export default function ManageMembersPage() {
 
     // Local update status
     const handleLocalUpdateStatus = (userId: number, memberName: string, newStatus: CutStatus | null) => {
+        if (!permissions.canManageMembers) {
+            toast.error(permissions.managementMessage || 'Member management is not available.');
+            return;
+        }
+
         if (!isSports && !isCulture) {
             toast.error('Status groups are only available for sports and culture CCAs');
             return;
@@ -396,6 +424,11 @@ export default function ManageMembersPage() {
     };
 
     const handleLocalUpdateCommitment = (userId: number, newPeriod: CommitmentPeriod) => {
+        if (!permissions.canManageMembers) {
+            toast.error(permissions.managementMessage || 'Member management is not available.');
+            return;
+        }
+
         // Find member
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const allCurrentMembers = Object.values(currentGroupedMembers).flat() as Member[];
@@ -452,18 +485,23 @@ export default function ManageMembersPage() {
             const updated: any = { ...prev };
             Object.keys(updated).forEach(key => {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                updated[key] = updated[key].map((m: any) => 
+                updated[key] = updated[key].map((m: any) =>
                     m.user_id === userId ? { ...m, commitment_period: newPeriod } : m
                 );
             });
             return updated;
         });
-        
+
         toast.success('Commitment period updated (pending save)');
     };
 
     // Save all pending changes
     const handleSaveMembers = async () => {
+        if (!permissions.canManageMembers) {
+            toast.error(permissions.managementMessage || 'Member management is not available.');
+            return;
+        }
+
         if (pendingChanges.length === 0) {
             toast.error('No changes to save');
             return;
@@ -565,7 +603,7 @@ export default function ManageMembersPage() {
                         }
                         successCount++;
                     }
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 } catch (error: any) {
                     console.error(`Error processing ${change.type} for ${change.user_name}:`, error);
                     errorCount++;
@@ -657,28 +695,33 @@ export default function ManageMembersPage() {
         if (members.length === 0 && !showActionsColumn && !showAddButton) return null;
 
         const canManage = permissions.canManageMembers;
+        const showEditableCommitment = canManage && !isSports;
 
         // Build columns based on whether we can manage
         const columnsToUse: SimpleTableColumn<Member>[] = (showActionsColumn && canManage)
             ? [
                 ...memberTableColumns,
-                ...(!isSports ? [{
+                {
                     accessorKey: 'commitment_period' as keyof Member,
                     header: 'Commitment',
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     cell: (value: any, row: Member) => (
-                        <select
-                            value={value || 'full-year'}
-                            onChange={(e) => handleLocalUpdateCommitment(row.user_id, e.target.value as CommitmentPeriod)}
-                            className="border rounded p-1 text-sm bg-transparent cursor-pointer hover:bg-gray-100 w-28"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <option value="full-year">Full Year</option>
-                            <option value="semester-1">Sem 1</option>
-                            <option value="semester-2">Sem 2</option>
-                        </select>
+                        showEditableCommitment ? (
+                            <select
+                                value={value || 'full-year'}
+                                onChange={(e) => handleLocalUpdateCommitment(row.user_id, e.target.value as CommitmentPeriod)}
+                                className="border rounded p-1 text-sm bg-transparent cursor-pointer hover:bg-gray-100 w-28"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <option value="full-year">Full Year</option>
+                                <option value="semester-1">Semester 1</option>
+                                <option value="semester-2">Semester 2</option>
+                            </select>
+                        ) : (
+                            <span>{formatCommitmentPeriod(value as CommitmentPeriod | null | undefined)}</span>
+                        )
                     )
-                }] : []),
+                },
                 {
                     accessorKey: 'actions' as keyof Member,
                     header: 'Actions',
@@ -762,7 +805,17 @@ export default function ManageMembersPage() {
                     ),
                 },
             ]
-            : memberTableColumns;
+            : [
+                ...memberTableColumns,
+                {
+                    accessorKey: 'commitment_period' as keyof Member,
+                    header: 'Commitment',
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    cell: (value: any) => (
+                        <span>{formatCommitmentPeriod(value as CommitmentPeriod | null | undefined)}</span>
+                    )
+                },
+            ];
 
         return (
             <div className="mb-8">
@@ -850,6 +903,14 @@ export default function ManageMembersPage() {
                     </Card>
                 )}
 
+                {!isSportsCulture && !permissions.canManageMembers && (
+                    <Card className="mb-4 bg-slate-50 border-slate-300 py-3 rounded-sm">
+                        <CardContent className="text-slate-700 text-sm pl-4">
+                            {permissions.managementMessage || 'Member management is currently not available.'}
+                        </CardContent>
+                    </Card>
+                )}
+
                 {totalFilteredMembers === 0 && !isSportsCulture ? (
                     <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500 bg-gray-50 rounded-md">
                         <p className="text-lg mb-2">
@@ -865,12 +926,12 @@ export default function ManageMembersPage() {
                         {!isSportsCulture && renderMemberGroup('Main Committee', currentGroupedMembers.maincomm || [], true, false)}
                         {!isSportsCulture && renderMemberGroup('Sub Committee', currentGroupedMembers.subcomm || [], true, false)}
                         {isSportsCulture && renderMemberGroup('Team Manager', currentGroupedMembers.teamManager || [])}
-                        
+
                         {isSports && renderMemberGroup('Final Cut - IHG Team Members (IVP)', currentGroupedMembers.ivpIhgTeam || [], true, false)}
                         {isSports && renderMemberGroup('Final Cut - IHG Team Members', currentGroupedMembers.ihgTeam || [], true, false)}
                         {isSports && renderMemberGroup('Final Cut Members', currentGroupedMembers.finalCut || [], true, false)}
                         {isCulture && renderMemberGroup('IVP Members', currentGroupedMembers.firstCut || [], true, false)}
-                        
+
                         {renderMemberGroup('Members', currentGroupedMembers.members || [], true, true)}
                     </div>
                 )}
@@ -891,50 +952,50 @@ export default function ManageMembersPage() {
                                         <p className="font-bold">{selectedUser.name}</p>
                                         <p className="text-sm text-gray-500">{selectedUser.email}</p>
                                     </div>
-                                    
+
                                     <div>
                                         <label className="block text-sm font-medium mb-1">Position</label>
                                         <select
                                             className="w-full border rounded p-2 bg-white"
                                             value={addForm.positionId}
-                                            onChange={(e) => setAddForm({...addForm, positionId: Number(e.target.value)})}
+                                            onChange={(e) => setAddForm({ ...addForm, positionId: Number(e.target.value) })}
                                         >
                                             {allPositions
                                                 .filter((pos) => !isChairPositionType(pos.position_type))
                                                 .map((pos) => (
-                                                <option key={pos.id} value={pos.id}>{pos.name}</option>
-                                            ))}
+                                                    <option key={pos.id} value={pos.id}>{pos.name}</option>
+                                                ))}
                                         </select>
                                     </div>
-                                    
+
                                     <div>
                                         <label className="block text-sm font-medium mb-1">Commitment Period</label>
                                         <select
                                             className="w-full border rounded p-2 bg-white"
                                             value={addForm.commitmentPeriod}
-                                            onChange={(e) => setAddForm({...addForm, commitmentPeriod: e.target.value as CommitmentPeriod})}
+                                            onChange={(e) => setAddForm({ ...addForm, commitmentPeriod: e.target.value as CommitmentPeriod })}
                                         >
                                             <option value="full-year">Full Year</option>
                                             <option value="semester-1">Semester 1</option>
                                             <option value="semester-2">Semester 2</option>
                                         </select>
                                     </div>
-                                    
+
                                     <div className="flex justify-end gap-2 mt-6">
-                                        <Button 
-                                            onClick={() => setSelectedUser(null)} 
+                                        <Button
+                                            onClick={() => setSelectedUser(null)}
                                             variant="outline"
                                             className="bg-gray-100 hover:bg-gray-200"
                                         >
                                             Back
                                         </Button>
-                                        <Button 
+                                        <Button
                                             onClick={() => handleLocalAddMember(
-                                                selectedUser.id, 
-                                                selectedUser.name, 
-                                                selectedUser.email, 
-                                                selectedUser.room || undefined, 
-                                                addForm.positionId, 
+                                                selectedUser.id,
+                                                selectedUser.name,
+                                                selectedUser.email,
+                                                selectedUser.room || undefined,
+                                                addForm.positionId,
                                                 (addForm.commitmentPeriod || 'full-year') as CommitmentPeriod
                                             )}
                                             className="bg-green-600 hover:bg-green-500 text-white"
@@ -1034,7 +1095,7 @@ export default function ManageMembersPage() {
                             ))}
                         </div>
                         <div className="flex justify-end">
-                            <Button 
+                            <Button
                                 onClick={() => setSaveErrors([])}
                                 className="bg-gray-800 text-white hover:bg-gray-700"
                             >

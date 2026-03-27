@@ -2,6 +2,7 @@
 // API route to add a member to a CCA (sports, culture, or others)
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
+import { canManageCcaMembers, getCcaMemberManagementDisabledMessage } from "@/lib/cca-member-management";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { getManagedCcaAccess } from "@/lib/cca-management-access";
 
@@ -31,6 +32,10 @@ export async function POST(
 
         if (ccaError || !ccaData) {
             return NextResponse.json({ error: 'CCA not found' }, { status: 404 });
+        }
+
+        if (!canManageCcaMembers(ccaData.cca_type)) {
+            return NextResponse.json({ error: getCcaMemberManagementDisabledMessage(ccaData.cca_type) }, { status: 403 });
         }
 
         // Verify requesting user has lead/vice role for this CCA
