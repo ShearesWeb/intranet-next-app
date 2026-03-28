@@ -842,7 +842,7 @@ export function PointsRecapCard({
                                             <Button
                                                 type="button"
                                                 size="lg"
-                                                onClick={downloadRecapImage}
+                                                onClick={shareRecapImageToLinkedIn}
                                                 disabled={imgGenerating}
                                                 className="w-fit rounded-full border border-white/20 bg-white/20 px-6 font-semibold text-white shadow-sm backdrop-blur-sm hover:bg-white/30"
                                             >
@@ -1039,7 +1039,7 @@ export function PointsRecapCard({
                                                         </Button>
                                                         <Button
                                                             type="button"
-                                                            onClick={downloadRecapImage}
+                                                            onClick={shareRecapImageToLinkedIn}
                                                             disabled={imgGenerating}
                                                             className="w-full rounded-full bg-white/90 text-slate-950 hover:bg-white md:w-auto"
                                                         >
