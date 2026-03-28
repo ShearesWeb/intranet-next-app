@@ -1,7 +1,7 @@
 // src\app\dashboard\home\page.tsx
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { motion } from "framer-motion";
 import { useRoleAuth } from "@/hooks/useRoleAuth";
@@ -10,6 +10,7 @@ import { AppLoading } from "@/components/layout/app-loading";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { PointsRecapCard } from "@/components/dashboard/points-recap-card";
 import { getCoreServiceFlags } from "@/lib/feature-flags";
+import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { Users, Trophy, Activity, ClipboardList, ChevronRight } from "lucide-react";
 
@@ -17,9 +18,14 @@ export default function Dashboard() {
     const { user } = useAuth();
     const { isAuthorized, loading: roleLoading } = useRoleAuth();
     const featureFlags = getCoreServiceFlags();
+    const [hasSeenRecap, setHasSeenRecap] = useState(false);
 
     const getRankCCAButtonText = () => 'CCA Ranking';
     const isSportsCultureAvailable = () => featureFlags.ccaApplications;
+
+    useEffect(() => {
+        setHasSeenRecap(localStorage.getItem("hasSeenPointsRecap") === "true");
+    }, []);
 
     if (!user) {
         return <AppLoading />;
@@ -55,11 +61,18 @@ export default function Dashboard() {
                     <Card className="border-none shadow-lg flex flex-col overflow-hidden relative">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
-                                <span>Your Points</span>
+                                <span>{hasSeenRecap ? "Your Final Hall Points" : "Your Points"}</span>
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="flex-1 flex items-center justify-center p-4 md:p-8 relative min-h-[300px] md:min-h-[400px]">
-                            <PointsRecapCard user={user} />
+                        <CardContent
+                            className={cn(
+                                "relative flex-1 min-h-[300px] md:min-h-[400px]",
+                                hasSeenRecap
+                                    ? "flex items-start justify-start p-4 md:p-6"
+                                    : "flex items-center justify-center p-4 md:p-8"
+                            )}
+                        >
+                            <PointsRecapCard user={user} onSeenStateChange={setHasSeenRecap} />
                         </CardContent>
                     </Card>
 

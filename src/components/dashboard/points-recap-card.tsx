@@ -7,14 +7,9 @@ import { Linkedin, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { isResidentPositionType } from "@/lib/cca-ranking-metrics";
 import { CCAData } from "@/types/dashboard";
 import { User } from "@/types/User";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 type RecapSlide = {
     id: string;
@@ -70,7 +65,21 @@ function truncateList(values: string[], maxVisible = 3) {
     return [...visible, `${remaining} more`];
 }
 
-export function PointsRecapCard({ user }: { user: User }) {
+function isBlockCcaName(value?: string | null) {
+    return String(value || "").trim().toLowerCase().startsWith("block");
+}
+
+function isResidentBlockPosition(positionType?: string | null, role?: string | null) {
+    return isResidentPositionType(positionType) || String(role || "").trim().toLowerCase() === "resident";
+}
+
+export function PointsRecapCard({
+    user,
+    onSeenStateChange,
+}: {
+    user: User;
+    onSeenStateChange?: (hasSeenRecap: boolean) => void;
+}) {
     const [open, setOpen] = useState(false);
     const [direction, setDirection] = useState(1);
     const [currentSlide, setCurrentSlide] = useState(0);
@@ -89,6 +98,10 @@ export function PointsRecapCard({ user }: { user: User }) {
             setHasSeenRecap(true);
         }
     }, []);
+
+    useEffect(() => {
+        onSeenStateChange?.(hasSeenRecap);
+    }, [hasSeenRecap, onSeenStateChange]);
 
     useEffect(() => {
         let isActive = true;
@@ -154,9 +167,10 @@ export function PointsRecapCard({ user }: { user: User }) {
     const recap = useMemo(() => {
         const totalPoints = user.points || 0;
         const totalCcas = ccas.length;
-        const topContributor = undefined;
-        const topContributorId = undefined as string | undefined;
-        const topContributorPoints = 0;
+        const blockResidentAppointments = (user.appointments || []).filter((appointment) =>
+            isBlockCcaName(appointment.cca_name) &&
+            isResidentBlockPosition(appointment.position_type, appointment.position_name)
+        );
         const ccasBeforeTopContributor = ccas;
         const committeeCcas = ccas.filter((cca) => {
             if (cca.cca_type !== "committee") return false;
@@ -167,13 +181,6 @@ export function PointsRecapCard({ user }: { user: User }) {
         const sportsCcas = ccas.filter((cca) => cca.cca_type === "sports");
         const supplementaryCcas = ccas.filter((cca) => cca.cca_type === "supplementary");
         const adhocCcas = ccas.filter((cca) => cca.cca_type === "adhoc");
-        const blockResidentCcas = ccas.filter((cca) => {
-            const ccaName = String(cca.name || "").trim().toLowerCase();
-            const positionType = String(cca.position_type || "").trim().toLowerCase();
-            const role = String(cca.role || "").trim().toLowerCase();
-
-            return ccaName.startsWith("block") && (positionType === "resident" || role === "resident");
-        });
         const leadershipCcas = committeeCcas.filter(isLeadershipRole);
         const committeePoints = ccasBeforeTopContributor
             .filter((cca) => {
@@ -194,22 +201,14 @@ export function PointsRecapCard({ user }: { user: User }) {
         const adhocPoints = ccasBeforeTopContributor
             .filter((cca) => cca.cca_type === "adhoc")
             .reduce((sum, cca) => sum + (cca.points || 0), 0);
-        const blockPoints = ccasBeforeTopContributor
-            .filter((cca) => {
-                const ccaName = String(cca.name || "").trim().toLowerCase();
-                const positionType = String(cca.position_type || "").trim().toLowerCase();
-                const role = String(cca.role || "").trim().toLowerCase();
-
-                return ccaName.startsWith("block") && (positionType === "resident" || role === "resident");
-            })
-            .reduce((sum, cca) => sum + (cca.points || 0), 0);
+        const blockPoints = blockResidentAppointments
+            .reduce((sum, appointment) => sum + (appointment.points || 0), 0);
         const cumulativeAfterCulture = culturePoints;
         const cumulativeAfterSports = culturePoints + sportsPoints;
         const cumulativeAfterCommittees = culturePoints + sportsPoints + committeePoints;
         const cumulativeAfterBlock = cumulativeAfterCommittees + blockPoints;
         const cumulativeAfterSupplementary = cumulativeAfterBlock + supplementaryPoints;
         const cumulativeAfterAdhoc = cumulativeAfterSupplementary + adhocPoints;
-        const cumulativeAfterTopContributor = cumulativeAfterAdhoc + topContributorPoints;
         const sportsIhgTeamCount = sportsCcas.filter((cca) =>
             ihgTeamStatuses.has(String(cca.cut_status || "").trim().toLowerCase())
         ).length;
@@ -224,7 +223,7 @@ export function PointsRecapCard({ user }: { user: User }) {
             adhocCcas.map((cca) => cca.name)
         );
         const blockResidentNames = truncateList(
-            blockResidentCcas.map((cca) => cca.name)
+            blockResidentAppointments.map((appointment) => appointment.cca_name)
         );
         const leadershipDescriptions = truncateList(
             leadershipCcas.map((cca) => `${cca.role} in ${cca.name}`),
@@ -314,7 +313,7 @@ export function PointsRecapCard({ user }: { user: User }) {
                 eyebrow: "Block",
                 title: "Are you active in your block?",
                 description:
-                    blockResidentCcas.length > 0
+                    blockResidentAppointments.length > 0
                         ? "Block points also contributed to your total."
                         : "No block points showed up here.",
                 statLabel: "Points so far",
@@ -394,7 +393,7 @@ export function PointsRecapCard({ user }: { user: User }) {
                 blockPoints,
             },
         };
-    }, [ccas, user.points]);
+    }, [ccas, user.appointments, user.points]);
 
     useEffect(() => {
         if (!open) return;
@@ -521,6 +520,17 @@ export function PointsRecapCard({ user }: { user: User }) {
         audio.currentTime = 0;
     };
 
+    const closeRecap = () => {
+        setOpen(false);
+        stopRecapAudio();
+        setCurrentSlide(0);
+        setDirection(1);
+        setDisplayCount(0);
+        displayCountRef.current = 0;
+        setHasSeenRecap(true);
+        localStorage.setItem("hasSeenPointsRecap", "true");
+    };
+
     const [imgGenerating, setImgGenerating] = useState(false);
     const createRecapImageBlob = async () => {
         const width = 1080;
@@ -603,7 +613,13 @@ export function PointsRecapCard({ user }: { user: User }) {
                     return posType !== "member" && posType !== "resident";
                 }).map(c => ({ name: formatName(c), points: c.points || 0 })), total: (recap.totals.committeePoints || 0)
             },
-            { label: "Block", items: (ccas || []).filter(c => String(c.name || "").toLowerCase().startsWith("block")).map(c => ({ name: formatName(c), points: c.points || 0 })), total: (recap.totals.blockPoints || 0) },
+            {
+                label: "Block",
+                items: (user.appointments || [])
+                    .filter((appointment) => isBlockCcaName(appointment.cca_name) && isResidentBlockPosition(appointment.position_type, appointment.position_name))
+                    .map((appointment) => ({ name: appointment.cca_name, points: appointment.points || 0 })),
+                total: (recap.totals.blockPoints || 0)
+            },
             { label: "Supplementary", items: (ccas || []).filter(c => c.cca_type === "supplementary").map(c => ({ name: formatName(c), points: c.points || 0 })), total: (recap.totals.supplementaryPoints || 0) },
             { label: "Adhoc", items: (ccas || []).filter(c => c.cca_type === "adhoc").map(c => ({ name: formatName(c), points: c.points || 0 })), total: (recap.totals.adhocPoints || 0) },
         ].filter(cat => cat.items.length > 0 || cat.total > 0);
@@ -628,7 +644,7 @@ export function PointsRecapCard({ user }: { user: User }) {
         const col2X = useTwoCols ? col1X + col1Width + 50 : col1X;
 
         let currentX = col1X;
-        let currentWidth = col1Width;
+        const currentWidth = col1Width;
         let y = 400;
         const maxY = 1000;
 
@@ -767,7 +783,7 @@ export function PointsRecapCard({ user }: { user: User }) {
 
     return (
         <>
-            <div className="relative flex w-full flex-col justify-between overflow-hidden rounded-[32px] border border-orange-400/50 bg-gradient-to-br from-[#ff6a00] via-[#ff9500] to-[#ffb700] p-6 text-white py-12 md:py-16 md:p-8 shadow-lg shadow-orange-500/20">
+            <div className="relative flex min-h-[22rem] w-full flex-col justify-between overflow-hidden rounded-[32px] border border-orange-400/50 bg-gradient-to-br from-[#ff6a00] via-[#ff9500] to-[#ffb700] p-6 py-12 text-white shadow-lg shadow-orange-500/20 md:p-8 md:py-16">
                 <motion.div
                     className="absolute -right-16 -top-16 h-52 w-52 rounded-full bg-white/30 blur-3xl"
                     animate={{ scale: [1, 1.12, 1], opacity: [0.4, 0.7, 0.4] }}
@@ -785,97 +801,87 @@ export function PointsRecapCard({ user }: { user: User }) {
                             <div className="h-12 w-3/4 rounded-lg bg-white/20" />
                             <div className="h-6 w-1/2 rounded-lg bg-white/20" />
                         </div>
-                    ) : hasSeenRecap ? (
-                        <div className="flex h-full flex-col justify-between">
-                            <div className="space-y-5">
-                                <div className="flex items-center gap-2">
-                                    <Sparkles className="h-5 w-5 text-white/90" />
-                                    <span className="text-xs uppercase tracking-[0.3em] font-semibold text-white/90">
-                                        Final Score
-                                    </span>
-                                </div>
-                                <div className="max-w-xl space-y-3">
-                                    <h3 className="text-4xl font-black leading-tight text-white md:text-5xl">
-                                        Your Final Hall Points
-                                    </h3>
-                                    <p className="max-w-lg text-base font-medium leading-7 text-white/90">
-                                        No more surprises. This is where your hall points stand at.
-                                    </p>
-                                </div>
-                                <motion.div
-                                    className="pt-2"
-                                    initial={{ y: 8, opacity: 0.85 }}
-                                    animate={{ y: 0, opacity: 1 }}
-                                >
-                                    <h3 className="text-7xl font-black leading-tight text-white md:text-8xl">
-                                        {user.points || 0}
-                                    </h3>
-                                </motion.div>
-                            </div>
-
-                            <div className="relative z-10 flex flex-col xl:flex-row gap-3 pt-6">
-                                <Button
-                                    asChild
-                                    size="lg"
-                                    className="w-fit rounded-full bg-white px-6 font-semibold text-orange-600 hover:bg-orange-50 hover:text-orange-700 shadow-sm"
-                                >
-                                    <Link href="/dashboard/mycca">View breakdown</Link>
-                                </Button>
-                                <Button
-                                    type="button"
-                                    size="lg"
-                                    onClick={downloadRecapImage}
-                                    disabled={imgGenerating}
-                                    className="w-fit rounded-full bg-white/20 px-6 font-semibold text-white hover:bg-white/30 backdrop-blur-sm shadow-sm border border-white/20"
-                                >
-                                    Share your certificate!
-                                </Button>
-                                <Button
-                                    type="button"
-                                    size="lg"
-                                    variant="ghost"
-                                    onClick={() => {
-                                        setCurrentSlide(0);
-                                        setDirection(1);
-                                        playRecapAudio();
-                                        setOpen(true);
-                                    }}
-                                    className="w-fit rounded-full text-white hover:bg-white/20 hover:text-white"
-                                >
-                                    <Sparkles className="h-4 w-4 mr-2" />
-                                    Replay recap
-                                </Button>
-                            </div>
-                        </div>
                     ) : (
                         <>
                             <div className="space-y-5">
                                 <div className="max-w-xl space-y-3">
                                     <h3 className="text-4xl font-bold leading-tight text-white md:text-5xl">
-                                        Your points are ready!
+                                        {hasSeenRecap ? "Final Hall Points" : "Your points are ready!"}
                                     </h3>
                                     <p className="max-w-lg text-base font-medium leading-7 text-white/90">
-                                        View your points recap?
+                                        {!hasSeenRecap
+                                            ? "View your points recap?"
+                                            : recap.totals.totalCcas > 0 ? `${formatCount(recap.totals.totalCcas, "CCA")} joined.`
+                                                : "No CCAs joined"}
                                     </p>
                                 </div>
+                                {hasSeenRecap ? (
+                                    <motion.div
+                                        className="pt-2"
+                                        initial={{ y: 8, opacity: 0.85 }}
+                                        animate={{ y: 0, opacity: 1 }}
+                                    >
+                                        <h3 className="text-7xl font-black leading-tight text-white md:text-8xl">
+                                            {user.points || 0}
+                                        </h3>
+                                    </motion.div>
+                                ) : null}
                             </div>
 
                             <div className="relative z-10 flex flex-col gap-3">
-                                <Button
-                                    type="button"
-                                    size="lg"
-                                    onClick={() => {
-                                        setCurrentSlide(0);
-                                        setDirection(1);
-                                        playRecapAudio();
-                                        setOpen(true);
-                                    }}
-                                    disabled={loadingCcas}
-                                    className="w-fit rounded-full bg-white px-6 font-semibold text-orange-600 hover:bg-orange-50 hover:text-orange-700 shadow-sm"
-                                >
-                                    <Sparkles className="h-4 w-4 mr-1" />
-                                    {loadingCcas ? "Loading..." : "View points recap"}
-                                </Button>
+                                {hasSeenRecap ? (
+                                    <>
+                                        <Button
+                                            asChild
+                                            size="lg"
+                                            className="w-fit rounded-full bg-white px-6 font-semibold text-orange-600 hover:bg-orange-50 hover:text-orange-700 shadow-sm"
+                                        >
+                                            <Link href="/dashboard/mycca">View breakdown</Link>
+                                        </Button>
+                                        <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap">
+                                            <Button
+                                                type="button"
+                                                size="lg"
+                                                onClick={downloadRecapImage}
+                                                disabled={imgGenerating}
+                                                className="w-fit rounded-full border border-white/20 bg-white/20 px-6 font-semibold text-white shadow-sm backdrop-blur-sm hover:bg-white/30"
+                                            >
+                                                Share your certificate!
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                size="lg"
+                                                variant="ghost"
+                                                onClick={() => {
+                                                    setCurrentSlide(0);
+                                                    setDirection(1);
+                                                    playRecapAudio();
+                                                    setOpen(true);
+                                                }}
+                                                className="w-fit rounded-full text-white hover:bg-white/20 hover:text-white"
+                                            >
+                                                <Sparkles className="h-4 w-4 mr-2" />
+                                                Replay recap
+                                            </Button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <Button
+                                        type="button"
+                                        size="lg"
+                                        onClick={() => {
+                                            setCurrentSlide(0);
+                                            setDirection(1);
+                                            playRecapAudio();
+                                            setOpen(true);
+                                        }}
+                                        disabled={loadingCcas}
+                                        className="w-fit rounded-full bg-white px-6 font-semibold text-orange-600 hover:bg-orange-50 hover:text-orange-700 shadow-sm"
+                                    >
+                                        <Sparkles className="h-4 w-4 mr-1" />
+                                        {loadingCcas ? "Loading..." : "View points recap"}
+                                    </Button>
+                                )}
                             </div>
                         </>
                     )}
@@ -885,16 +891,11 @@ export function PointsRecapCard({ user }: { user: User }) {
             <Dialog
                 open={open}
                 onOpenChange={(nextOpen) => {
-                    setOpen(nextOpen);
                     if (!nextOpen) {
-                        stopRecapAudio();
-                        setCurrentSlide(0);
-                        setDirection(1);
-                        setDisplayCount(0);
-                        displayCountRef.current = 0;
-                        setHasSeenRecap(true);
-                        localStorage.setItem("hasSeenPointsRecap", "true");
+                        closeRecap();
+                        return;
                     }
+                    setOpen(true);
                 }}
             >
                 <DialogContent className="w-[calc(100vw-1rem)] max-h-[92dvh] overflow-hidden border-none bg-transparent p-0 text-white shadow-none sm:w-full sm:max-w-3xl [&>button]:hidden">
@@ -957,7 +958,7 @@ export function PointsRecapCard({ user }: { user: User }) {
                                                 </div>
                                                 <button
                                                     type="button"
-                                                    onClick={() => setOpen(false)}
+                                                    onClick={closeRecap}
                                                     className="rounded-full bg-white/12 p-2.5 text-white transition hover:bg-white/20"
                                                     aria-label="Close recap"
                                                 >
@@ -1072,7 +1073,7 @@ export function PointsRecapCard({ user }: { user: User }) {
                                                         type="button"
                                                         onClick={() => {
                                                             if (currentSlide === recap.slides.length - 1) {
-                                                                setOpen(false);
+                                                                closeRecap();
                                                                 return;
                                                             }
                                                             paginate(1);

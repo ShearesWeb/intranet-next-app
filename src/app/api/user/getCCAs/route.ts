@@ -23,6 +23,8 @@ type ManagedCcaSummary = {
 export async function GET(request: Request) {
         try {
                 const supabase = await createClient();
+                const { searchParams } = new URL(request.url);
+                const includeAllAppointments = searchParams.get("includeAllAppointments") === "true";
 
                 // Get user with hydrated appointments (from cached cookie where possible)
                 const user = await fetchUserInfo();
@@ -78,6 +80,9 @@ export async function GET(request: Request) {
                 const appointmentsByCca = new Map(
                         appointments.map((appointment) => [appointment.cca_id, appointment])
                 );
+                const appointmentsToTransform = includeAllAppointments
+                        ? appointments
+                        : Array.from(appointmentsByCca.values());
                 const appointmentPositionIds = appointments
                         .map((appointment) => appointment.position_id)
                         .filter((positionId): positionId is number => typeof positionId === "number");
@@ -101,7 +106,7 @@ export async function GET(request: Request) {
                         }
                 }
 
-                const transformedData = Array.from(appointmentsByCca.values()).map((appointment) => {
+                const transformedData = appointmentsToTransform.map((appointment) => {
                         const cca = ccaMap.get(appointment.cca_id);
 
                         return {

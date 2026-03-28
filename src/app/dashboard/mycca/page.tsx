@@ -78,7 +78,7 @@ export default function MyCCAs() {
 
     setLoadingCCAs(true);
     setError(null);
-    fetch('/api/user/getCCAs')
+    fetch('/api/user/getCCAs?includeAllAppointments=true')
       .then(async (res) => {
         if (!res.ok) {
           const errorData = await res.json();
