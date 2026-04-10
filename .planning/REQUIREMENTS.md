@@ -1,4 +1,4 @@
-# Requirements: Intranet Next App — Refactor & Overhaul
+# Requirements: Intranet Next App -- Refactor & Overhaul
 
 **Defined:** 2026-04-11
 **Core Value:** Users can securely authenticate and manage CCA operations without session bleed or data leaking between accounts.
@@ -9,19 +9,19 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Authentication & Security
 
-- [ ] **AUTH-01**: Fix SSR session bleed — re-enable `setAll()` in middleware with proper cookie forwarding
+- [ ] **AUTH-01**: Fix SSR session bleed -- re-enable `setAll()` in middleware with proper cookie forwarding
 - [ ] **AUTH-02**: Upgrade `@supabase/ssr` to ^0.10.2 and `@supabase/supabase-js` to ^2.102.1
-- [ ] **AUTH-03**: Consolidate auth into two patterns — middleware (route protection + token refresh) and AuthContext (client state)
-- [ ] **AUTH-04**: Remove `withAuth` HOC — replace all usages with middleware + AuthContext pattern
+- [ ] **AUTH-03**: Consolidate auth into two patterns -- middleware (route protection + token refresh) and AuthContext (client state)
+- [ ] **AUTH-04**: Remove `withAuth` HOC -- replace all usages with middleware + AuthContext pattern
 - [ ] **AUTH-05**: Set up Vitest with at least auth flow tests as safety net
 
 ### Infrastructure Cleanup
 
-- [ ] **INFR-01**: Standardize on sonner — migrate 7 files from react-hot-toast, remove package
+- [ ] **INFR-01**: Standardize on sonner -- migrate 7 files from react-hot-toast, remove package
 - [ ] **INFR-02**: Remove unused dependencies (aphrodite, fs shim, logger)
-- [ ] **INFR-03**: Fix self-calling API route — extract shared logic from getCCAs/getManagedCCAs into lib function
-- [ ] **INFR-04**: Enable ESLint during builds — remove `ignoreDuringBuilds`, fix all lint errors
-- [ ] **INFR-05**: Eliminate all `any` types — replace 35+ eslint-disable directives with proper interfaces
+- [ ] **INFR-03**: Fix self-calling API route -- extract shared logic from getCCAs/getManagedCCAs into lib function
+- [ ] **INFR-04**: Enable ESLint during builds -- remove `ignoreDuringBuilds`, fix all lint errors
+- [ ] **INFR-05**: Eliminate all `any` types -- replace 35+ eslint-disable directives with proper interfaces
 
 ### CCA Management Refactor
 
@@ -42,7 +42,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Holiday Subsidy Refactor
 
-- [ ] **HSUB-01**: Refactor holiday subsidy pages — consistent patterns matching CCA module structure
+- [ ] **HSUB-01**: Refactor holiday subsidy pages -- consistent patterns matching CCA module structure
 - [ ] **HSUB-02**: Move hardcoded `HOLIDAY_WEEKS` to configurable data source
 
 ### UI Consistency
@@ -84,35 +84,35 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | — | Pending |
-| AUTH-02 | — | Pending |
-| AUTH-03 | — | Pending |
-| AUTH-04 | — | Pending |
-| AUTH-05 | — | Pending |
-| INFR-01 | — | Pending |
-| INFR-02 | — | Pending |
-| INFR-03 | — | Pending |
-| INFR-04 | — | Pending |
-| INFR-05 | — | Pending |
-| CCA-01 | — | Pending |
-| CCA-02 | — | Pending |
-| CCA-03 | — | Pending |
-| RANK-01 | — | Pending |
-| RANK-02 | — | Pending |
-| RANK-03 | — | Pending |
-| ALLOC-01 | — | Pending |
-| ALLOC-02 | — | Pending |
-| HSUB-01 | — | Pending |
-| HSUB-02 | — | Pending |
-| UI-01 | — | Pending |
-| UI-02 | — | Pending |
-| UI-03 | — | Pending |
+| AUTH-01 | Phase 1 | Pending |
+| AUTH-02 | Phase 1 | Pending |
+| AUTH-03 | Phase 1 | Pending |
+| AUTH-04 | Phase 1 | Pending |
+| AUTH-05 | Phase 1 | Pending |
+| INFR-01 | Phase 2 | Pending |
+| INFR-02 | Phase 2 | Pending |
+| INFR-03 | Phase 2 | Pending |
+| INFR-04 | Phase 2 | Pending |
+| INFR-05 | Phase 2 | Pending |
+| CCA-01 | Phase 3 | Pending |
+| CCA-02 | Phase 3 | Pending |
+| CCA-03 | Phase 3 | Pending |
+| RANK-01 | Phase 4 | Pending |
+| RANK-02 | Phase 4 | Pending |
+| RANK-03 | Phase 4 | Pending |
+| ALLOC-01 | Phase 5 | Pending |
+| ALLOC-02 | Phase 5 | Pending |
+| HSUB-01 | Phase 5 | Pending |
+| HSUB-02 | Phase 5 | Pending |
+| UI-01 | Phase 6 | Pending |
+| UI-02 | Phase 6 | Pending |
+| UI-03 | Phase 6 | Pending |
 
 **Coverage:**
 - v1 requirements: 23 total
-- Mapped to phases: 0
-- Unmapped: 23 ⚠️
+- Mapped to phases: 23
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-11*
-*Last updated: 2026-04-11 after initial definition*
+*Last updated: 2026-04-10 after roadmap creation*
