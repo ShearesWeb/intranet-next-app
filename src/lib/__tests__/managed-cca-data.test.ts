@@ -39,7 +39,7 @@ function createSupabaseMock({
 }: {
 	managedRows?: ManagedRowFixture[];
 	ccaRows?: CcaMetaFixture[];
-}) {
+} = {}) {
 	const managedSelect = vi.fn().mockResolvedValue({ data: managedRows, error: null });
 	const ccaIn = vi.fn().mockResolvedValue({ data: ccaRows, error: null });
 	const ccaSelect = vi.fn().mockReturnValue({ in: ccaIn });
