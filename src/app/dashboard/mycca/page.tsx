@@ -1,14 +1,13 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { useAuth } from "@/context/AuthContext";
-import { toast } from "sonner";
+import React from "react";
 import { AppLayout } from "@/components/layout/app-layout";
 import { Button } from "@/components/ui/button";
 import { SimpleTable, SimpleTableColumn } from "@/components/table/simple-table";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Card, CardContent } from "@/components/ui/card";
-import { CCAData } from "@/features/cca/types/cca-data";
+import { useCcaList } from "@/features/cca/hooks/use-cca-list";
+import type { CCAData } from "@/features/cca/types/cca-data";
 import { PositionTypeBadge } from "@/components/badges/position-type-badge";
 import { CcaTypeBadge } from "@/components/badges/cca-type-badge";
 
@@ -56,46 +55,7 @@ const ccaTableColumns: SimpleTableColumn<CCAData>[] = [
 ];
 
 export default function MyCCAs() {
-	const { user } = useAuth();
-	const [ccas, setCCAs] = useState<CCAData[]>([]);
-	const [loadingCCAs, setLoadingCCAs] = useState(true);
-	const [error, setError] = useState<string | null>(null);
-
-	useEffect(() => {
-		if (!user) {
-			setCCAs([]);
-			setLoadingCCAs(false);
-			return;
-		}
-
-		if (!user.appointments?.length) {
-			setCCAs([]);
-			setLoadingCCAs(false);
-			return;
-		}
-
-		setLoadingCCAs(true);
-		setError(null);
-		fetch("/api/user/getCCAs?includeAllAppointments=true")
-			.then(async (res) => {
-				if (!res.ok) {
-					const errorData = await res.json();
-					throw new Error(errorData.error || "Failed to fetch user CCA data");
-				}
-				return res.json();
-			})
-			.then((data) => {
-				setCCAs(data.data);
-			})
-			.catch((error) => {
-				console.error("Error fetching CCAs:", error.message);
-				toast.error(error.message);
-				setError("Failed to load CCAs");
-			})
-			.finally(() => {
-				setLoadingCCAs(false);
-			});
-	}, [user]);
+	const { data: ccas, loading: loadingCCAs, error } = useCcaList();
 
 	if (loadingCCAs) {
 		return (
