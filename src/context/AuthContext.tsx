@@ -83,7 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                                         setSession(null);
                                 }
                                 toast.error("Please login with your Intranet gmail instead.");
-				router.push("/auth/auth-error?reason=user_not_found");
+				router.push("/auth/login?reason=user_not_found");
 				return;
 			}
 			if (isMounted) {

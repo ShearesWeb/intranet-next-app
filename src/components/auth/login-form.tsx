@@ -18,11 +18,15 @@ export function LoginForm() {
 
     useEffect(() => {
         if (!reason) return;
-        const message =
-            reason === "user_not_found"
-                ? "Your account isn't registered in the intranet. Please use your correct email or contact an admin."
-                : "There was an error signing you in. Please try again.";
-        toast.error(message);
+        const messages: Record<string, string> = {
+            user_not_found:
+                "Your account isn't registered in the intranet. Please use your correct email or contact an admin.",
+            session_expired: "Your session has expired. Please sign in again.",
+            no_code: "We couldn't detect a valid login code. Please try signing in again.",
+            code_exchange_failed:
+                "Something went wrong while verifying your sign-in. Please try again.",
+        };
+        toast.error(messages[reason] ?? "An unexpected error occurred. Please try again.");
     }, [reason]);
 
     const handleSignIn = async () => {

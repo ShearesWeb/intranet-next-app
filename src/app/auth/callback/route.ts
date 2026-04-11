@@ -9,13 +9,13 @@ export async function GET(request: Request) {
     const code = searchParams.get("code");
     const next = searchParams.get("next") ?? "/";
 
-    if (!code) return NextResponse.redirect(`${origin}/auth/auth-error?reason=no_code`);
+    if (!code) return NextResponse.redirect(`${origin}/auth/login?reason=no_code`);
 
     const supabase = await createClient({ allowCookieWrite: true });
 
     // Exchange the auth code for a session
     const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (error) return NextResponse.redirect(`${origin}/auth/auth-error?reason=code_exchange_failed`);
+    if (error) return NextResponse.redirect(`${origin}/auth/login?reason=code_exchange_failed`);
 
     try {
         const userItem = await fetchUserInfo();
