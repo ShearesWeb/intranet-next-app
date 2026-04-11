@@ -5,6 +5,7 @@ import { createClient } from "@/utils/supabase/server";
 import { isCoreServiceEnabled } from "@/lib/feature-flags";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { isChairPositionType } from "@/lib/cca-chair-access";
+import { getManagedCcaData } from "@/lib/managed-cca-data";
 import { CcaType } from "@/types/User";
 
 type CCAMeta = {
@@ -13,11 +14,6 @@ type CCAMeta = {
         cca_type: CcaType;
         description: string;
         image_url: string | null;
-};
-
-type ManagedCcaSummary = {
-        cca_id: number;
-        can_rank_members?: boolean;
 };
 
 export async function GET(request: Request) {
@@ -58,21 +54,14 @@ export async function GET(request: Request) {
                 const rankableCcaIds = new Set<number>();
 
                 try {
-                        const fetchUrl = new URL('/api/user/getManagedCCAs', request.url);
-                        const apiRes = await fetch(fetchUrl, {
-                                headers: { cookie: request.headers.get("cookie") || "" },
+                        const managedCcas = await getManagedCcaData(supabase, user);
+                        managedCcas.forEach((managedCca) => {
+                                if (isCoreServiceEnabled("memberRanking", {
+                                        isJcrc: user.is_jcrc && Boolean(managedCca.can_rank_members),
+                                })) {
+                                        rankableCcaIds.add(managedCca.cca_id);
+                                }
                         });
-                        if (apiRes.ok) {
-                                const apiData = await apiRes.json();
-                                const managedCcas = (apiData.data || []) as ManagedCcaSummary[];
-                                managedCcas.forEach((managedCca) => {
-                                        if (isCoreServiceEnabled("memberRanking", {
-                                                isJcrc: user.is_jcrc && Boolean(managedCca.can_rank_members),
-                                        })) {
-                                                rankableCcaIds.add(managedCca.cca_id);
-                                        }
-                                });
-                        }
                 } catch (managedCcaError) {
                         console.error("Error fetching managed CCA positions:", managedCcaError);
                 }

@@ -2,11 +2,8 @@ import { NextResponse } from "next/server";
 
 import { getCoreServiceDisabledApiResponse, isCoreServiceEnabled } from "@/lib/feature-flags";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
-
-type ManagedPositionRow = {
-    cca_id: number;
-    can_rank_members?: boolean;
-};
+import { getManagedCcaData } from "@/lib/managed-cca-data";
+import { createClient } from "@/utils/supabase/server";
 
 export async function GET(request: Request) {
     const user = await fetchUserInfo();
@@ -16,19 +13,8 @@ export async function GET(request: Request) {
     }
 
     try {
-        const fetchUrl = new URL('/api/user/getManagedCCAs', request.url);
-        const apiRes = await fetch(fetchUrl, {
-            headers: {
-                cookie: request.headers.get("cookie") || "",
-            },
-        });
-
-        if (!apiRes.ok) {
-            return NextResponse.json({ error: "Failed to load managed CCA positions" }, { status: apiRes.status });
-        }
-
-        const apiData = await apiRes.json();
-        const rows = (apiData.data || []) as ManagedPositionRow[];
+        const supabase = await createClient();
+        const rows = await getManagedCcaData(supabase, user);
         const disabledResponse = getCoreServiceDisabledApiResponse("memberRanking", {
             isJcrc: user.is_jcrc,
         });
