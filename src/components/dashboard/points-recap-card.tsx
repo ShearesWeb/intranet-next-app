@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { isResidentPositionType } from "@/lib/cca-ranking-metrics";
-import { CCAData } from "@/types/dashboard";
+import { CCAData } from "@/features/cca/types/cca-data";
 import { User } from "@/types/User";
 
 type RecapSlide = {

@@ -9,7 +9,7 @@ import {
 import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { getManagedCcaAccess } from "@/lib/cca-management-access";
 import { normalizeCutStatusForCca } from "@/lib/cca-cut-status";
-import { MemberJoinPosition, MemberWithJoins } from "@/types/cca-members";
+import { MemberJoinPosition, MemberWithJoins } from "@/features/cca/types/members";
 
 interface TransformedMember {
 	user_id: number;

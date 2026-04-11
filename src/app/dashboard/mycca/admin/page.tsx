@@ -9,7 +9,7 @@ import { SimpleTable, SimpleTableColumn } from "@/components/table/simple-table"
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
-import { CCAData } from "@/types/dashboard";
+import { CCAData } from "@/features/cca/types/cca-data";
 import { Users, BarChart3, ArrowLeft } from "lucide-react";
 import { PositionTypeBadge } from "@/components/badges/position-type-badge";
 import { CcaTypeBadge } from "@/components/badges/cca-type-badge";

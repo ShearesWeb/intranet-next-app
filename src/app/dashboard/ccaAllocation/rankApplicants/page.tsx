@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowUp, ArrowDown, X, Search, Loader2 } from "lucide-react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { Applicant, Position, UserSearchResult } from "@/types/dashboard";
+import { UserSearchResult } from "@/features/cca/types/members";
+import { Applicant, Position } from "@/types/dashboard";
 
 // Position Search Box Component
 function PositionSearchBox({

@@ -1,26 +1,4 @@
-import { CcaType, PositionType } from "./User";
-
-export interface ManagedCcaPosition {
-	position_id: number;
-	position_name: string;
-	position_type: PositionType;
-	description: string | null;
-	access_depth: number;
-}
-
-export interface CCAData {
-	id: number;
-	name: string;
-	role: string;
-	position_type: PositionType;
-	cca_type: CcaType;
-	description: string;
-	points: number;
-	cut_status?: CutStatus | null;
-	positions?: ManagedCcaPosition[];
-	can_manage_members?: boolean;
-	can_rank_members?: boolean;
-}
+import { PositionType } from "./User";
 
 export interface RankablePosition {
 	id: number;
@@ -71,43 +49,4 @@ export interface Position {
 	applied_count: number;
 	position_type: PositionType;
 	applicants: Applicant[];
-}
-
-export interface UserSearchResult {
-	id: number;
-	name: string;
-	email: string;
-	room?: string | null;
-}
-
-export type CutStatus = "ivp-ihg-team" | "ihg-team" | "final-cut" | "first-cut";
-export type CommitmentPeriod = "semester-1" | "semester-2" | "full-year";
-
-export interface Member {
-	user_id: number;
-	name: string;
-	email: string;
-	room: string;
-	position_id?: number;
-	position_name: string;
-	position_type: PositionType;
-	points: number;
-	appointed_date: string;
-	cut?: boolean;
-	cut_status?: CutStatus | null;
-	commitment_period?: CommitmentPeriod | null;
-}
-
-export type PendingChangeType = "add" | "remove" | "cut" | "update_status" | "update_commitment";
-
-export interface PendingChange {
-	type: PendingChangeType;
-	user_id: number;
-	user_name: string;
-	user_email: string;
-	user_room?: string;
-	new_status?: CutStatus | null;
-	new_commitment_period?: CommitmentPeriod;
-	position_id?: number;
-	position_name?: string;
 }

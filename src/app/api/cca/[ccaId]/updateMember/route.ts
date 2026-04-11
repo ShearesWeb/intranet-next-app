@@ -8,7 +8,7 @@ import { createClient } from "@/utils/supabase/server";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { getManagedCcaAccess } from "@/lib/cca-management-access";
 import { normalizeCutStatusForCca } from "@/lib/cca-cut-status";
-import { MemberUpdate } from "@/types/cca-members";
+import { MemberUpdate } from "@/features/cca/types/members";
 
 const CUT_STATUSES_BY_CCA_TYPE = {
 	sports: new Set(["ivp-ihg-team", "ihg-team", "final-cut"]),

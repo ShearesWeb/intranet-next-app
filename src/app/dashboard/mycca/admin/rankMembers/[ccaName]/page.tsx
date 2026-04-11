@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { Save, Loader2, ArrowLeft, AlertCircle } from "lucide-react";
-import { CutStatus, CommitmentPeriod } from "@/types/dashboard";
+import { CutStatus, CommitmentPeriod } from "@/features/cca/types/members";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { PositionTypeBadge } from "@/components/badges/position-type-badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";

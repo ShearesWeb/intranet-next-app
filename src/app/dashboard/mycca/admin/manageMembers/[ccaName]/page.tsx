@@ -11,8 +11,8 @@ import {
 	UserSearchResult,
 	CutStatus,
 	CommitmentPeriod,
-} from "@/types/dashboard";
-import { CcaSummary, GroupedMembers, MemberPermissions } from "@/types/cca-members";
+} from "@/features/cca/types/members";
+import { CcaSummary, GroupedMembers, MemberPermissions } from "@/features/cca/types/members";
 
 // shadcn UI
 import { Button } from "@/components/ui/button";

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { SimpleTable, SimpleTableColumn } from "@/components/table/simple-table";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Card, CardContent } from "@/components/ui/card";
-import { CCAData } from "@/types/dashboard";
+import { CCAData } from "@/features/cca/types/cca-data";
 import { PositionTypeBadge } from "@/components/badges/position-type-badge";
 import { CcaTypeBadge } from "@/components/badges/cca-type-badge";
 
