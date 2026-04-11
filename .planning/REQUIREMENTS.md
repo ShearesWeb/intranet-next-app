@@ -27,7 +27,7 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 - [ ] **CCA-01**: Decompose ManageMembers page (1111 lines) into hooks, sub-components, and utilities
 - [ ] **CCA-02**: Extract CCA data fetching into reusable custom hooks
-- [ ] **CCA-03**: Establish feature module pattern (`src/features/cca/`) for reuse in subsequent refactors
+- [x] **CCA-03**: Establish feature module pattern (`src/features/cca/`) for reuse in subsequent refactors
 
 ### Member Ranking Refactor
 
@@ -96,7 +96,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INFR-05 | Phase 2 | Pending |
 | CCA-01 | Phase 3 | Pending |
 | CCA-02 | Phase 3 | Pending |
-| CCA-03 | Phase 3 | Pending |
+| CCA-03 | Phase 3 | Complete |
 | RANK-01 | Phase 4 | Pending |
 | RANK-02 | Phase 4 | Pending |
 | RANK-03 | Phase 4 | Pending |

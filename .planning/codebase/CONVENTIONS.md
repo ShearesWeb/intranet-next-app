@@ -10,6 +10,7 @@
 - API routes: `route.ts`
 - UI primitives: `kebab-case.tsx` (e.g., `loading-spinner.tsx`, `dropdown-menu.tsx`)
 - Custom components: `kebab-case.tsx` (e.g., `cca-type-badge.tsx`, `points-recap-card.tsx`)
+- Feature-module files: `kebab-case.ts` / `kebab-case.tsx` under `src/features/{domain}/...`
 - Hooks: `camelCase.ts` prefixed with `use` (e.g., `useRoleAuth.ts`, `use-mobile.ts` -- mixed conventions exist)
 - Types: `PascalCase.ts` (e.g., `User.ts`, `CCAPosition.ts`) or `kebab-case.ts` (e.g., `holiday-subsidy.ts`, `dashboard.ts`)
 - Lib modules: `kebab-case.ts` (e.g., `cca-chair-access.ts`, `feature-flags.ts`, `fetch-user-info.ts`)
@@ -30,7 +31,7 @@
 **Types:**
 - Interfaces: `PascalCase` (e.g., `AuthenticatedUser`, `CCAData`, `SimpleTableColumn`)
 - Type aliases: `PascalCase` (e.g., `PositionType`, `CcaType`, `CoreServiceKey`)
-- Generic result types: discriminated union pattern `{ ok: true; data: T } | { ok: false; status: number; error: string }` used in `src/lib/cca-chair-access.ts` and `src/lib/cca-management-access.ts`
+- Generic result types: discriminated union pattern `{ ok: true; data: T } | { ok: false; status: number; error: string }` used in `src/features/cca/utils/cca-chair-access.ts` and `src/features/cca/utils/cca-management-access.ts`
 
 ## Code Style
 
@@ -57,6 +58,7 @@
 - `@/*` maps to `./src/*` (configured in `tsconfig.json`)
 - Use `@/components/ui/button` not `../ui/button`
 - Use `@/lib/utils` not `../../lib/utils`
+- Prefer canonical feature imports like `@/features/cca/types/members` for single-domain code instead of legacy `@/types/...` / `@/lib/...` paths
 
 **Import Style:**
 - Named imports preferred: `import { Button } from "@/components/ui/button"`
@@ -243,10 +245,15 @@ if (disabledResponse) return disabledResponse;
 
 **Shared logic in `src/lib/`:**
 - Pure business logic functions (no React dependencies) in `src/lib/`
-- Authorization: `src/lib/cca-chair-access.ts`, `src/lib/cca-management-access.ts`
+- Feature-owned authorization now lives in `src/features/cca/utils/` for CCA-only code
 - Feature flags: `src/lib/feature-flags.ts`
 - Domain logic: `src/lib/cca-ranking-metrics.ts`, `src/lib/cca-ranking-comments.ts`, `src/lib/cca-cut-status.ts`
 - Data fetching (server-only): `src/lib/fetch-user-info.ts` (marked `"use server"`)
+
+**Feature modules in `src/features/`:**
+- Keep feature-local types in `types/`, utilities in `utils/`, hooks in `hooks/`, and UI in `components/`
+- Avoid barrel files; import concrete files directly
+- Migrate single-domain helpers out of `src/lib/` / `src/types/` when refactors establish a dedicated feature module
 
 ---
 

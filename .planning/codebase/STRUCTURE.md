@@ -43,9 +43,11 @@ intranet-next-app/
 │   │   ├── table/           # Generic table components
 │   │   └── ui/              # shadcn/ui primitives
 │   ├── context/             # React Context providers
+│   ├── features/            # Feature-local domain modules (types, utils, hooks, components)
+│   │   └── cca/             # CCA management feature scaffold
 │   ├── hoc/                 # Higher-order components
 │   ├── hooks/               # Custom React hooks
-│   ├── lib/                 # Business logic, utilities, constants
+│   ├── lib/                 # Cross-feature business logic, utilities, constants
 │   │   └── constants/       # Constant values
 │   ├── types/               # TypeScript type definitions
 │   └── utils/               # Utility functions
@@ -125,6 +127,11 @@ intranet-next-app/
 - Contains: `AuthContext.tsx` -- the only context provider
 - Key exports: `AuthProvider` (component), `useAuth()` (hook)
 
+**`src/features/`:**
+- Purpose: Feature-local modules that colocate domain-specific types, utilities, hooks, and components
+- Contains: `cca/` feature scaffold created during Phase 03
+- Pattern: Prefer placing single-domain contracts and helpers here instead of `src/types/` or `src/lib/`
+
 **`src/hoc/`:**
 - Purpose: Higher-order components for cross-cutting concerns
 - Contains: `withAuth.tsx` -- wraps client components with auth check and redirect
@@ -134,19 +141,27 @@ intranet-next-app/
 - Contains: `useRoleAuth.ts` (role-based authorization with caching), `use-mobile.ts` (responsive breakpoint detection)
 
 **`src/lib/`:**
-- Purpose: Shared business logic and utility functions used by both API routes and components
-- Contains: Feature flags, access control helpers, ranking logic, subsidy week calculations
+- Purpose: Shared cross-feature business logic and utility functions used by both API routes and components
+- Contains: Feature flags, ranking logic, subsidy week calculations, and non-feature-specific helpers
 - Key files:
   - `feature-flags.ts` -- Core service toggle flags and gating utilities
   - `fetch-user-info.ts` -- Server-side user resolution from JWT claims + DB
-  - `cca-chair-access.ts` -- Chair (lead/vice) authorization checks
-  - `cca-management-access.ts` -- Managed CCA position access checks
   - `cca-ranking-metrics.ts` -- CCA-type-specific ranking metric definitions
   - `cca-ranking-comments.ts` -- Ranking comment field serialization/deserialization
-  - `cca-member-management.ts` -- Member management permission rules
-  - `cca-cut-status.ts` -- Cut status normalization logic
   - `holiday-subsidy-weeks.ts` -- Holiday week definitions and editability logic
   - `utils.ts` -- `cn()` class name merge utility (clsx + tailwind-merge)
+
+**`src/features/cca/`:**
+- Purpose: CCA management feature module for ongoing Phase 03 refactors
+- Contains:
+  - `types/cca-data.ts` -- CCA list/view-model interfaces
+  - `types/members.ts` -- Member-management and API join contracts
+  - `utils/cca-chair-access.ts` -- Chair authorization helpers
+  - `utils/cca-management-access.ts` -- Managed CCA access helpers
+  - `utils/cca-member-management.ts` -- Member management rules
+  - `utils/cca-cut-status.ts` -- Cut status normalization helpers
+  - `utils/member-helpers.ts` -- Shared member formatting/status helpers
+  - `components/`, `hooks/` -- Empty scaffolds reserved for later Phase 03 plans
 
 **`src/lib/constants/`:**
 - Purpose: Constant value definitions
@@ -158,7 +173,7 @@ intranet-next-app/
 - Key files:
   - `User.ts` -- `AuthenticatedUser`, `UserAppointment`, `UserRoleFlags`, `PositionType`, `CcaType`
   - `CCAPosition.ts` -- `CCAPosition` interface
-  - `dashboard.ts` -- View model types (`CCAData`, `RankablePosition`, `SportsCulturePosition`, `Member`, `Position`, `Applicant`, `PendingChange`)
+  - `dashboard.ts` -- Shared non-CCA dashboard view models (`RankablePosition`, `SportsCulturePosition`, `Position`, `Applicant`)
   - `holiday-subsidy.ts` -- Subsidy types (`SubsidyRow`, `SubsidyDeclaration`, `SubsidyStatus`)
 
 **`src/utils/supabase/`:**
@@ -191,8 +206,8 @@ intranet-next-app/
 **Core Logic:**
 - `src/lib/fetch-user-info.ts`: Server-side authenticated user resolution
 - `src/lib/feature-flags.ts`: Feature toggle system
-- `src/lib/cca-chair-access.ts`: Chair authorization logic
-- `src/lib/cca-management-access.ts`: Managed CCA access verification
+- `src/features/cca/utils/cca-chair-access.ts`: Chair authorization logic
+- `src/features/cca/utils/cca-management-access.ts`: Managed CCA access verification
 - `src/context/AuthContext.tsx`: Client-side auth state management
 
 **Testing:**
@@ -244,16 +259,19 @@ intranet-next-app/
 - Badge components: `src/components/badges/{badge-name}.tsx`
 
 **New Business Logic:**
-- Shared logic: `src/lib/{feature-name}.ts`
+- Feature-owned logic: `src/features/{feature-name}/utils/{module-name}.ts`
+- Shared cross-feature logic: `src/lib/{feature-name}.ts`
 - Constants: `src/lib/constants/{name}.ts`
 - Pattern: Export pure functions, keep server-only code marked with `"use server"` directive
 
 **New Types:**
-- Domain types: `src/types/{TypeName}.ts` or add to `src/types/dashboard.ts` for view models
-- Pattern: Export interfaces/types, import in both API routes and components
+- Feature-local domain types: `src/features/{feature-name}/types/{name}.ts`
+- Shared types across domains: `src/types/{TypeName}.ts` or `src/types/dashboard.ts`
+- Pattern: Prefer feature-local ownership unless multiple domains depend on the contract
 
 **New Hook:**
-- Location: `src/hooks/{hookName}.ts`
+- Feature hook: `src/features/{featureName}/hooks/{hookName}.ts`
+- Shared app-wide hook: `src/hooks/{hookName}.ts`
 - Pattern: Prefix with `use`, mark `'use client'`, leverage `useAuth()` for user context
 
 **New Feature Flag:**

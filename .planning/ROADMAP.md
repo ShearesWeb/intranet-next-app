@@ -67,7 +67,7 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 03-01-PLAN.md -- Feature module structure, type splitting, and CCA lib file migration
+- [x] 03-01-PLAN.md -- Feature module structure, type splitting, and CCA lib file migration
 - [ ] 03-02-PLAN.md -- Custom hook extraction for all three CCA pages
 - [ ] 03-03-PLAN.md -- ManageMembers component decomposition (MemberGroupTable, AddMemberModal, SaveErrorDialog)
 
