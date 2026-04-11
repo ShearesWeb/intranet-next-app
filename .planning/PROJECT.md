@@ -21,11 +21,13 @@ Users can securely authenticate and manage CCA operations without session bleed 
 - ✓ Role-based access control (JCRC positions, chair roles) — existing
 - ✓ Feature flag system for service gating — existing
 - ✓ SST/OpenNext deployment pipeline — existing
+- ✓ SSR session bleed fixed with middleware cookie writeback and no-cache headers — validated in Phase 01: Auth Fix & Security
+- ✓ Supabase auth packages upgraded to current SSR-safe versions — validated in Phase 01: Auth Fix & Security
+- ✓ Auth consolidated to middleware + AuthContext with `withAuth` removed — validated in Phase 01: Auth Fix & Security
+- ✓ Vitest auth safety net added for middleware, callback, and AuthContext flows — validated in Phase 01: Auth Fix & Security
 
 ### Active
 
-- [ ] Fix SSR session bleed — middleware must write refreshed auth cookies back to response
-- [ ] Upgrade to latest Supabase packages and follow current auth patterns
 - [ ] Refactor CCA management pages — extract logic from giant components into hooks and utilities
 - [ ] Refactor member ranking pages — break up 500+ line components, proper typing
 - [ ] Refactor allocation pages — separate data fetching, state, and rendering concerns
@@ -49,9 +51,9 @@ Users can securely authenticate and manage CCA operations without session bleed 
 ## Context
 
 - **Codebase state:** Brownfield Next.js 15 app with Supabase backend, deployed via SST/OpenNext to AWS
-- **Critical bug:** SSR session bleed — middleware `setAll()` is disabled, causing stale/wrong sessions to be served to different users. This is the highest priority fix.
+- **Critical bug:** SSR session bleed fixed in Phase 01 — middleware now refreshes auth cookies onto both request and response with private no-cache headers.
 - **Code quality:** 35+ eslint-disable directives, dual toast libraries, 1000+ line page components, `any` types throughout
-- **Auth pattern:** Multiple overlapping patterns (AuthContext, withAuth HOC, middleware) that need consolidation
+- **Auth pattern:** Consolidated to two patterns — middleware for route protection/refresh and `AuthContext` for client auth state.
 - **Feature flags:** Hardcoded compile-time constants — all currently set to `false`
 - **Existing codebase map:** `.planning/codebase/` contains detailed analysis (7 documents, 1483 lines)
 
@@ -66,10 +68,10 @@ Users can securely authenticate and manage CCA operations without session bleed 
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Fix auth before refactoring features | Session bleed is a security bug that affects all users | — Pending |
+| Fix auth before refactoring features | Session bleed is a security bug that affects all users | Completed in Phase 01 |
 | Refactor in feature order: CCA → Ranking → Allocation → Subsidies | User-specified priority order based on feature importance | — Pending |
 | Standardize on sonner for toasts | Already has provider in layout.tsx, newer library | — Pending |
-| Research latest Supabase packages | Current auth patterns may be outdated, need to verify best practices | — Pending |
+| Research latest Supabase packages | Current auth patterns may be outdated, need to verify best practices | Completed in Phase 01 |
 
 ## Evolution
 
@@ -89,4 +91,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-10 after initialization*
+*Last updated: 2026-04-11 after Phase 01 completion*
