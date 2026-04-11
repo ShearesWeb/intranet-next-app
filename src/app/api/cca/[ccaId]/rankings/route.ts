@@ -7,8 +7,8 @@ import {
 	hasRequiredRankingInputs,
 	isResidentPositionType,
 } from "@/lib/cca-ranking-metrics";
-import { getManagedCcaAccess } from "@/lib/cca-management-access";
-import { normalizeCutStatusForCca } from "@/lib/cca-cut-status";
+import { getManagedCcaAccess } from "@/features/cca/utils/cca-management-access";
+import { normalizeCutStatusForCca } from "@/features/cca/utils/cca-cut-status";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 import { PositionType, UserAppointment } from "@/types/User";

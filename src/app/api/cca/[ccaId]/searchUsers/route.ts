@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
-import { getManagedCcaAccess } from "@/lib/cca-management-access";
+import { getManagedCcaAccess } from "@/features/cca/utils/cca-management-access";
 
 export async function GET(request: Request, { params }: { params: Promise<{ ccaId: string }> }) {
 	try {

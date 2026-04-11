@@ -1,4 +1,4 @@
-import { isChairPositionType } from "@/lib/cca-chair-access";
+import { isChairPositionType } from "@/features/cca/utils/cca-chair-access";
 import type { AuthenticatedUser, CcaType, PositionType } from "@/types/User";
 import { createClient } from "@/utils/supabase/server";
 

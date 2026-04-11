@@ -18,7 +18,7 @@ import Link from "next/link";
 import { Avatar, AvatarImage } from "../ui/avatar";
 import { useAuth } from "@/context/AuthContext";
 import { User } from "@/types/User";
-import { checkCcaAuthorization } from "@/lib/cca-chair-access";
+import { checkCcaAuthorization } from "@/features/cca/utils/cca-chair-access";
 import {
 	CoreServiceKey,
 	isCoreServiceEnabled,

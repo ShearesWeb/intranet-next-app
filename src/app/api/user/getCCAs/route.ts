@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { isCoreServiceEnabled } from "@/lib/feature-flags";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
-import { isChairPositionType } from "@/lib/cca-chair-access";
+import { isChairPositionType } from "@/features/cca/utils/cca-chair-access";
 import { getManagedCcaData } from "@/lib/managed-cca-data";
 import { CcaType } from "@/types/User";
 

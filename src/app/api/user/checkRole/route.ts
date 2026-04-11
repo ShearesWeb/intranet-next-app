@@ -2,7 +2,7 @@
 // API route to check if a user has lead/vice roles and return their positions
 import { NextResponse } from "next/server";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
-import { checkCcaAuthorization } from "@/lib/cca-chair-access";
+import { checkCcaAuthorization } from "@/features/cca/utils/cca-chair-access";
 import { isCoreServiceEnabled } from "@/lib/feature-flags";
 
 type UserPositionSummary = {

@@ -1,6 +1,6 @@
 import { AuthenticatedUser } from "@/types/User";
 
-type AccessResult<T> = { ok: true; data: T } | { ok: false; status: number; error: string };
+export type AccessResult<T> = { ok: true; data: T } | { ok: false; status: number; error: string };
 
 const CHAIR_POSITION_TYPES = new Set(["lead", "vice"]);
 

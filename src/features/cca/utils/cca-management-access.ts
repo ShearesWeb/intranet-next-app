@@ -1,4 +1,4 @@
-import { checkCcaAuthorization } from "@/lib/cca-chair-access";
+import { checkCcaAuthorization } from "@/features/cca/utils/cca-chair-access";
 import { AuthenticatedUser } from "@/types/User";
 import { createClient } from "@/utils/supabase/server";
 

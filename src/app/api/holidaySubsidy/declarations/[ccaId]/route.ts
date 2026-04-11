@@ -3,7 +3,7 @@ import { createClient } from "@/utils/supabase/server";
 import { SubsidyStatus } from "@/types/holiday-subsidy";
 import { PositionWithSubsidies } from "@/types/holiday-subsidy-api";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
-import { checkCcaAuthorization } from "@/lib/cca-chair-access";
+import { checkCcaAuthorization } from "@/features/cca/utils/cca-chair-access";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 
 type Params = {

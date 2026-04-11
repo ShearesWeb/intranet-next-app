@@ -2,12 +2,12 @@ import { NextResponse } from "next/server";
 import {
 	canManageCcaMembers,
 	getCcaMemberManagementDisabledMessage,
-} from "@/lib/cca-member-management";
+} from "@/features/cca/utils/cca-member-management";
 import { buildRankingComments } from "@/lib/cca-ranking-comments";
 import { createClient } from "@/utils/supabase/server";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
-import { getManagedCcaAccess } from "@/lib/cca-management-access";
-import { normalizeCutStatusForCca } from "@/lib/cca-cut-status";
+import { getManagedCcaAccess } from "@/features/cca/utils/cca-management-access";
+import { normalizeCutStatusForCca } from "@/features/cca/utils/cca-cut-status";
 import { MemberUpdate } from "@/features/cca/types/members";
 
 const CUT_STATUSES_BY_CCA_TYPE = {

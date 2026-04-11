@@ -3,7 +3,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
-import { checkCcaAuthorization } from "@/lib/cca-chair-access";
+import { checkCcaAuthorization } from "@/features/cca/utils/cca-chair-access";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 
 export async function GET(request: Request) {
