@@ -3,7 +3,7 @@ import {
 	canManageCcaMembers,
 	getCcaMemberManagementDisabledMessage,
 } from "@/features/cca/utils/cca-member-management";
-import { buildRankingComments } from "@/lib/cca-ranking-comments";
+import { buildRankingComments } from "@/features/ranking/utils/cca-ranking-comments";
 import { createClient } from "@/utils/supabase/server";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { getManagedCcaAccess } from "@/features/cca/utils/cca-management-access";
@@ -65,6 +65,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cca
 			supabase,
 			requestingUser,
 			cca: ccaData,
+			accessLevel: "manage_members",
 		});
 
 		if (!authResult.ok) {

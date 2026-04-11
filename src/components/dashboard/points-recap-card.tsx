@@ -7,7 +7,7 @@ import { Linkedin, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { isResidentPositionType } from "@/lib/cca-ranking-metrics";
+import { isResidentPositionType } from "@/features/ranking/utils/cca-ranking-metrics";
 import { CCAData } from "@/features/cca/types/cca-data";
 import { User } from "@/types/User";
 

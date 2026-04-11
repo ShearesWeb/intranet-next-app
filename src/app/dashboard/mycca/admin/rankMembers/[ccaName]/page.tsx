@@ -27,25 +27,17 @@ import {
 	getRankingScore,
 	hasRequiredRankingInputs,
 	isResidentPositionType,
-} from "@/lib/cca-ranking-metrics";
-
-export interface CCAMember {
-	row_key: string;
-	user_id: number;
-	name: string;
-	position: string;
-	position_type: string;
-	position_id: number;
-	ranking: number;
-	remarks: string;
-	cut_status?: CutStatus | null;
-	commitment_period?: CommitmentPeriod | null;
-	attendance: number;
-	performance: number;
-	helpfulness: number;
-	initiative: number;
-	attitude: number;
-}
+} from "@/features/ranking/utils/cca-ranking-metrics";
+import {
+	CCAMember,
+	MAX_SAVE_PAYLOAD_BYTES,
+	POSITION_TYPE_ORDER,
+	PositionGroup,
+	RESIDENT_METRICS,
+	RankingSavePayload,
+	SCORE_OPTIONS,
+	ScoreField,
+} from "@/features/ranking/types/ranking";
 
 type RankingsApiMember = {
 	user_id: number;
@@ -70,46 +62,8 @@ type RankingsApiResponse = {
 	cca_name?: string | null;
 };
 
-type PositionGroup = {
-	position_id: number;
-	position: string;
-	position_type: string;
-	members: CCAMember[];
-};
-
-type RankingSavePayload = {
-	user_id: number;
-	position_id: number;
-	ranking: number;
-	attendance: number;
-	performance: number;
-	helpfulness: number;
-	initiative: number;
-	attitude: number;
-	remarks: string;
-};
-
-const POSITION_TYPE_ORDER: Record<string, number> = {
-	lead: 1,
-	vice: 2,
-	maincomm: 3,
-	blockcomm: 4,
-	subcomm: 5,
-	"team manager": 6,
-	member: 7,
-	resident: 8,
-};
-
 const cloneMembers = (items: CCAMember[]): CCAMember[] => items.map((member) => ({ ...member }));
-const MAX_SAVE_PAYLOAD_BYTES = 4_500_000;
 const textEncoder = new TextEncoder();
-const SCORE_OPTIONS = Array.from({ length: 10 }, (_, index) => index + 1);
-const RESIDENT_METRICS = [
-	{ field: "helpfulness", label: "Helpfulness" },
-	{ field: "initiative", label: "Initiative" },
-	{ field: "attitude", label: "Attitude" },
-] as const;
-type ScoreField = "attendance" | "performance" | "helpfulness" | "initiative" | "attitude";
 
 const rankMembersWithinPosition = (members: CCAMember[], ccaType: string): CCAMember[] => {
 	const sorted = [...members].sort((a, b) => {

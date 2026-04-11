@@ -1,82 +1,27 @@
 // src/app/api/cca/[ccaId]/rankings/route.ts
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-import { buildRankingComments, extractRankingCommentFields } from "@/lib/cca-ranking-comments";
+import {
+	buildRankingComments,
+	extractRankingCommentFields,
+} from "@/features/ranking/utils/cca-ranking-comments";
 import {
 	getRankingMetricKeys,
 	hasRequiredRankingInputs,
 	isResidentPositionType,
-} from "@/lib/cca-ranking-metrics";
+} from "@/features/ranking/utils/cca-ranking-metrics";
 import { getManagedCcaAccess } from "@/features/cca/utils/cca-management-access";
 import { normalizeCutStatusForCca } from "@/features/cca/utils/cca-cut-status";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
-import { PositionType, UserAppointment } from "@/types/User";
-
-export type RankingAccessPosition = {
-	id: UserAppointment["position_id"];
-	cca_id: UserAppointment["cca_id"];
-	name: UserAppointment["position_name"];
-	position_type: PositionType;
-};
-
-type AppointmentPositionRow = RankingAccessPosition;
-
-type AppointmentUserRow = {
-	name: string;
-};
-
-type AppointmentRow = {
-	user_id: number;
-	cut_status: string | null;
-	commitment_period: string | null;
-	public_user_info: AppointmentUserRow | AppointmentUserRow[] | null;
-	cca_positions: AppointmentPositionRow | AppointmentPositionRow[] | null;
-};
-
-type RankingRow = {
-	user_id: number;
-	position_id: number;
-	ranking: number | null;
-	comments: unknown | null;
-};
-
-type RankingPayload = {
-	user_id: number;
-	position_id: number;
-	ranking: number;
-	attendance: number;
-	performance: number;
-	helpfulness: number;
-	initiative: number;
-	attitude: number;
-	remarks?: string | null;
-};
-
-type ManagedRankingAccessRow = {
-	cca_id: number;
-	cca_name: string | null;
-	positions: Array<{
-		position_id: number;
-	}> | null;
-};
-
-type RankingResponseMember = {
-	user_id: number;
-	name: string;
-	position_id: number;
-	position: string;
-	position_type: string;
-	cut_status: string | null;
-	commitment_period: string | null;
-	ranking: number;
-	attendance: number;
-	performance: number;
-	helpfulness: number;
-	initiative: number;
-	attitude: number;
-	remarks: string | null;
-};
+import type {
+	AppointmentRow,
+	ManagedRankingAccessRow,
+	RankingAccessPosition,
+	RankingPayload,
+	RankingResponseMember,
+	RankingRow,
+} from "@/features/ranking/types/ranking-api";
 
 async function loadCcaContext(supabase: Awaited<ReturnType<typeof createClient>>, ccaId: number) {
 	const [{ data: cca, error: ccaError }, { data: positions, error: positionsError }] =
@@ -105,6 +50,7 @@ async function loadManagedRankingAccess({
 		supabase,
 		requestingUser,
 		cca,
+		accessLevel: "rank_members",
 	});
 
 	if (!managedAccessResult.ok) {
@@ -339,7 +285,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cca
 	}
 
 	const positionTypeById = new Map<number, string | null>(
-		((positions || []) as AppointmentPositionRow[]).map((position) => [
+		((positions || []) as RankingAccessPosition[]).map((position) => [
 			position.id,
 			position.position_type || null,
 		]),
