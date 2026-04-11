@@ -51,10 +51,10 @@ Plans:
 **Plans:** 4 plans
 
 Plans:
-- [ ] 02-01-PLAN.md -- Toast migration (react-hot-toast to sonner) and dead dependency removal
-- [ ] 02-02-PLAN.md -- Self-calling API route extraction into shared lib function
-- [ ] 02-03-PLAN.md -- Type safety (replace all any suppressions) and ESLint build enforcement
-- [ ] 02-04-PLAN.md -- Prettier setup and one-time codebase format pass
+- [x] 02-01-PLAN.md -- Toast migration (react-hot-toast to sonner) and dead dependency removal
+- [x] 02-02-PLAN.md -- Self-calling API route extraction into shared lib function
+- [x] 02-03-PLAN.md -- Type safety (replace all any suppressions) and ESLint build enforcement
+- [x] 02-04-PLAN.md -- Prettier setup and one-time codebase format pass
 
 ### Phase 3: CCA Management Module
 **Goal**: CCA management pages are decomposed into focused components and hooks within a feature module structure that serves as the pattern for all subsequent refactors
