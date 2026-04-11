@@ -12,7 +12,7 @@ This roadmap takes a working but structurally compromised intranet application a
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Auth Fix & Security** - Fix SSR session bleed, upgrade Supabase packages, consolidate auth patterns, add test safety net
+- [x] **Phase 1: Auth Fix & Security** - Fix SSR session bleed, upgrade Supabase packages, consolidate auth patterns, add test safety net (Completed 2026-04-11)
 - [ ] **Phase 2: Infrastructure Cleanup** - Standardize toast library, remove dead dependencies, fix self-calling API route, enable ESLint, eliminate any types
 - [ ] **Phase 3: CCA Management Module** - Decompose monolithic CCA pages into hooks and components, establish feature module pattern
 - [ ] **Phase 4: Member Ranking Module** - Decompose ranking pages, fix non-atomic save operation with database transaction
@@ -33,10 +33,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans:** 4 plans
 
 Plans:
-- [ ] 01-01-PLAN.md -- Vitest setup and test scaffolds for all Phase 1 auth behaviors
-- [ ] 01-02-PLAN.md -- Supabase package upgrade and middleware session bleed fix
-- [ ] 01-03-PLAN.md -- Auth consolidation: remove withAuth HOC, unify redirects to /auth/login
-- [ ] 01-04-PLAN.md -- Final verification suite and manual Set-Cookie header inspection
+- [x] 01-01-PLAN.md -- Vitest setup and test scaffolds for all Phase 1 auth behaviors
+- [x] 01-02-PLAN.md -- Supabase package upgrade and middleware session bleed fix
+- [x] 01-03-PLAN.md -- Auth consolidation: remove withAuth HOC, unify redirects to /auth/login
+- [x] 01-04-PLAN.md -- Final verification suite and manual Set-Cookie header inspection
 
 ### Phase 2: Infrastructure Cleanup
 **Goal**: The codebase has a single toast library, no dead dependencies, no self-calling API routes, ESLint enforced on builds, and no `any` type suppressions
@@ -101,7 +101,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Auth Fix & Security | 0/4 | Planned | - |
+| 1. Auth Fix & Security | 4/4 | Complete | 2026-04-11 |
 | 2. Infrastructure Cleanup | 0/? | Not started | - |
 | 3. CCA Management Module | 0/? | Not started | - |
 | 4. Member Ranking Module | 0/? | Not started | - |

@@ -9,11 +9,11 @@ Requirements for this milestone. Each maps to roadmap phases.
 
 ### Authentication & Security
 
-- [ ] **AUTH-01**: Fix SSR session bleed -- re-enable `setAll()` in middleware with proper cookie forwarding
-- [ ] **AUTH-02**: Upgrade `@supabase/ssr` to ^0.10.2 and `@supabase/supabase-js` to ^2.102.1
-- [ ] **AUTH-03**: Consolidate auth into two patterns -- middleware (route protection + token refresh) and AuthContext (client state)
-- [ ] **AUTH-04**: Remove `withAuth` HOC -- replace all usages with middleware + AuthContext pattern
-- [ ] **AUTH-05**: Set up Vitest with at least auth flow tests as safety net
+- [x] **AUTH-01**: Fix SSR session bleed -- re-enable `setAll()` in middleware with proper cookie forwarding
+- [x] **AUTH-02**: Upgrade `@supabase/ssr` to ^0.10.2 and `@supabase/supabase-js` to ^2.102.1
+- [x] **AUTH-03**: Consolidate auth into two patterns -- middleware (route protection + token refresh) and AuthContext (client state)
+- [x] **AUTH-04**: Remove `withAuth` HOC -- replace all usages with middleware + AuthContext pattern
+- [x] **AUTH-05**: Set up Vitest with at least auth flow tests as safety net
 
 ### Infrastructure Cleanup
 
@@ -84,11 +84,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | Phase 1 | Pending |
-| AUTH-02 | Phase 1 | Pending |
-| AUTH-03 | Phase 1 | Pending |
-| AUTH-04 | Phase 1 | Pending |
-| AUTH-05 | Phase 1 | Pending |
+| AUTH-01 | Phase 1 | Complete |
+| AUTH-02 | Phase 1 | Complete |
+| AUTH-03 | Phase 1 | Complete |
+| AUTH-04 | Phase 1 | Complete |
+| AUTH-05 | Phase 1 | Complete |
 | INFR-01 | Phase 2 | Pending |
 | INFR-02 | Phase 2 | Pending |
 | INFR-03 | Phase 2 | Pending |
@@ -115,4 +115,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-04-11*
-*Last updated: 2026-04-10 after roadmap creation*
+*Last updated: 2026-04-11 after Phase 1 completion*
