@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import toast from 'react-hot-toast';
+import { toast } from "sonner";
 import { AppLayout } from '@/components/layout/app-layout';
 import { Button } from '@/components/ui/button';
 import { SimpleTable, SimpleTableColumn } from '@/components/table/simple-table';

@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import toast from 'react-hot-toast';
+import { toast } from "sonner";
 import { AppLayout } from '@/components/layout/app-layout';
 import { Member, PendingChange, UserSearchResult, CutStatus, CommitmentPeriod } from '@/types/dashboard';
 

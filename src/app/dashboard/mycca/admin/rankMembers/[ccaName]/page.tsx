@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import toast from 'react-hot-toast';
+import { toast } from "sonner";
 import { AppLayout } from '@/components/layout/app-layout';
 import { AppLoading } from '@/components/layout/app-loading';
 import { Button } from '@/components/ui/button';

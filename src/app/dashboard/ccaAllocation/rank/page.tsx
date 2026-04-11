@@ -4,7 +4,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import toast from 'react-hot-toast';
+import { toast } from "sonner";
 import { AppLayout } from '@/components/layout/app-layout';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import toast from 'react-hot-toast';
+import { toast } from "sonner";
 import { AppLayout } from '@/components/layout/app-layout';
 import { AppLoading } from '@/components/layout/app-loading';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
