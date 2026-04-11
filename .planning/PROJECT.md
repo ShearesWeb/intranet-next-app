@@ -25,6 +25,11 @@ Users can securely authenticate and manage CCA operations without session bleed 
 - ✓ Supabase auth packages upgraded to current SSR-safe versions — validated in Phase 01: Auth Fix & Security
 - ✓ Auth consolidated to middleware + AuthContext with `withAuth` removed — validated in Phase 01: Auth Fix & Security
 - ✓ Vitest auth safety net added for middleware, callback, and AuthContext flows — validated in Phase 01: Auth Fix & Security
+- ✓ Standardized on `sonner` as the single toast library with `react-hot-toast` removed — validated in Phase 02: Infrastructure Cleanup
+- ✓ Removed unused dependencies (`aphrodite`, `fs`, `logger`) from the runtime dependency graph — validated in Phase 02: Infrastructure Cleanup
+- ✓ Replaced self-calling managed-CCA API routes with direct shared-lib calls — validated in Phase 02: Infrastructure Cleanup
+- ✓ Replaced `any` suppressions with shared TypeScript interfaces across the infrastructure cleanup scope — validated in Phase 02: Infrastructure Cleanup
+- ✓ Re-enabled ESLint enforcement during production builds and added Prettier formatting tooling — validated in Phase 02: Infrastructure Cleanup
 
 ### Active
 
@@ -32,13 +37,8 @@ Users can securely authenticate and manage CCA operations without session bleed 
 - [ ] Refactor member ranking pages — break up 500+ line components, proper typing
 - [ ] Refactor allocation pages — separate data fetching, state, and rendering concerns
 - [ ] Refactor holiday subsidy pages — consistent patterns, remove hardcoded week definitions
-- [ ] Eliminate all `any` types — replace with proper interfaces across API routes and pages
-- [ ] Standardize on single toast library (sonner) — remove react-hot-toast
-- [ ] Remove unused dependencies (aphrodite, fs shim, logger)
 - [ ] UI consistency pass — standardize component patterns, spacing, and styling across all pages
-- [ ] Fix self-calling API route (getCCAs calling getManagedCCAs via HTTP)
 - [ ] Fix non-atomic delete-then-insert in saveRankings
-- [ ] Enable ESLint during builds (remove ignoreDuringBuilds)
 
 ### Out of Scope
 
@@ -70,7 +70,7 @@ Users can securely authenticate and manage CCA operations without session bleed 
 |----------|-----------|---------|
 | Fix auth before refactoring features | Session bleed is a security bug that affects all users | Completed in Phase 01 |
 | Refactor in feature order: CCA → Ranking → Allocation → Subsidies | User-specified priority order based on feature importance | — Pending |
-| Standardize on sonner for toasts | Already has provider in layout.tsx, newer library | — Pending |
+| Standardize on sonner for toasts | Already has provider in layout.tsx, newer library | Completed in Phase 02 |
 | Research latest Supabase packages | Current auth patterns may be outdated, need to verify best practices | Completed in Phase 01 |
 
 ## Evolution
@@ -91,4 +91,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-11 after Phase 01 completion*
+*Last updated: 2026-04-11 after Phase 02 completion*
