@@ -1,66 +1,70 @@
-import { createServerClient } from '@supabase/ssr'
-import { NextResponse, type NextRequest } from 'next/server'
+import { createServerClient } from "@supabase/ssr";
+import { NextResponse, type NextRequest } from "next/server";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey =
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export async function updateSession(request: NextRequest) {
-    const supabaseResponse = NextResponse.next({
-        request,
-    })
+  let supabaseResponse = NextResponse.next({ request });
 
-    const supabase = createServerClient(
-        supabaseUrl,
-        supabaseKey,
-        {
-            cookies: {
-                getAll() {
-                    return request.cookies.getAll()
-                },
-                setAll() {
-                    // Intentionally disabled.
-                    // Middleware must not mutate auth cookies server-side.
-                },
-            },
+  const supabase = createServerClient(supabaseUrl, supabaseKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(cookiesToSet, headers) {
+        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+
+        supabaseResponse = NextResponse.next({ request });
+
+        cookiesToSet.forEach(({ name, value, options }) =>
+          supabaseResponse.cookies.set(name, value, options)
+        );
+
+        if (headers) {
+          Object.entries(headers).forEach(([key, value]) =>
+            supabaseResponse.headers.set(key, value)
+          );
         }
-    )
+      },
+    },
+  });
 
-    // Refreshing and validating the auth token via verified claims.
-    const { data, error } = await supabase.auth.getClaims()
-    const isAuthenticated = Boolean(data?.claims?.sub)
+  const { data, error } = await supabase.auth.getClaims();
+  const isAuthenticated = Boolean(data?.claims?.sub);
+  const path = request.nextUrl.pathname;
 
-    const path = request.nextUrl.pathname;
-
-    if (error) {
-        // If we are already on an auth page, allow the request to proceed so the user can log in
-        if (path.startsWith('/auth')) {
-            return supabaseResponse
-        }
-
-        // Only log actual errors, not just "session missing" which is expected for unauthenticated users
-        if (!error.message.includes('Auth session missing')) {
-            console.error('Error getting user:', error)
-        }
-
-        const url = request.nextUrl.clone()
-        url.pathname = '/auth/login'
-        return NextResponse.redirect(url)
+  if (error) {
+    if (path.startsWith("/auth")) {
+      return supabaseResponse;
     }
 
-    if (!isAuthenticated && path.startsWith('/dashboard')) {
-        // no user, respond by redirecting the user to the login page
-        const url = request.nextUrl.clone()
-        url.pathname = '/auth/login'
-        return NextResponse.redirect(url)
+    if (!error.message.includes("Auth session missing")) {
+      console.error("Auth error in middleware:", error);
     }
 
-    if (isAuthenticated && path.startsWith('/auth')) {
-        const url = request.nextUrl.clone();
-        url.pathname = "/dashboard";
-        return NextResponse.redirect(url);
-    }
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = "/auth/login";
+    loginUrl.searchParams.set("reason", "session_expired");
+    loginUrl.searchParams.set("next", request.nextUrl.pathname);
+    return NextResponse.redirect(loginUrl);
+  }
 
-    return supabaseResponse
+  if (!isAuthenticated && path.startsWith("/dashboard")) {
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = "/auth/login";
+    loginUrl.searchParams.set("reason", "session_expired");
+    loginUrl.searchParams.set("next", request.nextUrl.pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  if (isAuthenticated && path.startsWith("/auth")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/dashboard";
+    return NextResponse.redirect(url);
+  }
+
+  return supabaseResponse;
 }
