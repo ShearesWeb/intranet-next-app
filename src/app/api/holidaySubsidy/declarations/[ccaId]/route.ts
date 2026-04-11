@@ -98,7 +98,12 @@ export async function GET(_request: Request, { params }: Params) {
 
         // Flatten subsidies and clean up positions to match previous response structure
         const subsidies = positionsWithSubsidies?.flatMap((position: PositionWithSubsidies) => position.subsidies || []) || [];
-        const positions = positionsWithSubsidies?.map(({ subsidies: _subsidies, ...rest }: PositionWithSubsidies) => rest) || [];
+        const positions = positionsWithSubsidies?.map((position: PositionWithSubsidies) => ({
+            id: position.id,
+            name: position.name,
+            position_type: position.position_type,
+            cca_id: position.cca_id,
+        })) || [];
 
         return NextResponse.json({ positions, subsidies });
     } catch (error) {

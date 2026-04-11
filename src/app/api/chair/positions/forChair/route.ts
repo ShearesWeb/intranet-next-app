@@ -53,8 +53,7 @@ const getPositionsForPhase = async (ccaIds: number[], supabase: SupabaseClient) 
     return (allPositions || []) as CapacityInfoRow[];
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function GET(_request: Request) {
+export async function GET() {
     const disabledResponse = getCoreServiceDisabledApiResponse("ccaApplications");
 
     if (disabledResponse) {

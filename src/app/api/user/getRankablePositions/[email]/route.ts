@@ -26,8 +26,7 @@ interface PositionData {
     ccas: CCAData[];  // Keep as array for consistency
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function GET(_request: Request) {
+export async function GET() {
     const disabledResponse = getCoreServiceDisabledApiResponse("ccaApplications");
 
     if (disabledResponse) {

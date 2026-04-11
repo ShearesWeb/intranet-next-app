@@ -745,7 +745,8 @@ export function PointsRecapCard({
         return new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b as Blob), "image/png", 0.92));
     };
 
-    const downloadRecapImage = async () => {
+    // TODO(Phase-4): Reconnect or remove -- currently unused.
+    const _downloadRecapImage = async () => {
         if (imgGenerating) return;
         setImgGenerating(true);
         try {
@@ -762,6 +763,8 @@ export function PointsRecapCard({
             setImgGenerating(false);
         }
     };
+
+    void _downloadRecapImage;
 
     const shareRecapImageToLinkedIn = async () => {
         if (imgGenerating) return;

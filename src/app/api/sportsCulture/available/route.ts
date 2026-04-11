@@ -20,7 +20,7 @@ interface AvailablePosition {
     can_apply: boolean;
 }
 
-export async function GET(_request: Request) {
+export async function GET() {
     const disabledResponse = getCoreServiceDisabledApiResponse("ccaApplications");
 
     if (disabledResponse) {

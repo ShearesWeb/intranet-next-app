@@ -337,7 +337,6 @@ export default function RankApplicants() {
             setLoading(false);
             fetchingRef.current = false;
         });
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user?.email]); // fetchPositions is a ref, so it's stable
 
     const checkForChanges = useCallback((positionId: number, currentApplicants: Applicant[]) => {

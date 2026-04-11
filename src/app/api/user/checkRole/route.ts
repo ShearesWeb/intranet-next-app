@@ -11,8 +11,7 @@ type UserPositionSummary = {
     cca: string;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function GET(_request: Request) {
+export async function GET() {
     try {
         const headers = {
             'Cache-Control': 'no-store, private',

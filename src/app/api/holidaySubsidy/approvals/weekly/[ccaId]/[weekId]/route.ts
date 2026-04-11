@@ -32,6 +32,8 @@ async function authorizeJCRC(supabase: Awaited<ReturnType<typeof createClient>>)
     return { authorized: true, message: "", status: 200 };
 }
 
+void authorizeJCRC;
+
 export async function GET(_request: Request, { params }: Params) {
     const disabledResponse = getCoreServiceDisabledApiResponse("holidaySubsidy");
 
