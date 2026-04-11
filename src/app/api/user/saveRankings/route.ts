@@ -30,26 +30,18 @@ export async function POST(request: Request) {
 
 		// Save rankings
 		const preferences = rankings.map((rank: { position_id: number; ranking: number }) => ({
-			user_id: userId,
 			position_id: rank.position_id,
 			ranking: rank.ranking,
 			application_status: "pending",
 		}));
 
-		// Delete existing preferences and insert new ones
-		const { error: deleteError } = await supabase
-			.from("user_cca_applications")
-			.delete()
-			.eq("user_id", userId);
+		const { error } = await supabase.rpc("replace_user_cca_rankings", {
+			p_user_id: userId,
+			p_rankings: preferences,
+		});
 
-		if (deleteError) {
-			console.error("Error deleting existing preferences:", deleteError);
-		}
-
-		const { error: insertError } = await supabase.from("user_cca_applications").insert(preferences);
-
-		if (insertError) {
-			console.error("Error inserting preferences:", insertError);
+		if (error) {
+			console.error("Error saving rankings:", error);
 			return NextResponse.json({ error: "Failed to save rankings" }, { status: 500 });
 		}
 
