@@ -48,7 +48,13 @@ Plans:
   3. getCCAs and getManagedCCAs share logic via a lib function -- no API route calls another API route via HTTP
   4. `next build` runs ESLint and passes with zero errors; `ignoreDuringBuilds` is removed from next.config
   5. Zero `eslint-disable` directives for `@typescript-eslint/no-explicit-any` remain in the codebase -- all replaced with proper interfaces
-**Plans**: TBD
+**Plans:** 4 plans
+
+Plans:
+- [ ] 02-01-PLAN.md -- Toast migration (react-hot-toast to sonner) and dead dependency removal
+- [ ] 02-02-PLAN.md -- Self-calling API route extraction into shared lib function
+- [ ] 02-03-PLAN.md -- Type safety (replace all any suppressions) and ESLint build enforcement
+- [ ] 02-04-PLAN.md -- Prettier setup and one-time codebase format pass
 
 ### Phase 3: CCA Management Module
 **Goal**: CCA management pages are decomposed into focused components and hooks within a feature module structure that serves as the pattern for all subsequent refactors
@@ -102,7 +108,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Auth Fix & Security | 4/4 | Complete | 2026-04-11 |
-| 2. Infrastructure Cleanup | 0/? | Not started | - |
+| 2. Infrastructure Cleanup | 0/4 | Planning complete | - |
 | 3. CCA Management Module | 0/? | Not started | - |
 | 4. Member Ranking Module | 0/? | Not started | - |
 | 5. Allocation & Holiday Subsidy Modules | 0/? | Not started | - |
