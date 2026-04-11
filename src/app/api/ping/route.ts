@@ -1,10 +1,10 @@
 // src\app\api\ping\route.ts
-import { NextResponse } from 'next/server'; 
+import { NextResponse } from "next/server";
 
 export async function GET() {
-    try {
-        return NextResponse.json({ message: 'PONG!' }, { status: 200 });
-    } catch (error) {
-        return NextResponse.json({ message: `${error}` }, { status: 500 });
-    }
+	try {
+		return NextResponse.json({ message: "PONG!" }, { status: 200 });
+	} catch (error) {
+		return NextResponse.json({ message: `${error}` }, { status: 500 });
+	}
 }

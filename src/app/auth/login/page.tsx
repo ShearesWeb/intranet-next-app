@@ -3,11 +3,10 @@ import { LoginForm } from "@/components/auth/login-form";
 import { Avatar } from "@/components/ui/avatar";
 import { AvatarImage } from "@radix-ui/react-avatar";
 import Link from "next/link";
-import { Suspense } from 'react'
+import { Suspense } from "react";
 import Image from "next/image";
 
 export default function LoginPage() {
-
 	return (
 		<Suspense>
 			<div className="grid min-h-svh lg:grid-cols-2">
@@ -26,7 +25,10 @@ export default function LoginPage() {
 						</div>
 					</div>
 				</div>
-				<div className="bg-muted hidden lg:flex bg-primary justify-center items-center relative" style={{ height: '100vh' }}>
+				<div
+					className="bg-muted hidden lg:flex bg-primary justify-center items-center relative"
+					style={{ height: "100vh" }}
+				>
 					<Image
 						src="/images/shweb-logo.png"
 						alt="Image"
@@ -37,5 +39,5 @@ export default function LoginPage() {
 				</div>
 			</div>
 		</Suspense>
-	)
+	);
 }

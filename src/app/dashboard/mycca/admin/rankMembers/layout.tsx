@@ -5,15 +5,15 @@ import { isCoreServiceEnabled } from "@/lib/feature-flags";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
 
 export default async function ManageCcaRankMembersLayout({ children }: { children: ReactNode }) {
-    const user = await fetchUserInfo();
+	const user = await fetchUserInfo();
 
-    const isMemberRankingEnabled = isCoreServiceEnabled("memberRanking", {
-        isJcrc: user?.is_jcrc,
-    });
+	const isMemberRankingEnabled = isCoreServiceEnabled("memberRanking", {
+		isJcrc: user?.is_jcrc,
+	});
 
-    if (!isMemberRankingEnabled) {
-        return <ServiceDisabledState service="memberRanking" />;
-    }
+	if (!isMemberRankingEnabled) {
+		return <ServiceDisabledState service="memberRanking" />;
+	}
 
-    return children;
+	return children;
 }

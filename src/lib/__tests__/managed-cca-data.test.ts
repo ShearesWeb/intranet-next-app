@@ -61,9 +61,7 @@ function createSupabaseMock({
 	return { supabase, managedSelect, ccaSelect, ccaIn };
 }
 
-function createUser(
-	appointments: AuthenticatedUser["appointments"] = [],
-): AuthenticatedUser {
+function createUser(appointments: AuthenticatedUser["appointments"] = []): AuthenticatedUser {
 	return {
 		id: 1,
 		name: "Alex Chair",
@@ -82,8 +80,8 @@ function createUser(
 describe("getManagedCcaData", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		mocks.isChairPositionType.mockImplementation((positionType?: string | null) =>
-			positionType === "lead" || positionType === "vice",
+		mocks.isChairPositionType.mockImplementation(
+			(positionType?: string | null) => positionType === "lead" || positionType === "vice",
 		);
 	});
 

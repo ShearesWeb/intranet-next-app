@@ -6,9 +6,6 @@
 // import { GoogleAuthProvider } from "firebase/auth/web-extension";
 // import { useState } from "react";
 
-
-
-
 // export default function Home() {
 //     const { user, loading } = useAuth();
 //     const [error, setError] = useState<string | null>(null);
@@ -23,7 +20,7 @@
 //           setError(error.message);
 //         })
 //     };
-    
+
 //     const handleSignOut = async () => {
 //         try {
 //             await signOut(auth);
@@ -40,14 +37,14 @@
 //           >
 //             User: {user?.displayName}
 //           </button>
-  
+
 //           <button
 //             className="bg-white text-orange-500 font-semibold text-lg py-3 px-6 rounded transition-colors hover:bg-gray-200"
 //             onClick={handleSignIn}
 //           >
 //             Sign in with Google
 //           </button>
-  
+
 //           <button
 //             className="bg-white text-orange-500 font-semibold text-lg py-3 px-6 rounded transition-colors hover:bg-gray-200"
 //             onClick={handleSignOut}

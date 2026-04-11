@@ -76,10 +76,7 @@ export async function getManagedCcaData(
 
 	const managedCcaById = new Map(managedCcaRows.map((row) => [row.cca_id, row]));
 	const managedCcaIds = Array.from(
-		new Set([
-			...managedCcaRows.map((row) => row.cca_id),
-			...chairAppointmentsByCcaId.keys(),
-		]),
+		new Set([...managedCcaRows.map((row) => row.cca_id), ...chairAppointmentsByCcaId.keys()]),
 	);
 
 	const { data: ccasData, error: ccasError } = await supabase
