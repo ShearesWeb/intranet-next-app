@@ -1,18 +1,11 @@
 // src/app/dashboard/mycca/admin/manageMembers/[ccaName]/page.tsx
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { toast } from "sonner";
 import { AppLayout } from "@/components/layout/app-layout";
-import {
-	Member,
-	PendingChange,
-	UserSearchResult,
-	CutStatus,
-	CommitmentPeriod,
-} from "@/features/cca/types/members";
-import { CcaSummary, GroupedMembers, MemberPermissions } from "@/features/cca/types/members";
+import { Member, UserSearchResult, CommitmentPeriod } from "@/features/cca/types/members";
+import { useCcaMembers } from "@/features/cca/hooks/use-cca-members";
 
 // shadcn UI
 import { Button } from "@/components/ui/button";
@@ -37,15 +30,16 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { PositionTypeBadge } from "@/components/badges/position-type-badge";
+import {
+	CULTURE_STATUS_OPTIONS,
+	formatCommitmentPeriod,
+	isChairPositionType,
+	SPORTS_STATUS_OPTIONS,
+} from "@/features/cca/utils/member-helpers";
 
 // Custom table component
 import { SimpleTable, SimpleTableColumn } from "@/components/table/simple-table";
 import Link from "next/link";
-
-const isChairPositionType = (value: string | null | undefined) => {
-	const normalized = (value || "").trim().replace(/\s+/g, " ").toLowerCase();
-	return normalized === "lead" || normalized === "vice";
-};
 
 // Define member table columns
 const memberTableColumns: SimpleTableColumn<Member>[] = [
@@ -65,62 +59,37 @@ const memberTableColumns: SimpleTableColumn<Member>[] = [
 	},
 ];
 
-type PositionOption = {
-	id: number;
-	name: string;
-	position_type: string;
-};
-
-const SPORTS_STATUS_OPTIONS: Array<{ status: CutStatus; label: string }> = [
-	{ status: "ivp-ihg-team", label: "Move to IHG Team (IVP)" },
-	{ status: "ihg-team", label: "Move to IHG Team" },
-	{ status: "final-cut", label: "Move to Final Cut" },
-];
-
-const CULTURE_STATUS_OPTIONS: Array<{ status: CutStatus; label: string }> = [
-	{ status: "first-cut", label: "Promote to IVP" },
-];
-
-const formatCommitmentPeriod = (value: CommitmentPeriod | null | undefined) => {
-	switch (value) {
-		case "semester-1":
-			return "Semester 1";
-		case "semester-2":
-			return "Semester 2";
-		case "full-year":
-			return "Full Year";
-		default:
-			return "-";
-	}
-};
 
 export default function ManageMembersPage() {
 	const router = useRouter();
 	const searchParams = useSearchParams();
 
 	const ccaId = searchParams.get("ccaId");
-
-	// Original state
-	const [originalGroupedMembers, setOriginalGroupedMembers] = useState<GroupedMembers>({});
-	const [currentGroupedMembers, setCurrentGroupedMembers] = useState<GroupedMembers>({});
-
-	// UI state
-	const [cca, setCCA] = useState<CcaSummary | null>(null);
-	const [permissions, setPermissions] = useState<MemberPermissions>({
-		canManageMembers: false,
-		ccaType: "",
-		managementMessage: "",
-	});
-	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState<string | null>(null);
-	const [memberPositionId, setMemberPositionId] = useState<number | null>(null);
-	const [saving, setSaving] = useState(false);
+	const {
+		groupedMembers,
+		cca,
+		permissions,
+		allPositions,
+		loading,
+		error,
+		saving,
+		saveErrors,
+		setSaveErrors,
+		pendingChanges,
+		searchQuery,
+		setSearchQuery,
+		searchResults,
+		searchLoading,
+		searchUser,
+		addMember,
+		removeMember,
+		updateStatus,
+		updateCommitment,
+		saveAll,
+	} = useCcaMembers(ccaId);
 
 	// Modal state
 	const [showAddMemberModal, setShowAddMemberModal] = useState(false);
-	const [userSearchQuery, setUserSearchQuery] = useState("");
-	const [userSearchResults, setUserSearchResults] = useState<UserSearchResult[]>([]);
-	const [isSearching, setIsSearching] = useState(false);
 	const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(null);
 	const [addForm, setAddForm] = useState<{
 		positionId: number;
@@ -129,538 +98,16 @@ export default function ManageMembersPage() {
 		positionId: 0,
 		commitmentPeriod: "",
 	});
-	const [allPositions, setAllPositions] = useState<PositionOption[]>([]);
-	const [saveErrors, setSaveErrors] = useState<string[]>([]);
 
-	// Pending changes
-	const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([]);
-
-	const fetchMembers = useCallback(async () => {
-		try {
-			setLoading(true);
-			if (!ccaId) {
-				throw new Error("CCA ID is required");
-			}
-			const response = await fetch(`/api/cca/${ccaId}/members`);
-
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.error || "Failed to fetch members");
-			}
-
-			const data = await response.json();
-			setOriginalGroupedMembers(data.groupedMembers || {});
-			setCurrentGroupedMembers(data.groupedMembers || {});
-			setCCA(data.cca);
-			setPermissions(
-				data.permissions || { canManageMembers: false, ccaType: "", managementMessage: "" },
-			);
-			setMemberPositionId(data.member_position_id || 0);
-			setAllPositions(data.all_positions || []);
-			setError(null);
-			setPendingChanges([]); // Reset pending changes
-		} catch (error: unknown) {
-			console.error("Error fetching members:", error);
-			const message = error instanceof Error ? error.message : "Failed to fetch members";
-			setError(message);
-			if (message.includes("Unauthorized")) {
-				toast.error("You are not authorized to manage this CCA");
-				router.push("/dashboard/mycca/admin");
-			} else {
-				toast.error("Failed to load members");
-			}
-		} finally {
-			setLoading(false);
-		}
-	}, [ccaId, router]);
-
-	useEffect(() => {
-		fetchMembers();
-	}, [fetchMembers]);
-
-	const handleSearchUsers = async () => {
-		const query = userSearchQuery.trim();
-		if (!ccaId) {
-			toast.error("CCA ID is required to search users");
-			setUserSearchResults([]);
-			return;
-		}
-
-		if (query.length < 2) {
-			toast.error("Please enter at least 2 characters to search");
-			setUserSearchResults([]);
-			return;
-		}
-
-		setIsSearching(true);
-		try {
-			const response = await fetch(
-				`/api/cca/${ccaId}/searchUsers?query=${encodeURIComponent(query)}`,
-			);
-			const data = await response.json();
-			if (!response.ok) {
-				throw new Error(data.message || data.error || "Failed to search users");
-			}
-			setUserSearchResults(data.data || []);
-		} catch (error) {
-			console.error("Error searching users:", error);
-			const message = error instanceof Error ? error.message : "Failed to search users";
-			toast.error(message);
-			setUserSearchResults([]);
-		} finally {
-			setIsSearching(false);
-		}
-	};
-
-	const handleSearchKeyPress = (e: React.KeyboardEvent) => {
+	const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
 		if (e.key === "Enter") {
-			handleSearchUsers();
-		}
-	};
-
-	// Local add member (doesn't call API yet)
-	const handleLocalAddMember = (
-		userId: number,
-		userName: string,
-		userEmail: string,
-		userRoom?: string,
-		positionId?: number,
-		commitmentPeriod?: CommitmentPeriod,
-	) => {
-		if (!permissions.canManageMembers) {
-			toast.error(permissions.managementMessage || "Member management is not available.");
-			return;
-		}
-
-		// Check if user is already a member or pending add
-		const allCurrentMembers = Object.values(currentGroupedMembers).flat() as Member[];
-		const isAlreadyMember = allCurrentMembers.some((member) => member.user_id === userId);
-		const isPendingAdd = pendingChanges.some(
-			(change) => change.type === "add" && change.user_id === userId,
-		);
-
-		if (isAlreadyMember || isPendingAdd) {
-			toast.error("User is already a member or pending addition");
-			return;
-		}
-
-		// Add to pending changes
-		const newChange: PendingChange = {
-			type: "add",
-			user_id: userId,
-			user_name: userName,
-			user_email: userEmail,
-			user_room: userRoom || "",
-			position_id: positionId,
-			new_commitment_period: commitmentPeriod,
-		};
-
-		setPendingChanges((prev) => [...prev, newChange]);
-
-		// Find position name
-		const position = allPositions.find((p) => p.id === positionId);
-		const positionName = position ? position.name : "Member";
-
-		// Add to current members display (for immediate UI feedback)
-		const newMember: Member = {
-			user_id: userId,
-			name: userName,
-			email: userEmail,
-			room: userRoom || "",
-			position_name: positionName,
-			position_type: position?.position_type || "member",
-			points: 0,
-			appointed_date: new Date().toISOString(),
-			commitment_period: commitmentPeriod || null,
-			position_id: positionId,
-		};
-
-		setCurrentGroupedMembers((prev) => ({
-			...prev,
-			members: [...(prev.members || []), newMember],
-		}));
-
-		toast.success(`${userName} added to pending changes`);
-
-		// Clear search and selection
-		setUserSearchQuery("");
-		setUserSearchResults([]);
-		setSelectedUser(null);
-		setAddForm({ positionId: 0, commitmentPeriod: "" });
-		setShowAddMemberModal(false);
-	};
-
-	// Local remove member
-	const handleLocalRemoveMember = (userId: number, memberName: string) => {
-		if (!permissions.canManageMembers) {
-			toast.error(permissions.managementMessage || "Member management is not available.");
-			return;
-		}
-
-		// Check if this is an original member (needs API removal)
-		const allOriginalMembers = Object.values(originalGroupedMembers).flat() as Member[];
-		const member = allOriginalMembers.find((m) => m.user_id === userId);
-
-		setPendingChanges((prev) => {
-			const remainingChanges = prev.filter((change) => change.user_id !== userId);
-
-			if (!member) {
-				return remainingChanges;
-			}
-
-			const newChange: PendingChange = {
-				type: "remove",
-				user_id: userId,
-				user_name: memberName,
-				user_email: "",
-				position_id: member.position_id,
-			};
-
-			return [...remainingChanges, newChange];
-		});
-
-		// Remove from current display
-		setCurrentGroupedMembers((prev) => {
-			const updated: GroupedMembers = { ...prev };
-			Object.keys(updated).forEach((key) => {
-				updated[key] = updated[key].filter((member: Member) => member.user_id !== userId);
-			});
-			return updated;
-		});
-
-		toast.success(`${memberName} marked for removal`);
-	};
-
-	const getGroupFromStatus = (status: CutStatus | undefined | null) => {
-		switch (status) {
-			case "ivp-ihg-team":
-				return "ivpIhgTeam";
-			case "ihg-team":
-				return "ihgTeam";
-			case "final-cut":
-				return "finalCut";
-			case "first-cut":
-				return "firstCut";
-			default:
-				return "members";
-		}
-	};
-
-	const getStatusLabel = (status: CutStatus | undefined | null) => {
-		switch (status) {
-			case "ivp-ihg-team":
-				return "Final Cut - IHG Team Members (IVP)";
-			case "ihg-team":
-				return "Final Cut - IHG Team Members";
-			case "final-cut":
-				return "Final Cut Members";
-			case "first-cut":
-				return "IVP Members";
-			default:
-				return "Members";
-		}
-	};
-
-	// Local update status
-	const handleLocalUpdateStatus = (
-		userId: number,
-		memberName: string,
-		newStatus: CutStatus | null,
-	) => {
-		if (!permissions.canManageMembers) {
-			toast.error(permissions.managementMessage || "Member management is not available.");
-			return;
-		}
-
-		if (!isSports && !isCulture) {
-			toast.error("Status groups are only available for sports and culture CCAs");
-			return;
-		}
-
-		const allCurrentMembers = Object.values(currentGroupedMembers).flat() as Member[];
-		const member = allCurrentMembers.find((m) => m.user_id === userId);
-
-		if (!member) {
-			toast.error(`${memberName} not found in current members`);
-			return;
-		}
-
-		if (member.cut_status === newStatus) {
-			toast.error(`${memberName} is already in this status`);
-			return;
-		}
-
-		const resolvedPositionId = member.position_id || memberPositionId || undefined;
-
-		setPendingChanges((prev) => {
-			const withoutExistingStatusChanges = prev.filter(
-				(change) => !(change.type === "update_status" && change.user_id === userId),
-			);
-
-			const pendingAdd = withoutExistingStatusChanges.find(
-				(change) => change.type === "add" && change.user_id === userId,
-			);
-
-			if (pendingAdd) {
-				return withoutExistingStatusChanges.map((change) => {
-					if (change.type === "add" && change.user_id === userId) {
-						return {
-							...change,
-							new_status: newStatus,
-							position_id: change.position_id || resolvedPositionId,
-						};
-					}
-
-					return change;
-				});
-			}
-
-			const newChange: PendingChange = {
-				type: "update_status",
-				user_id: userId,
-				user_name: memberName,
-				user_email: member.email,
-				user_room: member.room,
-				new_status: newStatus,
-				position_id: resolvedPositionId,
-			};
-
-			return [...withoutExistingStatusChanges, newChange];
-		});
-
-		// Update currentGroupedMembers locally
-		setCurrentGroupedMembers((prev) => {
-			const updated: GroupedMembers = { ...prev };
-
-			// Helper to remove member from any group
-			const removeFromGroup = (group: Member[] | undefined) =>
-				(group || []).filter((m) => m.user_id !== userId);
-
-			Object.keys(updated).forEach((key) => {
-				updated[key] = removeFromGroup(updated[key]);
-			});
-
-			// Add to new group
-			const targetGroup = getGroupFromStatus(newStatus);
-			if (targetGroup) {
-				updated[targetGroup] = [
-					...(updated[targetGroup] || []),
-					{ ...member, cut_status: newStatus },
-				];
-			}
-
-			return updated;
-		});
-
-		toast.success(`Moved ${memberName} to ${getStatusLabel(newStatus)}`);
-	};
-
-	const handleLocalUpdateCommitment = (userId: number, newPeriod: CommitmentPeriod) => {
-		if (!permissions.canManageMembers) {
-			toast.error(permissions.managementMessage || "Member management is not available.");
-			return;
-		}
-
-		const allCurrentMembers = Object.values(currentGroupedMembers).flat() as Member[];
-		const member = allCurrentMembers.find((m) => m.user_id === userId);
-
-		if (!member) {
-			toast.error("Member not found");
-			return;
-		}
-
-		if (member.commitment_period === newPeriod) return;
-
-		const resolvedPositionId = member.position_id || memberPositionId || undefined;
-
-		setPendingChanges((prev) => {
-			const withoutExistingCommitmentChanges = prev.filter(
-				(change) => !(change.type === "update_commitment" && change.user_id === userId),
-			);
-
-			const pendingAdd = withoutExistingCommitmentChanges.find(
-				(change) => change.type === "add" && change.user_id === userId,
-			);
-
-			if (pendingAdd) {
-				return withoutExistingCommitmentChanges.map((change) => {
-					if (change.type === "add" && change.user_id === userId) {
-						return {
-							...change,
-							new_commitment_period: newPeriod,
-							position_id: change.position_id || resolvedPositionId,
-						};
-					}
-
-					return change;
-				});
-			}
-
-			const newChange: PendingChange = {
-				type: "update_commitment",
-				user_id: userId,
-				user_name: member.name,
-				user_email: member.email,
-				new_commitment_period: newPeriod,
-				position_id: resolvedPositionId,
-			};
-
-			return [...withoutExistingCommitmentChanges, newChange];
-		});
-
-		// Update local state
-		setCurrentGroupedMembers((prev) => {
-			const updated: GroupedMembers = { ...prev };
-			Object.keys(updated).forEach((key) => {
-				updated[key] = updated[key].map((m) =>
-					m.user_id === userId ? { ...m, commitment_period: newPeriod } : m,
-				);
-			});
-			return updated;
-		});
-
-		toast.success("Commitment period updated (pending save)");
-	};
-
-	// Save all pending changes
-	const handleSaveMembers = async () => {
-		if (!permissions.canManageMembers) {
-			toast.error(permissions.managementMessage || "Member management is not available.");
-			return;
-		}
-
-		if (pendingChanges.length === 0) {
-			toast.error("No changes to save");
-			return;
-		}
-
-		setSaving(true);
-		setSaveErrors([]);
-		let successCount = 0;
-		let errorCount = 0;
-		const currentErrors: string[] = [];
-
-		try {
-			for (const change of pendingChanges) {
-				try {
-					if (change.type === "add") {
-						const response = await fetch(`/api/cca/${ccaId}/addMember`, {
-							method: "POST",
-							headers: { "Content-Type": "application/json" },
-							body: JSON.stringify({
-								user_id: change.user_id,
-								reason: "Added by lead/vice",
-								position_id: change.position_id,
-								commitment_period: change.new_commitment_period,
-							}),
-						});
-
-						const responseData = await response.json().catch(() => ({}));
-						if (!response.ok) {
-							throw new Error(responseData.error || "Failed to add member");
-						}
-
-						if (change.new_status !== undefined) {
-							const resolvedPositionId =
-								responseData.position_id || change.position_id || memberPositionId;
-							const statusResponse = await fetch(`/api/cca/${ccaId}/updateMember`, {
-								method: "POST",
-								headers: { "Content-Type": "application/json" },
-								body: JSON.stringify({
-									user_id: change.user_id,
-									position_id: resolvedPositionId,
-									cut_status: change.new_status,
-								}),
-							});
-
-							const statusResponseData = await statusResponse.json().catch(() => ({}));
-							if (!statusResponse.ok) {
-								throw new Error(
-									statusResponseData.error || "Member added but failed to update status",
-								);
-							}
-						}
-						successCount++;
-					} else if (change.type === "remove") {
-						const response = await fetch(`/api/cca/${ccaId}/removeMember`, {
-							method: "POST",
-							headers: { "Content-Type": "application/json" },
-							body: JSON.stringify({
-								user_id: change.user_id,
-								reason: "Removed by lead/vice",
-								position_id: change.position_id,
-							}),
-						});
-
-						if (!response.ok) {
-							const errorData = await response.json();
-							throw new Error(errorData.error || "Failed to remove member");
-						}
-						successCount++;
-					} else if (change.type === "update_status") {
-						if (!change.position_id && !memberPositionId) {
-							throw new Error("Missing position ID for status update");
-						}
-						const response = await fetch(`/api/cca/${ccaId}/updateMember`, {
-							method: "POST",
-							headers: { "Content-Type": "application/json" },
-							body: JSON.stringify({
-								user_id: change.user_id,
-								position_id: change.position_id || memberPositionId,
-								cut_status: change.new_status,
-							}),
-						});
-
-						if (!response.ok) {
-							const errorData = await response.json();
-							throw new Error(errorData.error || "Failed to update member status");
-						}
-						successCount++;
-					} else if (change.type === "update_commitment") {
-						const response = await fetch(`/api/cca/${ccaId}/updateMember`, {
-							method: "POST",
-							headers: { "Content-Type": "application/json" },
-							body: JSON.stringify({
-								user_id: change.user_id,
-								position_id: change.position_id || memberPositionId,
-								commitment_period: change.new_commitment_period,
-							}),
-						});
-
-						if (!response.ok) {
-							const errorData = await response.json();
-							throw new Error(errorData.error || "Failed to update commitment period");
-						}
-						successCount++;
-					}
-				} catch (error: unknown) {
-					console.error(`Error processing ${change.type} for ${change.user_name}:`, error);
-					errorCount++;
-					const errorMsg = error instanceof Error ? error.message : "Unknown error";
-					currentErrors.push(`${change.user_name}: ${errorMsg}`);
-				}
-			}
-
-			if (successCount > 0) {
-				toast.success(`Successfully processed ${successCount} changes`);
-			}
-			if (errorCount > 0) {
-				setSaveErrors(currentErrors);
-			}
-
-			// Refresh data from server
-			await fetchMembers();
-		} catch (error) {
-			console.error("Error saving members:", error);
-			toast.error("Failed to save changes");
-		} finally {
-			setSaving(false);
+			void searchUser();
 		}
 	};
 
 	// Check if user is already added (locally or originally)
 	const isUserAdded = (userId: number) => {
-		const allCurrentMembers = Object.values(currentGroupedMembers).flat() as Member[];
+		const allCurrentMembers = Object.values(groupedMembers).flat() as Member[];
 		return allCurrentMembers.some((member) => member.user_id === userId);
 	};
 
@@ -672,14 +119,10 @@ export default function ManageMembersPage() {
 	// Handle adding/removing user from search results
 	const handleUserButtonClick = (user: UserSearchResult) => {
 		if (isUserAdded(user.id)) {
-			handleLocalRemoveMember(user.id, user.name);
+			removeMember(user.id, user.name);
 			return;
 		}
-		if (!isSportsCulture) {
-			toast.error("Adding members is only available for sports and culture CCAs");
-			return;
-		}
-		handleLocalAddMember(user.id, user.name, user.email, user.room || "");
+		addMember(user.id, user.name, user.email, user.room || "");
 	};
 
 	if (loading) {
@@ -738,9 +181,7 @@ export default function ManageMembersPage() {
 								showEditableCommitment ? (
 									<select
 										value={(typeof value === "string" ? value : null) || "full-year"}
-										onChange={(e) =>
-											handleLocalUpdateCommitment(row.user_id, e.target.value as CommitmentPeriod)
-										}
+										onChange={(e) => updateCommitment(row.user_id, e.target.value as CommitmentPeriod)}
 										className="border rounded p-1 text-sm bg-transparent cursor-pointer hover:bg-gray-100 w-28"
 										onClick={(e) => e.stopPropagation()}
 									>
@@ -772,7 +213,7 @@ export default function ManageMembersPage() {
 												<DropdownMenuSeparator />
 												{row.cut_status && (
 													<DropdownMenuItem
-														onClick={() => handleLocalUpdateStatus(row.user_id, row.name, null)}
+														onClick={() => updateStatus(row.user_id, row.name, null)}
 													>
 														Move to Members
 													</DropdownMenuItem>
@@ -782,16 +223,14 @@ export default function ManageMembersPage() {
 												).map((option) => (
 													<DropdownMenuItem
 														key={option.status}
-														onClick={() =>
-															handleLocalUpdateStatus(row.user_id, row.name, option.status)
-														}
+														onClick={() => updateStatus(row.user_id, row.name, option.status)}
 													>
 														{option.label}
 													</DropdownMenuItem>
 												))}
 												<DropdownMenuSeparator />
 												<DropdownMenuItem
-													onClick={() => handleLocalRemoveMember(row.user_id, row.name)}
+													onClick={() => removeMember(row.user_id, row.name)}
 													className="text-red-600"
 												>
 													Remove Member
@@ -811,7 +250,7 @@ export default function ManageMembersPage() {
 												<DropdownMenuSeparator />
 												{row.cut_status ? (
 													<DropdownMenuItem
-														onClick={() => handleLocalUpdateStatus(row.user_id, row.name, null)}
+														onClick={() => updateStatus(row.user_id, row.name, null)}
 													>
 														Move to Members
 													</DropdownMenuItem>
@@ -821,16 +260,14 @@ export default function ManageMembersPage() {
 												).map((option) => (
 													<DropdownMenuItem
 														key={option.status}
-														onClick={() =>
-															handleLocalUpdateStatus(row.user_id, row.name, option.status)
-														}
+														onClick={() => updateStatus(row.user_id, row.name, option.status)}
 													>
 														{option.label}
 													</DropdownMenuItem>
 												))}
 												<DropdownMenuSeparator />
 												<DropdownMenuItem
-													onClick={() => handleLocalRemoveMember(row.user_id, row.name)}
+													onClick={() => removeMember(row.user_id, row.name)}
 													className="text-red-600"
 												>
 													Remove Member
@@ -838,11 +275,11 @@ export default function ManageMembersPage() {
 											</DropdownMenuContent>
 										</DropdownMenu>
 									) : (
-										<Button
-											size="sm"
-											onClick={() => handleLocalRemoveMember(row.user_id, row.name)}
-											className="bg-red-500 text-white hover:bg-red-400 px-4 py-2 shadow-md font-bold cursor-pointer"
-										>
+									<Button
+										size="sm"
+										onClick={() => removeMember(row.user_id, row.name)}
+										className="bg-red-500 text-white hover:bg-red-400 px-4 py-2 shadow-md font-bold cursor-pointer"
+									>
 											Remove
 										</Button>
 									)}
@@ -896,13 +333,13 @@ export default function ManageMembersPage() {
 	};
 
 	const leadershipMembers = [
-		...(currentGroupedMembers.lead || []),
-		...(currentGroupedMembers.vice || []),
+		...(groupedMembers.lead || []),
+		...(groupedMembers.vice || []),
 	];
 	const isSports = permissions.ccaType === "sports";
 	const isCulture = permissions.ccaType === "culture";
 	const isSportsCulture = ["sports", "culture"].includes(permissions.ccaType);
-	const totalFilteredMembers = Object.values(currentGroupedMembers).flat().length;
+	const totalFilteredMembers = Object.values(groupedMembers).flat().length;
 
 	return (
 		<AppLayout>
@@ -912,7 +349,7 @@ export default function ManageMembersPage() {
 					<div className="flex flex-wrap items-center gap-4">
 						{pendingChanges.length > 0 && (
 							<Button
-								onClick={handleSaveMembers}
+								onClick={() => void saveAll()}
 								disabled={saving}
 								size="lg"
 								className="bg-green-500 text-white hover:bg-green-400 px-6 py-4 shadow-md font-bold cursor-pointer"
@@ -972,40 +409,40 @@ export default function ManageMembersPage() {
 						{!isSportsCulture &&
 							renderMemberGroup(
 								"Main Committee",
-								currentGroupedMembers.maincomm || [],
+								groupedMembers.maincomm || [],
 								true,
 								false,
 							)}
 						{!isSportsCulture &&
-							renderMemberGroup("Sub Committee", currentGroupedMembers.subcomm || [], true, false)}
+							renderMemberGroup("Sub Committee", groupedMembers.subcomm || [], true, false)}
 						{isSportsCulture &&
-							renderMemberGroup("Team Manager", currentGroupedMembers.teamManager || [])}
+							renderMemberGroup("Team Manager", groupedMembers.teamManager || [])}
 
 						{isSports &&
 							renderMemberGroup(
 								"Final Cut - IHG Team Members (IVP)",
-								currentGroupedMembers.ivpIhgTeam || [],
+								groupedMembers.ivpIhgTeam || [],
 								true,
 								false,
 							)}
 						{isSports &&
 							renderMemberGroup(
 								"Final Cut - IHG Team Members",
-								currentGroupedMembers.ihgTeam || [],
+								groupedMembers.ihgTeam || [],
 								true,
 								false,
 							)}
 						{isSports &&
 							renderMemberGroup(
 								"Final Cut Members",
-								currentGroupedMembers.finalCut || [],
+								groupedMembers.finalCut || [],
 								true,
 								false,
 							)}
 						{isCulture &&
-							renderMemberGroup("IVP Members", currentGroupedMembers.firstCut || [], true, false)}
+							renderMemberGroup("IVP Members", groupedMembers.firstCut || [], true, false)}
 
-						{renderMemberGroup("Members", currentGroupedMembers.members || [], true, true)}
+						{renderMemberGroup("Members", groupedMembers.members || [], true, true)}
 					</div>
 				)}
 				<Alert className="bg-blue-500/10 dark:bg-blue-600/20 text-blue-500 border-none">
@@ -1074,7 +511,7 @@ export default function ManageMembersPage() {
 										</Button>
 										<Button
 											onClick={() =>
-												handleLocalAddMember(
+												addMember(
 													selectedUser.id,
 													selectedUser.name,
 													selectedUser.email,
@@ -1095,21 +532,21 @@ export default function ManageMembersPage() {
 										<Input
 											type="text"
 											placeholder="Search by name / email / room..."
-											value={userSearchQuery}
-											onChange={(e) => setUserSearchQuery(e.target.value)}
-											onKeyPress={handleSearchKeyPress}
+											value={searchQuery}
+											onChange={(e) => setSearchQuery(e.target.value)}
+											onKeyDown={handleSearchKeyDown}
 											className="focus-visible:ring-[2px] focus-visible:ring-blue-500/20 focus-visible:border-blue-500 py-5 rounded-sm border border-gray-300 w-full pl-4"
 										/>
 										<Button
-											onClick={handleSearchUsers}
-											disabled={isSearching}
+											onClick={() => void searchUser()}
+											disabled={searchLoading}
 											className="bg-blue-500 text-white hover:bg-blue-400 px-8 py-3 shadow-md font-bold cursor-pointer"
 										>
-											{isSearching ? "Searching..." : "Search"}
+											{searchLoading ? "Searching..." : "Search"}
 										</Button>
 									</div>
 
-									{isSearching && (
+									{searchLoading && (
 										<div className="flex items-center justify-center mt-4">
 											<LoadingSpinner message="Searching users..." fullHeight={false} />
 										</div>
@@ -1117,7 +554,7 @@ export default function ManageMembersPage() {
 
 									<div className="mt-4">
 										<div className="space-y-2 max-h-64 overflow-y-auto">
-											{userSearchResults.map((user) => (
+											{searchResults.map((user) => (
 												<div
 													key={user.id}
 													className="flex justify-between items-center p-3 border border-gray-200 rounded-md bg-white shadow-sm"
@@ -1150,8 +587,9 @@ export default function ManageMembersPage() {
 								<Button
 									onClick={() => {
 										setShowAddMemberModal(false);
-										setUserSearchQuery("");
-										setUserSearchResults([]);
+										setSearchQuery("");
+										setSelectedUser(null);
+										setAddForm({ positionId: 0, commitmentPeriod: "" });
 									}}
 									className="bg-gray-500 text-white hover:bg-gray-400 px-6 py-4 shadow-md font-bold cursor-pointer"
 								>
