@@ -30,7 +30,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Refreshed auth tokens are written back to browser cookies by middleware, verified by inspecting Set-Cookie headers on SSR responses
   3. Auth follows exactly two patterns throughout the codebase: middleware for route protection and token refresh, AuthContext for client-side user state -- no withAuth HOC remains
   4. At least auth flow tests exist and pass via Vitest, covering login, session refresh, and route protection
-**Plans**: TBD
+**Plans:** 4 plans
+
+Plans:
+- [ ] 01-01-PLAN.md -- Vitest setup and test scaffolds for all Phase 1 auth behaviors
+- [ ] 01-02-PLAN.md -- Supabase package upgrade and middleware session bleed fix
+- [ ] 01-03-PLAN.md -- Auth consolidation: remove withAuth HOC, unify redirects to /auth/login
+- [ ] 01-04-PLAN.md -- Final verification suite and manual Set-Cookie header inspection
 
 ### Phase 2: Infrastructure Cleanup
 **Goal**: The codebase has a single toast library, no dead dependencies, no self-calling API routes, ESLint enforced on builds, and no `any` type suppressions
@@ -95,7 +101,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Auth Fix & Security | 0/? | Not started | - |
+| 1. Auth Fix & Security | 0/4 | Planned | - |
 | 2. Infrastructure Cleanup | 0/? | Not started | - |
 | 3. CCA Management Module | 0/? | Not started | - |
 | 4. Member Ranking Module | 0/? | Not started | - |
