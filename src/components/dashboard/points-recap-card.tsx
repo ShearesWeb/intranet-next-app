@@ -6,26 +6,11 @@ import { AnimatePresence, animate, motion, PanInfo } from "framer-motion";
 import { Linkedin, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { useRecapData } from "@/features/ranking/hooks/use-recap-data";
+import type { RecapSlide } from "@/features/ranking/types/recap";
+import { createRecapImageBlob } from "@/features/ranking/utils/create-recap-image-blob";
 import { cn } from "@/lib/utils";
-import { isResidentPositionType } from "@/features/ranking/utils/cca-ranking-metrics";
-import { CCAData } from "@/features/cca/types/cca-data";
 import { User } from "@/types/User";
-
-type RecapSlide = {
-	id: string;
-	eyebrow: string;
-	title: string;
-	description: string;
-	statLabel?: string;
-	statValue?: string;
-	statNote?: string;
-	bulletItems?: string[];
-	supportingText?: string;
-	supportingBulletItems?: string[];
-	emphasis?: string;
-	accent: string;
-	kind?: "copy" | "reveal";
-};
 
 const slideVariants = {
 	enter: (direction: number) => ({
@@ -42,49 +27,10 @@ const slideVariants = {
 	}),
 };
 
-const leadershipPositionTypes = new Set(["lead", "vice", "maincomm", "subcomm"]);
-const ihgTeamStatuses = new Set(["ihg-team", "ivp-ihg-team"]);
 const swipeThreshold = 70;
 
 function formatCount(count: number, singular: string, plural = `${singular}s`) {
 	return `${count} ${count === 1 ? singular : plural}`;
-}
-
-function isLeadershipRole(cca: Pick<CCAData, "position_type" | "role">) {
-	const positionType = String(cca.position_type || "")
-		.trim()
-		.toLowerCase();
-	const role = String(cca.role || "")
-		.trim()
-		.toLowerCase();
-	return (
-		leadershipPositionTypes.has(positionType) || role.includes("lead") || role.includes("vice")
-	);
-}
-
-function truncateList(values: string[], maxVisible = 3) {
-	const filtered = values.filter(Boolean);
-	if (filtered.length <= maxVisible) return filtered;
-
-	const visible = filtered.slice(0, maxVisible);
-	const remaining = filtered.length - maxVisible;
-	return [...visible, `${remaining} more`];
-}
-
-function isBlockCcaName(value?: string | null) {
-	return String(value || "")
-		.trim()
-		.toLowerCase()
-		.startsWith("block");
-}
-
-function isResidentBlockPosition(positionType?: string | null, role?: string | null) {
-	return (
-		isResidentPositionType(positionType) ||
-		String(role || "")
-			.trim()
-			.toLowerCase() === "resident"
-	);
 }
 
 export function PointsRecapCard({
@@ -98,73 +44,13 @@ export function PointsRecapCard({
 	const [direction, setDirection] = useState(1);
 	const [currentSlide, setCurrentSlide] = useState(0);
 	const [displayCount, setDisplayCount] = useState(0);
+	const [imgGenerating, setImgGenerating] = useState(false);
 	const displayCountRef = useRef(0);
 	const audioRef = useRef<HTMLAudioElement | null>(null);
-	const [loadingCcas, setLoadingCcas] = useState(Boolean(user.appointments?.length));
-	const [ccas, setCcas] = useState<CCAData[]>([]);
-	const [hasSeenRecap, setHasSeenRecap] = useState(false);
-	const [isMounted, setIsMounted] = useState(false);
-
-	useEffect(() => {
-		setIsMounted(true);
-		const seen = localStorage.getItem("hasSeenPointsRecap");
-		if (seen === "true") {
-			setHasSeenRecap(true);
-		}
-	}, []);
-
-	useEffect(() => {
-		onSeenStateChange?.(hasSeenRecap);
-	}, [hasSeenRecap, onSeenStateChange]);
-
-	useEffect(() => {
-		let isActive = true;
-
-		if (!user.appointments?.length) {
-			setCcas([]);
-			setLoadingCcas(false);
-			return () => {
-				isActive = false;
-			};
-		}
-
-		const fallbackCcas: CCAData[] = user.appointments.map((appointment) => ({
-			id: appointment.cca_id,
-			name: appointment.cca_name,
-			role: appointment.position_name,
-			position_type: appointment.position_type,
-			cca_type: "unknown",
-			description: "",
-			points: appointment.points || 0,
-			cut_status: null,
-		}));
-
-		setLoadingCcas(true);
-
-		fetch("/api/user/getCCAs")
-			.then(async (res) => {
-				if (!res.ok) {
-					throw new Error("Failed to fetch CCA recap data");
-				}
-				return res.json();
-			})
-			.then((data) => {
-				if (!isActive) return;
-				setCcas(Array.isArray(data.data) ? data.data : []);
-			})
-			.catch(() => {
-				if (!isActive) return;
-				setCcas(fallbackCcas);
-			})
-			.finally(() => {
-				if (!isActive) return;
-				setLoadingCcas(false);
-			});
-
-		return () => {
-			isActive = false;
-		};
-	}, [user]);
+	const { ccas, hasSeenRecap, isMounted, loadingCcas, recap, setHasSeenRecap } = useRecapData(
+		user,
+		onSeenStateChange,
+	);
 
 	useEffect(() => {
 		const audio = new Audio("/audio/sheares.mp3");
@@ -177,246 +63,6 @@ export function PointsRecapCard({
 			audioRef.current = null;
 		};
 	}, []);
-
-	const recap = useMemo(() => {
-		const totalPoints = user.points || 0;
-		const totalCcas = ccas.length;
-		const blockResidentAppointments = (user.appointments || []).filter(
-			(appointment) =>
-				isBlockCcaName(appointment.cca_name) &&
-				isResidentBlockPosition(appointment.position_type, appointment.position_name),
-		);
-		const ccasBeforeTopContributor = ccas;
-		const committeeCcas = ccas.filter((cca) => {
-			if (cca.cca_type !== "committee") return false;
-			const posType = String(cca.position_type || "")
-				.trim()
-				.toLowerCase();
-			return posType !== "member" && posType !== "resident";
-		});
-		const cultureCcas = ccas.filter((cca) => cca.cca_type === "culture");
-		const sportsCcas = ccas.filter((cca) => cca.cca_type === "sports");
-		const supplementaryCcas = ccas.filter((cca) => cca.cca_type === "supplementary");
-		const adhocCcas = ccas.filter((cca) => cca.cca_type === "adhoc");
-		const leadershipCcas = committeeCcas.filter(isLeadershipRole);
-		const committeePoints = ccasBeforeTopContributor
-			.filter((cca) => {
-				if (cca.cca_type !== "committee") return false;
-				const posType = String(cca.position_type || "")
-					.trim()
-					.toLowerCase();
-				return posType !== "member" && posType !== "resident";
-			})
-			.reduce((sum, cca) => sum + (cca.points || 0), 0);
-		const culturePoints = ccasBeforeTopContributor
-			.filter((cca) => cca.cca_type === "culture")
-			.reduce((sum, cca) => sum + (cca.points || 0), 0);
-		const sportsPoints = ccasBeforeTopContributor
-			.filter((cca) => cca.cca_type === "sports")
-			.reduce((sum, cca) => sum + (cca.points || 0), 0);
-		const supplementaryPoints = ccasBeforeTopContributor
-			.filter((cca) => cca.cca_type === "supplementary")
-			.reduce((sum, cca) => sum + (cca.points || 0), 0);
-		const adhocPoints = ccasBeforeTopContributor
-			.filter((cca) => cca.cca_type === "adhoc")
-			.reduce((sum, cca) => sum + (cca.points || 0), 0);
-		const blockPoints = blockResidentAppointments.reduce(
-			(sum, appointment) => sum + (appointment.points || 0),
-			0,
-		);
-		const cumulativeAfterCulture = culturePoints;
-		const cumulativeAfterSports = culturePoints + sportsPoints;
-		const cumulativeAfterCommittees = culturePoints + sportsPoints + committeePoints;
-		const cumulativeAfterBlock = cumulativeAfterCommittees + blockPoints;
-		const cumulativeAfterSupplementary = cumulativeAfterBlock + supplementaryPoints;
-		const cumulativeAfterAdhoc = cumulativeAfterSupplementary + adhocPoints;
-		const sportsIhgTeamCount = sportsCcas.filter((cca) =>
-			ihgTeamStatuses.has(
-				String(cca.cut_status || "")
-					.trim()
-					.toLowerCase(),
-			),
-		).length;
-
-		const committeeNames = truncateList(committeeCcas.map((cca) => cca.name));
-		const sportsNames = truncateList(sportsCcas.map((cca) => cca.name));
-		const cultureNames = truncateList(cultureCcas.map((cca) => cca.name));
-		const supplementaryNames = truncateList(supplementaryCcas.map((cca) => cca.name));
-		const adhocNames = truncateList(adhocCcas.map((cca) => cca.name));
-		const blockResidentNames = truncateList(
-			blockResidentAppointments.map((appointment) => appointment.cca_name),
-		);
-		const leadershipDescriptions = truncateList(
-			leadershipCcas.map((cca) => `${cca.role} in ${cca.name}`),
-			2,
-		);
-
-		const slides: RecapSlide[] = [
-			{
-				id: "intro",
-				eyebrow: "Points Recap",
-				title: "How did you earn points?",
-				description: `Before the final reveal, let’s trace how your AY25/26 took shape.`,
-				statLabel: "Points so far",
-				statValue: "0",
-				statNote: `You were in ${formatCount(totalCcas, "CCA")} this year`,
-				supportingText: "Watch this number climb as each cca adds to your final points.",
-				accent: "from-[#2a1458] via-[#7b2ff7] to-[#ff5ea8]",
-			},
-			{
-				id: "culture",
-				eyebrow: "Culture",
-				title: "How cultural were you this year?",
-				description:
-					cultureCcas.length > 0
-						? `You joined ${formatCount(cultureCcas.length, "culture CCA")}.`
-						: "This part of your year stayed in the background.",
-				statLabel: "Points so far",
-				statValue: String(cumulativeAfterCulture),
-				statNote:
-					culturePoints > 0
-						? `${culturePoints} point${culturePoints === 1 ? "" : "s"} came from the cultures.`
-						: cultureCcas.length > 0
-							? "The colour was there, even if the scoreboard stayed quiet :("
-							: undefined,
-				bulletItems: cultureCcas.length > 0 ? cultureNames : undefined,
-				supportingText: "All your trainings, concerts, practices led to this.",
-				accent: "from-[#2b124c] via-[#ff4d8d] to-[#ff9f43]",
-			},
-			{
-				id: "sports",
-				eyebrow: "Activity",
-				title: "How physically active were you in Sheares?",
-				description:
-					sportsCcas.length > 0
-						? `You joined ${formatCount(sportsCcas.length, "sport CCA")}.`
-						: "Perhaps your energy showed up somewhere else this year?",
-				statLabel: "Points so far",
-				statValue: String(cumulativeAfterSports),
-				statNote:
-					sportsIhgTeamCount > 0
-						? `You represented Sheares Hall in IHG in ${sportsIhgTeamCount} sports.`
-						: sportsCcas.length > 0
-							? `${sportsPoints} point${sportsPoints === 1 ? "" : "s"} came from sports.`
-							: undefined,
-				bulletItems: sportsCcas.length > 0 ? sportsNames : undefined,
-				supportingText: "Sheares Hall Sports Hall??",
-				accent: "from-[#10203f] via-[#1e90ff] to-[#00c6ff]",
-			},
-			{
-				id: "committees",
-				eyebrow: "Committees",
-				title: "So.. do you like to plan events?",
-				description:
-					committeeCcas.length > 0
-						? `You joined ${formatCount(committeeCcas.length, "committee", "committees")} in total.`
-						: "You stayed fairly quiet this year.",
-				statLabel: "Points so far",
-				statValue: String(cumulativeAfterCommittees),
-				statNote:
-					committeePoints > 0
-						? `${committeePoints} point${committeePoints === 1 ? "" : "s"} came from the work of building and shaping hall life.`
-						: committeeCcas.length > 0
-							? "The effort was there even if the points have not landed yet."
-							: undefined,
-				bulletItems: committeeCcas.length > 0 ? committeeNames : undefined,
-				supportingText:
-					leadershipDescriptions.length > 0
-						? `You also took on ${formatCount(leadershipCcas.length, "leadership position")}.`
-						: committeeCcas.length > 0
-							? "No leadership roles here, but you still did the work."
-							: undefined,
-				supportingBulletItems:
-					leadershipDescriptions.length > 0 ? leadershipDescriptions : undefined,
-				accent: "from-[#35155d] via-[#c94b4b] to-[#f2994a]",
-			},
-			{
-				id: "block",
-				eyebrow: "Block",
-				title: "Are you active in your block?",
-				description:
-					blockResidentAppointments.length > 0
-						? "Block points also contributed to your total."
-						: "No block points showed up here.",
-				statLabel: "Points so far",
-				statValue: String(cumulativeAfterBlock),
-				statNote:
-					blockPoints > 0
-						? `${blockPoints} block point${blockPoints === 1 ? "" : "s"} came in here.`
-						: undefined,
-				bulletItems: blockResidentNames.length > 0 ? blockResidentNames : undefined,
-				supportingText: blockPoints > 0 ? "Home ground matters too." : undefined,
-				accent: "from-[#0f172a] via-[#1e3a8a] to-[#3b82f6]", // Darker blue
-			},
-			{
-				id: "supplementary",
-				eyebrow: "Supplementary",
-				title: "You also participated in some events!",
-				description:
-					supplementaryCcas.length > 0
-						? "Some extra points quietly slipped into your pocket too."
-						: "No supplementary points showed up this time.",
-				statLabel: "Points so far",
-				statValue: String(cumulativeAfterSupplementary),
-				statNote:
-					supplementaryPoints > 0
-						? `${supplementaryPoints} supplementary point${supplementaryPoints === 1 ? "" : "s"} came in here.`
-						: undefined,
-				bulletItems: supplementaryNames.length > 0 ? supplementaryNames : undefined,
-				supportingText:
-					supplementaryPoints > 0
-						? "Small additions still make the total feel very different."
-						: undefined,
-				accent: "from-[#064e3b] via-[#166534] to-[#10b981]", // Vibrant green
-			},
-			{
-				id: "adhoc",
-				eyebrow: "Adhoc Events",
-				title: "There were some adhoc events too",
-				description:
-					adhocCcas.length > 0
-						? "You joined them and snagged some extra points."
-						: "Did you join them?",
-				statLabel: "Points so far",
-				statValue: String(cumulativeAfterAdhoc),
-				statNote:
-					adhocPoints > 0
-						? `${adhocPoints} adhoc point${adhocPoints === 1 ? "" : "s"} came in here.`
-						: undefined,
-				bulletItems: adhocNames.length > 0 ? adhocNames : undefined,
-				supportingText: adhocPoints > 0 ? "Every little event counts." : undefined,
-				accent: "from-[#4c1d95] via-[#7e22ce] to-[#c084fc]", // Vibrant purple tone
-			},
-			{
-				id: "reveal",
-				eyebrow: "Final Score",
-				title: "Your Final Hall Points",
-				description: `This is where your hall points stand at.`,
-				statLabel: "Total points",
-				statValue: String(totalPoints),
-				statNote: "Did you beat your friends? Share your statistics on LinkedIn.",
-				emphasis: String(totalPoints),
-				supportingText:
-					totalCcas > 0 ? `${formatCount(totalCcas, "CCA")} joined.` : "No CCAs joined yet.",
-				accent: "from-[#ff6a00] via-[#ff9500] to-[#ffb700]",
-				kind: "reveal",
-			},
-		];
-
-		return {
-			slides,
-			totals: {
-				totalPoints,
-				totalCcas,
-				culturePoints,
-				sportsPoints,
-				committeePoints,
-				supplementaryPoints,
-				adhocPoints,
-				blockPoints,
-			},
-		};
-	}, [ccas, user.appointments, user.points]);
 
 	useEffect(() => {
 		if (!open) return;
@@ -503,7 +149,7 @@ export function PointsRecapCard({
 			? `${window.location.origin}/dashboard/mycca`
 			: "https://sheares-dashboard.local";
 
-	const slide = recap.slides[currentSlide];
+	const slide: RecapSlide = recap.slides[currentSlide];
 	const emphasis = slide.kind === "reveal" ? String(displayCount) : slide.emphasis;
 
 	const paginate = (nextDirection: number) => {
@@ -553,300 +199,13 @@ export function PointsRecapCard({
 		setDisplayCount(0);
 		displayCountRef.current = 0;
 		setHasSeenRecap(true);
-		localStorage.setItem("hasSeenPointsRecap", "true");
 	};
 
-	const [imgGenerating, setImgGenerating] = useState(false);
-	const createRecapImageBlob = async () => {
-		const width = 1080;
-		const height = 1350;
-		const scale = 2;
-		const canvas = document.createElement("canvas");
-		canvas.width = width * scale;
-		canvas.height = height * scale;
-		const ctx = canvas.getContext("2d");
-		if (!ctx) throw new Error("ctx");
-		ctx.scale(scale, scale);
-
-		const roundedRect = (x: number, y: number, w: number, h: number, r: number) => {
-			ctx.beginPath();
-			ctx.moveTo(x + r, y);
-			ctx.arcTo(x + w, y, x + w, y + h, r);
-			ctx.arcTo(x + w, y + h, x, y + h, r);
-			ctx.arcTo(x, y + h, x, y, r);
-			ctx.arcTo(x, y, x + w, y, r);
-			ctx.closePath();
-		};
-
-		// Certificate Background
-		const grad = ctx.createLinearGradient(0, 0, width, height);
-		grad.addColorStop(0, "#ff6a00");
-		grad.addColorStop(0.5, "#ff9500");
-		grad.addColorStop(1, "#ffb700");
-		ctx.fillStyle = grad;
-		ctx.fillRect(0, 0, width, height);
-
-		const vignette = ctx.createRadialGradient(
-			width / 2,
-			height / 2,
-			0,
-			width / 2,
-			height / 2,
-			width,
-		);
-		vignette.addColorStop(0, "rgba(255,255,255,0.05)");
-		vignette.addColorStop(1, "rgba(150, 40, 0, 0.45)"); // Burnt orange vignette for contrast
-		ctx.fillStyle = vignette;
-		ctx.fillRect(0, 0, width, height);
-
-		// Certificate Borders
-		ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
-		ctx.lineWidth = 3;
-		roundedRect(40, 40, width - 80, height - 80, 24);
-		ctx.stroke();
-
-		ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
-		ctx.lineWidth = 1;
-		roundedRect(54, 54, width - 108, height - 108, 16);
-		ctx.stroke();
-
-		// Header Text
-		ctx.shadowColor = "rgba(0,0,0,0.2)";
-		ctx.shadowBlur = 8;
-		ctx.shadowOffsetY = 2;
-
-		ctx.textAlign = "center";
-		ctx.fillStyle = "#ffffff";
-		ctx.font = "800 64px system-ui, -apple-system, sans-serif";
-		ctx.fillText("SHEARES WRAPPED", width / 2, 160);
-
-		ctx.font = "700 32px system-ui, -apple-system, sans-serif";
-		ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
-		ctx.fillText("25/26 HALL POINTS RECAP", width / 2, 220);
-
-		ctx.font = "italic 600 40px system-ui, -apple-system, sans-serif";
-		ctx.fillStyle = "#ffffff";
-		const userName = (user.name || "Resident").toUpperCase();
-		ctx.fillText(userName, width / 2, 280);
-
-		ctx.shadowColor = "transparent";
-
-		const formatName = (c: Pick<CCAData, "name" | "role" | "position_type">) =>
-			isLeadershipRole(c) && c.role ? `${c.role} in ${c.name}` : c.name;
-
-		// Filter valid categories
-		const catDefs = [
-			{
-				label: "Culture",
-				items: (ccas || [])
-					.filter((c) => c.cca_type === "culture")
-					.map((c) => ({ name: formatName(c), points: c.points || 0 })),
-				total: recap.totals.culturePoints || 0,
-			},
-			{
-				label: "Sports",
-				items: (ccas || [])
-					.filter((c) => c.cca_type === "sports")
-					.map((c) => ({ name: formatName(c), points: c.points || 0 })),
-				total: recap.totals.sportsPoints || 0,
-			},
-			{
-				label: "Committees",
-				items: (ccas || [])
-					.filter((c) => {
-						if (c.cca_type !== "committee") return false;
-						const posType = String(c.position_type || "")
-							.trim()
-							.toLowerCase();
-						return posType !== "member" && posType !== "resident";
-					})
-					.map((c) => ({ name: formatName(c), points: c.points || 0 })),
-				total: recap.totals.committeePoints || 0,
-			},
-			{
-				label: "Block",
-				items: (user.appointments || [])
-					.filter(
-						(appointment) =>
-							isBlockCcaName(appointment.cca_name) &&
-							isResidentBlockPosition(appointment.position_type, appointment.position_name),
-					)
-					.map((appointment) => ({ name: appointment.cca_name, points: appointment.points || 0 })),
-				total: recap.totals.blockPoints || 0,
-			},
-			{
-				label: "Supplementary",
-				items: (ccas || [])
-					.filter((c) => c.cca_type === "supplementary")
-					.map((c) => ({ name: formatName(c), points: c.points || 0 })),
-				total: recap.totals.supplementaryPoints || 0,
-			},
-			{
-				label: "Adhoc",
-				items: (ccas || [])
-					.filter((c) => c.cca_type === "adhoc")
-					.map((c) => ({ name: formatName(c), points: c.points || 0 })),
-				total: recap.totals.adhocPoints || 0,
-			},
-		].filter((cat) => cat.items.length > 0 || cat.total > 0);
-
-		// Semi-transparent container for CCAs
-		ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
-		roundedRect(80, 330, width - 160, 710, 24);
-		ctx.fill();
-		ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
-		ctx.lineWidth = 1;
-		ctx.stroke();
-
-		// Layout calculation for columns
-		let totalLines = catDefs.length * 2;
-		catDefs.forEach((c) => {
-			totalLines += c.items.length;
-		});
-
-		const useTwoCols = totalLines > 11;
-		const col1X = 120;
-		const col1Width = useTwoCols ? (width - 290) / 2 : width - 240;
-		const col2X = useTwoCols ? col1X + col1Width + 50 : col1X;
-
-		let currentX = col1X;
-		const currentWidth = col1Width;
-		let y = 400;
-		const maxY = 1000;
-
-		const drawText = (
-			text: string,
-			x: number,
-			yy: number,
-			font: string,
-			align: CanvasTextAlign,
-			color = "#ffffff",
-		) => {
-			ctx.font = font;
-			ctx.fillStyle = color;
-			ctx.textAlign = align;
-			ctx.fillText(text, x, yy);
-		};
-
-		const wrapText = (text: string, maxW: number, font: string): string[] => {
-			ctx.font = font;
-			const words = text.split(" ");
-			const lines: string[] = [];
-			let currentLine = words[0];
-
-			for (let i = 1; i < words.length; i++) {
-				const word = words[i];
-				const width = ctx.measureText(currentLine + " " + word).width;
-				if (width < maxW) {
-					currentLine += " " + word;
-				} else {
-					lines.push(currentLine);
-					currentLine = word;
-				}
-			}
-			lines.push(currentLine);
-			return lines;
-		};
-
-		for (const cat of catDefs) {
-			// Check if we need to move to the second column to avoid orphans
-			const spaceNeeded = 70 + cat.items.length * 40;
-			if (useTwoCols && currentX === col1X && y + spaceNeeded > maxY && y > 450) {
-				currentX = col2X;
-				y = 400;
-			}
-
-			ctx.font = "800 28px system-ui, -apple-system, sans-serif";
-			drawText(
-				cat.label,
-				currentX,
-				y,
-				"800 28px system-ui, -apple-system, sans-serif",
-				"left",
-				"#ffffff",
-			);
-			drawText(
-				`${cat.total} pts`,
-				currentX + currentWidth,
-				y,
-				"800 28px system-ui, -apple-system, sans-serif",
-				"right",
-				"#ffffff",
-			);
-
-			// Subtle line under category
-			ctx.beginPath();
-			ctx.moveTo(currentX, y + 15);
-			ctx.lineTo(currentX + currentWidth, y + 15);
-			ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
-			ctx.stroke();
-
-			y += 50;
-
-			for (const item of cat.items) {
-				const ptsText = `${item.points} pts`;
-				ctx.font = "700 24px system-ui, -apple-system, sans-serif";
-				const ptsWidth = ctx.measureText(ptsText).width;
-
-				const nameFont = "500 24px system-ui, -apple-system, sans-serif";
-				const nameMaxW = currentWidth - ptsWidth - 25; // buffer between name and points
-
-				const nameLines = wrapText(`• ${item.name}`, nameMaxW, nameFont);
-				const itemHeight = Math.max(nameLines.length * 30, 36);
-
-				if (useTwoCols && currentX === col1X && y + itemHeight > maxY - 20) {
-					currentX = col2X;
-					y = 400;
-				}
-
-				drawText(
-					ptsText,
-					currentX + currentWidth,
-					y,
-					"700 24px system-ui, -apple-system, sans-serif",
-					"right",
-					"rgba(255, 255, 255, 0.95)",
-				);
-
-				for (let i = 0; i < nameLines.length; i++) {
-					const lineX = currentX + 10 + (i > 0 ? 15 : 0);
-					drawText(nameLines[i], lineX, y + i * 30, nameFont, "left", "rgba(255, 255, 255, 0.95)");
-				}
-
-				y += itemHeight + 6;
-			}
-			y += 24; // space before next category
-		}
-
-		// Bottom Total section
-		ctx.textAlign = "center";
-
-		ctx.shadowColor = "rgba(0,0,0,0.2)";
-		ctx.shadowBlur = 6;
-		ctx.shadowOffsetY = 2;
-		ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
-		ctx.font = "800 32px system-ui, -apple-system, sans-serif";
-		ctx.fillText("TOTAL SCORE", width / 2, 1120);
-
-		ctx.fillStyle = "#ffffff";
-		ctx.font = "900 150px system-ui, -apple-system, sans-serif";
-		ctx.shadowColor = "rgba(0,0,0,0.4)";
-		ctx.shadowBlur = 16;
-		ctx.shadowOffsetY = 6;
-		ctx.fillText(String(recap.totals.totalPoints), width / 2, 1260);
-		ctx.shadowColor = "transparent";
-
-		return new Promise<Blob>((resolve) =>
-			canvas.toBlob((b) => resolve(b as Blob), "image/png", 0.92),
-		);
-	};
-
-	// TODO(Phase-4): Reconnect or remove -- currently unused.
 	const _downloadRecapImage = async () => {
 		if (imgGenerating) return;
 		setImgGenerating(true);
 		try {
-			const blob = await createRecapImageBlob();
+			const blob = await createRecapImageBlob(user, ccas, recap);
 			const url = URL.createObjectURL(blob);
 			const a = document.createElement("a");
 			a.href = url;
@@ -866,7 +225,7 @@ export function PointsRecapCard({
 		if (imgGenerating) return;
 		setImgGenerating(true);
 		try {
-			const blob = await createRecapImageBlob();
+			const blob = await createRecapImageBlob(user, ccas, recap);
 			const file = new File([blob], "sheares-wrapped.png", { type: "image/png" });
 			if (navigator.canShare && navigator.canShare({ files: [file] })) {
 				await navigator.share({ files: [file], title: "Sheares Wrapped" });
