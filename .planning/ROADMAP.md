@@ -69,7 +69,7 @@ Plans:
 Plans:
 - [x] 03-01-PLAN.md -- Feature module structure, type splitting, and CCA lib file migration
 - [x] 03-02-PLAN.md -- Custom hook extraction for all three CCA pages
-- [ ] 03-03-PLAN.md -- ManageMembers component decomposition (MemberGroupTable, AddMemberModal, SaveErrorDialog)
+- [x] 03-03-PLAN.md -- ManageMembers component decomposition (MemberGroupTable, AddMemberModal, SaveErrorDialog)
 
 ### Phase 4: Member Ranking Module
 **Goal**: Ranking pages are decomposed into manageable components and the ranking save operation is atomic -- no data loss on partial failure
