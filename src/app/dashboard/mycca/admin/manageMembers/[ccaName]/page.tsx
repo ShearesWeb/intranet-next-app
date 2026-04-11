@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from "sonner";
 import { AppLayout } from '@/components/layout/app-layout';
 import { Member, PendingChange, UserSearchResult, CutStatus, CommitmentPeriod } from '@/types/dashboard';
+import { CcaSummary, GroupedMembers, MemberPermissions } from '@/types/cca-members';
 
 // shadcn UI
 import { Button } from "@/components/ui/button";
@@ -58,8 +59,6 @@ const memberTableColumns: SimpleTableColumn<Member>[] = [
     },
 ];
 
-type GroupedMembers = Record<string, Member[]>;
-
 type PositionOption = {
     id: number;
     name: string;
@@ -100,10 +99,8 @@ export default function ManageMembersPage() {
     const [currentGroupedMembers, setCurrentGroupedMembers] = useState<GroupedMembers>({});
 
     // UI state
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [cca, setCCA] = useState<any>(null);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [permissions, setPermissions] = useState<any>({ canManageMembers: false, ccaType: '', managementMessage: '' });
+    const [cca, setCCA] = useState<CcaSummary | null>(null);
+    const [permissions, setPermissions] = useState<MemberPermissions>({ canManageMembers: false, ccaType: '', managementMessage: '' });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [memberPositionId, setMemberPositionId] = useState<number | null>(null);
@@ -254,7 +251,7 @@ export default function ManageMembersPage() {
             position_id: positionId
         };
 
-        setCurrentGroupedMembers((prev: GroupedMembers) => ({
+        setCurrentGroupedMembers((prev) => ({
             ...prev,
             members: [...(prev.members || []), newMember]
         }));
@@ -299,9 +296,8 @@ export default function ManageMembersPage() {
         });
 
         // Remove from current display
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        setCurrentGroupedMembers((prev: any) => {
-            const updated = { ...prev };
+        setCurrentGroupedMembers((prev) => {
+            const updated: GroupedMembers = { ...prev };
             Object.keys(updated).forEach(key => {
                 updated[key] = updated[key].filter((member: Member) => member.user_id !== userId);
             });
@@ -343,8 +339,6 @@ export default function ManageMembersPage() {
             return;
         }
 
-        // Find member in any group
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const allCurrentMembers = Object.values(currentGroupedMembers).flat() as Member[];
         const member = allCurrentMembers.find(m => m.user_id === userId);
 
@@ -397,14 +391,11 @@ export default function ManageMembersPage() {
         });
 
         // Update currentGroupedMembers locally
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        setCurrentGroupedMembers((prev: any) => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const updated: any = { ...prev };
+        setCurrentGroupedMembers((prev) => {
+            const updated: GroupedMembers = { ...prev };
 
             // Helper to remove member from any group
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const removeFromGroup = (group: any[]) => (group || []).filter((m: any) => m.user_id !== userId);
+            const removeFromGroup = (group: Member[] | undefined) => (group || []).filter((m) => m.user_id !== userId);
 
             Object.keys(updated).forEach(key => {
                 updated[key] = removeFromGroup(updated[key]);
@@ -413,7 +404,6 @@ export default function ManageMembersPage() {
             // Add to new group
             const targetGroup = getGroupFromStatus(newStatus);
             if (targetGroup) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 updated[targetGroup] = [...(updated[targetGroup] || []), { ...member, cut_status: newStatus }];
             }
 
@@ -429,8 +419,6 @@ export default function ManageMembersPage() {
             return;
         }
 
-        // Find member
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const allCurrentMembers = Object.values(currentGroupedMembers).flat() as Member[];
         const member = allCurrentMembers.find(m => m.user_id === userId);
 
@@ -479,13 +467,10 @@ export default function ManageMembersPage() {
         });
 
         // Update local state
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        setCurrentGroupedMembers((prev: any) => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const updated: any = { ...prev };
+        setCurrentGroupedMembers((prev) => {
+            const updated: GroupedMembers = { ...prev };
             Object.keys(updated).forEach(key => {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                updated[key] = updated[key].map((m: any) =>
+                updated[key] = updated[key].map((m) =>
                     m.user_id === userId ? { ...m, commitment_period: newPeriod } : m
                 );
             });
@@ -603,11 +588,10 @@ export default function ManageMembersPage() {
                         }
                         successCount++;
                     }
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                } catch (error: any) {
+                } catch (error: unknown) {
                     console.error(`Error processing ${change.type} for ${change.user_name}:`, error);
                     errorCount++;
-                    const errorMsg = error.message || 'Unknown error';
+                    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
                     currentErrors.push(`${change.user_name}: ${errorMsg}`);
                 }
             }
@@ -704,11 +688,10 @@ export default function ManageMembersPage() {
                 {
                     accessorKey: 'commitment_period' as keyof Member,
                     header: 'Commitment',
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    cell: (value: any, row: Member) => (
+                    cell: (value, row: Member) => (
                         showEditableCommitment ? (
                             <select
-                                value={value || 'full-year'}
+                                value={(typeof value === 'string' ? value : null) || 'full-year'}
                                 onChange={(e) => handleLocalUpdateCommitment(row.user_id, e.target.value as CommitmentPeriod)}
                                 className="border rounded p-1 text-sm bg-transparent cursor-pointer hover:bg-gray-100 w-28"
                                 onClick={(e) => e.stopPropagation()}
@@ -725,8 +708,7 @@ export default function ManageMembersPage() {
                 {
                     accessorKey: 'actions' as keyof Member,
                     header: 'Actions',
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    cell: (_value: any, row: Member) => (
+                    cell: (_value, row: Member) => (
                         <div className="flex flex-wrap gap-3">
                             {isSports ? (
                                 <DropdownMenu>
@@ -810,8 +792,7 @@ export default function ManageMembersPage() {
                 {
                     accessorKey: 'commitment_period' as keyof Member,
                     header: 'Commitment',
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    cell: (value: any) => (
+                    cell: (value) => (
                         <span>{formatCommitmentPeriod(value as CommitmentPeriod | null | undefined)}</span>
                     )
                 },

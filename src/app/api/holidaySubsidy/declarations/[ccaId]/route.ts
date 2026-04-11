@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { SubsidyStatus } from "@/types/holiday-subsidy";
+import { PositionWithSubsidies } from "@/types/holiday-subsidy-api";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { checkCcaAuthorization } from "@/lib/cca-chair-access";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
@@ -96,10 +97,8 @@ export async function GET(_request: Request, { params }: Params) {
         }
 
         // Flatten subsidies and clean up positions to match previous response structure
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const subsidies = positionsWithSubsidies?.flatMap((p: any) => p.subsidies || []) || [];
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const positions = positionsWithSubsidies?.map(({ subsidies, ...rest }) => rest) || [];
+        const subsidies = positionsWithSubsidies?.flatMap((position: PositionWithSubsidies) => position.subsidies || []) || [];
+        const positions = positionsWithSubsidies?.map(({ subsidies: _subsidies, ...rest }: PositionWithSubsidies) => rest) || [];
 
         return NextResponse.json({ positions, subsidies });
     } catch (error) {

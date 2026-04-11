@@ -14,8 +14,7 @@ import {
 export interface OrderingTableColumn<TData> {
     accessorKey: keyof TData;
     header: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    cell?: (value: any, row: TData, index: number) => React.ReactNode;
+    cell?: (value: unknown, row: TData, index: number) => React.ReactNode;
 }
 
 interface OrderingTableProps<TData> {
@@ -26,8 +25,7 @@ interface OrderingTableProps<TData> {
     emptyMessage?: string;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function OrderingTable<TData extends Record<string, any>>({
+export function OrderingTable<TData extends object>({
     data,
     columns,
     onReorder,
@@ -243,7 +241,9 @@ export function OrderingTable<TData extends Record<string, any>>({
                                     </div>
                                 </TableCell>
                                 {allColumns.map((col, colIndex) => {
-                                    const value = col.accessorKey === '__rank' ? null : row[col.accessorKey];
+                                    const value = col.accessorKey === '__rank'
+                                        ? null
+                                        : (row as Record<keyof TData, unknown>)[col.accessorKey];
                                     return (
                                         <TableCell key={colIndex}>
                                             {col.cell

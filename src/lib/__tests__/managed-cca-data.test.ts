@@ -227,7 +227,7 @@ describe("getManagedCcaData", () => {
 				position_name: "Chair",
 				position_type: "lead",
 				points: 5,
-				name: "Chair",
+				is_admin: false,
 			},
 		]);
 

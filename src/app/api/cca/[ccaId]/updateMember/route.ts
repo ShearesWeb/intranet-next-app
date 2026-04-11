@@ -5,6 +5,7 @@ import { createClient } from "@/utils/supabase/server";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { getManagedCcaAccess } from "@/lib/cca-management-access";
 import { normalizeCutStatusForCca } from "@/lib/cca-cut-status";
+import { MemberUpdate } from "@/types/cca-members";
 
 const CUT_STATUSES_BY_CCA_TYPE = {
     sports: new Set(["ivp-ihg-team", "ihg-team", "final-cut"]),
@@ -74,8 +75,7 @@ export async function POST(
             }
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const updates: any = {};
+        const updates: MemberUpdate = {};
         if (cut_status !== undefined) updates.cut_status = normalizedCutStatus;
         if (commitment_period !== undefined) updates.commitment_period = commitment_period;
         if (comments !== undefined) updates.comments = comments;

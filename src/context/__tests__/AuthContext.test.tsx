@@ -108,7 +108,9 @@ describe("AuthContext", () => {
     expect(mocks.push).toHaveBeenCalledWith(
       "/auth/login?reason=user_not_found"
     );
-    expect(latestAuth?.user).toBeNull();
+    const authSnapshot = latestAuth as AuthStateSnapshot | null;
+    expect(authSnapshot).not.toBeNull();
+    expect(authSnapshot?.user).toBeNull();
   });
 
   it("redirects to /auth/login?reason=user_not_found when backend returns no user", async () => {
@@ -180,7 +182,9 @@ describe("AuthContext", () => {
     });
     await flushEffects();
 
-    expect(latestAuth?.session).toBe(session);
-    expect(latestAuth?.user?.email).toBe("a@test.com");
+    const authSnapshot = latestAuth as AuthStateSnapshot | null;
+    expect(authSnapshot).not.toBeNull();
+    expect(authSnapshot?.session).toBe(session);
+    expect(authSnapshot?.user?.email).toBe("a@test.com");
   });
 });

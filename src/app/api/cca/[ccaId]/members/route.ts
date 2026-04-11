@@ -6,6 +6,7 @@ import { canManageCcaMembers, getCcaMemberManagementDisabledMessage } from "@/li
 import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { getManagedCcaAccess } from "@/lib/cca-management-access";
 import { normalizeCutStatusForCca } from "@/lib/cca-cut-status";
+import { MemberJoinPosition, MemberWithJoins } from "@/types/cca-members";
 
 interface TransformedMember {
     user_id: number;
@@ -95,17 +96,17 @@ export async function GET(
 
         const transformedMembers: TransformedMember[] = [];
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ccaMembers?.forEach((member: any) => {
-            const userData = member.public_user_info;
-            
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            let positionData: any = null;
-            if (member.cca_positions) {
-                positionData = Array.isArray(member.cca_positions)
-                    ? member.cca_positions[0]
-                    : member.cca_positions;
+        const unwrapSingleRelation = <T,>(value: T | T[] | null | undefined): T | null => {
+            if (Array.isArray(value)) {
+                return value[0] ?? null;
             }
+
+            return value ?? null;
+        };
+
+        ccaMembers?.forEach((member: MemberWithJoins) => {
+            const userData = unwrapSingleRelation(member.public_user_info);
+            const positionData = unwrapSingleRelation<MemberJoinPosition>(member.cca_positions);
 
             if (userData && positionData) {
                 transformedMembers.push({

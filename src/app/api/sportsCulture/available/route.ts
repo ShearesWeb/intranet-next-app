@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { fetchUserId } from "@/lib/fetch-user-info";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
+import { SportsCultureAppointment, SportsCultureCca, SportsCulturePositionJoin } from "@/types/sports-culture";
 
 interface AvailablePosition {
     id: number;
@@ -19,7 +20,6 @@ interface AvailablePosition {
     can_apply: boolean;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function GET(_request: Request) {
     const disabledResponse = getCoreServiceDisabledApiResponse("ccaApplications");
 
@@ -59,20 +59,29 @@ export async function GET(_request: Request) {
         const userCCAMap = new Map<number, string>(); // cca_id -> position_type (existing roles)
         const userApplicationsByCCA = new Map<number, { positionId: number, positionType: string, positionName: string }>(); // cca_id -> applied position info
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        userCurrentCCAs?.forEach((appointment: any) => {
+        const unwrapSingleRelation = <T,>(value: T | T[] | null | undefined): T | null => {
+            if (Array.isArray(value)) {
+                return value[0] ?? null;
+            }
+
+            return value ?? null;
+        };
+
+        userCurrentCCAs?.forEach((appointment: SportsCultureAppointment) => {
             const position = appointment.cca_positions;
-            if (position && position.ccas) {
-                const cca = Array.isArray(position.ccas) ? position.ccas[0] : position.ccas;
+            const resolvedPosition = unwrapSingleRelation<SportsCulturePositionJoin>(position);
+
+            if (resolvedPosition?.ccas) {
+                const cca = unwrapSingleRelation<SportsCultureCca>(resolvedPosition.ccas);
                 if (cca) {
-                    userCCAMap.set(cca.id, position.position_type);
+                    userCCAMap.set(cca.id, resolvedPosition.position_type);
 
                     // ✅ Track applications to sports/culture positions
-                    if (['sports', 'culture'].includes(cca.cca_type) && ['member', 'team manager'].includes(position.position_type)) {
+                    if (["sports", "culture"].includes(cca.cca_type) && ["member", "team manager"].includes(resolvedPosition.position_type)) {
                         userApplicationsByCCA.set(cca.id, {
                             positionId: appointment.position_id,
-                            positionType: position.position_type,
-                            positionName: position.name
+                            positionType: resolvedPosition.position_type,
+                            positionName: resolvedPosition.name
                         });
                     }
                 }

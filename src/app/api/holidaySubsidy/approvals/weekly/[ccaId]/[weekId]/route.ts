@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
+import { WeeklyApprovalSubmission, JoinedPositionSummary, JoinedUserSummary } from "@/types/holiday-subsidy-api";
 
 type Params = {
     params: Promise<{
@@ -9,7 +10,6 @@ type Params = {
     }>;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function authorizeJCRC(supabase: Awaited<ReturnType<typeof createClient>>) {
     const {
         data: { user },
@@ -86,10 +86,17 @@ export async function GET(_request: Request, { params }: Params) {
             return NextResponse.json({ error: submissionsError.message }, { status: 500 });
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const submissionsData = submissions?.map((sub: any) => {
-            const user = sub.public_user_info;
-            const position = sub.cca_positions;
+        const unwrapSingleRelation = <T,>(value: T | T[] | null | undefined): T | null => {
+            if (Array.isArray(value)) {
+                return value[0] ?? null;
+            }
+
+            return value ?? null;
+        };
+
+        const submissionsData = submissions?.map((sub: WeeklyApprovalSubmission) => {
+            const user = unwrapSingleRelation<JoinedUserSummary>(sub.public_user_info);
+            const position = unwrapSingleRelation<JoinedPositionSummary>(sub.cca_positions);
 
             return {
                 id: `${sub.user_id}-${sub.position_id}`, // Composite ID for table

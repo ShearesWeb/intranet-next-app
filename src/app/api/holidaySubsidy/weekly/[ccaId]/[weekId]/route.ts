@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 import { getWeekLabel, isWeekEditable } from "@/lib/holiday-subsidy-weeks";
+import { AppointmentWithSubsidy, JoinedPositionSummary, JoinedUserSummary, MemberWithDeclaration, PositionSubsidyRecord, UserSubsidyRecord } from "@/types/holiday-subsidy-api";
 
 type Params = {
     params: Promise<{
@@ -67,11 +68,18 @@ export async function GET(_request: Request, { params }: Params) {
             }, { status: 500 });
         }
 
+        const unwrapSingleRelation = <T,>(value: T | T[] | null | undefined): T | null => {
+            if (Array.isArray(value)) {
+                return value[0] ?? null;
+            }
+
+            return value ?? null;
+        };
+
         // Map the joined data to the expected structure
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const members = appointments?.map((appointment: any) => {
-            const position = appointment.cca_positions;
-            const user = appointment.public_user_info;
+        const members: MemberWithDeclaration[] = appointments?.map((appointment: AppointmentWithSubsidy) => {
+            const position = unwrapSingleRelation<JoinedPositionSummary>(appointment.cca_positions);
+            const user = unwrapSingleRelation<JoinedUserSummary>(appointment.public_user_info);
 
             return {
                 id: appointment.user_id,
@@ -113,18 +121,16 @@ export async function GET(_request: Request, { params }: Params) {
 
         const subsidies = subsidiesResult.data;
         const userSubmissions = submissionsResult.data;
-        const approvedPositionIds = new Set(subsidies?.map((s) => s.position_id) || []);
+        const approvedPositionIds = new Set(subsidies?.map((s: PositionSubsidyRecord) => s.position_id) || []);
 
         // Build response with pre-fill logic
-        const subsidyMap = new Map(subsidies?.map((s) => [s.position_id, s]) || []);
+        const subsidyMap = new Map(subsidies?.map((s: PositionSubsidyRecord) => [s.position_id, s]) || []);
         const submissionMap = new Map(
-            userSubmissions?.map((s) => [`${s.user_id}-${s.position_id}`, s]) || []
+            userSubmissions?.map((s: UserSubsidyRecord) => [`${s.user_id}-${s.position_id}`, s]) || []
         );
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const membersData = members
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            ?.map((member: any) => {
+            ?.map((member: MemberWithDeclaration) => {
                 const approvedSubsidy = subsidyMap.get(member.position_id);
                 const submission = submissionMap.get(`${member.user_id}-${member.position_id}`);
 
