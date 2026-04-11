@@ -77,13 +77,27 @@ describe("auth callback route", () => {
     );
   });
 
-  it("redirects to auth-error when no code provided", async () => {
+  it("redirects to /auth/login?reason=no_code when no code provided", async () => {
     mockSupabase();
 
     const { GET } = await import("../callback/route");
     const response = await GET(new Request("http://localhost/auth/callback"));
 
     expect(response.status).toBe(307);
-    expect(response.headers.get("location")).toContain("/auth/auth-error?reason=no_code");
+    expect(response.headers.get("location")).toContain("/auth/login?reason=no_code");
+  });
+
+  it("redirects to /auth/login?reason=code_exchange_failed when code exchange fails", async () => {
+    mockSupabase({ message: "exchange failed" });
+
+    const { GET } = await import("../callback/route");
+    const response = await GET(
+      new Request("http://localhost/auth/callback?code=invalid&next=/dashboard")
+    );
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toContain(
+      "/auth/login?reason=code_exchange_failed"
+    );
   });
 });
