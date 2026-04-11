@@ -68,7 +68,7 @@ Plans:
 
 Plans:
 - [x] 03-01-PLAN.md -- Feature module structure, type splitting, and CCA lib file migration
-- [ ] 03-02-PLAN.md -- Custom hook extraction for all three CCA pages
+- [x] 03-02-PLAN.md -- Custom hook extraction for all three CCA pages
 - [ ] 03-03-PLAN.md -- ManageMembers component decomposition (MemberGroupTable, AddMemberModal, SaveErrorDialog)
 
 ### Phase 4: Member Ranking Module
@@ -113,7 +113,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6
 |-------|----------------|--------|-----------|
 | 1. Auth Fix & Security | 4/4 | Complete | 2026-04-11 |
 | 2. Infrastructure Cleanup | 0/4 | Planning complete | - |
-| 3. CCA Management Module | 0/3 | Planning complete | - |
+| 3. CCA Management Module | 2/3 | In Progress | - |
 | 4. Member Ranking Module | 0/? | Not started | - |
 | 5. Allocation & Holiday Subsidy Modules | 0/? | Not started | - |
 | 6. UI Consistency & Hardening | 0/? | Not started | - |
