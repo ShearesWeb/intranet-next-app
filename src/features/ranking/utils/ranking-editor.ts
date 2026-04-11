@@ -1,4 +1,4 @@
-import type { CommitmentPeriod } from "@/features/cca/types/members";
+import type { CommitmentPeriod, CutStatus } from "@/features/cca/types/members";
 import type { RankingsApiMember } from "@/features/ranking/types/ranking-api";
 import {
 	MAX_SAVE_PAYLOAD_BYTES,
@@ -195,8 +195,8 @@ export function mapRankingsApiMemberToEditorMember(member: RankingsApiMember): C
 		position: member.position,
 		position_type: member.position_type || "",
 		position_id: member.position_id,
-		cut_status: member.cut_status,
-		commitment_period: member.commitment_period,
+		cut_status: member.cut_status as CutStatus | null,
+		commitment_period: member.commitment_period as CommitmentPeriod | null,
 		ranking: member.ranking ?? 0,
 		attendance: member.attendance ?? 0,
 		performance: member.performance ?? 0,
