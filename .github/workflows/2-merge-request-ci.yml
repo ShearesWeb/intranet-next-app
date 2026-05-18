@@ -1,4 +1,4 @@
-# .github/workflows/ci-merge-request.yml
+# .github/workflows/2-merge-request-ci.yml
 name: Merge Request CI
 
 # Trigger:

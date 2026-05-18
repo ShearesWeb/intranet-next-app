@@ -28,7 +28,8 @@ Treat the harness as greenfield. Goal: a CI-enforced testing system that catches
 
 - Per-PR preview environments (Vercel + Supabase branching). Stays as a phase-2 upgrade.
 - Mutation testing.
-- Cross-browser matrix on every PR (Chromium-only; opt-in pre-release for Firefox/WebKit).
+- Cross-browser matrix on every PR (Chromium-only; cross-browser is not on the roadmap).
+- Cross-device-width testing IS in scope — Playwright runs key E2E specs across mobile / tablet / desktop viewport presets.
 - Coverage thresholds as hard gates (report, don't enforce, until the suite stabilizes).
 - Storybook, visual regression, load testing, contract testing, fuzz testing.
 - Adhoc / supplementary CCA-type personas (no distinct authorization behavior per Daniel).
@@ -274,7 +275,7 @@ These complement (don't replace) the matrix.
   - `globalSetup`: runs `scripts/setup-test-db.sh`, starts `next start` (after `next build`), waits for `http://localhost:3000`, mints sessions via admin API for each persona and saves storage state to `.auth/<persona>.json`.
   - `globalTeardown`: kills Next.js, runs `supabase stop`.
   - `webServer` NOT used — we want full control over the production-mode server.
-  - `projects: [{ name: "chromium" }]` only.
+  - `projects` declares Chromium-only across three viewport widths: `chromium-mobile` (Pixel 7, 412×915), `chromium-tablet` (iPad Mini, 768×1024), `chromium-desktop` (1440×900). Each spec runs in all three by default; specs that are width-irrelevant (e.g., the auth-bleed canary) opt out via `test.use({ viewport })` or `test.skip()`.
   - `workers: 4` in CI, `2` locally.
   - `trace: 'on-first-retry'`, `screenshot: 'only-on-failure'`, `video: 'retain-on-failure'`.
   - Sharding via `--shard=${{ matrix.shard }}/2`.
@@ -303,17 +304,35 @@ These complement (don't replace) the matrix.
 
 ## 8. CI workflow
 
-Replace the current single-job `1-ci-merge-request.yml` with parallel jobs:
+Workflows are numbered by their position in the promotion pipeline (branch → PR → preprod → prod):
+
+| File | Trigger | Purpose |
+|---|---|---|
+| `1-feature-branch-ci.yml` | `push` to any non-`main` branch | Fast feedback (static + unit) on each push — pre-PR signal for the dev |
+| `2-merge-request-ci.yml` | `pull_request` to `main` | Full merge gate — adds integration, RLS, E2E, build to the static + unit checks |
+| `3-preprod-release.yml` | `vX.Y.Z-rc` tag | Deploy to preprod |
+| `4-prd-release.yml` | `vX.Y.Z` tag | Deploy to prod |
+
+**Feature-branch CI (`1-feature-branch-ci.yml`)** runs everything in a single job since total wall-clock is <2 min:
+
+| Step | Time | Gates push? |
+|---|---|---|
+| `format:check` | <10 s | yes |
+| `lint` | <30 s | yes |
+| `typecheck` | ~30 s | yes |
+| `npm test` | <1 min | yes |
+
+**Merge-request CI (`2-merge-request-ci.yml`)** uses parallel jobs to keep wall-clock under ~8 min:
 
 | Job | Time | Services | Gates merge? |
 |---|---|---|---|
 | `static` (lint + prettier + tsc + fixtures-check) | <1 min | none | yes |
 | `unit-and-component` (`npm test`) | <1 min | none | yes |
 | `integration` (`npm run test:integration`) | 3-6 min | local Supabase + `../intranet` checkout | yes |
-| `e2e` (Playwright, shard matrix `[1, 2]`) | 5-8 min each, parallel | local Supabase + `../intranet` + Next prod build | yes |
+| `e2e` (Playwright, viewport+shard matrix) | 5-8 min | local Supabase + `../intranet` + Next prod build | yes |
 | `build` (`next build`, existing) | ~2 min | none | yes |
 
-All run in parallel. Total wall-clock ~8 min dominated by E2E.
+Note that `static` and `unit-and-component` are duplicated between the two workflows. That's intentional — push-time runs catch problems before PR open; PR-time runs ensure the gate is independent of push history.
 
 CI workflow snippet for integration:
 
@@ -366,7 +385,7 @@ Migration is incremental — old and new can coexist during transition. The matr
 ## 11. Out of scope for v1 (phase-2 candidates)
 
 - Per-PR preview environments via Vercel + Supabase branching for E2E and manual QA.
-- Cross-browser matrix (Firefox, WebKit) on every PR.
+- Cross-browser matrix (Firefox, WebKit) — not on the roadmap; cross-device-width is the substitute.
 - Hard coverage thresholds.
 - Mutation testing for access-control helpers.
 - Visual regression / Storybook.
