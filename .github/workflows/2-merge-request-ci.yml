@@ -12,12 +12,17 @@ jobs:
   build-static-assets:
     name: ⚙️ Build Next.js Static Assets
     runs-on: ubuntu-latest
-    environment: preprod
 
+    # No `environment:` is set — the MR workflow runs verification checks and
+    # `next build`, not a deployment. GitHub treats any job with `environment:`
+    # as a deployment in the PR UI, which is misleading for a check job.
+    # The build doesn't connect to Supabase at compile time; it only embeds the
+    # NEXT_PUBLIC_* values into the client bundle. Placeholders below are
+    # sufficient for the build to succeed. Real Supabase config is scoped to
+    # the preprod and prd release workflows (3-* / 4-*).
     env:
-      # Supabase Configuration
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY }}
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY: placeholder-publishable-key
 
     steps:
       - name: 1. 📄 Checkout Repository
