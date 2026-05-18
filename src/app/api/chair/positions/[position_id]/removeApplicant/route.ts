@@ -1,5 +1,7 @@
-// src\app\api\chair\positions\[position_id]\removeApplicant\route.ts
-// API route to remove a ranked applicant
+// src/app/api/chair/positions/[position_id]/removeApplicant/route.ts
+// API route to remove an applicant from a chair's rank list.
+// Deletes a row from `cca_position_preferences` (was `cca_user_ranking`).
+// RLS `delete_managed` policy authorizes the write via `internal.can_manage_cca_appointments`.
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
@@ -45,10 +47,11 @@ export async function POST(
 		}
 
 		const cca = Array.isArray(position.ccas) ? position.ccas[0] : position.ccas;
-		const accessResult = checkCcaAuthorization({
+		const accessResult = await checkCcaAuthorization({
 			requestingUser,
 			cca,
 			require: "chair",
+			supabase,
 		});
 
 		if (!accessResult.ok) {
@@ -56,10 +59,10 @@ export async function POST(
 		}
 
 		const { error } = await supabase
-			.from("cca_user_ranking")
+			.from("cca_position_preferences")
 			.delete()
-			.eq("user_id", user_id)
-			.eq("position_id", positionId);
+			.eq("position_id", positionId)
+			.eq("user_id", user_id);
 
 		if (error) {
 			console.error("Error removing applicant:", error);

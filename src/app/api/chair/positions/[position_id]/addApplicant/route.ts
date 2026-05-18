@@ -1,5 +1,6 @@
-// src\app\api\chair\positions\[position_id]\addApplicant\route.ts
-// API route to add an applicant to rank
+// src/app/api/chair/positions/[position_id]/addApplicant/route.ts
+// API route to add an applicant to a chair's rank list.
+// Writes a row in `cca_position_preferences` via the `upsert_cca_position_preference` RPC.
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
@@ -45,23 +46,24 @@ export async function POST(
 		}
 
 		const cca = Array.isArray(position.ccas) ? position.ccas[0] : position.ccas;
-		const accessResult = checkCcaAuthorization({
+		const accessResult = await checkCcaAuthorization({
 			requestingUser,
 			cca,
 			require: "chair",
+			supabase,
 		});
 
 		if (!accessResult.ok) {
 			return NextResponse.json({ error: accessResult.error }, { status: accessResult.status });
 		}
 
-		// Check if applicant already exists
+		// Check if applicant already exists for this position
 		const { data: existingApplicant } = await supabase
-			.from("cca_user_ranking")
-			.select("id")
-			.eq("user_id", user_id)
+			.from("cca_position_preferences")
+			.select("rank")
 			.eq("position_id", positionId)
-			.single();
+			.eq("user_id", user_id)
+			.maybeSingle();
 
 		if (existingApplicant) {
 			return NextResponse.json(
@@ -70,12 +72,12 @@ export async function POST(
 			);
 		}
 
-		// Get current number of applicants to determine next rank
+		// Get current highest rank to derive the next-rank slot
 		const { data: currentApplicants, error: countError } = await supabase
-			.from("cca_user_ranking")
-			.select("ranking")
+			.from("cca_position_preferences")
+			.select("rank")
 			.eq("position_id", positionId)
-			.order("ranking", { ascending: false })
+			.order("rank", { ascending: false })
 			.limit(1);
 
 		if (countError) {
@@ -83,19 +85,21 @@ export async function POST(
 			return NextResponse.json({ error: "Failed to determine ranking" }, { status: 500 });
 		}
 
-		// Calculate next ranking: highest current rank + 1, or 1 if no applicants
-		const nextRanking = currentApplicants.length > 0 ? (currentApplicants[0].ranking || 0) + 1 : 1;
+		// Next rank = highest existing + 1, or 1 if no rows
+		const nextRanking =
+			currentApplicants && currentApplicants.length > 0
+				? (currentApplicants[0].rank || 0) + 1
+				: 1;
 
-		// Insert new applicant with calculated ranking
-		const { error } = await supabase.from("cca_user_ranking").insert({
-			user_id: user_id,
-			position_id: positionId,
-			ranking: nextRanking,
+		const { error: rpcError } = await supabase.rpc("upsert_cca_position_preference", {
+			p_position_id: positionId,
+			p_user_id: user_id,
+			p_rank: nextRanking,
 		});
 
-		if (error) {
-			console.error("Error adding applicant:", error);
-			return NextResponse.json({ error: error.message }, { status: 500 });
+		if (rpcError) {
+			console.error("Error adding applicant via upsert_cca_position_preference:", rpcError);
+			return NextResponse.json({ error: rpcError.message }, { status: 500 });
 		}
 
 		return NextResponse.json({

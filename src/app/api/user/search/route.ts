@@ -28,7 +28,9 @@ export async function GET(request: Request) {
 
 		const supabase = await createClient();
 
-		const authResult = checkCcaAuthorization({ requestingUser: user });
+		// `checkCcaAuthorization` is async (see `cca-chair-access.ts`): with no `cca`
+		// argument it short-circuits on the JWT fast path (no DB round-trip).
+		const authResult = await checkCcaAuthorization({ requestingUser: user });
 
 		if (!authResult.ok || !authResult.data.hasChairAccess) {
 			return NextResponse.json(
@@ -51,9 +53,14 @@ export async function GET(request: Request) {
 			);
 		}
 
-		// Perform search
+		// Perform search.
+		// `authenticated_user_directory` exposes `id, email, name, room, telegram_handle,
+		// profile_photo_path` to authenticated callers (see
+		// intranet-wiki/wiki/entity/view/public.authenticated_user_directory.md).
+		// `public_user_info` no longer carries `email`/`room` under the new schema, so
+		// chair-only searches must run against the directory view.
 		const { data, error } = await supabase
-			.from("public_user_info")
+			.from("authenticated_user_directory")
 			.select("id, name, email, room")
 			.or(`name.ilike.%${query}%,email.ilike.%${query}%,room.ilike.%${query}%`)
 			.order("name")

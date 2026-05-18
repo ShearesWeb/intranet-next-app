@@ -38,7 +38,9 @@ export async function GET() {
 			);
 		}
 
-		const authResult = checkCcaAuthorization({ requestingUser: userInfo });
+		// `checkCcaAuthorization` is async (see `cca-chair-access.ts`): with no
+		// `cca` argument it short-circuits on the JWT fast path (no DB round-trip).
+		const authResult = await checkCcaAuthorization({ requestingUser: userInfo });
 		const userPositions: UserPositionSummary[] = (userInfo.appointments || []).map(
 			(appointment) => ({
 				position: appointment.position_name,
@@ -51,7 +53,16 @@ export async function GET() {
 			positions: userPositions.map((pos) => `${pos.position} (${pos.position_type}) - ${pos.cca}`),
 		};
 
-		// Allow admins to access chair features
+		// Allow admins to access chair features.
+		//
+		// Note: under the new schema `is_admin` is *not* a stored flag on
+		// `users`. It is derived per query from
+		// `public.authenticated_user_roles` — true iff the caller holds a
+		// position whose `reports_to` chain has subordinate positions. If a
+		// user "had admin" before but now does not, check their position
+		// reporting chain in `cca_positions` rather than searching for a
+		// settable flag.
+		// See: intranet-wiki/wiki/entity/view/public.authenticated_user_info.md
 		if (userInfo.is_admin) {
 			roleResult.isAuthorized = true;
 			if (roleResult.positions.length === 0) {
