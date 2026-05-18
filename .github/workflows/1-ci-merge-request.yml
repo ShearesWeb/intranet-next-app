@@ -18,7 +18,7 @@ jobs:
       # Supabase Configuration
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY }}
-      
+
     steps:
       - name: 1. 📄 Checkout Repository
         uses: actions/checkout@v4
@@ -60,5 +60,17 @@ jobs:
             yarn install --frozen-lockfile --prefer-offline
           fi
 
-      - name: 6. 🚧 Build with Next.js
+      - name: 6. 🎨 Prettier Check
+        run: ${{ steps.detect-pm.outputs.manager }} run format:check
+
+      - name: 7. 🧹 Lint
+        run: ${{ steps.detect-pm.outputs.manager }} run lint
+
+      - name: 8. 🔎 Typecheck
+        run: ${{ steps.detect-pm.outputs.manager }} run typecheck
+
+      - name: 9. 🧪 Unit + Component Tests
+        run: ${{ steps.detect-pm.outputs.manager }} test
+
+      - name: 10. 🚧 Build with Next.js
         run: ${{ steps.detect-pm.outputs.manager }} run build
