@@ -66,3 +66,6 @@ next-env.d.ts
 
 # open-next
 .open-next
+
+# playwright MCP artifacts (browser console logs from MCP tool runs)
+.playwright-mcp/
