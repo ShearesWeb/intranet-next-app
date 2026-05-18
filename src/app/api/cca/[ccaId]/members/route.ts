@@ -67,6 +67,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cca
 			supabase,
 			requestingUser,
 			cca: ccaData,
+			accessLevel: "manage_members",
 		});
 
 		if (!authResult.ok) {
@@ -88,7 +89,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cca
                 created_at,
                 cut_status,
                 commitment_period,
-                public_user_info!inner(id, name, email, room),
+                authenticated_user_directory!inner(id, name, email, room),
                 cca_positions!inner(id, name, position_type, cca_id)
             `,
 			)
@@ -110,7 +111,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cca
 		};
 
 		ccaMembers?.forEach((member: MemberWithJoins) => {
-			const userData = unwrapSingleRelation(member.public_user_info);
+			const userData = unwrapSingleRelation(member.authenticated_user_directory);
 			const positionData = unwrapSingleRelation<MemberJoinPosition>(member.cca_positions);
 
 			if (userData && positionData) {

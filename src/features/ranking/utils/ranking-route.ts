@@ -117,16 +117,23 @@ export function mapRankingResponseMembers({
 		}
 	>();
 
-	rankings?.forEach((ranking) => {
-		const parsedComments = extractRankingCommentFields(ranking.comments);
-		rankingsMap.set(`${ranking.user_id}:${ranking.position_id}`, {
-			ranking: ranking.ranking,
-			attendance: parsedComments.attendance,
-			performance: parsedComments.performance,
-			helpfulness: parsedComments.helpfulness,
-			initiative: parsedComments.initiative,
-			attitude: parsedComments.attitude,
-			remarks: parsedComments.remarks,
+	rankings?.forEach((row) => {
+		const parsedScores = extractRankingCommentFields(row.scores);
+		const rankingValue =
+			row.scores && typeof row.scores === "object" && !Array.isArray(row.scores)
+				? (() => {
+						const raw = (row.scores as Record<string, unknown>).ranking;
+						return typeof raw === "number" && Number.isFinite(raw) ? raw : null;
+					})()
+				: null;
+		rankingsMap.set(`${row.user_id}:${row.position_id}`, {
+			ranking: rankingValue,
+			attendance: parsedScores.attendance,
+			performance: parsedScores.performance,
+			helpfulness: parsedScores.helpfulness,
+			initiative: parsedScores.initiative,
+			attitude: parsedScores.attitude,
+			remarks: parsedScores.remarks,
 		});
 	});
 
@@ -223,7 +230,7 @@ export function buildRankingsUpsertPayloads({
 					: ranking.performance > 0
 						? ranking.performance
 						: ranking.attendance;
-			const comments = isResidentPositionType(positionType)
+			const rubric = isResidentPositionType(positionType)
 				? buildRankingComments({
 						helpfulness: ranking.helpfulness,
 						initiative: ranking.initiative,
@@ -241,8 +248,7 @@ export function buildRankingsUpsertPayloads({
 			return {
 				user_id: ranking.user_id,
 				position_id: ranking.position_id,
-				ranking: ranking.ranking,
-				comments,
+				scores: { ranking: ranking.ranking, ...rubric },
 			};
 		});
 }

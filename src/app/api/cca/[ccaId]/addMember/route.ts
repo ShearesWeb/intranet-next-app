@@ -46,6 +46,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cca
 			supabase,
 			requestingUser,
 			cca: ccaData,
+			accessLevel: "manage_members",
 		});
 
 		if (!authResult.ok) {
@@ -75,7 +76,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ cca
 					.insert({
 						cca_id: ccaData.id,
 						position_type: "member",
-						tier_type: "none",
 						name: "Member",
 					})
 					.select("id")
@@ -90,10 +90,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ cca
 			targetPositionId = memberPosition.id;
 		}
 
-		// Check if member already exists
+		// Check if member already exists (composite PK on user_id/position_id; no id column).
 		const { data: existingAppointment } = await supabase
 			.from("cca_appointments")
-			.select("id")
+			.select("user_id, position_id")
 			.eq("user_id", user_id)
 			.eq("position_id", targetPositionId)
 			.single();
@@ -122,6 +122,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ cca
 			return NextResponse.json({ error: "Position does not belong to this CCA" }, { status: 400 });
 		}
 
+		// App-side capacity pre-check is for friendly UX only.
+		// The DB-side constraint trigger `internal.validate_cca_appointment` is the
+		// authoritative guard and will reject inserts that would exceed capacity.
 		if (positionInfo && positionInfo.capacity > 0) {
 			const { count } = await supabase
 				.from("cca_appointments")
@@ -138,13 +141,24 @@ export async function POST(request: Request, { params }: { params: Promise<{ cca
 			}
 		}
 
-		// Add the member
-		const { error: appointmentError } = await supabase.from("cca_appointments").insert({
+		// Add the member. Omit `commitment_period` when undefined so the DB
+		// column default ('full-year') fires; explicit caller values are honoured.
+		const appointmentInsert: {
+			user_id: number;
+			position_id: number;
+			points: number;
+			commitment_period?: string;
+		} = {
 			user_id: user_id,
 			position_id: targetPositionId,
 			points: 0,
-			commitment_period: commitment_period,
-		});
+		};
+		if (commitment_period !== undefined) {
+			appointmentInsert.commitment_period = commitment_period;
+		}
+		const { error: appointmentError } = await supabase
+			.from("cca_appointments")
+			.insert(appointmentInsert);
 
 		if (appointmentError) {
 			console.error("Error adding member:", appointmentError);

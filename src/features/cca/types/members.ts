@@ -73,12 +73,11 @@ export interface MemberWithJoins {
 	created_at: string;
 	cut_status: CutStatus | string | null;
 	commitment_period: CommitmentPeriod | null;
-	public_user_info: MemberJoinUser | MemberJoinUser[] | null;
+	authenticated_user_directory: MemberJoinUser | MemberJoinUser[] | null;
 	cca_positions: MemberJoinPosition | MemberJoinPosition[] | null;
 }
 
 export type MemberUpdate = Partial<{
 	cut_status: CutStatus | null;
 	commitment_period: CommitmentPeriod;
-	comments: string;
 }>;

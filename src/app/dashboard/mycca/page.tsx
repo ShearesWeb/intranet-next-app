@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { AppLayout } from "@/components/layout/app-layout";
 import { Button } from "@/components/ui/button";
 import { SimpleTable, SimpleTableColumn } from "@/components/table/simple-table";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -19,7 +18,7 @@ const ccaTableColumns: SimpleTableColumn<CCAData>[] = [
 			<div className="flex flex-col gap-2 pr-4">
 				<strong className="font-semibold text-sm md:text-base">{String(value)}</strong>
 				{row.description && (
-					<div className="text-xs md:text-sm text-gray-600 break-words whitespace-normal text-justify leading-relaxed line-clamp-5">
+					<div className="text-xs md:text-sm text-muted-foreground break-words whitespace-normal text-justify leading-relaxed line-clamp-5">
 						{row.description}
 					</div>
 				)}
@@ -58,58 +57,47 @@ export default function MyCCAs() {
 	const { data: ccas, loading: loadingCCAs, error } = useCcaList();
 
 	if (loadingCCAs) {
-		return (
-			<AppLayout>
-				<LoadingSpinner message="Loading your CCA data..." />
-			</AppLayout>
-		);
+		return <LoadingSpinner message="Loading your CCA data..." />;
 	}
 
 	if (error && ccas.length === 0) {
 		return (
-			<AppLayout>
-				<div className="flex flex-col space-y-4 p-4">
-					<h1 className="text-2xl font-bold">My CCAs</h1>
-					<Card className="bg-red-50 border-red-200">
-						<CardContent className="flex flex-col items-center p-6 gap-4">
-							<p className="text-red-700 font-medium text-center">⚠️ {error}</p>
-							<Button
-								onClick={() => window.location.reload()}
-								className="bg-blue-500 text-white hover:bg-blue-400 px-6 py-4 shadow-md font-bold cursor-pointer"
-							>
-								Retry
-							</Button>
-						</CardContent>
-					</Card>
-				</div>
-			</AppLayout>
+			<div className="flex flex-col space-y-6 p-4 md:p-6">
+				<h1 className="text-2xl font-semibold">My CCAs</h1>
+				<Card className="border-destructive/40 bg-destructive/5">
+					<CardContent className="flex flex-col items-center gap-4 p-6">
+						<p className="text-destructive font-medium text-center">{error}</p>
+						<Button onClick={() => window.location.reload()} variant="default">
+							Retry
+						</Button>
+					</CardContent>
+				</Card>
+			</div>
 		);
 	}
 
 	return (
-		<AppLayout>
-			<div className="flex flex-col space-y-4 p-4">
-				<h1 className="text-2xl font-bold">My CCAs</h1>
+		<div className="flex flex-col space-y-6 p-4 md:p-6">
+			<h1 className="text-2xl font-semibold">My CCAs</h1>
 
-				{ccas.length === 0 ? (
-					<Card className="bg-gray-50 border-2 border-dashed border-gray-300">
-						<CardContent className="flex flex-col items-center justify-center py-16 text-center">
-							<p className="text-lg text-gray-600 mb-2">📋 No CCA appointments found.</p>
-							<p className="text-sm text-gray-500">
-								You have not been assigned to any CCAs yet. Check back later or contact your CCA
-								chairs/ICs.
-							</p>
-						</CardContent>
-					</Card>
-				) : (
-					<SimpleTable<CCAData>
-						data={ccas}
-						columns={ccaTableColumns}
-						pageSize={10}
-						emptyMessage="No CCAs found"
-					/>
-				)}
-			</div>
-		</AppLayout>
+			{ccas.length === 0 ? (
+				<Card className="border-dashed bg-muted/40">
+					<CardContent className="flex flex-col items-center justify-center py-16 text-center">
+						<p className="text-lg text-muted-foreground mb-2">No CCA appointments found.</p>
+						<p className="text-sm text-muted-foreground">
+							You have not been assigned to any CCAs yet. Check back later or contact your CCA
+							chairs/ICs.
+						</p>
+					</CardContent>
+				</Card>
+			) : (
+				<SimpleTable<CCAData>
+					data={ccas}
+					columns={ccaTableColumns}
+					pageSize={10}
+					emptyMessage="No CCAs found"
+				/>
+			)}
+		</div>
 	);
 }

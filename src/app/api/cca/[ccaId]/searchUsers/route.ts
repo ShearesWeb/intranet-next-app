@@ -43,6 +43,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ ccaI
 			supabase,
 			requestingUser,
 			cca: ccaData,
+			accessLevel: "manage_members",
 		});
 
 		if (!authResult.ok) {
@@ -53,7 +54,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ ccaI
 		}
 
 		const { data, error } = await supabase
-			.from("public_user_info")
+			.from("authenticated_user_directory")
 			.select("id, name, email, room")
 			.or(`name.ilike.%${query}%,email.ilike.%${query}%,room.ilike.%${query}%`)
 			.order("name")

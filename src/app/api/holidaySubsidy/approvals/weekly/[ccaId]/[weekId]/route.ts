@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
+import { fetchUserInfo } from "@/lib/fetch-user-info";
+import { getWeekDay } from "@/features/holiday-subsidy/utils/holiday-weeks";
+import { SubsidyStatus } from "@/features/holiday-subsidy/types/declarations";
 import {
-	WeeklyApprovalSubmission,
 	JoinedPositionSummary,
-	JoinedUserSummary,
-} from "@/types/holiday-subsidy-api";
+	WeeklyApprovalSubmission,
+} from "@/features/holiday-subsidy/types/api";
 
 type Params = {
 	params: Promise<{
@@ -14,29 +16,43 @@ type Params = {
 	}>;
 };
 
-async function authorizeJCRC(supabase: Awaited<ReturnType<typeof createClient>>) {
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
-
-	if (!user) {
-		return { authorized: false, message: "Not authenticated", status: 401 };
+async function assertJcrcAccess() {
+	const user = await fetchUserInfo();
+	if (!user || (!user.is_jcrc && !user.is_admin)) {
+		return {
+			authorized: false as const,
+			response: NextResponse.json({ error: "Not authorized. JCRC access only." }, { status: 403 }),
+		};
 	}
-
-	const { data: userRoles } = await supabase
-		.from("authenticated_user_info")
-		.select("is_jcrc, is_admin")
-		.eq("id", user.id)
-		.single();
-
-	if (!userRoles || (!userRoles.is_jcrc && !userRoles.is_admin)) {
-		return { authorized: false, message: "Not authorized. JCRC access only.", status: 403 };
-	}
-
-	return { authorized: true, message: "", status: 200 };
+	return { authorized: true as const };
 }
 
-void authorizeJCRC;
+function unwrapRelation<T>(value: T | T[] | null | undefined): T | null {
+	if (Array.isArray(value)) return value[0] ?? null;
+	return value ?? null;
+}
+
+/**
+ * approve_user_subsidy errors share their semantics with approve_subsidy:
+ * the same validate_*_transition trigger guards the state machine, and the
+ * JCRC-only rule comes from the same internal.is_jcrc check. Map the same
+ * surface to consistent HTTP codes.
+ */
+function mapApproveRpcError(message: string): { status: number; error: string } {
+	if (message.startsWith("Invalid transition")) {
+		return { status: 409, error: message };
+	}
+	if (message.startsWith("Only JCRC")) {
+		return { status: 403, error: message };
+	}
+	if (message.includes("not found") || message.includes("not accessible")) {
+		return { status: 404, error: message };
+	}
+	if (message.includes("only accepts")) {
+		return { status: 400, error: message };
+	}
+	return { status: 400, error: message };
+}
 
 export async function GET(_request: Request, { params }: Params) {
 	const disabledResponse = getCoreServiceDisabledApiResponse("holidaySubsidy");
@@ -55,70 +71,100 @@ export async function GET(_request: Request, { params }: Params) {
 			return NextResponse.json({ error: "Invalid CCA ID or Week ID" }, { status: 400 });
 		}
 
-		// TODO: Re-enable authorization after testing
-		// const authResult = await authorizeJCRC(supabase);
-		// if (!authResult.authorized) {
-		//     return NextResponse.json({ error: authResult.message }, { status: authResult.status });
-		// }
+		const authResult = await assertJcrcAccess();
+		if (!authResult.authorized) {
+			return authResult.response;
+		}
 
-		// Fetch all user_subsidies for this CCA and week with details
-		// Use inner join on cca_positions to filter by CCA ID
+		const day = getWeekDay(weekIdNum);
+		if (!day) {
+			return NextResponse.json({ error: "Unknown week" }, { status: 400 });
+		}
+
+		// cca_user_subsidies has no direct cca_id; walk up via
+		// cca_subsidies (gives us envelope hours + position) and filter by
+		// cca_positions.cca_id and cca_subsidies.day.
 		const { data: submissions, error: submissionsError } = await supabase
-			.from("user_subsidies")
+			.from("cca_user_subsidies")
 			.select(
 				`
+                id,
+                subsidy_id,
                 user_id,
-                position_id,
                 hours,
-                justification,
                 comments,
-                subsidy_status,
-                cca_positions!inner (
+                status,
+                rejection_reason,
+                cca_subsidies!inner (
                     id,
-                    name,
-                    position_type,
-                    cca_id
-                ),
-                public_user_info (
-                    id,
-                    name,
-                    email
+                    position_id,
+                    day,
+                    hours,
+                    justification,
+                    cca_positions!inner (
+                        id,
+                        name,
+                        position_type,
+                        cca_id
+                    )
                 )
             `,
 			)
-			.eq("cca_positions.cca_id", ccaIdNum)
-			.eq("week_id", weekIdNum);
+			.eq("cca_subsidies.cca_positions.cca_id", ccaIdNum)
+			.eq("cca_subsidies.day", day);
 
 		if (submissionsError) {
 			console.error("Submissions error:", submissionsError);
 			return NextResponse.json({ error: submissionsError.message }, { status: 500 });
 		}
 
-		const unwrapSingleRelation = <T>(value: T | T[] | null | undefined): T | null => {
-			if (Array.isArray(value)) {
-				return value[0] ?? null;
+		const userIds = Array.from(
+			new Set(
+				((submissions as unknown as WeeklyApprovalSubmission[]) || []).map((sub) => sub.user_id),
+			),
+		);
+
+		const directoryMap = new Map<number, { id: number; name: string; email: string }>();
+		if (userIds.length > 0) {
+			const { data: directoryRaw, error: directoryError } = await supabase
+				.from("authenticated_user_directory")
+				.select("id, name, email")
+				.in("id", userIds);
+
+			if (directoryError) {
+				return NextResponse.json({ error: directoryError.message }, { status: 500 });
 			}
 
-			return value ?? null;
-		};
+			(directoryRaw || []).forEach((row: { id: number; name: string; email: string }) => {
+				directoryMap.set(row.id, row);
+			});
+		}
 
 		const submissionsData =
-			submissions?.map((sub: WeeklyApprovalSubmission) => {
-				const user = unwrapSingleRelation<JoinedUserSummary>(sub.public_user_info);
-				const position = unwrapSingleRelation<JoinedPositionSummary>(sub.cca_positions);
+			((submissions as unknown as WeeklyApprovalSubmission[]) || []).map((sub) => {
+				const envelope = unwrapRelation(sub.cca_subsidies);
+				const position = envelope
+					? unwrapRelation<JoinedPositionSummary>(envelope.cca_positions)
+					: null;
+				const directory = directoryMap.get(sub.user_id);
+				// Effective hours: per-user override (if non-null) else envelope rate.
+				const effectiveHours = sub.hours ?? envelope?.hours ?? 0;
 
 				return {
-					id: `${sub.user_id}-${sub.position_id}`, // Composite ID for table
+					id: sub.id,
+					user_subsidy_id: sub.id,
+					subsidy_id: sub.subsidy_id,
 					user_id: sub.user_id,
-					position_id: sub.position_id,
-					name: user?.name || `User #${sub.user_id}`,
-					email: user?.email || "",
+					position_id: envelope?.position_id ?? 0,
+					name: directory?.name || `User #${sub.user_id}`,
+					email: directory?.email || "",
 					role: position?.name || "Member",
 					type: position?.position_type || "",
-					hours: sub.hours,
-					justification: sub.justification || "",
-					remarks: sub.comments || "",
-					status: sub.subsidy_status || "pending",
+					hours: effectiveHours,
+					comments: sub.comments || "",
+					justification: envelope?.justification || "",
+					status: sub.status || SubsidyStatus.PENDING,
+					rejection_reason: sub.rejection_reason ?? null,
 				};
 			}) || [];
 
@@ -153,69 +199,82 @@ export async function PATCH(request: Request, { params }: Params) {
 			return NextResponse.json({ error: "Invalid CCA ID or Week ID" }, { status: 400 });
 		}
 
-		// TODO: Re-enable authorization after testing
-		// const authResult = await authorizeJCRC(supabase);
-		// if (!authResult.authorized) {
-		//     return NextResponse.json({ error: authResult.message }, { status: authResult.status });
-		// }
+		const authResult = await assertJcrcAccess();
+		if (!authResult.authorized) {
+			return authResult.response;
+		}
 
 		const body = await request.json();
-		const { updates } = body as {
-			updates: Array<{
-				user_id: number;
-				position_id: number;
-				status: "approved" | "rejected";
-			}>;
-		};
+		const updates = (body?.updates || []) as Array<{
+			userSubsidyId: number;
+			status: "approved" | "rejected";
+			rejectionReason?: string | null;
+		}>;
 
-		if (!updates || !Array.isArray(updates) || updates.length === 0) {
+		if (!Array.isArray(updates) || updates.length === 0) {
 			return NextResponse.json({ error: "No updates provided" }, { status: 400 });
 		}
 
-		// Group updates by status to batch them
-		const updatesByStatus = updates.reduce(
-			(acc, update) => {
-				if (!acc[update.status]) acc[update.status] = [];
-				acc[update.status].push(update);
-				return acc;
-			},
-			{} as Record<string, typeof updates>,
-		);
-
-		const updatePromises = [];
-
-		for (const [status, statusUpdates] of Object.entries(updatesByStatus)) {
-			// Batch updates to avoid URL length limits
-			const BATCH_SIZE = 20;
-			for (let i = 0; i < statusUpdates.length; i += BATCH_SIZE) {
-				const batch = statusUpdates.slice(i, i + BATCH_SIZE);
-				// Construct OR filter: and(user_id.eq.1,position_id.eq.2),and(user_id.eq.3,position_id.eq.4)
-				const orFilter = batch
-					.map((u) => `and(user_id.eq.${u.user_id},position_id.eq.${u.position_id})`)
-					.join(",");
-
-				updatePromises.push(
-					supabase
-						.from("user_subsidies")
-						.update({ subsidy_status: status })
-						.eq("week_id", weekIdNum)
-						.or(orFilter),
-				);
+		for (const update of updates) {
+			if (
+				!update ||
+				typeof update.userSubsidyId !== "number" ||
+				(update.status !== "approved" && update.status !== "rejected")
+			) {
+				return NextResponse.json({ error: "Invalid update payload" }, { status: 400 });
 			}
 		}
 
-		const results = await Promise.all(updatePromises);
+		const results = await Promise.allSettled(
+			updates.map((update) =>
+				supabase
+					.rpc("approve_user_subsidy", {
+						p_user_subsidy_id: update.userSubsidyId,
+						p_decision: update.status,
+						p_reason: update.rejectionReason ?? null,
+					})
+					.single(),
+			),
+		);
 
-		// Check for errors
-		const errors = results.filter((r) => r.error);
-		if (errors.length > 0) {
-			console.error("Update errors:", errors);
-			return NextResponse.json({ error: "Some updates failed", details: errors }, { status: 500 });
+		const failures: Array<{ userSubsidyId: number; status: number; error: string }> = [];
+		let successCount = 0;
+
+		results.forEach((result, idx) => {
+			const update = updates[idx];
+			if (result.status === "fulfilled") {
+				const { error: rpcError } = result.value;
+				if (rpcError) {
+					const mapped = mapApproveRpcError(rpcError.message);
+					failures.push({ userSubsidyId: update.userSubsidyId, ...mapped });
+				} else {
+					successCount += 1;
+				}
+			} else {
+				const message =
+					result.reason instanceof Error
+						? result.reason.message
+						: String(result.reason || "Unknown error");
+				const mapped = mapApproveRpcError(message);
+				failures.push({ userSubsidyId: update.userSubsidyId, ...mapped });
+			}
+		});
+
+		if (failures.length > 0) {
+			const statusOrder = [403, 409, 404, 400, 500];
+			const status = statusOrder.find((code) => failures.some((f) => f.status === code)) ?? 400;
+			return NextResponse.json(
+				{
+					error: failures.map((f) => `user_subsidy ${f.userSubsidyId}: ${f.error}`).join("; "),
+					failures,
+				},
+				{ status },
+			);
 		}
 
 		return NextResponse.json({
-			message: `Successfully updated ${updates.length} submission(s)`,
-			updated: updates.length,
+			message: `Successfully updated ${successCount} submission(s)`,
+			updated: successCount,
 		});
 	} catch (error) {
 		console.error("Error updating JCRC weekly approvals:", error);

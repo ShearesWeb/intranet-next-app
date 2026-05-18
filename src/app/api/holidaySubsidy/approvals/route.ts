@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { createClient } from "@/utils/supabase/server";
-import { SubsidyStatus } from "@/types/holiday-subsidy";
+import { SubsidyStatus } from "@/features/holiday-subsidy/types/declarations";
 
 type ApprovalRow = {
 	id: number;
@@ -12,23 +12,94 @@ type ApprovalRow = {
 	pendingWeekly: number;
 };
 
-type SubsidyWithCCA = {
-	cca_positions?: {
-		cca_id?: number;
-		ccas?: {
-			id?: number;
-			name?: string;
-		} | null;
-	} | null;
+type CcaIdName = {
+	id: number;
+	name: string;
 };
 
-async function fetchSubsidies(
+// Envelope row when projected through cca_positions->ccas.
+// Supabase PostgREST returns the relation as an object or an array depending
+// on the FK arity in the schema cache; types here accept either.
+type EnvelopeWithCca = {
+	status?: SubsidyStatus;
+	cca_positions?:
+		| {
+				cca_id?: number;
+				ccas?: CcaIdName | CcaIdName[] | null;
+		  }
+		| Array<{
+				cca_id?: number;
+				ccas?: CcaIdName | CcaIdName[] | null;
+		  }>
+		| null;
+};
+
+// Per-user claim row joined back through cca_subsidies->cca_positions->ccas
+// because cca_user_subsidies has no direct cca/position FK (only subsidy_id).
+type UserSubsidyWithCca = {
+	status?: SubsidyStatus;
+	cca_subsidies?:
+		| {
+				cca_positions?:
+					| {
+							cca_id?: number;
+							ccas?: CcaIdName | CcaIdName[] | null;
+					  }
+					| Array<{
+							cca_id?: number;
+							ccas?: CcaIdName | CcaIdName[] | null;
+					  }>
+					| null;
+		  }
+		| Array<{
+				cca_positions?:
+					| {
+							cca_id?: number;
+							ccas?: CcaIdName | CcaIdName[] | null;
+					  }
+					| Array<{
+							cca_id?: number;
+							ccas?: CcaIdName | CcaIdName[] | null;
+					  }>
+					| null;
+		  }>
+		| null;
+};
+
+function unwrapRelation<T>(value: T | T[] | null | undefined): T | null {
+	if (Array.isArray(value)) return value[0] ?? null;
+	return value ?? null;
+}
+
+function extractCca(envelope: EnvelopeWithCca): CcaIdName | null {
+	const position = unwrapRelation(envelope.cca_positions);
+	if (!position) return null;
+	const cca = unwrapRelation(position.ccas);
+	const id = cca?.id ?? position.cca_id;
+	const name = cca?.name;
+	if (!id || !name) return null;
+	return { id, name };
+}
+
+function extractCcaFromUserSubsidy(row: UserSubsidyWithCca): CcaIdName | null {
+	const subsidy = unwrapRelation(row.cca_subsidies);
+	if (!subsidy) return null;
+	const position = unwrapRelation(subsidy.cca_positions);
+	if (!position) return null;
+	const cca = unwrapRelation(position.ccas);
+	const id = cca?.id ?? position.cca_id;
+	const name = cca?.name;
+	if (!id || !name) return null;
+	return { id, name };
+}
+
+async function fetchPendingEnvelopes(
 	supabase: Awaited<ReturnType<typeof createClient>>,
 ): Promise<ApprovalRow[]> {
 	const { data, error } = await supabase
-		.from("subsidies")
+		.from("cca_subsidies")
 		.select(
-			`subsidy_status,
+			`status,
             cca_positions!inner (
                 cca_id,
                 ccas!inner (
@@ -37,7 +108,7 @@ async function fetchSubsidies(
                 )
             )`,
 		)
-		.eq("subsidy_status", SubsidyStatus.PENDING);
+		.eq("status", SubsidyStatus.PENDING);
 
 	if (error) {
 		throw new Error(error.message);
@@ -45,50 +116,46 @@ async function fetchSubsidies(
 
 	const map = new Map<number, ApprovalRow>();
 
-	(data as SubsidyWithCCA[] | null | undefined)?.forEach((row) => {
-		const ccaId = row.cca_positions?.ccas?.id ?? row.cca_positions?.cca_id;
-		const ccaName = row.cca_positions?.ccas?.name;
+	(data as EnvelopeWithCca[] | null | undefined)?.forEach((row) => {
+		const cca = extractCca(row);
+		if (!cca) return;
 
-		if (!ccaId || !ccaName) return;
-
-		const existing = map.get(ccaId);
-
+		const existing = map.get(cca.id);
 		if (existing) {
 			existing.pendingDeclarations += 1;
 		} else {
-			map.set(ccaId, { id: ccaId, name: ccaName, pendingDeclarations: 1, pendingWeekly: 0 });
+			map.set(cca.id, {
+				id: cca.id,
+				name: cca.name,
+				pendingDeclarations: 1,
+				pendingWeekly: 0,
+			});
 		}
 	});
 
 	return Array.from(map.values());
 }
 
-type UserSubsidyWithCCA = {
-	cca_positions?: {
-		cca_id?: number;
-		ccas?: {
-			id?: number;
-			name?: string;
-		} | null;
-	} | null;
-};
-
 async function fetchPendingWeeklyCommitments(
 	supabase: Awaited<ReturnType<typeof createClient>>,
 ): Promise<Map<number, { id: number; name: string; count: number }>> {
+	// cca_user_subsidies has no direct cca/position FK — walk through
+	// cca_subsidies -> cca_positions -> ccas. One extra join hop vs legacy.
 	const { data, error } = await supabase
-		.from("user_subsidies")
+		.from("cca_user_subsidies")
 		.select(
-			`subsidy_status,
-            cca_positions!inner (
-                cca_id,
-                ccas!inner (
-                    id,
-                    name
+			`status,
+            cca_subsidies!inner (
+                cca_positions!inner (
+                    cca_id,
+                    ccas!inner (
+                        id,
+                        name
+                    )
                 )
             )`,
 		)
-		.eq("subsidy_status", SubsidyStatus.PENDING);
+		.eq("status", SubsidyStatus.PENDING);
 
 	if (error) {
 		throw new Error(error.message);
@@ -96,28 +163,25 @@ async function fetchPendingWeeklyCommitments(
 
 	const map = new Map<number, { id: number; name: string; count: number }>();
 
-	(data as UserSubsidyWithCCA[] | null | undefined)?.forEach((row) => {
-		const ccaId = row.cca_positions?.ccas?.id ?? row.cca_positions?.cca_id;
-		const ccaName = row.cca_positions?.ccas?.name;
+	(data as UserSubsidyWithCca[] | null | undefined)?.forEach((row) => {
+		const cca = extractCcaFromUserSubsidy(row);
+		if (!cca) return;
 
-		if (!ccaId || !ccaName) return;
-
-		const existing = map.get(ccaId);
-
+		const existing = map.get(cca.id);
 		if (existing) {
 			existing.count += 1;
 		} else {
-			map.set(ccaId, { id: ccaId, name: ccaName, count: 1 });
+			map.set(cca.id, { id: cca.id, name: cca.name, count: 1 });
 		}
 	});
 
 	return map;
 }
 
-async function fetchCcasWithAnySubsidy(
+async function fetchCcasWithAnyEnvelope(
 	supabase: Awaited<ReturnType<typeof createClient>>,
 ): Promise<ApprovalRow[]> {
-	const { data, error } = await supabase.from("subsidies").select(
+	const { data, error } = await supabase.from("cca_subsidies").select(
 		`cca_positions!inner (
                 cca_id,
                 ccas!inner (
@@ -133,16 +197,14 @@ async function fetchCcasWithAnySubsidy(
 
 	const map = new Map<number, ApprovalRow>();
 
-	(data as SubsidyWithCCA[] | null | undefined)?.forEach((row) => {
-		const ccaId = row.cca_positions?.ccas?.id ?? row.cca_positions?.cca_id;
-		const ccaName = row.cca_positions?.ccas?.name;
+	(data as EnvelopeWithCca[] | null | undefined)?.forEach((row) => {
+		const cca = extractCca(row);
+		if (!cca) return;
 
-		if (!ccaId || !ccaName) return;
-
-		if (!map.has(ccaId)) {
-			map.set(ccaId, {
-				id: ccaId,
-				name: ccaName,
+		if (!map.has(cca.id)) {
+			map.set(cca.id, {
+				id: cca.id,
+				name: cca.name,
 				pendingDeclarations: 0,
 				pendingWeekly: 0,
 			});
@@ -162,6 +224,9 @@ export async function GET() {
 	try {
 		const user = await fetchUserInfo();
 
+		// This endpoint is the JCRC dashboard counter view. RLS would let
+		// chairs see their own envelopes too, but the UI shape (counters
+		// across all CCAs) is misleading for a chair — gate at the route.
 		if (!user || !user.is_jcrc) {
 			return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 		}
@@ -169,8 +234,8 @@ export async function GET() {
 		const supabase = await createClient();
 
 		const [subsidyCcas, declarations, weeklyMap] = await Promise.all([
-			fetchCcasWithAnySubsidy(supabase),
-			fetchSubsidies(supabase),
+			fetchCcasWithAnyEnvelope(supabase),
+			fetchPendingEnvelopes(supabase),
 			fetchPendingWeeklyCommitments(supabase),
 		]);
 
@@ -201,11 +266,20 @@ export async function GET() {
 			}
 		});
 
-		// Add weekly commitments
+		// Add weekly commitments — a CCA may have weekly claims via an
+		// already-approved envelope, even if there's no pending envelope
+		// of its own, so make sure those CCAs surface too.
 		weeklyMap.forEach((weekly, ccaId) => {
 			const existing = ccaMap.get(ccaId);
 			if (existing) {
 				existing.pendingWeekly = weekly.count;
+			} else {
+				ccaMap.set(ccaId, {
+					id: weekly.id,
+					name: weekly.name,
+					pendingDeclarations: 0,
+					pendingWeekly: weekly.count,
+				});
 			}
 		});
 
