@@ -12,20 +12,34 @@ type ManagedCcaAccessRow = {
 	}> | null;
 };
 
+type AccessLevel = "manage_members" | "rank_members" | "either";
+
+/**
+ * Resolves whether the requesting user has chair / managed-ranking access to a CCA
+ * and (when `requireAccess` is true) short-circuits with a friendly 403 if not.
+ *
+ * Note: this helper is for UX-friendly early returns. The DB is the authoritative
+ * guard — RLS on `cca_appointments` (and on `cca_appointment_evaluations` for the
+ * ranking domain) enforces writes via `internal.can_manage_cca_appointments`. If
+ * this helper allows a request through but the caller is not actually permitted,
+ * the subsequent Supabase write will be rejected by RLS.
+ */
 export async function getManagedCcaAccess({
 	supabase,
 	requestingUser,
 	cca,
 	requireAccess = true,
+	accessLevel = "either",
 }: {
 	supabase: Awaited<ReturnType<typeof createClient>>;
 	requestingUser: Pick<AuthenticatedUser, "id" | "appointments"> | null | undefined;
 	cca: { id: number; name?: string | null; cca_type?: string | null };
 	requireAccess?: boolean;
+	accessLevel?: AccessLevel;
 }): Promise<
 	AccessResult<{
 		hasChairAccess: boolean;
-		hasManagedViewAccess: boolean;
+		hasManagedRankingAccess: boolean;
 		managedPositionIds: number[];
 		managedCca: ManagedCcaAccessRow | null;
 	}>
@@ -34,9 +48,13 @@ export async function getManagedCcaAccess({
 		return { ok: false, status: 401, error: "Unauthorized" };
 	}
 
-	const chairAccessResult = checkCcaAuthorization({
+	// `checkCcaAuthorization` is now async (DB-widened reporting-chain check via
+	// `public.can_manage_any_position_in_cca`); pass `supabase` so the widened
+	// path is consulted when the JWT fast path doesn't grant access.
+	const chairAccessResult = await checkCcaAuthorization({
 		requestingUser,
 		cca,
+		supabase,
 	});
 
 	const { data: managedCca, error } = await supabase
@@ -55,17 +73,30 @@ export async function getManagedCcaAccess({
 		.filter((positionId): positionId is number => typeof positionId === "number");
 
 	const hasChairAccess = chairAccessResult.ok && chairAccessResult.data.hasChairAccess;
-	const hasManagedViewAccess = managedPositionIds.length > 0;
+	const hasManagedRankingAccess = managedPositionIds.length > 0;
+	const hasRequiredAccess =
+		accessLevel === "manage_members"
+			? hasChairAccess
+			: accessLevel === "rank_members"
+				? hasManagedRankingAccess
+				: hasChairAccess || hasManagedRankingAccess;
 
-	if (requireAccess && !hasChairAccess && !hasManagedViewAccess) {
-		return { ok: false, status: 403, error: "You are not authorized to manage this CCA" };
+	if (requireAccess && !hasRequiredAccess) {
+		return {
+			ok: false,
+			status: 403,
+			error:
+				accessLevel === "rank_members"
+					? "You are not authorized to view rankings for this CCA"
+					: "You are not authorized to manage this CCA",
+		};
 	}
 
 	return {
 		ok: true,
 		data: {
 			hasChairAccess,
-			hasManagedViewAccess,
+			hasManagedRankingAccess,
 			managedPositionIds,
 			managedCca: (managedCca as ManagedCcaAccessRow | null) || null,
 		},
