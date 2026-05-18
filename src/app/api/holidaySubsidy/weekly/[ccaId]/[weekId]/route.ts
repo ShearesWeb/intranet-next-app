@@ -335,11 +335,7 @@ export async function POST(request: Request, { params }: Params) {
 		}
 
 		for (const decl of declarations) {
-			if (
-				!decl ||
-				typeof decl.user_id !== "number" ||
-				typeof decl.position_id !== "number"
-			) {
+			if (!decl || typeof decl.user_id !== "number" || typeof decl.position_id !== "number") {
 				return NextResponse.json(
 					{ error: "Each declaration must include user_id and position_id" },
 					{ status: 400 },
@@ -362,9 +358,7 @@ export async function POST(request: Request, { params }: Params) {
 		// but failing fast yields a clearer 4xx.
 		const { data: envelopesRaw, error: envelopesError } = await supabase
 			.from("cca_subsidies")
-			.select(
-				`id, position_id, status, cca_positions!inner (cca_id)`,
-			)
+			.select(`id, position_id, status, cca_positions!inner (cca_id)`)
 			.eq("cca_positions.cca_id", ccaId)
 			.eq("day", day)
 			.eq("status", SubsidyStatus.APPROVED);
@@ -393,8 +387,7 @@ export async function POST(request: Request, { params }: Params) {
 
 		const validPairs = new Set(
 			(appointmentsRaw || []).map(
-				(appt: { user_id: number; position_id: number }) =>
-					`${appt.user_id}-${appt.position_id}`,
+				(appt: { user_id: number; position_id: number }) => `${appt.user_id}-${appt.position_id}`,
 			),
 		);
 

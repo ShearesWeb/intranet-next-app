@@ -87,9 +87,7 @@ export async function POST(
 
 		// Next rank = highest existing + 1, or 1 if no rows
 		const nextRanking =
-			currentApplicants && currentApplicants.length > 0
-				? (currentApplicants[0].rank || 0) + 1
-				: 1;
+			currentApplicants && currentApplicants.length > 0 ? (currentApplicants[0].rank || 0) + 1 : 1;
 
 		const { error: rpcError } = await supabase.rpc("upsert_cca_position_preference", {
 			p_position_id: positionId,

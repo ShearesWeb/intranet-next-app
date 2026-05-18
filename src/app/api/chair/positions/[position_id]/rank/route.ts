@@ -86,10 +86,7 @@ export async function POST(
 
 			if (deleteError) {
 				console.error("Error pruning removed applicants:", deleteError);
-				return NextResponse.json(
-					{ error: "Failed to clear removed applicants" },
-					{ status: 500 },
-				);
+				return NextResponse.json({ error: "Failed to clear removed applicants" }, { status: 500 });
 			}
 		} else {
 			// No applicants to keep: clear all rows for this position.
@@ -100,10 +97,7 @@ export async function POST(
 
 			if (deleteError) {
 				console.error("Error clearing position preferences:", deleteError);
-				return NextResponse.json(
-					{ error: "Failed to clear existing rankings" },
-					{ status: 500 },
-				);
+				return NextResponse.json({ error: "Failed to clear existing rankings" }, { status: 500 });
 			}
 		}
 
@@ -118,10 +112,7 @@ export async function POST(
 			});
 			if (stageError) {
 				console.error("Error staging preference rank:", stageError);
-				return NextResponse.json(
-					{ error: "Failed to stage rankings" },
-					{ status: 500 },
-				);
+				return NextResponse.json({ error: "Failed to stage rankings" }, { status: 500 });
 			}
 		}
 
@@ -133,10 +124,7 @@ export async function POST(
 			});
 			if (finalError) {
 				console.error("Error finalizing preference rank:", finalError);
-				return NextResponse.json(
-					{ error: "Failed to save new rankings" },
-					{ status: 500 },
-				);
+				return NextResponse.json({ error: "Failed to save new rankings" }, { status: 500 });
 			}
 		}
 

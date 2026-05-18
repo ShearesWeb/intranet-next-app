@@ -1,17 +1,11 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { SubsidyStatus } from "@/features/holiday-subsidy/types/declarations";
-import {
-	PositionSubsidyRecord,
-	PositionWithSubsidies,
-} from "@/features/holiday-subsidy/types/api";
+import { PositionSubsidyRecord, PositionWithSubsidies } from "@/features/holiday-subsidy/types/api";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { checkCcaAuthorization } from "@/features/cca/utils/cca-chair-access";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
-import {
-	getWeekDay,
-	getWeekIdForDay,
-} from "@/features/holiday-subsidy/utils/holiday-weeks";
+import { getWeekDay, getWeekIdForDay } from "@/features/holiday-subsidy/utils/holiday-weeks";
 
 type Params = {
 	params: Promise<{
@@ -80,10 +74,7 @@ function mapSubsidyRpcError(message: string): { status: number; error: string } 
 	if (message.includes("No authenticated user")) {
 		return { status: 401, error: "Unauthorized" };
 	}
-	if (
-		message.includes("already approved") ||
-		message.includes("cannot upsert")
-	) {
+	if (message.includes("already approved") || message.includes("cannot upsert")) {
 		return { status: 409, error: message };
 	}
 	if (message.startsWith("Invalid transition")) {

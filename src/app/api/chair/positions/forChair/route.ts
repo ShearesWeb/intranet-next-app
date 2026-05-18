@@ -45,9 +45,7 @@ type DirectoryRow = {
 	room: string;
 };
 
-type PositionsResult =
-	| { ok: true; data: PositionAvailabilityRow[] }
-	| { ok: false; error: string };
+type PositionsResult = { ok: true; data: PositionAvailabilityRow[] } | { ok: false; error: string };
 
 const getPositionsForPhase = async (
 	ccaIds: number[],
@@ -96,10 +94,7 @@ export async function GET() {
 
 		if (!positionsResult.ok) {
 			console.error("Error fetching position availability:", positionsResult.error);
-			return NextResponse.json(
-				{ error: "Failed to load positions" },
-				{ status: 500, headers },
-			);
+			return NextResponse.json({ error: "Failed to load positions" }, { status: 500, headers });
 		}
 
 		const allPositions = positionsResult.data;
@@ -120,10 +115,7 @@ export async function GET() {
 			// Don't return `{positions:[]}` with 200 — that hid a missing GRANT
 			// on `cca_position_preferences` during testing.
 			console.error("Error fetching position preferences:", prefError);
-			return NextResponse.json(
-				{ error: "Failed to load applicants" },
-				{ status: 500, headers },
-			);
+			return NextResponse.json({ error: "Failed to load applicants" }, { status: 500, headers });
 		}
 
 		const userIds = Array.from(new Set((prefRows ?? []).map((r) => r.user_id)));
