@@ -20,9 +20,7 @@ describe("HOLIDAY_WEEKS", () => {
 
 	it("endExclusive of each week equals start of next", () => {
 		for (let i = 0; i < HOLIDAY_WEEKS.length - 1; i++) {
-			expect(HOLIDAY_WEEKS[i].endExclusive.getTime()).toBe(
-				HOLIDAY_WEEKS[i + 1].start.getTime(),
-			);
+			expect(HOLIDAY_WEEKS[i].endExclusive.getTime()).toBe(HOLIDAY_WEEKS[i + 1].start.getTime());
 		}
 	});
 

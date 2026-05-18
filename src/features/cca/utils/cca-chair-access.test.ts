@@ -109,9 +109,7 @@ describe("canManageCcaServerSide", () => {
 });
 
 describe("checkCcaAuthorization", () => {
-	const buildUser = (
-		appointments: Array<{ cca_id: number; position_type: string }> = [],
-	) => ({
+	const buildUser = (appointments: Array<{ cca_id: number; position_type: string }> = []) => ({
 		id: 1,
 		appointments: appointments.map((a) => ({
 			cca_id: a.cca_id,
