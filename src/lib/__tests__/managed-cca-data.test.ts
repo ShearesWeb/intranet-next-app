@@ -146,7 +146,7 @@ describe("getManagedCcaData", () => {
 				cca_type: "culture",
 				description: "Public speaking club",
 				points: 0,
-				can_manage_members: true,
+				can_manage_members: false,
 				can_rank_members: true,
 			},
 		]);
@@ -225,7 +225,8 @@ describe("getManagedCcaData", () => {
 				position_name: "Chair",
 				position_type: "lead",
 				points: 5,
-				is_admin: false,
+				commitment_period: "full-year",
+				cut_status: null,
 			},
 		]);
 
@@ -244,7 +245,7 @@ describe("getManagedCcaData", () => {
 		expect(result.find((row) => row.cca_id === 20)).toMatchObject({
 			name: "Robotics",
 			role: "Treasurer",
-			can_manage_members: true,
+			can_manage_members: false,
 			can_rank_members: true,
 		});
 	});

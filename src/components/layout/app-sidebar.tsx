@@ -18,7 +18,7 @@ import Link from "next/link";
 import { Avatar, AvatarImage } from "../ui/avatar";
 import { useAuth } from "@/context/AuthContext";
 import { User } from "@/types/User";
-import { checkCcaAuthorization } from "@/features/cca/utils/cca-chair-access";
+import { checkCcaAuthorizationFromJwt } from "@/features/cca/utils/cca-chair-access";
 import {
 	CoreServiceKey,
 	isCoreServiceEnabled,
@@ -110,7 +110,7 @@ export const navOptions: NavItem[] = [
 ];
 
 export const buildNavItems = (user?: User | null) => {
-	const authResult = checkCcaAuthorization({ requestingUser: user });
+	const authResult = checkCcaAuthorizationFromJwt({ requestingUser: user });
 	const isChair = Boolean(user?.is_admin || (authResult.ok && authResult.data.hasChairAccess));
 	const hasMemberRankingAccess = isCoreServiceEnabled("memberRanking", {
 		isJcrc: user?.is_jcrc,

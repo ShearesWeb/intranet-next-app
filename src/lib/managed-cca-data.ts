@@ -112,7 +112,7 @@ export async function getManagedCcaData(
 			cca_type: ccaMeta?.cca_type || "committee",
 			description: ccaMeta?.description ?? "",
 			points: 0,
-			can_manage_members: hasChairAccess || hasManagedPositions,
+			can_manage_members: hasChairAccess,
 			can_rank_members: hasManagedPositions,
 		};
 	});
