@@ -10,6 +10,7 @@
 		"lint": "next lint",
 		"run-script": "ts-node -P tsconfig.scripts.json scripts/index.ts",
 		"start": "next start",
+		"typecheck": "tsc --noEmit",
 		"test": "vitest run",
 		"test:watch": "vitest"
 	},
