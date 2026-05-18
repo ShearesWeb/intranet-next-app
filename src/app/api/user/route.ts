@@ -1,6 +1,4 @@
-import { AUTH_USER_CACHE_KEY, AUTH_USER_ID_CACHE_KEY } from "@/lib/constants/auth";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -34,23 +32,4 @@ export async function GET() {
 			},
 		);
 	}
-}
-
-export async function DELETE() {
-	const cookieStore = await cookies();
-	try {
-		// Legacy cleanup: remove old app-level user cache cookies.
-		cookieStore.delete(AUTH_USER_CACHE_KEY);
-		cookieStore.delete(AUTH_USER_ID_CACHE_KEY);
-	} catch (err) {
-		console.warn("Failed to clear cached auth cookies", err);
-	}
-
-	return NextResponse.json(
-		{ cleared: true },
-		{
-			status: 200,
-			headers: { "Cache-Control": "no-store, private" },
-		},
-	);
 }

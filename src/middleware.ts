@@ -8,6 +8,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
 	matcher: [
+		"/", // Landing page — runs middleware purely for foreign-projref cookie eviction.
 		"/dashboard/:path*", // All dashboard pages
 		"/auth/:path*", // All auth pages
 	],
