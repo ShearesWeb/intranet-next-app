@@ -1,0 +1,81 @@
+# .github/workflows/2-merge-request-ci.yml
+name: Merge Request CI
+
+# Trigger:
+# - Runs when a pull request targets the `main` branch
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-static-assets:
+    name: ⚙️ Build Next.js Static Assets
+    runs-on: ubuntu-latest
+
+    # No `environment:` is set — the MR workflow runs verification checks and
+    # `next build`, not a deployment. GitHub treats any job with `environment:`
+    # as a deployment in the PR UI, which is misleading for a check job.
+    # The build doesn't connect to Supabase at compile time; it only embeds the
+    # NEXT_PUBLIC_* values into the client bundle. Placeholders below are
+    # sufficient for the build to succeed. Real Supabase config is scoped to
+    # the preprod and prd release workflows (3-* / 4-*).
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY: placeholder-publishable-key
+
+    steps:
+      - name: 1. 📄 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 2. ⚙️ Detect Package Manager
+        id: detect-pm
+        run: |
+          if [ -f "yarn.lock" ]; then
+            echo "manager=yarn" >> $GITHUB_OUTPUT
+            echo "command=install" >> $GITHUB_OUTPUT
+          elif [ -f "package.json" ]; then
+            echo "manager=npm" >> $GITHUB_OUTPUT
+            echo "command=ci" >> $GITHUB_OUTPUT
+          else
+            echo "Unable to detect package manager"
+            exit 1
+          fi
+
+      - name: 3. ⚙️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.22"
+          cache: ${{ steps.detect-pm.outputs.manager }}
+
+      - name: 4. ⬇️ Restore Next.js Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            .next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json', '**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-
+
+      - name: 5. 📦 Install Dependencies
+        run: |
+          if [ "${{ steps.detect-pm.outputs.manager }}" = "npm" ]; then
+            npm ci --prefer-offline --no-audit --no-fund
+          else
+            yarn install --frozen-lockfile --prefer-offline
+          fi
+
+      - name: 6. 🎨 Prettier Check
+        run: ${{ steps.detect-pm.outputs.manager }} run format:check
+
+      - name: 7. 🧹 Lint
+        run: ${{ steps.detect-pm.outputs.manager }} run lint
+
+      - name: 8. 🔎 Typecheck
+        run: ${{ steps.detect-pm.outputs.manager }} run typecheck
+
+      - name: 9. 🧪 Unit + Component Tests
+        run: ${{ steps.detect-pm.outputs.manager }} test
+
+      - name: 10. 🚧 Build with Next.js
+        run: ${{ steps.detect-pm.outputs.manager }} run build

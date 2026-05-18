@@ -1,0 +1,84 @@
+import type { CcaType, PositionType } from "@/types/User";
+
+export type CutStatus = "ivp-ihg-team" | "ihg-team" | "final-cut" | "first-cut";
+export type CommitmentPeriod = "semester-1" | "semester-2" | "full-year";
+
+export interface Member {
+	user_id: number;
+	name: string;
+	email: string;
+	room: string;
+	position_id?: number;
+	position_name: string;
+	position_type: PositionType;
+	points: number;
+	appointed_date: string;
+	cut?: boolean;
+	cut_status?: CutStatus | null;
+	commitment_period?: CommitmentPeriod | null;
+}
+
+export type PendingChangeType = "add" | "remove" | "cut" | "update_status" | "update_commitment";
+
+export interface PendingChange {
+	type: PendingChangeType;
+	user_id: number;
+	user_name: string;
+	user_email: string;
+	user_room?: string;
+	new_status?: CutStatus | null;
+	new_commitment_period?: CommitmentPeriod;
+	position_id?: number;
+	position_name?: string;
+}
+
+export interface UserSearchResult {
+	id: number;
+	name: string;
+	email: string;
+	room?: string | null;
+}
+
+export interface CcaSummary {
+	id: number;
+	name: string;
+	cca_type: CcaType;
+}
+
+export interface MemberPermissions {
+	canManageMembers: boolean;
+	ccaType: CcaType | "";
+	managementMessage: string;
+}
+
+export type GroupedMembers = Record<string, Member[]>;
+
+export interface MemberJoinPosition {
+	id: number;
+	name: string;
+	position_type: PositionType;
+	cca_id: number;
+}
+
+export interface MemberJoinUser {
+	id: number;
+	name: string;
+	email: string;
+	room: string;
+}
+
+export interface MemberWithJoins {
+	user_id: number;
+	points: number | null;
+	created_at: string;
+	cut_status: CutStatus | string | null;
+	commitment_period: CommitmentPeriod | null;
+	public_user_info: MemberJoinUser | MemberJoinUser[] | null;
+	cca_positions: MemberJoinPosition | MemberJoinPosition[] | null;
+}
+
+export type MemberUpdate = Partial<{
+	cut_status: CutStatus | null;
+	commitment_period: CommitmentPeriod;
+	comments: string;
+}>;

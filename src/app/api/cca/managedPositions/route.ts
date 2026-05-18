@@ -2,67 +2,55 @@ import { NextResponse } from "next/server";
 
 import { getCoreServiceDisabledApiResponse, isCoreServiceEnabled } from "@/lib/feature-flags";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
-
-type ManagedPositionRow = {
-    cca_id: number;
-    can_rank_members?: boolean;
-};
+import { getManagedCcaData } from "@/lib/managed-cca-data";
+import { createClient } from "@/utils/supabase/server";
 
 export async function GET(request: Request) {
-    const user = await fetchUserInfo();
+	const user = await fetchUserInfo();
 
-    if (!user) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+	if (!user) {
+		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	}
 
-    try {
-        const fetchUrl = new URL('/api/user/getManagedCCAs', request.url);
-        const apiRes = await fetch(fetchUrl, {
-            headers: {
-                cookie: request.headers.get("cookie") || "",
-            },
-        });
+	try {
+		const supabase = await createClient();
+		const rows = await getManagedCcaData(supabase, user);
+		const disabledResponse = getCoreServiceDisabledApiResponse("memberRanking", {
+			isJcrc: user.is_jcrc,
+		});
 
-        if (!apiRes.ok) {
-            return NextResponse.json({ error: "Failed to load managed CCA positions" }, { status: apiRes.status });
-        }
+		if (disabledResponse) {
+			return disabledResponse;
+		}
 
-        const apiData = await apiRes.json();
-        const rows = (apiData.data || []) as ManagedPositionRow[];
-        const disabledResponse = getCoreServiceDisabledApiResponse("memberRanking", {
-            isJcrc: user.is_jcrc,
-        });
+		const visibleRows = rows.filter((row) =>
+			isCoreServiceEnabled("memberRanking", {
+				isJcrc: user.is_jcrc && Boolean(row.can_rank_members),
+			}),
+		);
 
-        if (disabledResponse) {
-            return disabledResponse;
-        }
+		const { searchParams } = new URL(request.url);
+		const ccaIdParam = searchParams.get("ccaId");
 
-        const visibleRows = rows.filter((row) => isCoreServiceEnabled("memberRanking", {
-            isJcrc: user.is_jcrc && Boolean(row.can_rank_members),
-        }));
+		if (ccaIdParam) {
+			const ccaId = Number(ccaIdParam);
 
-        const { searchParams } = new URL(request.url);
-        const ccaIdParam = searchParams.get("ccaId");
+			if (Number.isNaN(ccaId)) {
+				return NextResponse.json({ error: "Invalid CCA ID" }, { status: 400 });
+			}
 
-        if (ccaIdParam) {
-            const ccaId = Number(ccaIdParam);
+			const row = visibleRows.find((r) => r.cca_id === ccaId);
 
-            if (Number.isNaN(ccaId)) {
-                return NextResponse.json({ error: "Invalid CCA ID" }, { status: 400 });
-            }
+			if (!row) {
+				return NextResponse.json({ error: "Managed CCA positions not found" }, { status: 404 });
+			}
 
-            const row = visibleRows.find((r) => r.cca_id === ccaId);
+			return NextResponse.json(row);
+		}
 
-            if (!row) {
-                return NextResponse.json({ error: "Managed CCA positions not found" }, { status: 404 });
-            }
-
-            return NextResponse.json(row);
-        }
-
-        return NextResponse.json(visibleRows);
-    } catch (error) {
-        console.error("Error fetching managed CCA positions:", error);
-        return NextResponse.json({ error: "Failed to load managed CCA positions" }, { status: 500 });
-    }
+		return NextResponse.json(visibleRows);
+	} catch (error) {
+		console.error("Error fetching managed CCA positions:", error);
+		return NextResponse.json({ error: "Failed to load managed CCA positions" }, { status: 500 });
+	}
 }

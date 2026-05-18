@@ -6,55 +6,48 @@ import { fetchUserId } from "@/lib/fetch-user-info";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 
 export async function POST(request: Request) {
-    const disabledResponse = getCoreServiceDisabledApiResponse("ccaApplications");
+	const disabledResponse = getCoreServiceDisabledApiResponse("ccaApplications");
 
-    if (disabledResponse) {
-        return disabledResponse;
-    }
+	if (disabledResponse) {
+		return disabledResponse;
+	}
 
-    try {
-        const { rankings } = await request.json();
-        const supabase = await createClient();
+	try {
+		const { rankings } = await request.json();
+		const supabase = await createClient();
 
-        // Get user ID from cookie
-        const userId = await fetchUserId();
+		// Get user ID from cookie
+		const userId = await fetchUserId();
 
-        if (!userId) {
-            return NextResponse.json({
-                error: 'Unauthorized'
-            }, { status: 401 });
-        }
+		if (!userId) {
+			return NextResponse.json(
+				{
+					error: "Unauthorized",
+				},
+				{ status: 401 },
+			);
+		}
 
-        // Save rankings
-        const preferences = rankings.map((rank: { position_id: number; ranking: number }) => ({
-            user_id: userId,
-            position_id: rank.position_id,
-            ranking: rank.ranking,
-            application_status: 'pending'
-        }));
+		// Save rankings
+		const preferences = rankings.map((rank: { position_id: number; ranking: number }) => ({
+			position_id: rank.position_id,
+			ranking: rank.ranking,
+			application_status: "pending",
+		}));
 
-        // Delete existing preferences and insert new ones
-        const { error: deleteError } = await supabase
-            .from('user_cca_applications')
-            .delete()
-            .eq('user_id', userId);
+		const { error } = await supabase.rpc("replace_user_cca_rankings", {
+			p_user_id: userId,
+			p_rankings: preferences,
+		});
 
-        if (deleteError) {
-            console.error('Error deleting existing preferences:', deleteError);
-        }
+		if (error) {
+			console.error("Error saving rankings:", error);
+			return NextResponse.json({ error: "Failed to save rankings" }, { status: 500 });
+		}
 
-        const { error: insertError } = await supabase
-            .from('user_cca_applications')
-            .insert(preferences);
-
-        if (insertError) {
-            console.error('Error inserting preferences:', insertError);
-            return NextResponse.json({ error: 'Failed to save rankings' }, { status: 500 });
-        }
-
-        return NextResponse.json({ success: true });
-    } catch (error) {
-        console.error("Error saving rankings:", error);
-        return NextResponse.json({ error: 'Failed to save rankings' }, { status: 500 });
-    }
+		return NextResponse.json({ success: true });
+	} catch (error) {
+		console.error("Error saving rankings:", error);
+		return NextResponse.json({ error: "Failed to save rankings" }, { status: 500 });
+	}
 }
