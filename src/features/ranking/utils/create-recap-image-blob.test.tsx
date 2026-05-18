@@ -58,9 +58,12 @@ const user = {
 		{
 			cca_id: 100,
 			cca_name: "Block A",
+			position_id: 100,
 			position_name: "Resident",
 			position_type: "resident",
 			points: 7,
+			commitment_period: "full-year" as const,
+			cut_status: null,
 		},
 	],
 };
@@ -84,7 +87,7 @@ const ccas = [
 		cca_type: "sports",
 		description: "",
 		points: 20,
-		cut_status: "ihg-team",
+		cut_status: "ihg-team" as const,
 	},
 	{
 		id: 3,
