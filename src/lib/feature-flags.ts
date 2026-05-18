@@ -1,7 +1,7 @@
 export const CORE_SERVICE_FLAGS = {
-	memberRanking: false,
-	ccaApplications: false,
-	holidaySubsidy: false,
+	memberRanking: true,
+	ccaApplications: true,
+	holidaySubsidy: true,
 };
 
 export type CoreServiceKey = keyof typeof CORE_SERVICE_FLAGS;

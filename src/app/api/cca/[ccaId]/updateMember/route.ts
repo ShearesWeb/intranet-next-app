@@ -3,7 +3,6 @@ import {
 	canManageCcaMembers,
 	getCcaMemberManagementDisabledMessage,
 } from "@/features/cca/utils/cca-member-management";
-import { buildRankingComments } from "@/features/ranking/utils/cca-ranking-comments";
 import { createClient } from "@/utils/supabase/server";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { getManagedCcaAccess } from "@/features/cca/utils/cca-management-access";
@@ -18,16 +17,7 @@ const CUT_STATUSES_BY_CCA_TYPE = {
 export async function POST(request: Request, { params }: { params: Promise<{ ccaId: string }> }) {
 	try {
 		const { ccaId } = await params;
-		const {
-			user_id,
-			position_id,
-			cut_status,
-			commitment_period,
-			comments,
-			ranking,
-			attendance_rating,
-			performance_rating,
-		} = await request.json();
+		const { user_id, position_id, cut_status, commitment_period } = await request.json();
 
 		const supabase = await createClient();
 		const requestingUser = await fetchUserInfo();
@@ -87,7 +77,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ cca
 			position_id,
 			cut_status: normalizedCutStatus,
 			commitment_period,
-			comments,
 		});
 
 		if (cut_status !== undefined && cut_status !== null) {
@@ -108,7 +97,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ cca
 		const updates: MemberUpdate = {};
 		if (cut_status !== undefined) updates.cut_status = normalizedCutStatus;
 		if (commitment_period !== undefined) updates.commitment_period = commitment_period;
-		if (comments !== undefined) updates.comments = comments;
 
 		if (Object.keys(updates).length === 0) {
 			return NextResponse.json({ success: true });
@@ -138,38 +126,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ cca
 				{ error: "No matching member appointment found for update" },
 				{ status: 404 },
 			);
-		}
-
-		// Upsert ranking
-		if (
-			ranking !== undefined ||
-			attendance_rating !== undefined ||
-			performance_rating !== undefined ||
-			comments !== undefined
-		) {
-			const rankingUpdate = {
-				user_id,
-				position_id,
-				ranking: ranking || 999,
-				comments: buildRankingComments({
-					attendance: Math.max(1, attendance_rating || 0),
-					performance: Math.max(1, performance_rating || 0),
-					remarks: typeof comments === "string" ? comments : null,
-				}),
-				updated_at: new Date().toISOString(),
-			};
-
-			const { error: rankError } = await supabase
-				.from("cca_member_rankings")
-				.upsert(rankingUpdate, { onConflict: "user_id, position_id" });
-
-			if (rankError) {
-				console.error("Error updating ranking:", rankError);
-				return NextResponse.json(
-					{ error: "Failed to update ranking: " + rankError.message },
-					{ status: 500 },
-				);
-			}
 		}
 
 		return NextResponse.json({ success: true });

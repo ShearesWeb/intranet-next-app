@@ -12,7 +12,7 @@ import { getManagedCcaAccess } from "@/features/cca/utils/cca-management-access"
 export async function POST(request: Request, { params }: { params: Promise<{ ccaId: string }> }) {
 	try {
 		const { ccaId } = await params;
-		const { user_id, reason, position_id } = await request.json();
+		const { user_id, position_id } = await request.json();
 
 		const supabase = await createClient();
 
@@ -46,6 +46,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cca
 			supabase,
 			requestingUser,
 			cca: ccaData,
+			accessLevel: "manage_members",
 		});
 
 		if (!authResult.ok) {
@@ -85,17 +86,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ cca
 			return NextResponse.json({ error: "Failed to remove member" }, { status: 500 });
 		}
 
-		// Log the allocation event (fixed column name)
-		try {
-			await supabase.from("cca_allocation_events").insert({
-				user_id: user_id,
-				position_id: targetPositionId,
-				reason: reason || "Removed by captain/head",
-				event_type: "cut",
-			});
-		} catch (logError) {
-			console.warn("Failed to log allocation event:", logError);
-		}
+		// Note: previously logged to `cca_allocation_events` for audit purposes; that table was
+		// dropped in the schema refactor and has no documented replacement. `cca_appointments.cut_status`
+		// is now the sole record of cut/uncut transitions.
 
 		return NextResponse.json({ success: true });
 	} catch (error) {

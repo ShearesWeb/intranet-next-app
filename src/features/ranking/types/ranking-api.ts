@@ -24,8 +24,7 @@ export type AppointmentRow = {
 export type RankingRow = {
 	user_id: number;
 	position_id: number;
-	ranking: number | null;
-	comments: unknown | null;
+	scores: unknown | null;
 };
 
 export type RankingPayload = {

@@ -90,8 +90,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ ccaI
 		.filter((id: number | undefined): id is number => typeof id === "number");
 
 	const { data: rankings, error: rankingsError } = await supabase
-		.from("cca_member_rankings")
-		.select("user_id, position_id, ranking, comments")
+		.from("cca_appointment_evaluations")
+		.select("user_id, position_id, scores")
 		.in("position_id", positionIds)
 		.in("user_id", userIds);
 
@@ -169,7 +169,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cca
 	}
 
 	const { error } = await supabase
-		.from("cca_member_rankings")
+		.from("cca_appointment_evaluations")
 		.upsert(rankingsToUpsert, { onConflict: "user_id, position_id" });
 
 	if (error) {

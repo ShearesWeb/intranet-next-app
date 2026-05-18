@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { createClient } from "@/utils/supabase/server";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
-import { SubsidyStatus, SubsidyWithPosition, PositionOption } from "@/types/holiday-subsidy";
+import {
+	SubsidyStatus,
+	SubsidyWithPosition,
+	PositionOption,
+} from "@/features/holiday-subsidy/types/declarations";
+import { getWeekIdForDay } from "@/features/holiday-subsidy/utils/holiday-weeks";
 
 type Params = {
 	params: Promise<{
@@ -10,9 +15,21 @@ type Params = {
 	}>;
 };
 
-// API-specific type with joined position data
-type SubsidyFromApi = SubsidyWithPosition & {
-	cca_positions?: PositionOption & { cca_id: number };
+// Raw envelope row as returned by Supabase with `cca_positions` joined.
+// PostgREST may serialize a !inner relation as either an object or a
+// single-element array depending on schema-cache state; accept both.
+type EnvelopeFromApi = {
+	id: number;
+	position_id: number;
+	day: string;
+	hours: number;
+	justification: string | null;
+	status: SubsidyStatus;
+	rejection_reason: string | null;
+	cca_positions?:
+		| (PositionOption & { cca_id: number })
+		| Array<PositionOption & { cca_id: number }>
+		| null;
 };
 
 async function assertJcrcAccess() {
@@ -38,14 +55,43 @@ async function loadCcaName(ccaId: number, supabase: Awaited<ReturnType<typeof cr
 	return { name: data.name as string };
 }
 
+function unwrapRelation<T>(value: T | T[] | null | undefined): T | null {
+	if (Array.isArray(value)) return value[0] ?? null;
+	return value ?? null;
+}
+
+function projectEnvelope(row: EnvelopeFromApi): SubsidyWithPosition | null {
+	const weekId = getWeekIdForDay(row.day);
+	if (weekId === null) return null;
+	const position = unwrapRelation(row.cca_positions);
+	return {
+		id: row.id,
+		position_id: row.position_id,
+		day: row.day,
+		weekId,
+		hours: row.hours,
+		justification: row.justification,
+		status: row.status,
+		rejection_reason: row.rejection_reason,
+		cca_positions: position
+			? {
+					id: position.id,
+					name: position.name,
+					position_type: position.position_type,
+					cca_id: position.cca_id,
+				}
+			: null,
+	};
+}
+
 async function fetchCcaData(ccaId: number, supabase: Awaited<ReturnType<typeof createClient>>) {
 	const [{ data: positions, error: positionsError }, { data: subsidies, error: subsidiesError }] =
 		await Promise.all([
 			supabase.from("cca_positions").select("id, name, position_type").eq("cca_id", ccaId),
 			supabase
-				.from("subsidies")
+				.from("cca_subsidies")
 				.select(
-					`id, position_id, week_id, hours, justification, subsidy_status,
+					`id, position_id, day, hours, justification, status, rejection_reason,
                 cca_positions!inner(id, name, position_type, cca_id)`,
 				)
 				.eq("cca_positions.cca_id", ccaId),
@@ -59,15 +105,23 @@ async function fetchCcaData(ccaId: number, supabase: Awaited<ReturnType<typeof c
 		throw new Error(subsidiesError.message);
 	}
 
+	const projected = ((subsidies as unknown as EnvelopeFromApi[] | null) || [])
+		.map((row) => projectEnvelope(row))
+		.filter((row): row is SubsidyWithPosition => row !== null);
+
 	return {
 		positions: positions || [],
-		subsidies: (subsidies as unknown as SubsidyFromApi[] | null) || [],
+		subsidies: projected,
 	};
 }
 
-function validateUpdates(
-	updates: Array<{ subsidyId: number; status: SubsidyStatus }>,
-): asserts updates is Array<{ subsidyId: number; status: SubsidyStatus }> {
+type ApprovalUpdate = {
+	subsidyId: number;
+	status: SubsidyStatus;
+	rejectionReason?: string | null;
+};
+
+function validateUpdates(updates: ApprovalUpdate[]): asserts updates is ApprovalUpdate[] {
 	if (!Array.isArray(updates) || updates.length === 0) {
 		throw new Error("No updates provided");
 	}
@@ -80,31 +134,36 @@ function validateUpdates(
 		) {
 			throw new Error("Invalid update payload");
 		}
+		// approve_subsidy rejects 'pending'; fail fast.
+		if (update.status === SubsidyStatus.PENDING) {
+			throw new Error("approve_subsidy only accepts approved/rejected");
+		}
 	}
 }
 
-async function ensureSubsidiesBelongToCca(
-	supabase: Awaited<ReturnType<typeof createClient>>,
-	ccaId: number,
-	ids: number[],
-): Promise<void> {
-	const { data, error } = await supabase
-		.from("subsidies")
-		.select("id, cca_positions!inner(cca_id)")
-		.in("id", ids)
-		.eq("cca_positions.cca_id", ccaId);
-
-	if (error) {
-		throw new Error(error.message);
+/**
+ * Map approve_subsidy trigger errors to actionable HTTP status codes.
+ *
+ * The triggers `internal.validate_cca_subsidy_transition_before_update` and
+ * `internal.cascade_cca_subsidy_rejection_after_update` raise structured
+ * messages; the JCRC-vs-chair gate is also enforced at the trigger layer.
+ * Anything we can't pattern-match defaults to 400 — these are domain
+ * violations, not 500s.
+ */
+function mapApproveRpcError(message: string): { status: number; error: string } {
+	if (message.startsWith("Invalid transition")) {
+		return { status: 409, error: message };
 	}
-
-	const foundIds = new Set((data || []).map((row: { id: number }) => row.id as number));
-
-	const missing = ids.filter((id) => !foundIds.has(id));
-
-	if (missing.length > 0) {
-		throw new Error("One or more subsidies do not belong to this CCA");
+	if (message.startsWith("Only JCRC")) {
+		return { status: 403, error: message };
 	}
+	if (message.includes("not found") || message.includes("not accessible")) {
+		return { status: 404, error: message };
+	}
+	if (message.includes("only accepts")) {
+		return { status: 400, error: message };
+	}
+	return { status: 400, error: message };
 }
 
 export async function GET(_request: Request, { params }: Params) {
@@ -166,7 +225,7 @@ export async function PATCH(request: Request, { params }: Params) {
 		}
 
 		const body = await request.json();
-		const updates = (body?.updates || []) as Array<{ subsidyId: number; status: SubsidyStatus }>;
+		const updates = (body?.updates || []) as ApprovalUpdate[];
 
 		try {
 			validateUpdates(updates);
@@ -179,51 +238,100 @@ export async function PATCH(request: Request, { params }: Params) {
 
 		const supabase = await createClient();
 
-		await ensureSubsidiesBelongToCca(
-			supabase,
-			ccaId,
-			updates.map((u) => u.subsidyId),
-		);
-
-		const groupedByStatus = updates.reduce<Record<SubsidyStatus, number[]>>(
-			(acc, { subsidyId, status }) => {
-				acc[status].push(subsidyId);
-				return acc;
-			},
-			{ pending: [], approved: [], rejected: [] },
-		);
-
-		for (const [status, ids] of Object.entries(groupedByStatus) as Array<
-			[SubsidyStatus, number[]]
-		>) {
-			if (ids.length === 0) continue;
-
-			const { error } = await supabase
-				.from("subsidies")
-				.update({ subsidy_status: status })
-				.in("id", ids);
-
-			if (error) {
-				throw new Error(error.message);
-			}
-		}
-
-		const { data, error } = await supabase
-			.from("subsidies")
-			.select(
-				`id, position_id, week_id, hours, justification, subsidy_status,
-                cca_positions!inner(id, name, position_type, cca_id)`,
-			)
+		// Pre-flight: ensure every subsidyId is reachable via the URL ccaId.
+		// RLS would not stop a JCRC actor from approving an envelope outside
+		// this CCA, but the route's contract is "this CCA's approvals".
+		const { data: belongsRows, error: belongsError } = await supabase
+			.from("cca_subsidies")
+			.select("id, cca_positions!inner(cca_id)")
 			.in(
 				"id",
 				updates.map((u) => u.subsidyId),
-			);
+			)
+			.eq("cca_positions.cca_id", ccaId);
 
-		if (error) {
-			throw new Error(error.message);
+		if (belongsError) {
+			throw new Error(belongsError.message);
 		}
 
-		return NextResponse.json({ updated: (data as unknown as SubsidyFromApi[] | null) || [] });
+		const foundIds = new Set((belongsRows || []).map((row: { id: number }) => row.id));
+		const missingIds = updates.map((u) => u.subsidyId).filter((id) => !foundIds.has(id));
+		if (missingIds.length > 0) {
+			return NextResponse.json(
+				{ error: "One or more subsidies do not belong to this CCA" },
+				{ status: 400 },
+			);
+		}
+
+		const results = await Promise.allSettled(
+			updates.map((update) =>
+				supabase
+					.rpc("approve_subsidy", {
+						p_subsidy_id: update.subsidyId,
+						p_decision: update.status,
+						p_reason: update.rejectionReason ?? null,
+					})
+					.single(),
+			),
+		);
+
+		const failures: Array<{ subsidyId: number; status: number; error: string }> = [];
+		const successes: EnvelopeFromApi[] = [];
+
+		results.forEach((result, idx) => {
+			const update = updates[idx];
+			if (result.status === "fulfilled") {
+				const { data, error: rpcError } = result.value;
+				if (rpcError) {
+					const mapped = mapApproveRpcError(rpcError.message);
+					failures.push({ subsidyId: update.subsidyId, ...mapped });
+				} else if (data) {
+					successes.push(data as EnvelopeFromApi);
+				}
+			} else {
+				const message =
+					result.reason instanceof Error
+						? result.reason.message
+						: String(result.reason || "Unknown error");
+				const mapped = mapApproveRpcError(message);
+				failures.push({ subsidyId: update.subsidyId, ...mapped });
+			}
+		});
+
+		if (failures.length > 0) {
+			// Worst-case status wins (403 > 409 > 404 > 400) — pick the
+			// largest unique code as the response status; surface per-row detail.
+			const statusOrder = [403, 409, 404, 400, 500];
+			const status = statusOrder.find((code) => failures.some((f) => f.status === code)) ?? 400;
+			return NextResponse.json(
+				{
+					error: failures.map((f) => `subsidy ${f.subsidyId}: ${f.error}`).join("; "),
+					failures,
+				},
+				{ status },
+			);
+		}
+
+		// Re-query is unnecessary — approve_subsidy returns the row. Re-join
+		// the position so the wire shape matches GET.
+		const ids = successes.map((row) => row.id);
+		const { data: rejoined, error: rejoinError } = await supabase
+			.from("cca_subsidies")
+			.select(
+				`id, position_id, day, hours, justification, status, rejection_reason,
+                cca_positions!inner(id, name, position_type, cca_id)`,
+			)
+			.in("id", ids);
+
+		if (rejoinError) {
+			throw new Error(rejoinError.message);
+		}
+
+		const projected = ((rejoined as unknown as EnvelopeFromApi[] | null) || [])
+			.map((row) => projectEnvelope(row))
+			.filter((row): row is SubsidyWithPosition => row !== null);
+
+		return NextResponse.json({ updated: projected });
 	} catch (error) {
 		console.error("Error updating subsidy approvals:", error);
 		return NextResponse.json({ error: "Failed to update approvals" }, { status: 500 });

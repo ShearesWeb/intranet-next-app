@@ -36,8 +36,7 @@ describe("mapRankingResponseMembers", () => {
 			{
 				user_id: 1,
 				position_id: 10,
-				ranking: 1,
-				comments: { attendance: 8, performance: 7, remarks: "steady" },
+				scores: { ranking: 1, attendance: 8, performance: 7, remarks: "steady" },
 			},
 		];
 
@@ -137,10 +136,47 @@ describe("buildRankingsUpsertPayloads", () => {
 			{
 				user_id: 1,
 				position_id: 10,
-				ranking: 1,
-				comments: { attendance: 8, performance: 7, remarks: "ready" },
+				scores: { ranking: 1, attendance: 8, performance: 7, remarks: "ready" },
 			},
 		]);
+	});
+
+	it("emits a non-empty rubric for resident positions so the scores CHECK constraint is satisfied", () => {
+		const rankings: RankingPayload[] = [
+			{
+				user_id: 7,
+				position_id: 20,
+				ranking: 1,
+				attendance: 0,
+				performance: 0,
+				helpfulness: 8,
+				initiative: 9,
+				attitude: 7,
+				remarks: "solid resident",
+			},
+		];
+
+		const payloads = buildRankingsUpsertPayloads({
+			rankings,
+			allowedPositionIds: new Set([20]),
+			positionTypeById: new Map([[20, "resident"]]),
+			ccaType: "resident",
+		});
+
+		expect(payloads).toHaveLength(1);
+		const [payload] = payloads;
+		expect(payload.user_id).toBe(7);
+		expect(payload.position_id).toBe(20);
+		const scores = payload.scores as Record<string, unknown>;
+		expect(scores).toMatchObject({
+			ranking: 1,
+			helpfulness: 8,
+			initiative: 9,
+			attitude: 7,
+			remarks: "solid resident",
+		});
+		// CHECK constraint: scores must be a non-empty JSONB object.
+		expect(Object.keys(scores).length).toBeGreaterThan(0);
 	});
 });
 
