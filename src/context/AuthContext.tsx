@@ -46,21 +46,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 				redirectTo: `${window.location.origin}/auth/callback${
 					next ? `?next=${encodeURIComponent(next)}` : `?next=${encodeURIComponent("/dashboard")}`
 				}`,
-				queryParams: {
-					prompt: "select_account",
-				},
 			},
 		});
 		if (error) throw error;
 	};
 
 	const signOut = async () => {
-		await supabase.auth.signOut();
-		await fetch("/api/user", { method: "DELETE" }).catch(() => undefined);
+		// Server endpoint revokes the refresh token and authoritatively clears
+		// every sb-<projref>-* and legacy cookie. The browser SDK can't delete
+		// httpOnly cookies on its own, so a server round-trip is required.
+		await fetch("/api/auth/signout", { method: "POST" }).catch(() => undefined);
+		// Local-only clear so the SIGNED_OUT event fires and the in-memory
+		// session/state are cleared in this tab.
+		await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
 		setUser(null);
 		setSession(null);
 		toast.info("Successfully signed out.");
-		router.push("/");
+		router.push("/auth/login");
 	};
 
 	useEffect(() => {
