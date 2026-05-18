@@ -65,9 +65,9 @@ tests/fixtures/
 
 `generate.ts` runs in CI as a guard: if `seed.sql` / `PERSONAS.md` are out of sync with the TS sources, CI fails. Developers run `npm run fixtures:generate` after editing personas.
 
-### 5.2 The 14 personas (+ anonymous)
+### 5.2 The 15 personas (+ anonymous)
 
-Gmail emails (matching real auth — students sign in with personal Google accounts). NUS matric format. Sheares Hall blocks A-E. Names skew modern; 9 of 14 are female.
+Gmail emails (matching real auth — students sign in with personal Google accounts). NUS matric format. Sheares Hall blocks A-E. Names skew modern; 10 of 15 are female.
 
 **Important: flags (`is_admin`, `is_jcrc`, `is_culture_sports_admin`) are NOT input.** They are derived in the `authenticated_user_info` view from the appointment/position graph:
 
@@ -94,6 +94,7 @@ Personas declare appointments; the harness asserts on derived flag values as par
 | `brielle` | `brielle.koh.j@gmail.com` | Brielle Koh | Y4 FASS, Block C #C312 | `maincomm` JCRC | `is_jcrc` + likely `is_admin` |
 | `nova` | `nova.tay.sg@gmail.com` | Nova Tay | Y3 SoC, Block A #A105 | `lead` Basketball + `subcomm` SECC | `is_admin`, `is_culture_sports_admin` — **the cross-CCA composition case** |
 | `willow` | `willow.rahman.gg@gmail.com` | Willow Rahman | Y4 SDE, Block D #D108 | `lead` Dance | `is_admin`, `is_culture_sports_admin` — culture-side counterpart to Declan |
+| `sage` | `sage.lim.97@gmail.com` | Sage Lim | Y3 BBA, Block E #E305 | `lead` Drama + `maincomm` JCRC | `is_admin`, `is_culture_sports_admin`, `is_jcrc` — **the triple-flag case** |
 
 **Removed from prior draft:** Theo (flag-only `is_admin` with no appointments — impossible under the schema since the flag derives from holding a chair position somewhere).
 
@@ -108,9 +109,9 @@ All personas default to `stay_period = 'full-year'` unless explicitly varied for
 | `is_admin` + `is_culture_sports_admin` | declan, kai, nova, willow |
 | `is_jcrc` only (no chair role) | jasper (if blockcomm has no children) |
 | `is_jcrc` + `is_admin` | brielle (likely), jasper (if blockcomm has children) |
-| `is_jcrc` + `is_admin` + `is_culture_sports_admin` | **not currently covered** — see open question 5 below |
+| `is_jcrc` + `is_admin` + `is_culture_sports_admin` | sage |
 
-### 5.3 The 7 CCAs
+### 5.3 The 8 CCAs
 
 | CCA | `cca_type` | `cca_tier_type` | Why |
 |---|---|---|---|
@@ -118,7 +119,8 @@ All personas default to `stay_period = 'full-year'` unless explicitly varied for
 | Basketball | sports | tier 1 | Sports foil — Nova is lead here, Declan must not have access |
 | Choir | culture | tier 1 | Primary culture CCA |
 | Dance | culture | tier 2 | Culture foil + exercises `tier 2` differences |
-| SHWEB | committee | none | Primary committee with lead/maincomm/subcomm rooster |
+| Drama | culture | tier 1 | Sage's CCA — supports the triple-flag persona without disturbing other CCAs' lead assignments |
+| SHWEB | committee | none | Primary committee with lead/maincomm/subcomm roster |
 | SECC | committee | none | Committee foil for cross-committee scoping |
 | JCRC | jcrc | none | Hall executive committee (no `lead` position — top is `maincomm`) |
 
@@ -377,7 +379,7 @@ Migration is incremental — old and new can coexist during transition. The matr
 2. **Schema drift between `../intranet@main` and a working PR.** Pinning to `main` means a breaking schema change in `intranet` can red-CI every open PR in this repo until they rebase. Mitigation: communicate with DB team; consider a `INTRANET_PIN_SHA` env var for short-lived stabilization windows.
 3. **Supabase admin API session minting in E2E.** Requires service-role key in CI; must be stored as a GitHub secret and never exposed to test browser contexts (only used in `globalSetup`).
 4. **Position-reporting graph fidelity.** `is_admin` / `is_culture_sports_admin` derivation depends on the `reporting_position` graph in `cca_positions`. The seed must materialize a graph that matches the real Sheares Hall structure for non-`lead` derived flags (`vice`, `maincomm`, `team manager`) to be meaningful. Source: `../intranet/data/cca-position/`. The harness commits the exact graph in `tests/fixtures/personas.ts` and asserts the derived flags as part of integration tests.
-5. **Open: `is_jcrc + is_admin + is_culture_sports_admin` triple coverage.** No current persona derives all three. To cover, add a 15th persona (e.g., `sage` — `lead` Dance + `maincomm` JCRC) or extend Willow with a JCRC appointment. Deferred to writing-plans unless reviewer wants it locked now.
+5. **Resolved.** `is_jcrc + is_admin + is_culture_sports_admin` triple coverage is now provided by `sage` (`lead` Drama + `maincomm` JCRC). A new culture CCA "Drama" is added to keep all other CCAs' lead assignments intact.
 
 ## 13. Acceptance criteria
 
