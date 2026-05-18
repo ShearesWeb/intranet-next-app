@@ -2,7 +2,11 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import type { AppointmentRow, RankingPayload, RankingRow } from "@/features/ranking/types/ranking-api";
+import type {
+	AppointmentRow,
+	RankingPayload,
+	RankingRow,
+} from "@/features/ranking/types/ranking-api";
 import {
 	buildRankingsUpsertPayloads,
 	mapRankingResponseMembers,

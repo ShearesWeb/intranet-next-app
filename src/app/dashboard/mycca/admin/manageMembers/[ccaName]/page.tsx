@@ -17,28 +17,127 @@ import { SaveErrorDialog } from "@/features/cca/components/save-error-dialog";
 export default function ManageMembersPage() {
 	const searchParams = useSearchParams();
 	const ccaId = searchParams.get("ccaId");
-	const { groupedMembers, cca, permissions, allPositions, loading, error, saving, saveErrors, setSaveErrors, pendingChanges, searchQuery, setSearchQuery, searchResults, searchLoading, searchUser, addMember, removeMember, updateStatus, updateCommitment, saveAll } = useCcaMembers(ccaId);
+	const {
+		groupedMembers,
+		cca,
+		permissions,
+		allPositions,
+		loading,
+		error,
+		saving,
+		saveErrors,
+		setSaveErrors,
+		pendingChanges,
+		searchQuery,
+		setSearchQuery,
+		searchResults,
+		searchLoading,
+		searchUser,
+		addMember,
+		removeMember,
+		updateStatus,
+		updateCommitment,
+		saveAll,
+	} = useCcaMembers(ccaId);
 	const [showAddMemberModal, setShowAddMemberModal] = useState(false);
 	const isSports = permissions.ccaType === "sports";
 	const isCulture = permissions.ccaType === "culture";
 	const isSportsCulture = ["sports", "culture"].includes(permissions.ccaType);
 	const leadershipMembers = [...(groupedMembers.lead || []), ...(groupedMembers.vice || [])];
-	const existingMemberIds = useMemo(() => Object.values(groupedMembers).flat().map((member) => member.user_id), [groupedMembers]);
+	const existingMemberIds = useMemo(
+		() =>
+			Object.values(groupedMembers)
+				.flat()
+				.map((member) => member.user_id),
+		[groupedMembers],
+	);
 	const totalFilteredMembers = existingMemberIds.length;
 	const sections = [
 		{ title: "Leadership", members: leadershipMembers, showActions: false, showAddButton: false },
-		!isSportsCulture && { title: "Main Committee", members: groupedMembers.maincomm || [], showActions: true, showAddButton: false },
-		!isSportsCulture && { title: "Sub Committee", members: groupedMembers.subcomm || [], showActions: true, showAddButton: false },
-		isSportsCulture && { title: "Team Manager", members: groupedMembers.teamManager || [], showActions: false, showAddButton: false },
-		isSports && { title: "Final Cut - IHG Team Members (IVP)", members: groupedMembers.ivpIhgTeam || [], showActions: true, showAddButton: false },
-		isSports && { title: "Final Cut - IHG Team Members", members: groupedMembers.ihgTeam || [], showActions: true, showAddButton: false },
-		isSports && { title: "Final Cut Members", members: groupedMembers.finalCut || [], showActions: true, showAddButton: false },
-		isCulture && { title: "IVP Members", members: groupedMembers.firstCut || [], showActions: true, showAddButton: false },
-		{ title: "Members", members: groupedMembers.members || [], showActions: true, showAddButton: true },
-	].filter(Boolean) as Array<{ title: string; members: typeof leadershipMembers; showActions: boolean; showAddButton: boolean }>;
+		!isSportsCulture && {
+			title: "Main Committee",
+			members: groupedMembers.maincomm || [],
+			showActions: true,
+			showAddButton: false,
+		},
+		!isSportsCulture && {
+			title: "Sub Committee",
+			members: groupedMembers.subcomm || [],
+			showActions: true,
+			showAddButton: false,
+		},
+		isSportsCulture && {
+			title: "Team Manager",
+			members: groupedMembers.teamManager || [],
+			showActions: false,
+			showAddButton: false,
+		},
+		isSports && {
+			title: "Final Cut - IHG Team Members (IVP)",
+			members: groupedMembers.ivpIhgTeam || [],
+			showActions: true,
+			showAddButton: false,
+		},
+		isSports && {
+			title: "Final Cut - IHG Team Members",
+			members: groupedMembers.ihgTeam || [],
+			showActions: true,
+			showAddButton: false,
+		},
+		isSports && {
+			title: "Final Cut Members",
+			members: groupedMembers.finalCut || [],
+			showActions: true,
+			showAddButton: false,
+		},
+		isCulture && {
+			title: "IVP Members",
+			members: groupedMembers.firstCut || [],
+			showActions: true,
+			showAddButton: false,
+		},
+		{
+			title: "Members",
+			members: groupedMembers.members || [],
+			showActions: true,
+			showAddButton: true,
+		},
+	].filter(Boolean) as Array<{
+		title: string;
+		members: typeof leadershipMembers;
+		showActions: boolean;
+		showAddButton: boolean;
+	}>;
 
-	if (loading) return <AppLayout><LoadingSpinner message="Loading members..." /></AppLayout>;
-	if (error) return <AppLayout><div className="flex-1 p-6"><div className="mb-6"><h1 className="text-2xl font-bold text-gray-800">CCA Members</h1></div><Card className="bg-red-50 border-red-200"><CardContent className="flex flex-col items-center p-6 gap-4"><p className="text-red-700 font-medium text-center">⚠️ {error}</p><Link href="/dashboard/mycca/admin"><Button variant="default" className="bg-blue-500 text-white hover:bg-blue-400 px-6 py-4 shadow-md font-bold cursor-pointer">Back to My CCAs</Button></Link></CardContent></Card></div></AppLayout>;
+	if (loading)
+		return (
+			<AppLayout>
+				<LoadingSpinner message="Loading members..." />
+			</AppLayout>
+		);
+	if (error)
+		return (
+			<AppLayout>
+				<div className="flex-1 p-6">
+					<div className="mb-6">
+						<h1 className="text-2xl font-bold text-gray-800">CCA Members</h1>
+					</div>
+					<Card className="bg-red-50 border-red-200">
+						<CardContent className="flex flex-col items-center p-6 gap-4">
+							<p className="text-red-700 font-medium text-center">⚠️ {error}</p>
+							<Link href="/dashboard/mycca/admin">
+								<Button
+									variant="default"
+									className="bg-blue-500 text-white hover:bg-blue-400 px-6 py-4 shadow-md font-bold cursor-pointer"
+								>
+									Back to My CCAs
+								</Button>
+							</Link>
+						</CardContent>
+					</Card>
+				</div>
+			</AppLayout>
+		);
 
 	return (
 		<AppLayout>
@@ -104,7 +203,19 @@ export default function ManageMembersPage() {
 				) : (
 					<div className="space-y-8">
 						{sections.map((section) => (
-							<MemberGroupTable key={section.title} title={section.title} members={section.members} canManage={permissions.canManageMembers} ccaType={permissions.ccaType} onRemoveMember={removeMember} onUpdateStatus={updateStatus} onUpdateCommitment={updateCommitment} onAddMember={() => setShowAddMemberModal(true)} showActions={section.showActions} showAddButton={section.showAddButton} />
+							<MemberGroupTable
+								key={section.title}
+								title={section.title}
+								members={section.members}
+								canManage={permissions.canManageMembers}
+								ccaType={permissions.ccaType}
+								onRemoveMember={removeMember}
+								onUpdateStatus={updateStatus}
+								onUpdateCommitment={updateCommitment}
+								onAddMember={() => setShowAddMemberModal(true)}
+								showActions={section.showActions}
+								showAddButton={section.showAddButton}
+							/>
 						))}
 					</div>
 				)}
@@ -114,7 +225,20 @@ export default function ManageMembersPage() {
 						<strong>Total Members:</strong> {totalFilteredMembers}
 					</AlertTitle>
 				</Alert>
-				<AddMemberModal open={showAddMemberModal} onOpenChange={setShowAddMemberModal} searchQuery={searchQuery} onSearchQueryChange={setSearchQuery} searchResults={searchResults} searchLoading={searchLoading} onSearch={searchUser} onAddMember={addMember} onRemoveMember={removeMember} allPositions={allPositions} isSportsCulture={isSportsCulture} existingMemberIds={existingMemberIds} />
+				<AddMemberModal
+					open={showAddMemberModal}
+					onOpenChange={setShowAddMemberModal}
+					searchQuery={searchQuery}
+					onSearchQueryChange={setSearchQuery}
+					searchResults={searchResults}
+					searchLoading={searchLoading}
+					onSearch={searchUser}
+					onAddMember={addMember}
+					onRemoveMember={removeMember}
+					allPositions={allPositions}
+					isSportsCulture={isSportsCulture}
+					existingMemberIds={existingMemberIds}
+				/>
 				<SaveErrorDialog errors={saveErrors} onClose={() => setSaveErrors([])} />
 				{saving && <LoadingSpinner message="Saving changes..." overlay />}
 			</div>

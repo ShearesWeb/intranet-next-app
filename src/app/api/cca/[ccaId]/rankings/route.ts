@@ -6,7 +6,7 @@ import {
 	loadCcaContext,
 	loadManagedRankingAccess,
 	mapRankingResponseMembers,
-	} from "@/features/ranking/utils/ranking-route";
+} from "@/features/ranking/utils/ranking-route";
 import { fetchUserInfo } from "@/lib/fetch-user-info";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 import type {

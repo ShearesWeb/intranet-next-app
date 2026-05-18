@@ -73,7 +73,10 @@ export function useRankingEditor(ccaId: string | null) {
 
 	const positionGroups = useMemo(() => buildPositionGroups(members), [members]);
 	const unrankedCount = useMemo(() => getUnrankedCount(members, ccaType), [members, ccaType]);
-	const hasChanges = useMemo(() => getHasChanges(members, initialMembers), [members, initialMembers]);
+	const hasChanges = useMemo(
+		() => getHasChanges(members, initialMembers),
+		[members, initialMembers],
+	);
 
 	const handleFieldChange = useCallback(
 		<K extends keyof CCAMember>(rowKey: string, field: K, value: FieldValue) => {

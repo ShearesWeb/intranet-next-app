@@ -275,7 +275,14 @@ export async function createRecapImageBlob(
 
 			for (let index = 0; index < nameLines.length; index += 1) {
 				const lineX = currentX + 10 + (index > 0 ? 15 : 0);
-				drawText(nameLines[index], lineX, y + index * 30, nameFont, "left", "rgba(255, 255, 255, 0.95)");
+				drawText(
+					nameLines[index],
+					lineX,
+					y + index * 30,
+					nameFont,
+					"left",
+					"rgba(255, 255, 255, 0.95)",
+				);
 			}
 
 			y += itemHeight + 6;

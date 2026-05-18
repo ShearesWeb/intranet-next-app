@@ -68,13 +68,26 @@ export function PositionRankingCard({ group, ccaType, onFieldChange }: PositionR
 							<TableRow>
 								<TableHead className="w-[88px]">Rank</TableHead>
 								<TableHead>Name</TableHead>
-								{!isResidentGroup && (ccaType === "sports" ? <TableHead>Status</TableHead> : <TableHead>Commitment</TableHead>)}
+								{!isResidentGroup &&
+									(ccaType === "sports" ? (
+										<TableHead>Status</TableHead>
+									) : (
+										<TableHead>Commitment</TableHead>
+									))}
 								{isResidentGroup ? (
-									RESIDENT_METRICS.map((metric) => <TableHead key={metric.field}>{metric.label} (1-10)</TableHead>)
+									RESIDENT_METRICS.map((metric) => (
+										<TableHead key={metric.field}>{metric.label} (1-10)</TableHead>
+									))
 								) : (
-									<TableHead>{ccaType === "sports" ? "Captain's Appraisal (1-10)" : "Attendance and Attitude (1-10)"}</TableHead>
+									<TableHead>
+										{ccaType === "sports"
+											? "Captain's Appraisal (1-10)"
+											: "Attendance and Attitude (1-10)"}
+									</TableHead>
 								)}
-								{!isResidentGroup && ccaType !== "sports" && <TableHead>Performance (1-10)</TableHead>}
+								{!isResidentGroup && ccaType !== "sports" && (
+									<TableHead>Performance (1-10)</TableHead>
+								)}
 								<TableHead>Remarks</TableHead>
 							</TableRow>
 						</TableHeader>
@@ -87,19 +100,34 @@ export function PositionRankingCard({ group, ccaType, onFieldChange }: PositionR
 										</div>
 									</TableCell>
 									<TableCell className="font-medium">{member.name}</TableCell>
-									{!isResidentGroup && (
-										ccaType === "sports" ? <TableCell className="text-sm">{formatCutStatus(member.cut_status)}</TableCell> : <TableCell className="text-sm">{formatCommitmentPeriod(member.commitment_period)}</TableCell>
-									)}
+									{!isResidentGroup &&
+										(ccaType === "sports" ? (
+											<TableCell className="text-sm">
+												{formatCutStatus(member.cut_status)}
+											</TableCell>
+										) : (
+											<TableCell className="text-sm">
+												{formatCommitmentPeriod(member.commitment_period)}
+											</TableCell>
+										))}
 									{isResidentGroup ? (
-										RESIDENT_METRICS.map((metric) => <TableCell key={metric.field}>{renderScoreSelect(member, metric.field)}</TableCell>)
+										RESIDENT_METRICS.map((metric) => (
+											<TableCell key={metric.field}>
+												{renderScoreSelect(member, metric.field)}
+											</TableCell>
+										))
 									) : (
 										<TableCell>{renderScoreSelect(member, "attendance")}</TableCell>
 									)}
-									{!isResidentGroup && ccaType !== "sports" && <TableCell>{renderScoreSelect(member, "performance")}</TableCell>}
+									{!isResidentGroup && ccaType !== "sports" && (
+										<TableCell>{renderScoreSelect(member, "performance")}</TableCell>
+									)}
 									<TableCell className="min-w-[220px]">
 										<Textarea
 											value={member.remarks || ""}
-											onChange={(event) => onFieldChange(member.row_key, "remarks", event.target.value)}
+											onChange={(event) =>
+												onFieldChange(member.row_key, "remarks", event.target.value)
+											}
 											placeholder="Enter remarks"
 											className="min-h-[60px] text-sm"
 										/>

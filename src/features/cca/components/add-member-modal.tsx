@@ -105,7 +105,10 @@ export function AddMemberModal({
 	if (!isSportsCulture) return null;
 
 	return (
-		<Dialog open={open} onOpenChange={(nextOpen) => (nextOpen ? onOpenChange(true) : handleClose())}>
+		<Dialog
+			open={open}
+			onOpenChange={(nextOpen) => (nextOpen ? onOpenChange(true) : handleClose())}
+		>
 			<DialogContent className="max-w-[750px] max-h-[80vh] overflow-auto">
 				<DialogHeader>
 					<DialogTitle>Add Member</DialogTitle>
@@ -124,7 +127,9 @@ export function AddMemberModal({
 								onChange={(e) => setSelectedPositionId(Number(e.target.value))}
 							>
 								{availablePositions.map((position) => (
-									<option key={position.id} value={position.id}>{position.name}</option>
+									<option key={position.id} value={position.id}>
+										{position.name}
+									</option>
 								))}
 							</select>
 						</div>
@@ -141,8 +146,19 @@ export function AddMemberModal({
 							</select>
 						</div>
 						<div className="flex justify-end gap-2 mt-6">
-							<Button onClick={() => setSelectedUser(null)} variant="outline" className="bg-gray-100 hover:bg-gray-200">Back</Button>
-							<Button onClick={handleConfirmAdd} className="bg-green-600 hover:bg-green-500 text-white">Confirm Add</Button>
+							<Button
+								onClick={() => setSelectedUser(null)}
+								variant="outline"
+								className="bg-gray-100 hover:bg-gray-200"
+							>
+								Back
+							</Button>
+							<Button
+								onClick={handleConfirmAdd}
+								className="bg-green-600 hover:bg-green-500 text-white"
+							>
+								Confirm Add
+							</Button>
 						</div>
 					</div>
 				) : (
@@ -156,36 +172,58 @@ export function AddMemberModal({
 								onKeyDown={handleSearchKeyDown}
 								className="focus-visible:ring-[2px] focus-visible:ring-blue-500/20 focus-visible:border-blue-500 py-5 rounded-sm border border-gray-300 w-full pl-4"
 							/>
-							<Button onClick={() => void onSearch()} disabled={searchLoading} className="bg-blue-500 text-white hover:bg-blue-400 px-8 py-3 shadow-md font-bold cursor-pointer">
+							<Button
+								onClick={() => void onSearch()}
+								disabled={searchLoading}
+								className="bg-blue-500 text-white hover:bg-blue-400 px-8 py-3 shadow-md font-bold cursor-pointer"
+							>
 								{searchLoading ? "Searching..." : "Search"}
 							</Button>
 						</div>
-						{searchLoading && <div className="flex items-center justify-center mt-4"><LoadingSpinner message="Searching users..." fullHeight={false} /></div>}
-						<div className="mt-4"><div className="space-y-2 max-h-64 overflow-y-auto">
-							{searchResults.map((user) => {
-								const isAdded = existingMemberIds.includes(user.id);
-								return (
-									<div key={user.id} className="flex justify-between items-center p-3 border border-gray-200 rounded-md bg-white shadow-sm">
-										<div className="flex flex-wrap items-center gap-2 text-sm text-gray-700">
-											<strong className="font-bold">{user.name}</strong>
-											<span className="text-gray-500">({user.email})</span>
-											{user.room && <span className="text-gray-400">- {user.room}</span>}
-										</div>
-										<Button
-											size="sm"
-											onClick={() => handleSelectUser(user)}
-											className={isAdded ? "bg-red-500 text-white hover:bg-red-400 px-4 py-2 shadow-md font-bold cursor-pointer" : "bg-green-500 text-white hover:bg-green-400 px-4 py-2 shadow-md font-bold cursor-pointer"}
+						{searchLoading && (
+							<div className="flex items-center justify-center mt-4">
+								<LoadingSpinner message="Searching users..." fullHeight={false} />
+							</div>
+						)}
+						<div className="mt-4">
+							<div className="space-y-2 max-h-64 overflow-y-auto">
+								{searchResults.map((user) => {
+									const isAdded = existingMemberIds.includes(user.id);
+									return (
+										<div
+											key={user.id}
+											className="flex justify-between items-center p-3 border border-gray-200 rounded-md bg-white shadow-sm"
 										>
-											{isAdded ? "Remove" : "Add"}
-										</Button>
-									</div>
-								);
-							})}
-						</div></div>
+											<div className="flex flex-wrap items-center gap-2 text-sm text-gray-700">
+												<strong className="font-bold">{user.name}</strong>
+												<span className="text-gray-500">({user.email})</span>
+												{user.room && <span className="text-gray-400">- {user.room}</span>}
+											</div>
+											<Button
+												size="sm"
+												onClick={() => handleSelectUser(user)}
+												className={
+													isAdded
+														? "bg-red-500 text-white hover:bg-red-400 px-4 py-2 shadow-md font-bold cursor-pointer"
+														: "bg-green-500 text-white hover:bg-green-400 px-4 py-2 shadow-md font-bold cursor-pointer"
+												}
+											>
+												{isAdded ? "Remove" : "Add"}
+											</Button>
+										</div>
+									);
+								})}
+							</div>
+						</div>
 					</>
 				)}
 				<div className="mt-6 flex justify-end">
-					<Button onClick={handleClose} className="bg-gray-500 text-white hover:bg-gray-400 px-6 py-4 shadow-md font-bold cursor-pointer">Close</Button>
+					<Button
+						onClick={handleClose}
+						className="bg-gray-500 text-white hover:bg-gray-400 px-6 py-4 shadow-md font-bold cursor-pointer"
+					>
+						Close
+					</Button>
 				</div>
 			</DialogContent>
 		</Dialog>

@@ -192,7 +192,9 @@ export function useCcaMembers(ccaId: string | null): UseCcaMembersReturn {
 
 		setSearchLoading(true);
 		try {
-			const response = await fetch(`/api/cca/${ccaId}/searchUsers?query=${encodeURIComponent(query)}`);
+			const response = await fetch(
+				`/api/cca/${ccaId}/searchUsers?query=${encodeURIComponent(query)}`,
+			);
 			const data = await response.json();
 			if (!response.ok) {
 				throw new Error(data.message || data.error || "Failed to search users");
@@ -386,11 +388,16 @@ export function useCcaMembers(ccaId: string | null): UseCcaMembersReturn {
 			setCurrentGroupedMembers((prev) => {
 				const updated: GroupedMembers = { ...prev };
 				Object.keys(updated).forEach((key) => {
-					updated[key] = (updated[key] || []).filter((currentMember) => currentMember.user_id !== userId);
+					updated[key] = (updated[key] || []).filter(
+						(currentMember) => currentMember.user_id !== userId,
+					);
 				});
 
 				const targetGroup = getGroupFromStatus(newStatus);
-				updated[targetGroup] = [...(updated[targetGroup] || []), { ...member, cut_status: newStatus }];
+				updated[targetGroup] = [
+					...(updated[targetGroup] || []),
+					{ ...member, cut_status: newStatus },
+				];
 				return updated;
 			});
 

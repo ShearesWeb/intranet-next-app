@@ -72,7 +72,9 @@ export function recalculateRankings(items: CCAMember[], ccaType: string): CCAMem
 export function buildComparisonSnapshot(items: CCAMember[]) {
 	return JSON.stringify(
 		[...items]
-			.sort((a, b) => a.position_id - b.position_id || a.ranking - b.ranking || a.user_id - b.user_id)
+			.sort(
+				(a, b) => a.position_id - b.position_id || a.ranking - b.ranking || a.user_id - b.user_id,
+			)
 			.map((member) => ({
 				row_key: member.row_key,
 				user_id: member.user_id,
@@ -121,7 +123,9 @@ export function getChangedRankingPayloads(members: CCAMember[], initialMembers: 
 
 	return [...members]
 		.sort((a, b) => a.position_id - b.position_id || a.ranking - b.ranking || a.user_id - b.user_id)
-		.filter((member) => initialSnapshots.get(member.row_key) !== buildMemberComparisonSnapshot(member))
+		.filter(
+			(member) => initialSnapshots.get(member.row_key) !== buildMemberComparisonSnapshot(member),
+		)
 		.map(toRankingSavePayload);
 }
 
@@ -136,7 +140,9 @@ export function chunkRankingPayloads(
 	payloads.forEach((payload) => {
 		const payloadSize = textEncoder.encode(JSON.stringify(payload)).length;
 		if (payloadSize > maxBytes) {
-			throw new Error(`Ranking for user ${payload.user_id} is too large to save in a single request`);
+			throw new Error(
+				`Ranking for user ${payload.user_id} is too large to save in a single request`,
+			);
 		}
 
 		const nextChunkSize = currentChunkSize + (currentChunk.length > 0 ? 1 : 0) + payloadSize;
@@ -228,7 +234,9 @@ export function buildPositionGroups(members: CCAMember[]): PositionGroup[] {
 	return Array.from(groups.values())
 		.map((group) => ({
 			...group,
-			members: [...group.members].sort((a, b) => a.ranking - b.ranking || a.name.localeCompare(b.name)),
+			members: [...group.members].sort(
+				(a, b) => a.ranking - b.ranking || a.name.localeCompare(b.name),
+			),
 		}))
 		.sort((a, b) => {
 			const orderA = POSITION_TYPE_ORDER[(a.position_type || "").toLowerCase()] ?? 99;

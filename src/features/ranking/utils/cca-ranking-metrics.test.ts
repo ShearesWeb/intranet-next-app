@@ -44,10 +44,7 @@ describe("getRankingMetricKeys", () => {
 describe("hasRequiredRankingInputs", () => {
 	it("requires all configured metrics for sports and culture rows", () => {
 		expect(
-			hasRequiredRankingInputs(
-				{ attendance: 6 },
-				{ ccaType: "sports", positionType: "member" },
-			),
+			hasRequiredRankingInputs({ attendance: 6 }, { ccaType: "sports", positionType: "member" }),
 		).toBe(true);
 
 		expect(
@@ -77,7 +74,9 @@ describe("hasRequiredRankingInputs", () => {
 
 describe("getRankingScore", () => {
 	it("sums the active metrics for each ranking mode", () => {
-		expect(getRankingScore({ attendance: 6 }, { ccaType: "sports", positionType: "member" })).toBe(6);
+		expect(getRankingScore({ attendance: 6 }, { ccaType: "sports", positionType: "member" })).toBe(
+			6,
+		);
 		expect(
 			getRankingScore(
 				{ attendance: 6, performance: 4 },

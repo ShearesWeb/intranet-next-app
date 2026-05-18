@@ -1,5 +1,10 @@
 import type { CCAData } from "@/features/cca/types/cca-data";
-import type { RecapCategoryConfig, RecapData, RecapSlide, RecapTotals } from "@/features/ranking/types/recap";
+import type {
+	RecapCategoryConfig,
+	RecapData,
+	RecapSlide,
+	RecapTotals,
+} from "@/features/ranking/types/recap";
 import { isResidentPositionType } from "@/features/ranking/utils/cca-ranking-metrics";
 import type { User } from "@/types/User";
 
@@ -97,7 +102,8 @@ export const RECAP_CATEGORY_CONFIG: RecapCategoryConfig[] = [
 		descriptionWhenEmpty: "No block points showed up here.",
 		statLabel: "Points so far",
 		accent: "from-[#0f172a] via-[#1e3a8a] to-[#3b82f6]",
-		filter: (cca) => isBlockCcaName(cca.name) && isResidentBlockPosition(cca.position_type, cca.role),
+		filter: (cca) =>
+			isBlockCcaName(cca.name) && isResidentBlockPosition(cca.position_type, cca.role),
 		buildSupportingText: ({ points }) => (points > 0 ? "Home ground matters too." : undefined),
 	},
 	{
@@ -207,11 +213,11 @@ export function buildRecapSlides(user: User, ccas: CCAData[]): RecapData {
 			description:
 				cultureCcas.length > 0
 					? RECAP_CATEGORY_CONFIG[0].descriptionWhenPresent({
-						count: cultureCcas.length,
-						points: culturePoints,
-						user,
-						ccas,
-					})
+							count: cultureCcas.length,
+							points: culturePoints,
+							user,
+							ccas,
+						})
 					: RECAP_CATEGORY_CONFIG[0].descriptionWhenEmpty,
 			statLabel: RECAP_CATEGORY_CONFIG[0].statLabel,
 			statValue: String(cumulativeAfterCulture),
@@ -237,11 +243,11 @@ export function buildRecapSlides(user: User, ccas: CCAData[]): RecapData {
 			description:
 				sportsCcas.length > 0
 					? RECAP_CATEGORY_CONFIG[1].descriptionWhenPresent({
-						count: sportsCcas.length,
-						points: sportsPoints,
-						user,
-						ccas,
-					})
+							count: sportsCcas.length,
+							points: sportsPoints,
+							user,
+							ccas,
+						})
 					: RECAP_CATEGORY_CONFIG[1].descriptionWhenEmpty,
 			statLabel: RECAP_CATEGORY_CONFIG[1].statLabel,
 			statValue: String(cumulativeAfterSports),
@@ -267,11 +273,11 @@ export function buildRecapSlides(user: User, ccas: CCAData[]): RecapData {
 			description:
 				committeeCcas.length > 0
 					? RECAP_CATEGORY_CONFIG[2].descriptionWhenPresent({
-						count: committeeCcas.length,
-						points: committeePoints,
-						user,
-						ccas,
-					})
+							count: committeeCcas.length,
+							points: committeePoints,
+							user,
+							ccas,
+						})
 					: RECAP_CATEGORY_CONFIG[2].descriptionWhenEmpty,
 			statLabel: RECAP_CATEGORY_CONFIG[2].statLabel,
 			statValue: String(cumulativeAfterCommittees),
@@ -288,13 +294,12 @@ export function buildRecapSlides(user: User, ccas: CCAData[]): RecapData {
 					: committeeCcas.length > 0
 						? "No leadership roles here, but you still did the work."
 						: RECAP_CATEGORY_CONFIG[2].buildSupportingText({
-							count: committeeCcas.length,
-							points: committeePoints,
-							user,
-							ccas,
-						}),
-			supportingBulletItems:
-				leadershipDescriptions.length > 0 ? leadershipDescriptions : undefined,
+								count: committeeCcas.length,
+								points: committeePoints,
+								user,
+								ccas,
+							}),
+			supportingBulletItems: leadershipDescriptions.length > 0 ? leadershipDescriptions : undefined,
 			accent: RECAP_CATEGORY_CONFIG[2].accent,
 		},
 		{
@@ -304,11 +309,11 @@ export function buildRecapSlides(user: User, ccas: CCAData[]): RecapData {
 			description:
 				blockResidentAppointments.length > 0
 					? RECAP_CATEGORY_CONFIG[3].descriptionWhenPresent({
-						count: blockResidentAppointments.length,
-						points: blockPoints,
-						user,
-						ccas,
-					})
+							count: blockResidentAppointments.length,
+							points: blockPoints,
+							user,
+							ccas,
+						})
 					: RECAP_CATEGORY_CONFIG[3].descriptionWhenEmpty,
 			statLabel: RECAP_CATEGORY_CONFIG[3].statLabel,
 			statValue: String(cumulativeAfterBlock),
@@ -332,11 +337,11 @@ export function buildRecapSlides(user: User, ccas: CCAData[]): RecapData {
 			description:
 				supplementaryCcas.length > 0
 					? RECAP_CATEGORY_CONFIG[4].descriptionWhenPresent({
-						count: supplementaryCcas.length,
-						points: supplementaryPoints,
-						user,
-						ccas,
-					})
+							count: supplementaryCcas.length,
+							points: supplementaryPoints,
+							user,
+							ccas,
+						})
 					: RECAP_CATEGORY_CONFIG[4].descriptionWhenEmpty,
 			statLabel: RECAP_CATEGORY_CONFIG[4].statLabel,
 			statValue: String(cumulativeAfterSupplementary),
@@ -360,11 +365,11 @@ export function buildRecapSlides(user: User, ccas: CCAData[]): RecapData {
 			description:
 				adhocCcas.length > 0
 					? RECAP_CATEGORY_CONFIG[5].descriptionWhenPresent({
-						count: adhocCcas.length,
-						points: adhocPoints,
-						user,
-						ccas,
-					})
+							count: adhocCcas.length,
+							points: adhocPoints,
+							user,
+							ccas,
+						})
 					: RECAP_CATEGORY_CONFIG[5].descriptionWhenEmpty,
 			statLabel: RECAP_CATEGORY_CONFIG[5].statLabel,
 			statValue: String(cumulativeAfterAdhoc),

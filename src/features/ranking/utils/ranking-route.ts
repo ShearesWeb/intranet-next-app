@@ -31,10 +31,7 @@ export async function loadCcaContext(supabase: SupabaseServerClient, ccaId: numb
 	const [{ data: cca, error: ccaError }, { data: positions, error: positionsError }] =
 		await Promise.all([
 			supabase.from("ccas").select("id, name, cca_type").eq("id", ccaId).single(),
-			supabase
-				.from("cca_positions")
-				.select("id, name, position_type, cca_id")
-				.eq("cca_id", ccaId),
+			supabase.from("cca_positions").select("id, name, position_type, cca_id").eq("cca_id", ccaId),
 		]);
 
 	return { cca, ccaError, positions, positionsError };

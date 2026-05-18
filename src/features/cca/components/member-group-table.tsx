@@ -93,9 +93,7 @@ export function MemberGroupTable({
 									<option value="semester-2">Semester 2</option>
 								</select>
 							) : (
-								<span>
-									{formatCommitmentPeriod(value as CommitmentPeriod | null | undefined)}
-								</span>
+								<span>{formatCommitmentPeriod(value as CommitmentPeriod | null | undefined)}</span>
 							),
 					},
 					{
@@ -115,7 +113,9 @@ export function MemberGroupTable({
 											<DropdownMenuLabel>Actions</DropdownMenuLabel>
 											<DropdownMenuSeparator />
 											{row.cut_status && (
-												<DropdownMenuItem onClick={() => onUpdateStatus(row.user_id, row.name, null)}>
+												<DropdownMenuItem
+													onClick={() => onUpdateStatus(row.user_id, row.name, null)}
+												>
 													Move to Members
 												</DropdownMenuItem>
 											)}
@@ -150,7 +150,9 @@ export function MemberGroupTable({
 											<DropdownMenuLabel>Actions</DropdownMenuLabel>
 											<DropdownMenuSeparator />
 											{row.cut_status ? (
-												<DropdownMenuItem onClick={() => onUpdateStatus(row.user_id, row.name, null)}>
+												<DropdownMenuItem
+													onClick={() => onUpdateStatus(row.user_id, row.name, null)}
+												>
 													Move to Members
 												</DropdownMenuItem>
 											) : null}

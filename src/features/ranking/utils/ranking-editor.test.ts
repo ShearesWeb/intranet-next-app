@@ -47,9 +47,33 @@ describe("recalculateRankings", () => {
 	it("ranks resident members by helpfulness, initiative, and attitude total", () => {
 		const ranked = recalculateRankings(
 			[
-				createMember({ user_id: 10, name: "Chris", position_type: "resident", helpfulness: 8, initiative: 8, attitude: 7, position_id: 2 }),
-				createMember({ user_id: 11, name: "Blair", position_type: "resident", helpfulness: 9, initiative: 9, attitude: 9, position_id: 2 }),
-				createMember({ user_id: 12, name: "Devon", position_type: "resident", helpfulness: 10, initiative: 0, attitude: 10, position_id: 2 }),
+				createMember({
+					user_id: 10,
+					name: "Chris",
+					position_type: "resident",
+					helpfulness: 8,
+					initiative: 8,
+					attitude: 7,
+					position_id: 2,
+				}),
+				createMember({
+					user_id: 11,
+					name: "Blair",
+					position_type: "resident",
+					helpfulness: 9,
+					initiative: 9,
+					attitude: 9,
+					position_id: 2,
+				}),
+				createMember({
+					user_id: 12,
+					name: "Devon",
+					position_type: "resident",
+					helpfulness: 10,
+					initiative: 0,
+					attitude: 10,
+					position_id: 2,
+				}),
 			],
 			"culture",
 		);
@@ -95,9 +119,39 @@ describe("getChangedRankingPayloads", () => {
 describe("chunkRankingPayloads", () => {
 	it("splits payloads when adding another row would exceed the byte limit", () => {
 		const payloads: RankingSavePayload[] = [
-			{ user_id: 1, position_id: 1, ranking: 1, attendance: 10, performance: 10, helpfulness: 0, initiative: 0, attitude: 0, remarks: "A".repeat(35) },
-			{ user_id: 2, position_id: 1, ranking: 2, attendance: 9, performance: 9, helpfulness: 0, initiative: 0, attitude: 0, remarks: "B".repeat(35) },
-			{ user_id: 3, position_id: 1, ranking: 3, attendance: 8, performance: 8, helpfulness: 0, initiative: 0, attitude: 0, remarks: "C".repeat(35) },
+			{
+				user_id: 1,
+				position_id: 1,
+				ranking: 1,
+				attendance: 10,
+				performance: 10,
+				helpfulness: 0,
+				initiative: 0,
+				attitude: 0,
+				remarks: "A".repeat(35),
+			},
+			{
+				user_id: 2,
+				position_id: 1,
+				ranking: 2,
+				attendance: 9,
+				performance: 9,
+				helpfulness: 0,
+				initiative: 0,
+				attitude: 0,
+				remarks: "B".repeat(35),
+			},
+			{
+				user_id: 3,
+				position_id: 1,
+				ranking: 3,
+				attendance: 8,
+				performance: 8,
+				helpfulness: 0,
+				initiative: 0,
+				attitude: 0,
+				remarks: "C".repeat(35),
+			},
 		];
 
 		const maxBytes = Buffer.byteLength(JSON.stringify(payloads[0])) * 2 + 10;
