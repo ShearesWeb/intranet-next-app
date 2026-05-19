@@ -76,3 +76,6 @@ supabase/.temp/
 
 # Liquibase per-run output
 liquibase.properties
+
+# Local-only Supabase env for integration tests (regenerated from `supabase status`).
+.env.test
