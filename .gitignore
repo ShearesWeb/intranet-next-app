@@ -69,3 +69,16 @@ next-env.d.ts
 
 # playwright MCP artifacts (browser console logs from MCP tool runs)
 .playwright-mcp/
+
+# Supabase local working artifacts (config.toml IS committed; these are not)
+supabase/.branches/
+supabase/.temp/
+
+# Test DB bootstrap output
+.supabase-test-db.log
+
+# Liquibase per-run output
+liquibase.properties
+
+# Local-only Supabase env for integration tests (regenerated from `supabase status`).
+.env.test

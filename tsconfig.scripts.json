@@ -7,6 +7,6 @@
 		"resolveJsonModule": true,
 		"moduleResolution": "Node"
 	},
-	"include": ["scripts/**/*"],
+	"include": ["scripts/**/*.ts", "tests/fixtures/**/*.ts"],
 	"exclude": ["node_modules"]
 }

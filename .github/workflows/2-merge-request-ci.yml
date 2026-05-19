@@ -74,8 +74,11 @@ jobs:
       - name: 8. 🔎 Typecheck
         run: ${{ steps.detect-pm.outputs.manager }} run typecheck
 
-      - name: 9. 🧪 Unit + Component Tests
+      - name: 9. 🧾 Fixtures Drift Check
+        run: ${{ steps.detect-pm.outputs.manager }} run fixtures:check
+
+      - name: 10. 🧪 Unit + Component Tests
         run: ${{ steps.detect-pm.outputs.manager }} test
 
-      - name: 10. 🚧 Build with Next.js
+      - name: 11. 🚧 Build with Next.js
         run: ${{ steps.detect-pm.outputs.manager }} run build
