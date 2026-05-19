@@ -4,7 +4,7 @@
 	"private": true,
 	"scripts": {
 		"build": "next build",
-		"db:test:reset": "psql \"postgresql://postgres:postgres@127.0.0.1:54322/postgres\" -v ON_ERROR_STOP=1 -f tests/fixtures/seed.sql",
+		"db:test:reset": "bash scripts/setup-test-db.sh --reseed",
 		"db:test:setup": "bash scripts/setup-test-db.sh",
 		"dev": "next dev",
 		"fixtures:check": "ts-node -P tsconfig.scripts.json tests/fixtures/generate.ts --check",
