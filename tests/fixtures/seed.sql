@@ -3,18 +3,22 @@
 
 BEGIN;
 
--- Truncate everything we own, in FK-safe order.
-TRUNCATE TABLE cca_appointments, cca_positions, ccas, users RESTART IDENTITY CASCADE;
+-- Surgical delete of fixture rows. The canonical schema ships baseline
+-- Block Committee + Sheares Hall data that triggers depend on, so we
+-- never TRUNCATE — we only remove rows we own. ON DELETE CASCADE on the
+-- FK chain wipes dependent positions and appointments.
+DELETE FROM users WHERE email IN ('aria.tan.sg@gmail.com', 'mason.lim.99@gmail.com', 'chloe.ng.j@gmail.com', 'declanho.sg@gmail.com', 'alexis.goh.99@gmail.com', 'sienna.lee.j@gmail.com', 'kai.koh.96@gmail.com', 'harper.tan.2k@gmail.com', 'ezrasim.nus@gmail.com', 'layla.ng.97@gmail.com', 'jasper.chua.sg@gmail.com', 'brielle.koh.j@gmail.com', 'nova.tay.sg@gmail.com', 'willow.rahman.gg@gmail.com', 'sage.lim.97@gmail.com');
+DELETE FROM ccas WHERE name IN ('Volleyball', 'Basketball', 'Choir', 'Dance', 'Drama', 'SHWEB', 'SECC', 'JCRC');
 
 -- CCAs (spec § 5.3)
-INSERT INTO ccas (name, cca_type, cca_tier_type, description) VALUES ('Volleyball', 'sports', 'tier 1', 'Primary sports CCA; full position roster including vice and team manager.');
-INSERT INTO ccas (name, cca_type, cca_tier_type, description) VALUES ('Basketball', 'sports', 'tier 1', 'Sports foil — Nova is lead here; Declan must not have access.');
-INSERT INTO ccas (name, cca_type, cca_tier_type, description) VALUES ('Choir', 'culture', 'tier 1', 'Primary culture CCA.');
-INSERT INTO ccas (name, cca_type, cca_tier_type, description) VALUES ('Dance', 'culture', 'tier 2', 'Culture foil exercising tier 2 differences.');
-INSERT INTO ccas (name, cca_type, cca_tier_type, description) VALUES ('Drama', 'culture', 'tier 1', 'Sage''s CCA — supports the triple-flag persona.');
-INSERT INTO ccas (name, cca_type, cca_tier_type, description) VALUES ('SHWEB', 'committee', 'none', 'Primary committee with lead / maincomm / subcomm roster.');
-INSERT INTO ccas (name, cca_type, cca_tier_type, description) VALUES ('SECC', 'committee', 'none', 'Committee foil for cross-committee scoping.');
-INSERT INTO ccas (name, cca_type, cca_tier_type, description) VALUES ('JCRC', 'jcrc', 'none', 'Hall executive committee — no lead position; top is maincomm.');
+INSERT INTO ccas (name, cca_type, tier_type, description) VALUES ('Volleyball', 'sports', 'tier 1', 'Primary sports CCA; full position roster including vice and team manager.');
+INSERT INTO ccas (name, cca_type, tier_type, description) VALUES ('Basketball', 'sports', 'tier 1', 'Sports foil — Nova is lead here; Declan must not have access.');
+INSERT INTO ccas (name, cca_type, tier_type, description) VALUES ('Choir', 'culture', 'tier 1', 'Primary culture CCA.');
+INSERT INTO ccas (name, cca_type, tier_type, description) VALUES ('Dance', 'culture', 'tier 2', 'Culture foil exercising tier 2 differences.');
+INSERT INTO ccas (name, cca_type, tier_type, description) VALUES ('Drama', 'culture', 'tier 1', 'Sage''s CCA — supports the triple-flag persona.');
+INSERT INTO ccas (name, cca_type, tier_type, description) VALUES ('SHWEB', 'committee', 'none', 'Primary committee with lead / maincomm / subcomm roster.');
+INSERT INTO ccas (name, cca_type, tier_type, description) VALUES ('SECC', 'committee', 'none', 'Committee foil for cross-committee scoping.');
+INSERT INTO ccas (name, cca_type, tier_type, description) VALUES ('JCRC', 'jcrc', 'none', 'Hall executive committee — no lead position; top is maincomm.');
 
 -- CCA positions: insert all rows first, then patch reporting_position via UPDATE.
 INSERT INTO cca_positions (cca_id, position_type, name, capacity) VALUES ((SELECT id FROM ccas WHERE name = 'Volleyball'), 'lead', 'Captain', 1);

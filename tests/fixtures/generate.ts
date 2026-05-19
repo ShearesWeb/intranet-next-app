@@ -28,15 +28,23 @@ function renderSql(): string {
 	lines.push("");
 	lines.push("BEGIN;");
 	lines.push("");
-	lines.push("-- Truncate everything we own, in FK-safe order.");
-	lines.push("TRUNCATE TABLE cca_appointments, cca_positions, ccas, users RESTART IDENTITY CASCADE;");
+	lines.push("-- Surgical delete of fixture rows. The canonical schema ships baseline");
+	lines.push("-- Block Committee + Sheares Hall data that triggers depend on, so we");
+	lines.push("-- never TRUNCATE — we only remove rows we own. ON DELETE CASCADE on the");
+	lines.push("-- FK chain wipes dependent positions and appointments.");
+	const fixtureCcaNames = CCAS.map((c) => q(c.name)).join(", ");
+	const fixtureUserEmails = PERSONAS.filter((p) => p.email !== null)
+		.map((p) => q(p.email))
+		.join(", ");
+	lines.push(`DELETE FROM users WHERE email IN (${fixtureUserEmails});`);
+	lines.push(`DELETE FROM ccas WHERE name IN (${fixtureCcaNames});`);
 	lines.push("");
 
 	// --- CCAs ---
 	lines.push("-- CCAs (spec § 5.3)");
 	for (const cca of CCAS) {
 		lines.push(
-			`INSERT INTO ccas (name, cca_type, cca_tier_type, description) VALUES (${q(cca.name)}, ${q(cca.type)}, ${q(cca.tierType)}, ${q(cca.description)});`,
+			`INSERT INTO ccas (name, cca_type, tier_type, description) VALUES (${q(cca.name)}, ${q(cca.type)}, ${q(cca.tierType)}, ${q(cca.description)});`,
 		);
 	}
 	lines.push("");
