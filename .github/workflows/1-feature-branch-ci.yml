@@ -39,5 +39,8 @@ jobs:
       - name: 6. 🔎 Typecheck
         run: npm run typecheck
 
-      - name: 7. 🧪 Unit + Component Tests
+      - name: 7. 🧾 Fixtures Drift Check
+        run: npm run fixtures:check
+
+      - name: 8. 🧪 Unit + Component Tests
         run: npm test
