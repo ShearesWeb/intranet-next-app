@@ -66,3 +66,13 @@ next-env.d.ts
 
 # open-next
 .open-next
+
+# Supabase local working artifacts (config.toml IS committed; these are not)
+supabase/.branches/
+supabase/.temp/
+
+# Test DB bootstrap output
+.supabase-test-db.log
+
+# Liquibase per-run output
+liquibase.properties
