@@ -16,6 +16,14 @@ import type { PositionDef } from "./types";
 // JCRC:
 //   maincomm (no parent — JCRC has no lead, per spec § 5.3)
 //   └── blockcomm (no children — keeps Jasper's is_admin off; only is_jcrc)
+//
+// Derived-flag consequences (asserted in smoke test):
+// - "lead" in any non-JCRC CCA → has children → is_admin = true
+//   For culture/sports CCAs → also is_culture_sports_admin = true
+// - "maincomm" in committee/JCRC → has children (subcomm/blockcomm) → is_admin = true
+//   In JCRC → also is_jcrc; never is_culture_sports_admin (cca_type != culture/sports)
+// - "vice", "team manager", "subcomm", "blockcomm", "member", "resident" → no children → no flags from chain.
+//   `is_jcrc` still derives from CCA membership alone for anyone with a JCRC appointment.
 
 export const POSITIONS: readonly PositionDef[] = [
 	// Volleyball

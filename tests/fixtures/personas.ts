@@ -42,6 +42,7 @@ export const PERSONAS: readonly Persona[] = [
 		room: "SH/C/1/108",
 		stayPeriod: "full-year",
 		appointments: [{ ccaKey: "volleyball", positionName: "Team Manager", points: 0 }],
+		// team manager has no children in the graph → no admin flag
 		expected: { is_admin: false, is_jcrc: false, is_culture_sports_admin: false },
 	},
 	{
@@ -52,6 +53,7 @@ export const PERSONAS: readonly Persona[] = [
 		room: "SH/A/4/412",
 		stayPeriod: "full-year",
 		appointments: [{ ccaKey: "volleyball", positionName: "Captain", points: 0 }],
+		// lead has children (vice, team manager, member) → is_admin; sports → is_culture_sports_admin
 		expected: { is_admin: true, is_jcrc: false, is_culture_sports_admin: true },
 	},
 	{
@@ -62,6 +64,7 @@ export const PERSONAS: readonly Persona[] = [
 		room: "SH/D/2/202",
 		stayPeriod: "full-year",
 		appointments: [{ ccaKey: "volleyball", positionName: "Vice Captain", points: 0 }],
+		// vice has no children in our graph → no flags
 		expected: { is_admin: false, is_jcrc: false, is_culture_sports_admin: false },
 	},
 	{
@@ -82,6 +85,7 @@ export const PERSONAS: readonly Persona[] = [
 		room: "SH/C/4/401",
 		stayPeriod: "full-year",
 		appointments: [{ ccaKey: "choir", positionName: "Conductor", points: 0 }],
+		// lead Choir (culture) → is_admin + is_culture_sports_admin
 		expected: { is_admin: true, is_jcrc: false, is_culture_sports_admin: true },
 	},
 	{
@@ -92,6 +96,7 @@ export const PERSONAS: readonly Persona[] = [
 		room: "SH/E/1/115",
 		stayPeriod: "full-year",
 		appointments: [{ ccaKey: "shweb", positionName: "Subcomm", points: 0 }],
+		// subcomm has no children → no flags
 		expected: { is_admin: false, is_jcrc: false, is_culture_sports_admin: false },
 	},
 	{
@@ -102,6 +107,7 @@ export const PERSONAS: readonly Persona[] = [
 		room: "SH/A/3/301",
 		stayPeriod: "full-year",
 		appointments: [{ ccaKey: "shweb", positionName: "Maincomm", points: 0 }],
+		// maincomm has subcomm child → is_admin. SHWEB is committee, not culture/sports → not CSA
 		expected: { is_admin: true, is_jcrc: false, is_culture_sports_admin: false },
 	},
 	{
@@ -112,6 +118,7 @@ export const PERSONAS: readonly Persona[] = [
 		room: "SH/D/4/405",
 		stayPeriod: "full-year",
 		appointments: [{ ccaKey: "shweb", positionName: "President", points: 0 }],
+		// lead SHWEB (committee) → is_admin only, NOT is_culture_sports_admin
 		expected: { is_admin: true, is_jcrc: false, is_culture_sports_admin: false },
 	},
 	{
@@ -122,6 +129,7 @@ export const PERSONAS: readonly Persona[] = [
 		room: "SH/B/4/406",
 		stayPeriod: "full-year",
 		appointments: [{ ccaKey: "jcrc", positionName: "Blockcomm", points: 0 }],
+		// blockcomm has no children → no admin; any JCRC appointment → is_jcrc
 		expected: { is_admin: false, is_jcrc: true, is_culture_sports_admin: false },
 	},
 	{
@@ -132,6 +140,7 @@ export const PERSONAS: readonly Persona[] = [
 		room: "SH/C/3/312",
 		stayPeriod: "full-year",
 		appointments: [{ ccaKey: "jcrc", positionName: "Maincomm", points: 0 }],
+		// maincomm JCRC has blockcomm child → is_admin; JCRC → is_jcrc; not culture/sports
 		expected: { is_admin: true, is_jcrc: true, is_culture_sports_admin: false },
 	},
 	{
@@ -145,6 +154,8 @@ export const PERSONAS: readonly Persona[] = [
 			{ ccaKey: "basketball", positionName: "Captain", points: 0 },
 			{ ccaKey: "secc", positionName: "Subcomm", points: 0 },
 		],
+		// lead Basketball (sports) → is_admin + is_culture_sports_admin
+		// subcomm SECC has no children → contributes nothing
 		expected: { is_admin: true, is_jcrc: false, is_culture_sports_admin: true },
 	},
 	{
@@ -155,6 +166,7 @@ export const PERSONAS: readonly Persona[] = [
 		room: "SH/D/1/108",
 		stayPeriod: "full-year",
 		appointments: [{ ccaKey: "dance", positionName: "Captain", points: 0 }],
+		// lead Dance (culture) → is_admin + is_culture_sports_admin
 		expected: { is_admin: true, is_jcrc: false, is_culture_sports_admin: true },
 	},
 	{
@@ -168,6 +180,8 @@ export const PERSONAS: readonly Persona[] = [
 			{ ccaKey: "drama", positionName: "Director", points: 0 },
 			{ ccaKey: "jcrc", positionName: "Maincomm", points: 0 },
 		],
+		// lead Drama (culture) → is_admin + is_culture_sports_admin
+		// maincomm JCRC → is_admin (additive, same flag); is_jcrc
 		expected: { is_admin: true, is_jcrc: true, is_culture_sports_admin: true },
 	},
 ] as const;

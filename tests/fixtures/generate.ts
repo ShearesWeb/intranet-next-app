@@ -8,7 +8,7 @@ import * as path from "node:path";
 import { CCAS } from "./ccas";
 import { POSITIONS } from "./positions";
 import { PERSONAS } from "./personas";
-import type { PositionDef } from "./types";
+import type { Cca, PositionDef, Persona } from "./types";
 
 const OUT_DIR = path.resolve(__dirname);
 const SQL_FILE = path.join(OUT_DIR, "seed.sql");
@@ -19,12 +19,6 @@ function q(value: string | number | null): string {
 	if (value === null) return "NULL";
 	if (typeof value === "number") return String(value);
 	return `'${value.replace(/'/g, "''")}'`;
-}
-
-function ccaName(key: string): string {
-	const cca = CCAS.find((c) => c.key === key);
-	if (!cca) throw new Error(`Unknown CCA key in seed: ${key}`);
-	return cca.name;
 }
 
 function renderSql(): string {
@@ -100,8 +94,10 @@ function renderSql(): string {
 	return lines.join("\n");
 }
 
-function flag(b: boolean): string {
-	return b ? "✓" : "—";
+function ccaName(key: string): string {
+	const cca = CCAS.find((c) => c.key === key);
+	if (!cca) throw new Error(`Unknown CCA key in seed: ${key}`);
+	return cca.name;
 }
 
 function renderMd(): string {
@@ -158,6 +154,10 @@ function renderMd(): string {
 		lines.push("");
 	}
 	return lines.join("\n");
+}
+
+function flag(b: boolean): string {
+	return b ? "✓" : "—";
 }
 
 function main(): void {
