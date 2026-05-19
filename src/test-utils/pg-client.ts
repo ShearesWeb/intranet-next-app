@@ -3,8 +3,7 @@ import { personaByKey } from "../../tests/fixtures/personas";
 import type { PersonaKey } from "../../tests/fixtures/types";
 
 const DB_URL =
-	process.env.SUPABASE_DB_URL ??
-	"postgresql://supabase_admin:postgres@127.0.0.1:54322/postgres";
+	process.env.SUPABASE_DB_URL ?? "postgresql://supabase_admin:postgres@127.0.0.1:54322/postgres";
 
 const PATCH_AUTH_EMAIL = `
 CREATE OR REPLACE FUNCTION auth.email()
