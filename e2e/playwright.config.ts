@@ -2,6 +2,7 @@ import { defineConfig } from "@playwright/test";
 import { SUPABASE_URL, ANON_KEY } from "./auth-harness";
 
 export default defineConfig({
+	globalSetup: "./global-setup.ts",
 	testDir: "./specs",
 	fullyParallel: true,
 	forbidOnly: !!process.env.CI,
