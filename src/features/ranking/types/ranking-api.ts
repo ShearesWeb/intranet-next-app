@@ -1,4 +1,4 @@
-import type { PositionType, UserAppointment } from "@/types/User";
+import type { PositionType, UserAppointment } from "@/types/user";
 
 export type RankingAccessPosition = {
 	id: UserAppointment["position_id"];

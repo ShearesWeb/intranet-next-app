@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import type { RecapSlide } from "@/features/ranking/types/recap";
 
 export function RecapSlideContent({
@@ -60,15 +59,12 @@ export function RecapSlideContent({
 					</ul>
 				) : null}
 				{emphasis ? (
-					<motion.p
-						className="pt-2 text-6xl font-bold leading-none text-white sm:text-7xl md:text-8xl"
+					<p
+						className="pt-2 text-6xl font-bold leading-none text-white sm:text-7xl md:text-8xl animate-[slide-fade-in_0.2s_ease-out_both]"
 						key={emphasis}
-						initial={{ y: 8, opacity: 0.85 }}
-						animate={{ y: 0, opacity: 1 }}
-						transition={{ duration: 0.2 }}
 					>
 						{emphasis}
-					</motion.p>
+					</p>
 				) : null}
 			</div>
 		</div>

@@ -1,8 +1,9 @@
 "use client";
 
 import { type ReactNode, useCallback, useMemo } from "react";
-import { PositionTypeBadge } from "@/components/badges/position-type-badge";
-import { SimpleTable, type SimpleTableColumn } from "@/components/table/simple-table";
+import { type ColumnDef } from "@tanstack/react-table";
+import { PositionTypeBadge } from "@/components/badges";
+import { DataTable } from "@/components/table/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -57,61 +58,84 @@ export function DeclarationSectionCard({
 		[weekOptions],
 	);
 
-	const commonColumns = useMemo<SimpleTableColumn<SubsidyDeclaration>[]>(
+	const commonColumns = useMemo<ColumnDef<SubsidyDeclaration>[]>(
 		() => [
 			{
 				accessorKey: "positionName",
-				header: "Position",
-				cell: (value, row) => (
-					<PositionTypeBadge value={String(value)} position_type={row.positionType} />
-				),
+				header: () => <div className="font-semibold">Position</div>,
 				enableSorting: false,
+				cell: ({ row }) => (
+					<PositionTypeBadge
+						value={String(row.getValue("positionName"))}
+						positionType={row.original.positionType}
+					/>
+				),
 			},
 			{
 				accessorKey: "weekId",
-				header: "Week",
-				cell: (value) => weekLabel(Number(value)),
-				enableSorting: true,
+				header: ({ column }) => (
+					<div className="flex items-center gap-2">
+						<span className="font-semibold">Week</span>
+						<Button
+							variant="ghost"
+							onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+							className="h-8 w-8 p-0"
+						>
+							<span className="sr-only">Sort</span>
+						</Button>
+					</div>
+				),
+				cell: ({ row }) => weekLabel(Number(row.getValue("weekId"))),
 			},
 			{
 				accessorKey: "hours",
-				header: "Requested Hours",
-				cell: (value) => `${Number(value)} hrs`,
-				enableSorting: true,
+				header: ({ column }) => (
+					<div className="flex items-center gap-2">
+						<span className="font-semibold">Requested Hours</span>
+						<Button
+							variant="ghost"
+							onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+							className="h-8 w-8 p-0"
+						>
+							<span className="sr-only">Sort</span>
+						</Button>
+					</div>
+				),
+				cell: ({ row }) => `${Number(row.getValue("hours"))} hrs`,
 			},
 			{
 				accessorKey: "justification",
-				header: "Justification",
-				cell: (value) => (
+				header: () => <div className="font-semibold">Justification</div>,
+				enableSorting: false,
+				cell: ({ row }) => (
 					<div className="text-sm text-muted-foreground whitespace-pre-line break-words max-w-[320px] max-h-32 overflow-y-auto pr-1 line-clamp-3">
-						{String(value ?? "")}
+						{String(row.getValue("justification") ?? "")}
 					</div>
 				),
-				enableSorting: false,
 			},
 			{
 				accessorKey: "status",
-				header: "Status",
-				cell: (value) => {
-					const status = coerceSubsidyStatus(value);
+				header: () => <div className="font-semibold">Status</div>,
+				enableSorting: false,
+				cell: ({ row }) => {
+					const status = coerceSubsidyStatus(row.getValue("status"));
 					return <Badge variant={statusVariant[status]}>{formatSubsidyStatus(status)}</Badge>;
 				},
-				enableSorting: false,
 			},
 		],
 		[weekLabel],
 	);
 
-	const columns = useMemo<SimpleTableColumn<SubsidyDeclaration>[]>(() => {
+	const columns = useMemo<ColumnDef<SubsidyDeclaration>[]>(() => {
 		if (renderActions) {
 			return [
 				...commonColumns,
 				{
-					accessorKey: "actions" as keyof SubsidyDeclaration,
-					header: "Actions",
+					id: "actions",
+					header: () => <div className="font-semibold">Actions</div>,
 					enableSorting: false,
-					cell: (_value, row) => (
-						<div className="flex justify-start gap-2">{renderActions(row)}</div>
+					cell: ({ row }) => (
+						<div className="flex justify-start gap-2">{renderActions(row.original)}</div>
 					),
 				},
 			];
@@ -121,15 +145,15 @@ export function DeclarationSectionCard({
 			return [
 				...commonColumns,
 				{
-					accessorKey: "actions" as keyof SubsidyDeclaration,
-					header: "Actions",
+					id: "actions",
+					header: () => <div className="font-semibold">Actions</div>,
 					enableSorting: false,
-					cell: (_value, row) => (
+					cell: ({ row }) => (
 						<div className="flex justify-start gap-2">
-							<Button variant="outline" size="sm" type="button" onClick={() => onEdit?.(row)}>
+							<Button variant="outline" size="sm" type="button" onClick={() => onEdit?.(row.original)}>
 								Edit
 							</Button>
-							<Button variant="destructive" size="sm" type="button" onClick={() => onDelete?.(row)}>
+							<Button variant="destructive" size="sm" type="button" onClick={() => onDelete?.(row.original)}>
 								Delete
 							</Button>
 						</div>
@@ -142,12 +166,12 @@ export function DeclarationSectionCard({
 			return [
 				...commonColumns,
 				{
-					accessorKey: "actions" as keyof SubsidyDeclaration,
-					header: "Actions",
+					id: "actions",
+					header: () => <div className="font-semibold">Actions</div>,
 					enableSorting: false,
-					cell: (_value, row) => (
+					cell: ({ row }) => (
 						<div className="flex justify-start gap-2">
-							<Button size="sm" type="button" onClick={() => onEdit?.(row)}>
+							<Button size="sm" type="button" onClick={() => onEdit?.(row.original)}>
 								Edit & Resubmit
 							</Button>
 						</div>
@@ -166,7 +190,7 @@ export function DeclarationSectionCard({
 				{headerExtra}
 			</CardHeader>
 			<CardContent>
-				<SimpleTable
+				<DataTable
 					data={section.data}
 					columns={columns}
 					searchColumn="positionName"

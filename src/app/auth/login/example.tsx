@@ -2,7 +2,7 @@
 
 // import { signInWithPopup, signOut } from "firebase/auth";
 // import { auth, provider } from "../../../../lib/firebase";
-// import { useAuth } from "@/context/AuthContext";
+// import { useAuth } from "@/lib/auth/auth-context";
 // import { GoogleAuthProvider } from "firebase/auth/web-extension";
 // import { useState } from "react";
 

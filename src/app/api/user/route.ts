@@ -1,35 +1,17 @@
-import { fetchUserInfo } from "@/lib/fetch-user-info";
-import { NextResponse } from "next/server";
+import { requireAuth } from "@/lib/api/auth";
+import { apiOk, handleApiError } from "@/lib/api/response";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+const CACHE_HEADERS = { "Cache-Control": "no-store, private" };
+
 export async function GET() {
 	try {
-		const user = await fetchUserInfo();
+		const user = await requireAuth();
 
-		if (!user) {
-			return NextResponse.json(
-				{ error: "User not found" },
-				{
-					status: 404,
-					headers: { "Cache-Control": "no-store, private" },
-				},
-			);
-		}
-
-		return NextResponse.json(user, {
-			status: 200,
-			headers: { "Cache-Control": "no-store, private" },
-		});
-	} catch (err) {
-		console.error("Error fetching user info:", err);
-		return NextResponse.json(
-			{ error: "Internal server error" },
-			{
-				status: 500,
-				headers: { "Cache-Control": "no-store, private" },
-			},
-		);
+		return apiOk(user, 200, CACHE_HEADERS);
+	} catch (e) {
+		return handleApiError(e);
 	}
 }

@@ -1,6 +1,6 @@
 import { checkCcaAuthorization } from "@/features/cca/utils/cca-chair-access";
-import { AuthenticatedUser } from "@/types/User";
-import { createClient } from "@/utils/supabase/server";
+import { AuthenticatedUser } from "@/types/user";
+import { createClient } from "@/lib/supabase/server";
 
 type AccessResult<T> = { ok: true; data: T } | { ok: false; status: number; error: string };
 

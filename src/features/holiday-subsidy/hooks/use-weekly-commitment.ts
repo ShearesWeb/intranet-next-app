@@ -95,15 +95,16 @@ export function useWeeklyCommitment(ccaId: string | null): UseWeeklyCommitmentRe
 					return;
 				}
 
-				const response = await fetch(`/api/holidaySubsidy/weekly/${ccaId}/${weekInfo.id}`);
+				const response = await fetch(`/api/holiday-subsidy/weekly/${ccaId}/${weekInfo.id}`);
 
 				if (!response.ok) {
-					const data = await response.json();
-					throw new Error(data.error || "Failed to load data");
+					const json = await response.json();
+					throw new Error(json.error || "Failed to load data");
 				}
 
-				const data = await response.json();
-				const fetchedRows: WeeklyRow[] = data.members || [];
+				const json = await response.json();
+				const payload = json.data ?? json;
+				const fetchedRows: WeeklyRow[] = payload.members || [];
 				setRows(fetchedRows);
 				setSelected(
 					new Set(fetchedRows.filter((member) => member.submitted).map((member) => member.id)),
@@ -210,19 +211,20 @@ export function useWeeklyCommitment(ccaId: string | null): UseWeeklyCommitmentRe
 				position_id: row.position_id,
 			}));
 
-			const response = await fetch(`/api/holidaySubsidy/weekly/${ccaId}/${weekInfo.id}`, {
+			const response = await fetch(`/api/holiday-subsidy/weekly/${ccaId}/${weekInfo.id}`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ declarations, deletions }),
 			});
 
 			if (!response.ok) {
-				const data = await response.json();
-				throw new Error(data.error || "Failed to save");
+				const json = await response.json();
+				throw new Error(json.error || "Failed to save");
 			}
 
-			const data = await response.json();
-			toast.success(data.message || "Changes saved successfully!");
+			const json = await response.json();
+			const savePayload = json.data ?? json;
+			toast.success(savePayload.message || "Changes saved successfully!");
 
 			const updatedRows = rows.map((row) => {
 				const wasSaved = selectedDirtyRows.some(

@@ -16,8 +16,8 @@ import {
 } from "@/components/ui/sidebar";
 import Link from "next/link";
 import { Avatar, AvatarImage } from "../ui/avatar";
-import { useAuth } from "@/context/AuthContext";
-import { User } from "@/types/User";
+import { useAuth } from "@/lib/auth/auth-context";
+import { AuthenticatedUser } from "@/types/user";
 import { checkCcaAuthorizationFromJwt } from "@/features/cca/utils/cca-chair-access";
 import {
 	CoreServiceKey,
@@ -53,13 +53,13 @@ export const navOptions: NavItem[] = [
 	},
 	{
 		title: "My CCAs",
-		url: "/dashboard/mycca",
+		url: "/dashboard/my-cca",
 		isActive: true,
 		icon: Volleyball,
 		items: [
 			{
 				title: "CCA Admin",
-				url: "/dashboard/mycca/admin",
+				url: "/dashboard/my-cca/admin",
 				chairOnly: true,
 				featureFlag: "memberRanking",
 			},
@@ -67,19 +67,19 @@ export const navOptions: NavItem[] = [
 	},
 	{
 		title: "CCA Allocation",
-		url: "/dashboard/ccaAllocation",
+		url: "/dashboard/cca-allocation",
 		icon: FileUser,
 		isActive: true,
 		featureFlag: "ccaApplications",
 		items: [
 			{
-				title: "Apply For CCAs",
-				url: "/dashboard/ccaAllocation/rank",
+				title: "My CCA Preferences",
+				url: "/dashboard/cca-allocation/rank",
 				featureFlag: "ccaApplications",
 			},
 			{
-				title: "Rank CCA Applicants",
-				url: "/dashboard/ccaAllocation/rankApplicants",
+				title: "Applicant Preferences",
+				url: "/dashboard/cca-allocation/rank-applicants",
 				chairOnly: true,
 				featureFlag: "ccaApplications",
 			},
@@ -87,7 +87,7 @@ export const navOptions: NavItem[] = [
 	},
 	{
 		title: "Holiday Subsidy",
-		url: "/dashboard/holidaySubsidy",
+		url: "/dashboard/holiday-subsidy",
 		icon: FileUser,
 		isActive: true,
 		adminOnly: true,
@@ -96,12 +96,12 @@ export const navOptions: NavItem[] = [
 		items: [
 			{
 				title: "Guide and FAQ",
-				url: "/dashboard/holidaySubsidy/guide",
+				url: "/dashboard/holiday-subsidy/guide",
 				featureFlag: "holidaySubsidy",
 			},
 			{
 				title: "JCRC Approvals",
-				url: "/dashboard/holidaySubsidy/approvals",
+				url: "/dashboard/holiday-subsidy/approvals",
 				jcrcOnly: true,
 				featureFlag: "holidaySubsidy",
 			},
@@ -109,7 +109,7 @@ export const navOptions: NavItem[] = [
 	},
 ];
 
-export const buildNavItems = (user?: User | null) => {
+export const buildNavItems = (user?: AuthenticatedUser | null) => {
 	const authResult = checkCcaAuthorizationFromJwt({ requestingUser: user });
 	const isChair = Boolean(user?.is_admin || (authResult.ok && authResult.data.hasChairAccess));
 	const hasMemberRankingAccess = isCoreServiceEnabled("memberRanking", {

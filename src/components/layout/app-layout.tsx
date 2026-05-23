@@ -13,7 +13,7 @@ import {
 } from "../ui/breadcrumb";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/lib/auth/auth-context";
 
 const formatSegment = (segment: string) => {
 	const cleaned = decodeURIComponent(segment).replace(/[\[\]]/g, "");

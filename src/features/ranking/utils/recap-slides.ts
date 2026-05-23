@@ -6,7 +6,7 @@ import type {
 	RecapTotals,
 } from "@/features/ranking/types/recap";
 import { isResidentPositionType } from "@/features/ranking/utils/cca-ranking-metrics";
-import type { User } from "@/types/User";
+import type { AuthenticatedUser } from "@/types/user";
 
 const leadershipPositionTypes = new Set(["lead", "vice", "maincomm", "subcomm"]);
 const ihgTeamStatuses = new Set(["ihg-team", "ivp-ihg-team"]);
@@ -131,7 +131,7 @@ export const RECAP_CATEGORY_CONFIG: RecapCategoryConfig[] = [
 	},
 ];
 
-export function buildRecapSlides(user: User, ccas: CCAData[]): RecapData {
+export function buildRecapSlides(user: AuthenticatedUser, ccas: CCAData[]): RecapData {
 	const totalPoints = user.points || 0;
 	const totalCcas = ccas.length;
 	const cultureCcas = ccas.filter(RECAP_CATEGORY_CONFIG[0].filter);

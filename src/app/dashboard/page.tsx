@@ -2,24 +2,53 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useAuth } from "@/context/AuthContext";
-import { motion } from "framer-motion";
-import { useRoleAuth } from "@/hooks/useRoleAuth";
+import { useAuth } from "@/lib/auth/auth-context";
+
+import { useRoleAuth } from "@/features/cca/hooks/use-role-auth";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { PointsRecapCard } from "@/features/ranking/components/points-recap-card";
 import { getCoreServiceFlags } from "@/lib/feature-flags";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { Users, Trophy, ClipboardList, ChevronRight } from "lucide-react";
+import { type LucideIcon, Users, Trophy, ClipboardList, ChevronRight } from "lucide-react";
+
+interface ActionCardProps {
+	href: string;
+	icon: LucideIcon;
+	title: string;
+	description: string;
+}
+
+function ActionCard({ href, icon: Icon, title, description }: ActionCardProps) {
+	return (
+		<Link href={href} className="block">
+			<div className="group relative overflow-hidden rounded-xl border border-orange-100 bg-card p-4 shadow-sm transition-all duration-200 hover:scale-[1.02] hover:-translate-y-0.5 active:scale-[0.98] hover:border-orange-300 hover:shadow-md">
+				<div className="absolute inset-0 bg-gradient-to-r from-orange-50 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+				<div className="relative flex items-center gap-4">
+					<div className="flex h-10 w-10 md:h-12 md:w-12 shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-600 transition-colors group-hover:bg-orange-500 group-hover:text-white">
+						<Icon className="h-5 w-5 md:h-6 md:w-6" />
+					</div>
+					<div className="flex-1">
+						<h3 className="font-bold text-foreground group-hover:text-orange-700 transition-colors">
+							{title}
+						</h3>
+						<p className="text-sm text-muted-foreground group-hover:text-orange-600/80 transition-colors">
+							{description}
+						</p>
+					</div>
+					<ChevronRight className="h-5 w-5 text-muted-foreground/50 transition-colors group-hover:text-orange-500" />
+				</div>
+			</div>
+		</Link>
+	);
+}
 
 export default function Dashboard() {
 	const { user } = useAuth();
 	const { isAuthorized, loading: roleLoading } = useRoleAuth();
 	const featureFlags = getCoreServiceFlags();
 	const [hasSeenRecap, setHasSeenRecap] = useState(false);
-
-	const getRankCCAButtonText = () => "CCA Ranking";
 
 	useEffect(() => {
 		setHasSeenRecap(localStorage.getItem("hasSeenPointsRecap") === "true");
@@ -54,7 +83,7 @@ export default function Dashboard() {
 
 			{/* Content Grid */}
 			<div className="grid gap-6 md:grid-cols-2">
-				{/* Points Display Card - Enhanced Party Celebration */}
+				{/* Points Display Card */}
 				<Card className="border-none shadow-lg flex flex-col overflow-hidden relative">
 					<CardHeader>
 						<CardTitle className="flex items-center gap-2">
@@ -80,86 +109,29 @@ export default function Dashboard() {
 					</CardHeader>
 					<CardContent className="p-4 md:p-6">
 						<div className="grid gap-4">
-							{/* My CCAs Button */}
-							<Link href="/dashboard/mycca" className="block">
-								<motion.div
-									whileHover={{ scale: 1.02, y: -2 }}
-									whileTap={{ scale: 0.98 }}
-									transition={{ duration: 0.2 }}
-									className="group relative overflow-hidden rounded-xl border border-orange-100 bg-card p-4 shadow-sm transition-all hover:border-orange-300 hover:shadow-md"
-								>
-									<div className="absolute inset-0 bg-gradient-to-r from-orange-50 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
-									<div className="relative flex items-center gap-4">
-										<div className="flex h-10 w-10 md:h-12 md:w-12 shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-600 transition-colors group-hover:bg-orange-500 group-hover:text-white">
-											<Users className="h-5 w-5 md:h-6 md:w-6" />
-										</div>
-										<div className="flex-1">
-											<h3 className="font-bold text-foreground group-hover:text-orange-700 transition-colors">
-												My CCAs
-											</h3>
-											<p className="text-sm text-muted-foreground group-hover:text-orange-600/80 transition-colors">
-												View your CCAs and Points
-											</p>
-										</div>
-										<ChevronRight className="h-5 w-5 text-muted-foreground/50 transition-colors group-hover:text-orange-500" />
-									</div>
-								</motion.div>
-							</Link>
+							<ActionCard
+								href="/dashboard/my-cca"
+								icon={Users}
+								title="My CCAs"
+								description="View your CCAs and Points"
+							/>
 
-							{/* Rank CCA Button */}
 							{featureFlags.ccaApplications && (
-								<Link href="/dashboard/ccaAllocation/rank" className="block">
-									<motion.div
-										whileHover={{ scale: 1.02, y: -2 }}
-										whileTap={{ scale: 0.98 }}
-										transition={{ duration: 0.2 }}
-										className="group relative overflow-hidden rounded-xl border border-orange-100 bg-card p-4 shadow-sm transition-all hover:border-orange-300 hover:shadow-md"
-									>
-										<div className="absolute inset-0 bg-gradient-to-r from-orange-50 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
-										<div className="relative flex items-center gap-4">
-											<div className="flex h-10 w-10 md:h-12 md:w-12 shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-600 transition-colors group-hover:bg-orange-500 group-hover:text-white">
-												<Trophy className="h-5 w-5 md:h-6 md:w-6" />
-											</div>
-											<div className="flex-1">
-												<h3 className="font-bold text-foreground group-hover:text-orange-700 transition-colors">
-													{getRankCCAButtonText()}
-												</h3>
-												<p className="text-sm text-muted-foreground group-hover:text-orange-600/80 transition-colors">
-													Rank your CCA preferences
-												</p>
-											</div>
-											<ChevronRight className="h-5 w-5 text-muted-foreground/50 transition-colors group-hover:text-orange-500" />
-										</div>
-									</motion.div>
-								</Link>
+								<ActionCard
+									href="/dashboard/cca-allocation/rank"
+									icon={Trophy}
+									title="CCA Ranking"
+									description="Rank your CCA preferences"
+								/>
 							)}
 
-							{/* Rank Applicants Button (conditional for authorized users) */}
 							{featureFlags.ccaApplications && !roleLoading && isAuthorized && (
-								<Link href="/dashboard/ccaAllocation/rankApplicants" className="block">
-									<motion.div
-										whileHover={{ scale: 1.02, y: -2 }}
-										whileTap={{ scale: 0.98 }}
-										transition={{ duration: 0.2 }}
-										className="group relative overflow-hidden rounded-xl border border-orange-100 bg-card p-4 shadow-sm transition-all hover:border-orange-300 hover:shadow-md"
-									>
-										<div className="absolute inset-0 bg-gradient-to-r from-orange-50 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
-										<div className="relative flex items-center gap-4">
-											<div className="flex h-10 w-10 md:h-12 md:w-12 shrink-0 items-center justify-center rounded-full bg-orange-100 text-orange-600 transition-colors group-hover:bg-orange-500 group-hover:text-white">
-												<ClipboardList className="h-5 w-5 md:h-6 md:w-6" />
-											</div>
-											<div className="flex-1">
-												<h3 className="font-bold text-foreground group-hover:text-orange-700 transition-colors">
-													Rank Applicants
-												</h3>
-												<p className="text-sm text-muted-foreground group-hover:text-orange-600/80 transition-colors">
-													Rank applicants for your CCA
-												</p>
-											</div>
-											<ChevronRight className="h-5 w-5 text-muted-foreground/50 transition-colors group-hover:text-orange-500" />
-										</div>
-									</motion.div>
-								</Link>
+								<ActionCard
+									href="/dashboard/cca-allocation/rank-applicants"
+									icon={ClipboardList}
+									title="Rank Applicants"
+									description="Rank applicants for your CCA"
+								/>
 							)}
 						</div>
 					</CardContent>

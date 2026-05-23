@@ -68,11 +68,11 @@ export function AllocationAlgorithmSteps() {
 					</CardHeader>
 					<CardContent>
 						<p className="text-muted-foreground">
-							&quot;If I rank a popular CCA #1, I have less chance than someone who ranks it
-							#2.&quot;
+							&quot;If I list a popular CCA as my #1 preference, I have less chance than someone who
+							lists it as #2.&quot;
 							<br />
-							<strong>False.</strong> The algorithm always tries your top pick first. Ranking
-							something lower can only hurt your odds — always rank what you really want at the top.
+							<strong>False.</strong> The algorithm always tries your top preference first. Ranking
+							something lower can only hurt your odds — always put what you really want at the top.
 						</p>
 					</CardContent>
 				</Card>

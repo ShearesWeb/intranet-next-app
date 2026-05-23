@@ -1,5 +1,5 @@
 // Single source of truth — types shared by personas.ts, ccas.ts, positions.ts, and generate.ts.
-// Mirrors the public schema from ../intranet/db/changelogs/.
+// Mirrors the public schema from vendor/intranet/db/changelogs/.
 
 export type CcaType = "sports" | "culture" | "committee" | "jcrc" | "adhoc" | "supplementary";
 

@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/lib/auth/auth-context";
 
 export function LoginForm() {
 	const { signIn } = useAuth();

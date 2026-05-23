@@ -1,7 +1,7 @@
 import type { CCAData } from "@/features/cca/types/cca-data";
 import type { RecapData } from "@/features/ranking/types/recap";
 import { isResidentPositionType } from "@/features/ranking/utils/cca-ranking-metrics";
-import type { User } from "@/types/User";
+import type { AuthenticatedUser } from "@/types/user";
 
 const leadershipPositionTypes = new Set(["lead", "vice", "maincomm", "subcomm"]);
 
@@ -35,7 +35,7 @@ function isResidentBlockPosition(positionType?: string | null, role?: string | n
 }
 
 export async function createRecapImageBlob(
-	user: User,
+	user: AuthenticatedUser,
 	ccas: CCAData[],
 	recap: RecapData,
 ): Promise<Blob> {

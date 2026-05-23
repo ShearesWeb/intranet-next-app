@@ -1,6 +1,6 @@
 import { isChairPositionType } from "@/features/cca/utils/cca-chair-access";
-import type { AuthenticatedUser, CcaType, PositionType } from "@/types/User";
-import { createClient } from "@/utils/supabase/server";
+import type { AuthenticatedUser, CcaType, PositionType } from "@/types/user";
+import { createClient } from "@/lib/supabase/server";
 
 export type ManagedCcaPosition = {
 	position_id: number;

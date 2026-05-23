@@ -1,4 +1,4 @@
-import type { PositionType } from "@/types/User";
+import type { PositionType } from "@/types/user";
 
 /**
  * Chair-side applicant view model.

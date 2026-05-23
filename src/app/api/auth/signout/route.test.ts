@@ -5,7 +5,7 @@ const mocks = vi.hoisted(() => ({
 	cookies: vi.fn(),
 }));
 
-vi.mock("@/utils/supabase/server", () => ({
+vi.mock("@/lib/supabase/server", () => ({
 	createClient: mocks.createClient,
 }));
 

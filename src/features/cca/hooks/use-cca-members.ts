@@ -136,7 +136,8 @@ export function useCcaMembers(ccaId: string | null): UseCcaMembersReturn {
 				throw new Error(errorData.error || "Failed to fetch members");
 			}
 
-			const data = await response.json();
+			const json = await response.json();
+			const data = json.data;
 			setOriginalGroupedMembers(data.groupedMembers || {});
 			setCurrentGroupedMembers(data.groupedMembers || {});
 			setCCA(data.cca);
@@ -151,7 +152,7 @@ export function useCcaMembers(ccaId: string | null): UseCcaMembersReturn {
 			setError(message);
 			if (message.includes("Unauthorized")) {
 				toast.error("You are not authorized to manage this CCA");
-				router.push("/dashboard/mycca/admin");
+				router.push("/dashboard/my-cca/admin");
 			} else {
 				toast.error("Failed to load members");
 			}
@@ -193,14 +194,14 @@ export function useCcaMembers(ccaId: string | null): UseCcaMembersReturn {
 		setSearchLoading(true);
 		try {
 			const response = await fetch(
-				`/api/cca/${ccaId}/searchUsers?query=${encodeURIComponent(query)}`,
+				`/api/cca/${ccaId}/search-users?query=${encodeURIComponent(query)}`,
 			);
-			const data = await response.json();
+			const json = await response.json();
 			if (!response.ok) {
-				throw new Error(data.message || data.error || "Failed to search users");
+				throw new Error(json.error || "Failed to search users");
 			}
 
-			setSearchResults(data.data || []);
+			setSearchResults(json.data || []);
 		} catch (error) {
 			console.error("Error searching users:", error);
 			const message = error instanceof Error ? error.message : "Failed to search users";
@@ -498,7 +499,7 @@ export function useCcaMembers(ccaId: string | null): UseCcaMembersReturn {
 			for (const change of pendingChanges) {
 				try {
 					if (change.type === "add") {
-						const response = await fetch(`/api/cca/${ccaId}/addMember`, {
+						const response = await fetch(`/api/cca/${ccaId}/members`, {
 							method: "POST",
 							headers: { "Content-Type": "application/json" },
 							body: JSON.stringify({
@@ -509,17 +510,17 @@ export function useCcaMembers(ccaId: string | null): UseCcaMembersReturn {
 							}),
 						});
 
-						const responseData = await response.json().catch(() => ({}));
+						const responseJson = await response.json().catch(() => ({}));
 						if (!response.ok) {
-							throw new Error(responseData.error || "Failed to add member");
+							throw new Error(responseJson.error || "Failed to add member");
 						}
 
 						if (change.new_status !== undefined) {
 							const resolvedPositionId =
-								responseData.position_id || change.position_id || memberPositionId;
+								responseJson.data?.position_id || change.position_id || memberPositionId;
 
-							const statusResponse = await fetch(`/api/cca/${ccaId}/updateMember`, {
-								method: "POST",
+							const statusResponse = await fetch(`/api/cca/${ccaId}/members`, {
+								method: "PATCH",
 								headers: { "Content-Type": "application/json" },
 								body: JSON.stringify({
 									user_id: change.user_id,
@@ -528,18 +529,18 @@ export function useCcaMembers(ccaId: string | null): UseCcaMembersReturn {
 								}),
 							});
 
-							const statusResponseData = await statusResponse.json().catch(() => ({}));
+							const statusResponseJson = await statusResponse.json().catch(() => ({}));
 							if (!statusResponse.ok) {
 								throw new Error(
-									statusResponseData.error || "Member added but failed to update status",
+									statusResponseJson.error || "Member added but failed to update status",
 								);
 							}
 						}
 
 						successCount++;
 					} else if (change.type === "remove") {
-						const response = await fetch(`/api/cca/${ccaId}/removeMember`, {
-							method: "POST",
+						const response = await fetch(`/api/cca/${ccaId}/members`, {
+							method: "DELETE",
 							headers: { "Content-Type": "application/json" },
 							body: JSON.stringify({
 								user_id: change.user_id,
@@ -559,8 +560,8 @@ export function useCcaMembers(ccaId: string | null): UseCcaMembersReturn {
 							throw new Error("Missing position ID for status update");
 						}
 
-						const response = await fetch(`/api/cca/${ccaId}/updateMember`, {
-							method: "POST",
+						const response = await fetch(`/api/cca/${ccaId}/members`, {
+							method: "PATCH",
 							headers: { "Content-Type": "application/json" },
 							body: JSON.stringify({
 								user_id: change.user_id,
@@ -576,8 +577,8 @@ export function useCcaMembers(ccaId: string | null): UseCcaMembersReturn {
 
 						successCount++;
 					} else if (change.type === "update_commitment") {
-						const response = await fetch(`/api/cca/${ccaId}/updateMember`, {
-							method: "POST",
+						const response = await fetch(`/api/cca/${ccaId}/members`, {
+							method: "PATCH",
 							headers: { "Content-Type": "application/json" },
 							body: JSON.stringify({
 								user_id: change.user_id,

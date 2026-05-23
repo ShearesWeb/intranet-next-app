@@ -26,23 +26,24 @@ export function useRankablePositions(userEmail: string | undefined) {
 
 		const fetchRankablePositions = async () => {
 			try {
-				const response = await fetch(`/api/user/getRankablePositions/${userEmail}`);
+				const response = await fetch(`/api/user/rankable-positions/${userEmail}`);
 				if (!response.ok) {
 					const errorData = await response.json();
 					throw new Error(errorData.error || "Failed to fetch rankable positions");
 				}
-				const data = await response.json();
-				setAllPositions(data.positions || []);
+				const json = await response.json();
+				const positions = json.data?.positions || [];
+				setAllPositions(positions);
 				const preSelected = new Set<number>(
-					data.positions
-						?.filter((p: RankablePosition) => p.is_selected)
-						.map((p: RankablePosition) => p.id) || [],
+					positions
+						.filter((p: RankablePosition) => p.is_selected)
+						.map((p: RankablePosition) => p.id),
 				);
 				setSelectedIds(preSelected);
 				setInitialSelectedIds(new Set(preSelected));
 
 				if (preSelected.size > 0) {
-					const selected = data.positions?.filter((p: RankablePosition) => preSelected.has(p.id));
+					const selected = positions.filter((p: RankablePosition) => preSelected.has(p.id));
 					selected.sort(
 						(a: RankablePosition, b: RankablePosition) =>
 							(a.user_ranking || 999) - (b.user_ranking || 999),
@@ -107,16 +108,16 @@ export function useRankablePositions(userEmail: string | undefined) {
 		setIsSaving(true);
 		try {
 			const rankings = buildRankingsPayload(selectedPositions);
-			const res = await fetch("/api/user/saveRankings", {
+			const res = await fetch("/api/user/rankings", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ email: userEmail, rankings }),
 			});
 			if (!res.ok) {
 				const data = await res.json();
-				throw new Error(data.error || "Failed to save rankings");
+				throw new Error(data.error || "Failed to save preferences");
 			}
-			toast.success("Rankings saved successfully!");
+			toast.success("Preferences saved!");
 			setInitialSelectedIds(new Set(selectedIds));
 			setInitialRankingOrder(selectedPositions.map((p) => p.id));
 			setHasChanges(false);

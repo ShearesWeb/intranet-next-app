@@ -16,8 +16,8 @@ import type {
 	RankingResponseMember,
 	RankingRow,
 } from "@/features/ranking/types/ranking-api";
-import { fetchUserInfo } from "@/lib/fetch-user-info";
-import { createClient } from "@/utils/supabase/server";
+import { fetchUserInfo } from "@/lib/auth/fetch-user-info";
+import { createClient } from "@/lib/supabase/server";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 

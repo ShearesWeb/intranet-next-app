@@ -1,6 +1,6 @@
 "use client";
 
-import { PositionTypeBadge } from "@/components/badges/position-type-badge";
+import { PositionTypeBadge } from "@/components/badges";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -51,7 +51,7 @@ export function PositionRankingCard({ group, ccaType, onFieldChange }: PositionR
 						<span className="flex items-center gap-1 text-sm font-normal text-muted-foreground">
 							<PositionTypeBadge
 								value={(group.position_type || "unknown").replace(/_/g, " ").toLowerCase()}
-								position_type={group.position_type}
+								positionType={group.position_type}
 								className="h-5 px-2 py-0 text-[11px] lowercase"
 							/>
 						</span>

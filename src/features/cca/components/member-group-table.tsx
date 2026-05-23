@@ -1,8 +1,10 @@
 "use client";
 
 import React from "react";
-import { PositionTypeBadge } from "@/components/badges/position-type-badge";
-import { SimpleTable, type SimpleTableColumn } from "@/components/table/simple-table";
+import { type ColumnDef } from "@tanstack/react-table";
+import { ArrowUpDown } from "lucide-react";
+import { PositionTypeBadge } from "@/components/badges";
+import { DataTable } from "@/components/table/data-table";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -33,22 +35,236 @@ interface MemberGroupTableProps {
 	showAddButton?: boolean;
 }
 
-const memberTableColumns: SimpleTableColumn<Member>[] = [
-	{ accessorKey: "name", header: "Name" },
-	{ accessorKey: "email", header: "Email" },
-	{ accessorKey: "room", header: "Room" },
-	{
-		accessorKey: "position_name",
-		header: "Position",
-		cell: (value, row) => (
-			<PositionTypeBadge
-				value={String(value)}
-				position_type={String(row.position_type || "")}
-				className="text-xs"
-			/>
-		),
-	},
-];
+function buildMemberColumns(
+	showActions: boolean,
+	canManage: boolean,
+	ccaType: string,
+	onRemoveMember: (userId: number, name: string) => void,
+	onUpdateStatus: (userId: number, name: string, status: CutStatus | null) => void,
+	onUpdateCommitment: (userId: number, period: CommitmentPeriod) => void,
+): ColumnDef<Member>[] {
+	const isSports = ccaType === "sports";
+	const isCulture = ccaType === "culture";
+	const showEditableCommitment = canManage && !isSports;
+
+	const baseColumns: ColumnDef<Member>[] = [
+		{
+			accessorKey: "name",
+			header: ({ column }) => (
+				<div className="flex items-center gap-2">
+					<span className="font-semibold">Name</span>
+					<Button
+						variant="ghost"
+						onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+						className="h-8 w-8 p-0"
+					>
+						<ArrowUpDown className="h-4 w-4" />
+					</Button>
+				</div>
+			),
+		},
+		{
+			accessorKey: "email",
+			header: ({ column }) => (
+				<div className="flex items-center gap-2">
+					<span className="font-semibold">Email</span>
+					<Button
+						variant="ghost"
+						onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+						className="h-8 w-8 p-0"
+					>
+						<ArrowUpDown className="h-4 w-4" />
+					</Button>
+				</div>
+			),
+		},
+		{
+			accessorKey: "room",
+			header: ({ column }) => (
+				<div className="flex items-center gap-2">
+					<span className="font-semibold">Room</span>
+					<Button
+						variant="ghost"
+						onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+						className="h-8 w-8 p-0"
+					>
+						<ArrowUpDown className="h-4 w-4" />
+					</Button>
+				</div>
+			),
+		},
+		{
+			accessorKey: "position_name",
+			header: ({ column }) => (
+				<div className="flex items-center gap-2">
+					<span className="font-semibold">Position</span>
+					<Button
+						variant="ghost"
+						onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+						className="h-8 w-8 p-0"
+					>
+						<ArrowUpDown className="h-4 w-4" />
+					</Button>
+				</div>
+			),
+			cell: ({ row }) => (
+				<PositionTypeBadge
+					value={String(row.getValue("position_name"))}
+					positionType={String(row.original.position_type || "")}
+					className="text-xs"
+				/>
+			),
+		},
+	];
+
+	if (showActions && canManage) {
+		return [
+			...baseColumns,
+			{
+				accessorKey: "commitment_period",
+				header: () => <div className="font-semibold">Commitment</div>,
+				enableSorting: false,
+				cell: ({ row }) =>
+					showEditableCommitment ? (
+						<select
+							value={
+								(typeof row.original.commitment_period === "string"
+									? row.original.commitment_period
+									: null) || "full-year"
+							}
+							onChange={(e) =>
+								onUpdateCommitment(row.original.user_id, e.target.value as CommitmentPeriod)
+							}
+							className="border rounded p-1 text-sm bg-transparent cursor-pointer hover:bg-gray-100 w-28"
+							onClick={(e) => e.stopPropagation()}
+						>
+							<option value="full-year">Full Year</option>
+							<option value="semester-1">Semester 1</option>
+							<option value="semester-2">Semester 2</option>
+						</select>
+					) : (
+						<span>
+							{formatCommitmentPeriod(
+								row.original.commitment_period as CommitmentPeriod | null | undefined,
+							)}
+						</span>
+					),
+			},
+			{
+				id: "actions",
+				header: () => <div className="font-semibold">Actions</div>,
+				enableSorting: false,
+				cell: ({ row }) => (
+					<div className="flex flex-wrap gap-3">
+						{isSports ? (
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<Button variant="ghost" className="h-8 w-8 p-0">
+										<span className="sr-only">Open menu</span>
+										<MoreHorizontal className="h-4 w-4" />
+									</Button>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent align="end">
+									<DropdownMenuLabel>Actions</DropdownMenuLabel>
+									<DropdownMenuSeparator />
+									{row.original.cut_status && (
+										<DropdownMenuItem
+											onClick={() => onUpdateStatus(row.original.user_id, row.original.name, null)}
+										>
+											Move to Members
+										</DropdownMenuItem>
+									)}
+									{SPORTS_STATUS_OPTIONS.filter(
+										(option) => option.status !== row.original.cut_status,
+									).map((option) => (
+										<DropdownMenuItem
+											key={option.status}
+											onClick={() =>
+												onUpdateStatus(row.original.user_id, row.original.name, option.status)
+											}
+										>
+											{option.label}
+										</DropdownMenuItem>
+									))}
+									<DropdownMenuSeparator />
+									<DropdownMenuItem
+										onClick={() => onRemoveMember(row.original.user_id, row.original.name)}
+										className="text-red-600"
+									>
+										Remove Member
+									</DropdownMenuItem>
+								</DropdownMenuContent>
+							</DropdownMenu>
+						) : isCulture ? (
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<Button variant="ghost" className="h-8 w-8 p-0">
+										<span className="sr-only">Open menu</span>
+										<MoreHorizontal className="h-4 w-4" />
+									</Button>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent align="end">
+									<DropdownMenuLabel>Actions</DropdownMenuLabel>
+									<DropdownMenuSeparator />
+									{row.original.cut_status ? (
+										<DropdownMenuItem
+											onClick={() => onUpdateStatus(row.original.user_id, row.original.name, null)}
+										>
+											Move to Members
+										</DropdownMenuItem>
+									) : null}
+									{CULTURE_STATUS_OPTIONS.filter(
+										(option) => option.status !== row.original.cut_status,
+									).map((option) => (
+										<DropdownMenuItem
+											key={option.status}
+											onClick={() =>
+												onUpdateStatus(row.original.user_id, row.original.name, option.status)
+											}
+										>
+											{option.label}
+										</DropdownMenuItem>
+									))}
+									<DropdownMenuSeparator />
+									<DropdownMenuItem
+										onClick={() => onRemoveMember(row.original.user_id, row.original.name)}
+										className="text-red-600"
+									>
+										Remove Member
+									</DropdownMenuItem>
+								</DropdownMenuContent>
+							</DropdownMenu>
+						) : (
+							<Button
+								size="sm"
+								onClick={() => onRemoveMember(row.original.user_id, row.original.name)}
+								className="bg-red-500 text-white hover:bg-red-400 px-4 py-2 shadow-md font-bold cursor-pointer"
+							>
+								Remove
+							</Button>
+						)}
+					</div>
+				),
+			},
+		];
+	}
+
+	return [
+		...baseColumns,
+		{
+			accessorKey: "commitment_period",
+			header: () => <div className="font-semibold">Commitment</div>,
+			enableSorting: false,
+			cell: ({ row }) => (
+				<span>
+					{formatCommitmentPeriod(
+						row.original.commitment_period as CommitmentPeriod | null | undefined,
+					)}
+				</span>
+			),
+		},
+	];
+}
 
 export function MemberGroupTable({
 	title,
@@ -69,136 +285,15 @@ export function MemberGroupTable({
 	const isSports = ccaType === "sports";
 	const isCulture = ccaType === "culture";
 	const isSportsCulture = isSports || isCulture;
-	const showEditableCommitment = canManage && !isSports;
 
-	const columnsToUse: SimpleTableColumn<Member>[] =
-		showActions && canManage
-			? [
-					...memberTableColumns,
-					{
-						accessorKey: "commitment_period",
-						header: "Commitment",
-						cell: (value, row) =>
-							showEditableCommitment ? (
-								<select
-									value={(typeof value === "string" ? value : null) || "full-year"}
-									onChange={(e) =>
-										onUpdateCommitment(row.user_id, e.target.value as CommitmentPeriod)
-									}
-									className="border rounded p-1 text-sm bg-transparent cursor-pointer hover:bg-gray-100 w-28"
-									onClick={(e) => e.stopPropagation()}
-								>
-									<option value="full-year">Full Year</option>
-									<option value="semester-1">Semester 1</option>
-									<option value="semester-2">Semester 2</option>
-								</select>
-							) : (
-								<span>{formatCommitmentPeriod(value as CommitmentPeriod | null | undefined)}</span>
-							),
-					},
-					{
-						accessorKey: "appointed_date",
-						header: "Actions",
-						cell: (_value, row) => (
-							<div className="flex flex-wrap gap-3">
-								{isSports ? (
-									<DropdownMenu>
-										<DropdownMenuTrigger asChild>
-											<Button variant="ghost" className="h-8 w-8 p-0">
-												<span className="sr-only">Open menu</span>
-												<MoreHorizontal className="h-4 w-4" />
-											</Button>
-										</DropdownMenuTrigger>
-										<DropdownMenuContent align="end">
-											<DropdownMenuLabel>Actions</DropdownMenuLabel>
-											<DropdownMenuSeparator />
-											{row.cut_status && (
-												<DropdownMenuItem
-													onClick={() => onUpdateStatus(row.user_id, row.name, null)}
-												>
-													Move to Members
-												</DropdownMenuItem>
-											)}
-											{SPORTS_STATUS_OPTIONS.filter(
-												(option) => option.status !== row.cut_status,
-											).map((option) => (
-												<DropdownMenuItem
-													key={option.status}
-													onClick={() => onUpdateStatus(row.user_id, row.name, option.status)}
-												>
-													{option.label}
-												</DropdownMenuItem>
-											))}
-											<DropdownMenuSeparator />
-											<DropdownMenuItem
-												onClick={() => onRemoveMember(row.user_id, row.name)}
-												className="text-red-600"
-											>
-												Remove Member
-											</DropdownMenuItem>
-										</DropdownMenuContent>
-									</DropdownMenu>
-								) : isCulture ? (
-									<DropdownMenu>
-										<DropdownMenuTrigger asChild>
-											<Button variant="ghost" className="h-8 w-8 p-0">
-												<span className="sr-only">Open menu</span>
-												<MoreHorizontal className="h-4 w-4" />
-											</Button>
-										</DropdownMenuTrigger>
-										<DropdownMenuContent align="end">
-											<DropdownMenuLabel>Actions</DropdownMenuLabel>
-											<DropdownMenuSeparator />
-											{row.cut_status ? (
-												<DropdownMenuItem
-													onClick={() => onUpdateStatus(row.user_id, row.name, null)}
-												>
-													Move to Members
-												</DropdownMenuItem>
-											) : null}
-											{CULTURE_STATUS_OPTIONS.filter(
-												(option) => option.status !== row.cut_status,
-											).map((option) => (
-												<DropdownMenuItem
-													key={option.status}
-													onClick={() => onUpdateStatus(row.user_id, row.name, option.status)}
-												>
-													{option.label}
-												</DropdownMenuItem>
-											))}
-											<DropdownMenuSeparator />
-											<DropdownMenuItem
-												onClick={() => onRemoveMember(row.user_id, row.name)}
-												className="text-red-600"
-											>
-												Remove Member
-											</DropdownMenuItem>
-										</DropdownMenuContent>
-									</DropdownMenu>
-								) : (
-									<Button
-										size="sm"
-										onClick={() => onRemoveMember(row.user_id, row.name)}
-										className="bg-red-500 text-white hover:bg-red-400 px-4 py-2 shadow-md font-bold cursor-pointer"
-									>
-										Remove
-									</Button>
-								)}
-							</div>
-						),
-						enableSorting: false,
-					},
-				]
-			: [
-					...memberTableColumns,
-					{
-						accessorKey: "commitment_period",
-						header: "Commitment",
-						cell: (value) => (
-							<span>{formatCommitmentPeriod(value as CommitmentPeriod | null | undefined)}</span>
-						),
-					},
-				];
+	const columnsToUse = buildMemberColumns(
+		showActions,
+		canManage,
+		ccaType,
+		onRemoveMember,
+		onUpdateStatus,
+		onUpdateCommitment,
+	);
 
 	return (
 		<div className="mb-8">
@@ -220,7 +315,7 @@ export function MemberGroupTable({
 					No {title.toLowerCase()} found.
 				</div>
 			) : (
-				<SimpleTable<Member>
+				<DataTable<Member>
 					searchColumn="name"
 					data={members}
 					columns={columnsToUse}

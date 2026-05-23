@@ -1,5 +1,5 @@
 import type { CCAData } from "@/features/cca/types/cca-data";
-import type { User } from "@/types/User";
+import type { AuthenticatedUser } from "@/types/user";
 
 export type RecapSlide = {
 	id: string;
@@ -40,7 +40,7 @@ export type RecapCategoryConfig = {
 	descriptionWhenPresent: (context: {
 		count: number;
 		points: number;
-		user: User;
+		user: AuthenticatedUser;
 		ccas: CCAData[];
 	}) => string;
 	descriptionWhenEmpty: string;
@@ -50,7 +50,7 @@ export type RecapCategoryConfig = {
 	buildSupportingText: (context: {
 		count: number;
 		points: number;
-		user: User;
+		user: AuthenticatedUser;
 		ccas: CCAData[];
 	}) => string | undefined;
 };

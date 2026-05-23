@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/lib/auth/auth-context";
 import type { CCAData } from "@/features/cca/types/cca-data";
 
 interface UseCcaListReturn {
@@ -28,7 +28,7 @@ export function useCcaList(): UseCcaListReturn {
 		setError(null);
 
 		try {
-			const res = await fetch("/api/user/getCCAs?includeAllAppointments=true");
+			const res = await fetch("/api/user/ccas?includeAllAppointments=true");
 			if (!res.ok) {
 				const errorData = await res.json();
 				throw new Error(errorData.error || "Failed to fetch user CCA data");

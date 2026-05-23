@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
-import { fetchUserInfo } from "@/lib/fetch-user-info";
+import { createClient } from "@/lib/supabase/server";
+import { fetchUserInfo } from "@/lib/auth/fetch-user-info";
 
 export async function GET(request: Request) {
 	const { searchParams, origin } = new URL(request.url);

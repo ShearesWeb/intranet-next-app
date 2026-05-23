@@ -1,4 +1,4 @@
-import type { CcaType, PositionType } from "@/types/User";
+import type { CcaType, PositionType } from "@/types/user";
 
 export type CutStatus = "ivp-ihg-team" | "ihg-team" | "final-cut" | "first-cut";
 export type CommitmentPeriod = "semester-1" | "semester-2" | "full-year";

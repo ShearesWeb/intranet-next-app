@@ -113,7 +113,7 @@ export function SubsidyDeclarationFormDialog({
 			}
 
 			try {
-				const response = await fetch(`/api/holidaySubsidy/declarations/${ccaId}`, {
+				const response = await fetch(`/api/holiday-subsidy/declarations/${ccaId}`, {
 					method: editingDeclaration ? "PATCH" : "POST",
 					headers: {
 						"Content-Type": "application/json",
@@ -127,18 +127,19 @@ export function SubsidyDeclarationFormDialog({
 					}),
 				});
 
-				const data = await response.json();
+				const json = await response.json();
 
 				if (!response.ok) {
-					throw new Error(data.error || "Failed to submit declaration");
+					throw new Error(json.error || "Failed to submit declaration");
 				}
 
-				if (data.subsidy) {
+				const payload = json.data ?? json;
+				if (payload.subsidy) {
 					const overrideMap = new Map<number, PositionOption>(
 						positions.map((position) => [position.id, position]),
 					);
 					onSubmitSuccess(
-						mapSubsidyToDeclaration(data.subsidy as SubsidyWithPosition, overrideMap),
+						mapSubsidyToDeclaration(payload.subsidy as SubsidyWithPosition, overrideMap),
 						Boolean(editingDeclaration),
 					);
 				}

@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { AuthenticatedUser } from "@/types/User";
+import type { AuthenticatedUser } from "@/types/user";
 
 const mocks = vi.hoisted(() => ({
 	createClient: vi.fn(),
 	isChairPositionType: vi.fn(),
 }));
 
-vi.mock("@/utils/supabase/server", () => ({
+vi.mock("@/lib/supabase/server", () => ({
 	createClient: mocks.createClient,
 }));
 

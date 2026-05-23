@@ -59,12 +59,9 @@ A Next.js 15 intranet application for managing CCAs (Co-Curricular Activities), 
 - `tailwind-merge` ^3.3.1 - Tailwind class deduplication
 - `lucide-react` ^0.545.0 - Icon library
 - `@tanstack/react-table` ^8.21.3 - Data table library
-- `framer-motion` ^12.4.10 - Animation library
-- `sonner` ^2.0.7 - Toast notifications (primary, used in `src/app/layout.tsx`)
-- `react-hot-toast` ^2.4.1 - Toast notifications (secondary, used in `src/hoc/withAuth.tsx`)
+- `sonner` ^2.0.7 - Toast notifications (used in `src/app/layout.tsx`)
 - `next-themes` ^0.4.6 - Dark/light mode support
 - `csv-parse` ^5.6.0 - CSV parsing (used in scripts)
-- `aphrodite` ^2.4.0 - CSS-in-JS (likely legacy, no active usage detected in main codebase)
 ## Configuration
 - Main config: `tsconfig.json` - strict mode, bundler module resolution, `@/*` path alias maps to `./src/*`
 - Scripts config: `tsconfig.scripts.json` - CommonJS module, ES2017 target
@@ -100,26 +97,14 @@ A Next.js 15 intranet application for managing CCAs (Co-Curricular Activities), 
 ## Conventions
 
 ## Naming Patterns
-- Page components: `page.tsx` (Next.js App Router convention)
-- Layout components: `layout.tsx`
-- API routes: `route.ts`
-- UI primitives: `kebab-case.tsx` (e.g., `loading-spinner.tsx`, `dropdown-menu.tsx`)
-- Custom components: `kebab-case.tsx` (e.g., `cca-type-badge.tsx`, `points-recap-card.tsx`)
-- Hooks: `camelCase.ts` prefixed with `use` (e.g., `useRoleAuth.ts`, `use-mobile.ts` -- mixed conventions exist)
-- Types: `PascalCase.ts` (e.g., `User.ts`, `CCAPosition.ts`) or `kebab-case.ts` (e.g., `holiday-subsidy.ts`, `dashboard.ts`)
-- Lib modules: `kebab-case.ts` (e.g., `cca-chair-access.ts`, `feature-flags.ts`, `fetch-user-info.ts`)
-- Constants: `kebab-case.ts` in `src/lib/constants/` (e.g., `auth.ts`)
-- React components: `PascalCase` (e.g., `AppLayout`, `SimpleTable`, `CcaTypeBadge`)
-- Hooks: `camelCase` prefixed with `use` (e.g., `useAuth`, `useRoleAuth`, `useIsMobile`)
-- Library/utility functions: `camelCase` (e.g., `fetchUserInfo`, `checkCcaAuthorization`, `canManageCcaMembers`)
-- API route handlers: uppercase HTTP method names (e.g., `GET`, `POST`, `PATCH`, `DELETE`)
-- Internal helpers within files: `camelCase` (e.g., `authorizeChair`, `validatePosition`)
-- Local state: `camelCase` (e.g., `loadingCCAs`, `userPositions`, `ccaData`)
-- Constants: `UPPER_SNAKE_CASE` for module-level constants (e.g., `CACHE_DURATION`, `STORAGE_KEY`, `CHAIR_POSITION_TYPES`, `HOLIDAY_WEEKS`)
-- Exported const objects: `PascalCase` or `UPPER_SNAKE_CASE` (e.g., `SubsidyStatus`, `CORE_SERVICE_FLAGS`)
-- Interfaces: `PascalCase` (e.g., `AuthenticatedUser`, `CCAData`, `SimpleTableColumn`)
-- Type aliases: `PascalCase` (e.g., `PositionType`, `CcaType`, `CoreServiceKey`)
-- Generic result types: discriminated union pattern `{ ok: true; data: T } | { ok: false; status: number; error: string }` used in `src/lib/cca-chair-access.ts` and `src/lib/cca-management-access.ts`
+- All filenames: `kebab-case.ts` / `kebab-case.tsx` — no exceptions
+- Route segments: `kebab-case` (e.g., `cca-allocation/`, `holiday-subsidy/`, `[cca-id]/`)
+- React components in code: `PascalCase` (e.g., `AppLayout`, `DataTable`, `CcaTypeBadge`)
+- Hooks: `use-kebab-case.ts` filename, `useCamelCase` function name
+- Types/interfaces in code: `PascalCase` (e.g., `AuthenticatedUser`, `CCAData`)
+- Functions: `camelCase` (e.g., `fetchUserInfo`, `checkCcaAuthorization`)
+- Constants: `UPPER_SNAKE_CASE` (e.g., `CORE_SERVICE_FLAGS`, `CACHE_DURATION`)
+- API route handlers: uppercase HTTP method names (`GET`, `POST`, `PATCH`, `DELETE`)
 ## Code Style
 - No dedicated Prettier config file detected -- relies on editor defaults
 - Indentation: mixed tabs and spaces (inconsistent across files -- `src/context/AuthContext.tsx` uses mixed tab/space indentation)
@@ -137,62 +122,50 @@ A Next.js 15 intranet application for managing CCAs (Co-Curricular Activities), 
 - Default imports for pages: `export default function Dashboard()`
 - Type imports use inline `type` keyword: `import { type ClassValue } from "clsx"`
 ## Component Patterns
-- Use `"use client"` directive at top for interactive pages
-- Wrap content in `<AppLayout>` for dashboard pages
-- Show `<AppLoading />` or `<LoadingSpinner />` while data loads
-- Use `useAuth()` hook to access user context
-- Fetch data with `fetch('/api/...')` in `useEffect` hooks
-- Export as `export default function PageName()`
+- Use `"use client"` only for interactive pages; read-only pages are server components
+- Use `<PageHeader>` from `@/components/layout/page-header` for page titles
+- Use `<EmptyState>` from `@/components/layout/empty-state` for empty data states
+- Use `<ErrorCard>` from `@/components/layout/error-card` for inline error states
+- Use `<DataTable>` from `@/components/table/data-table` for all data tables
+- Use `<OrderingTable>` from `@/components/table/ordering-table` for drag-and-drop ranking
 - shadcn/ui (new-york style) primitives in `src/components/ui/`
-- Use `cn()` utility from `src/lib/utils.ts` for conditional class merging
-- Use `class-variance-authority` (`cva`) for variant-based styling (see `src/components/ui/button.tsx`)
-- Components accept `className` prop for external customization
-- Component functions use `function` keyword (not arrow functions) for shadcn components
-- Use `isCoreServiceEnabled()` in layout files to gate entire feature sections
-- Render `<ServiceDisabledState service="..." />` when disabled
-- Example: `src/app/dashboard/holidaySubsidy/layout.tsx`, `src/app/dashboard/ccaAllocation/layout.tsx`
+- Use `cn()` utility from `@/lib/utils` for conditional class merging
+- Use `useAuth()` from `@/lib/auth/auth-context` for client-side auth
+- Use `isCoreServiceEnabled()` in layout files to gate feature sections
+- Use `error.tsx` per route segment delegating to `DashboardError`
+- Use `loading.tsx` per route segment with appropriate skeleton
 ## API Route Patterns
-- Success: `NextResponse.json({ data })` or `NextResponse.json({ success: true, ... })`
-- Error: `NextResponse.json({ error: "message" }, { status: 4xx/5xx })`
-- Some routes use `{ success: boolean, data: [], message: "..." }` pattern (e.g., `src/app/api/user/search/route.ts`)
-- No single standardized response envelope -- varies between routes
+- Standardized response envelope: `{ data: T, error: null }` on success, `{ data: null, error: string }` on error
+- Use `apiOk()`, `apiError()`, `handleApiError()` from `@/lib/api/response`
+- Use `requireAuth()`, `requireChairAccess()`, `requireJcrcAccess()` from `@/lib/api/auth`
+- Route handlers are thin (~30-60 lines) — business logic lives in `src/features/*/services/`
+- RESTful resource routes: `GET /members`, `POST /members`, `DELETE /members` — not verb-based routes
 ## Error Handling
-- `try/catch` around async operations
-- Toast notifications for user-facing errors via `sonner` (`toast.error(...)`) in most places
-- Legacy `react-hot-toast` still used in `src/hoc/withAuth.tsx` and `src/app/dashboard/mycca/page.tsx`
+- API routes: `try/catch` with `handleApiError()` in catch block
+- Auth guards throw `ApiError` (from `@/lib/api/errors`) — caught by route handlers
+- Toast notifications via `sonner` (`toast.error(...)`) for user-facing errors
 - `console.error()` for developer debugging
-- Loading/error state managed with `useState` booleans
-- Wrap entire handler body in `try/catch`
-- Catch block logs `console.error(...)` and returns generic error JSON
-- Supabase errors checked inline: `if (error) { return NextResponse.json({ error: error.message }, { status: 500 }); }`
-- Specific error codes handled (e.g., Postgres `23505` unique violation -> 409 Conflict in `src/app/api/holidaySubsidy/declarations/[ccaId]/route.ts`)
-- Uses a result-type pattern: `AccessResult<T> = { ok: true; data: T } | { ok: false; status: number; error: string }`
-- Defined in `src/lib/cca-chair-access.ts` and `src/lib/cca-management-access.ts`
-- Callers check `if (!authResult.ok)` and forward `authResult.status` / `authResult.error`
+- `AccessResult<T>` pattern in `src/features/cca/utils/cca-chair-access.ts` for authorization checks
 ## Logging
 - `console.error("Error [context]:", error)` for unexpected errors
 - `console.warn(...)` for non-critical issues (e.g., cookie clearing failure)
 - `console.log(...)` for informational messages (e.g., "No authenticated user found")
 - No log levels, no structured JSON logging, no external logging service
 ## Comments
-- File-level comment showing file path (legacy pattern from Windows paths): `// C:\Ron\intranet-next-app\src\hoc\withAuth.tsx`
-- File-level comment with relative path: `// src/app/api/ping/route.ts`
-- Inline comments using `//` with checkmark emojis for step annotations: `// ✅ Check client-side cache first` (seen in `src/hooks/useRoleAuth.ts`, `src/app/api/sportsCulture/available/route.ts`)
-- Block explanation comments after function definitions (see `src/hoc/withAuth.tsx` lines 34-66)
-- Minimal usage. One JSDoc comment found in `src/lib/fetch-user-info.ts`: `/** Get the authenticated user's ID... */`
-- Most functions have no documentation comments
+- Minimal comments — only when the WHY is non-obvious
+- No emoji checkmark comments, no Windows path comments
+- No file-level path comments unless useful for disambiguation
 ## State Management
 - No global state management library (no Redux, Zustand, Jotai)
-- `AuthContext` (`src/context/AuthContext.tsx`) provides user session via React Context
+- `AuthContext` (`src/lib/auth/auth-context.tsx`) provides user session via React Context
 - `useAuth()` hook is the single context consumer
-- `useRoleAuth()` hook in `src/hooks/useRoleAuth.ts` caches role data in `localStorage` with 5-minute TTL
-- Data fetched via raw `fetch()` in `useEffect` hooks
-- No client-side caching beyond manual `localStorage` usage in `useRoleAuth`
+- `useRoleAuth()` hook in `src/features/cca/hooks/use-role-auth.ts` caches role data in `localStorage` with 5-minute TTL
+- Read-only pages use server components with direct Supabase calls
+- Interactive pages use client-side `fetch()` in hooks
 ## Styling
 - CSS variables for theming defined in `src/app/globals.css`
 - Utility classes applied directly in JSX
 - `cn()` helper from `src/lib/utils.ts` combines `clsx` + `tailwind-merge`
-- `aphrodite` package is listed as a dependency but no active usage detected in source files
 - Custom fonts: Geist Sans, Geist Mono (local), Fredoka (Google Font)
 ## Module Design
 - Named exports preferred for components: `export function AppLayout(...)`, `export function SimpleTable(...)`

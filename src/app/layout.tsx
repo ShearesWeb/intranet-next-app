@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { Fredoka } from "next/font/google";
 import "./globals.css";
-import { AuthProvider } from "@/context/AuthContext";
+import { AuthProvider } from "@/lib/auth/auth-context";
 import { Toaster } from "sonner";
 const geistSans = localFont({
 	src: "./fonts/GeistVF.woff",

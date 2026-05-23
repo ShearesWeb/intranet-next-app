@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { AnimatePresence, motion } from "framer-motion";
 import { Linkedin, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -12,19 +11,13 @@ import { useRecapAudio } from "@/features/ranking/hooks/use-recap-audio";
 import { RecapSlideContent } from "@/features/ranking/components/recap-slide-content";
 import { createRecapImageBlob } from "@/features/ranking/utils/create-recap-image-blob";
 import { cn } from "@/lib/utils";
-import type { User } from "@/types/User";
-
-const slideVariants = {
-	enter: (d: number) => ({ opacity: 0, x: d > 0 ? 60 : -60 }),
-	center: { opacity: 1, x: 0 },
-	exit: (d: number) => ({ opacity: 0, x: d > 0 ? -60 : 60 }),
-};
+import type { AuthenticatedUser } from "@/types/user";
 
 export function PointsRecapCard({
 	user,
 	onSeenStateChange,
 }: {
-	user: User;
+	user: AuthenticatedUser;
 	onSeenStateChange?: (hasSeenRecap: boolean) => void;
 }) {
 	const [open, setOpen] = useState(false);
@@ -40,9 +33,24 @@ export function PointsRecapCard({
 		setDirection,
 		displayCount,
 		paginate,
-		handleDragEnd,
 	} = useRecapNavigation(recap.slides, open);
 	const { playRecapAudio, stopRecapAudio } = useRecapAudio();
+
+	// Touch swipe handling for slide navigation
+	const touchStartX = useRef<number | null>(null);
+	const handleTouchStart = useCallback((e: React.TouchEvent) => {
+		touchStartX.current = e.touches[0].clientX;
+	}, []);
+	const handleTouchEnd = useCallback(
+		(e: React.TouchEvent) => {
+			if (touchStartX.current === null) return;
+			const delta = e.changedTouches[0].clientX - touchStartX.current;
+			touchStartX.current = null;
+			if (delta < -70) paginate(1);
+			if (delta > 70) paginate(-1);
+		},
+		[paginate],
+	);
 
 	const shareText = useMemo(
 		() =>
@@ -51,7 +59,7 @@ export function PointsRecapCard({
 	);
 	const shareUrl =
 		typeof window !== "undefined"
-			? `${window.location.origin}/dashboard/mycca`
+			? `${window.location.origin}/dashboard/my-cca`
 			: "https://sheares-dashboard.local";
 
 	const shareRecapImageToLinkedIn = async () => {
@@ -84,15 +92,11 @@ export function PointsRecapCard({
 	return (
 		<>
 			<div className="relative flex min-h-[22rem] w-full flex-col justify-between overflow-hidden rounded-[32px] border border-orange-400/50 bg-gradient-to-br from-[#ff6a00] via-[#ff9500] to-[#ffb700] p-6 py-12 text-white shadow-lg shadow-orange-500/20 md:p-8 md:py-16">
-				<motion.div
-					className="absolute -right-16 -top-16 h-52 w-52 rounded-full bg-white/30 blur-3xl"
-					animate={{ scale: [1, 1.12, 1], opacity: [0.4, 0.7, 0.4] }}
-					transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+				<div
+					className="absolute -right-16 -top-16 h-52 w-52 rounded-full bg-white/30 blur-3xl animate-[pulse-blob_6s_ease-in-out_infinite]"
 				/>
-				<motion.div
-					className="absolute -bottom-20 left-[-2rem] h-64 w-64 rounded-full bg-yellow-200/40 blur-3xl"
-					animate={{ scale: [1, 1.08, 1], opacity: [0.3, 0.6, 0.3] }}
-					transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+				<div
+					className="absolute -bottom-20 left-[-2rem] h-64 w-64 rounded-full bg-yellow-200/40 blur-3xl animate-[pulse-blob-alt_7s_ease-in-out_1s_infinite]"
 				/>
 				<div className="relative z-10 flex h-full flex-col justify-between gap-8">
 					{!isMounted ? (
@@ -116,15 +120,13 @@ export function PointsRecapCard({
 									</p>
 								</div>
 								{hasSeenRecap ? (
-									<motion.div
-										className="pt-2"
-										initial={{ y: 8, opacity: 0.85 }}
-										animate={{ y: 0, opacity: 1 }}
+									<div
+										className="pt-2 animate-[slide-fade-in_0.3s_ease-out_both]"
 									>
 										<h3 className="text-7xl font-black leading-tight text-white md:text-8xl">
 											{user.points || 0}
 										</h3>
-									</motion.div>
+									</div>
 								) : null}
 							</div>
 							<div className="relative z-10 flex flex-col gap-3">
@@ -135,7 +137,7 @@ export function PointsRecapCard({
 											size="lg"
 											className="w-fit rounded-full bg-white px-6 font-semibold text-orange-600 hover:bg-orange-50 hover:text-orange-700 shadow-sm"
 										>
-											<Link href="/dashboard/mycca">View breakdown</Link>
+											<Link href="/dashboard/my-cca">View breakdown</Link>
 										</Button>
 										<div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap">
 											<Button
@@ -201,126 +203,116 @@ export function PointsRecapCard({
 					<DialogDescription className="sr-only">View your Sheares points recap.</DialogDescription>
 					<div className="mx-auto w-full max-w-3xl">
 						<div className="relative max-h-[88dvh] overflow-hidden rounded-[28px] shadow-none sm:rounded-[34px]">
-							<AnimatePresence initial={false} custom={direction} mode="wait">
-								<motion.div
-									key={slide.id}
-									custom={direction}
-									variants={slideVariants}
-									initial="enter"
-									animate="center"
-									exit="exit"
-									transition={{ duration: 0.3, ease: "easeOut" }}
-									drag="x"
-									dragConstraints={{ left: 0, right: 0 }}
-									dragElastic={0.18}
-									onDragEnd={handleDragEnd}
-									className="relative"
-								>
-									<div className={cn("absolute inset-0 bg-gradient-to-br", slide.accent)} />
-									<div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.16),_transparent_28%),radial-gradient(circle_at_bottom_left,_rgba(0,0,0,0.2),_transparent_36%)]" />
-									<div className="relative z-10 max-h-[88dvh] overflow-y-auto p-5 sm:p-6 md:p-8">
-										<div className="space-y-5">
-											<div className="flex items-center gap-2">
-												{recap.slides.map((item, index) => (
-													<button
-														key={item.id}
-														type="button"
-														onClick={() => {
-															setDirection(index > currentSlide ? 1 : -1);
-															setCurrentSlide(index);
-														}}
-														className="group flex-1"
-														aria-label={`Go to slide ${index + 1}`}
-													>
-														<span
-															className={cn(
-																"block h-1.5 rounded-full transition-all",
-																index === currentSlide
-																	? "bg-white"
-																	: "bg-white/30 group-hover:bg-white/50",
-															)}
-														/>
-													</button>
-												))}
-											</div>
-											<div className="flex items-start justify-between gap-4">
-												<div>
-													<p className="text-xs uppercase tracking-[0.35em] text-white/65 sm:text-sm">
-														{slide.eyebrow}
-													</p>
-													<p className="mt-2 text-sm text-white/75">
-														{currentSlide + 1} / {recap.slides.length}
-													</p>
-												</div>
+							<div
+								key={`${slide.id}-${currentSlide}`}
+								className="relative animate-[slide-fade-in_0.3s_ease-out_both]"
+								onTouchStart={handleTouchStart}
+								onTouchEnd={handleTouchEnd}
+							>
+								<div className={cn("absolute inset-0 bg-gradient-to-br", slide.accent)} />
+								<div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.16),_transparent_28%),radial-gradient(circle_at_bottom_left,_rgba(0,0,0,0.2),_transparent_36%)]" />
+								<div className="relative z-10 max-h-[88dvh] overflow-y-auto p-5 sm:p-6 md:p-8">
+									<div className="space-y-5">
+										<div className="flex items-center gap-2">
+											{recap.slides.map((item, index) => (
 												<button
-													type="button"
-													onClick={closeRecap}
-													className="rounded-full bg-white/12 p-2.5 text-white transition hover:bg-white/20"
-													aria-label="Close recap"
-												>
-													<X className="h-5 w-5" />
-												</button>
-											</div>
-										</div>
-										<RecapSlideContent slide={slide} displayCount={displayCount} />
-										<div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:gap-4 md:flex-row md:flex-wrap md:items-center md:justify-between">
-											{slide.kind === "reveal" ? (
-												<div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:flex-wrap">
-													<Button
-														asChild
-														className="w-full rounded-full bg-white text-slate-950 hover:bg-orange-100 md:w-auto"
-													>
-														<Link href="/dashboard/mycca">Open full breakdown</Link>
-													</Button>
-													<Button
-														type="button"
-														onClick={shareRecapImageToLinkedIn}
-														disabled={imgGenerating}
-														className="w-full rounded-full bg-white/90 text-slate-950 hover:bg-white md:w-auto"
-													>
-														Share your certificate!
-													</Button>
-													<Button
-														type="button"
-														onClick={shareRecapImageToLinkedIn}
-														disabled={imgGenerating}
-														className="w-full rounded-full bg-[#0A66C2] text-white hover:bg-[#004182] md:w-auto"
-													>
-														<Linkedin className="h-4 w-4 mr-2" />
-														Share to LinkedIn
-													</Button>
-												</div>
-											) : (
-												<div className="hidden md:block" />
-											)}
-											<div className="flex w-full gap-3 md:w-auto">
-												<Button
-													type="button"
-													variant="secondary"
-													onClick={() => paginate(-1)}
-													disabled={currentSlide === 0}
-													className="flex-1 rounded-full bg-white/14 text-white hover:bg-white/20 md:flex-none"
-												>
-													Back
-												</Button>
-												<Button
+													key={item.id}
 													type="button"
 													onClick={() => {
-														if (currentSlide === recap.slides.length - 1) {
-															closeRecap();
-															return;
-														}
-														paginate(1);
+														setDirection(index > currentSlide ? 1 : -1);
+														setCurrentSlide(index);
 													}}
-													className="flex-1 rounded-full bg-white text-slate-950 hover:bg-orange-100 md:flex-none"
+													className="group flex-1"
+													aria-label={`Go to slide ${index + 1}`}
 												>
-													{currentSlide === recap.slides.length - 1 ? "Close" : "Next"}
-												</Button>
+													<span
+														className={cn(
+															"block h-1.5 rounded-full transition-all",
+															index === currentSlide
+																? "bg-white"
+																: "bg-white/30 group-hover:bg-white/50",
+														)}
+													/>
+												</button>
+											))}
+										</div>
+										<div className="flex items-start justify-between gap-4">
+											<div>
+												<p className="text-xs uppercase tracking-[0.35em] text-white/65 sm:text-sm">
+													{slide.eyebrow}
+												</p>
+												<p className="mt-2 text-sm text-white/75">
+													{currentSlide + 1} / {recap.slides.length}
+												</p>
 											</div>
+											<button
+												type="button"
+												onClick={closeRecap}
+												className="rounded-full bg-white/12 p-2.5 text-white transition hover:bg-white/20"
+												aria-label="Close recap"
+											>
+												<X className="h-5 w-5" />
+											</button>
 										</div>
 									</div>
-								</motion.div>
-							</AnimatePresence>
+									<RecapSlideContent slide={slide} displayCount={displayCount} />
+									<div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:gap-4 md:flex-row md:flex-wrap md:items-center md:justify-between">
+										{slide.kind === "reveal" ? (
+											<div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:flex-wrap">
+												<Button
+													asChild
+													className="w-full rounded-full bg-white text-slate-950 hover:bg-orange-100 md:w-auto"
+												>
+													<Link href="/dashboard/my-cca">Open full breakdown</Link>
+												</Button>
+												<Button
+													type="button"
+													onClick={shareRecapImageToLinkedIn}
+													disabled={imgGenerating}
+													className="w-full rounded-full bg-white/90 text-slate-950 hover:bg-white md:w-auto"
+												>
+													Share your certificate!
+												</Button>
+												<Button
+													type="button"
+													onClick={shareRecapImageToLinkedIn}
+													disabled={imgGenerating}
+													className="w-full rounded-full bg-[#0A66C2] text-white hover:bg-[#004182] md:w-auto"
+												>
+													<Linkedin className="h-4 w-4 mr-2" />
+													Share to LinkedIn
+												</Button>
+											</div>
+										) : (
+											<div className="hidden md:block" />
+										)}
+										<div className="flex w-full gap-3 md:w-auto">
+											<Button
+												type="button"
+												variant="secondary"
+												onClick={() => paginate(-1)}
+												disabled={currentSlide === 0}
+												className="flex-1 rounded-full bg-white/14 text-white hover:bg-white/20 md:flex-none"
+											>
+												Back
+											</Button>
+											<Button
+												type="button"
+												onClick={() => {
+													if (currentSlide === recap.slides.length - 1) {
+														closeRecap();
+														return;
+													}
+													paginate(1);
+												}}
+												className="flex-1 rounded-full bg-white text-slate-950 hover:bg-orange-100 md:flex-none"
+											>
+												{currentSlide === recap.slides.length - 1 ? "Close" : "Next"}
+											</Button>
+										</div>
+									</div>
+								</div>
+							</div>
 						</div>
 					</div>
 				</DialogContent>

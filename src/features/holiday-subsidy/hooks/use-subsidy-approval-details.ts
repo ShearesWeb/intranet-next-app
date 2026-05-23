@@ -62,15 +62,15 @@ export function useSubsidyApprovalDetails(
 		setLoading(true);
 		setError(null);
 
-		fetch(`/api/holidaySubsidy/approvals/${ccaId}`)
+		fetch(`/api/holiday-subsidy/approvals/${ccaId}`)
 			.then(async (res) => {
-				const data = await res.json();
+				const json = await res.json();
 
 				if (!res.ok) {
-					throw new Error(data.error || "Failed to fetch subsidy approvals");
+					throw new Error(json.error || "Failed to fetch subsidy approvals");
 				}
 
-				return data as ApprovalDetailPayload;
+				return (json.data ?? json) as ApprovalDetailPayload;
 			})
 			.then((data) => {
 				if (!isMounted) return;
@@ -121,19 +121,20 @@ export function useSubsidyApprovalDetails(
 				status,
 			}));
 
-			const response = await fetch(`/api/holidaySubsidy/approvals/${ccaId}`, {
+			const response = await fetch(`/api/holiday-subsidy/approvals/${ccaId}`, {
 				method: "PATCH",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ updates }),
 			});
 
-			const data = (await response.json()) as UpdateResponse & { error?: string };
+			const json = (await response.json()) as { data?: UpdateResponse; error?: string };
 
 			if (!response.ok) {
-				throw new Error(data.error || "Failed to save approvals");
+				throw new Error(json.error || "Failed to save approvals");
 			}
 
-			const updated = data.updated ?? [];
+			const payload = (json.data ?? json) as UpdateResponse;
+			const updated = payload.updated ?? [];
 			const updatedMap = new Map(updated.map((item) => [item.id, item.status] as const));
 
 			setDeclarations((prev) =>

@@ -12,7 +12,7 @@ import {
 	mapRankingResponseMembers,
 } from "@/features/ranking/utils/ranking-route";
 
-const routePath = resolve(process.cwd(), "src/app/api/cca/[ccaId]/rankings/route.ts");
+const routePath = resolve(process.cwd(), "src/app/api/cca/[cca-id]/rankings/route.ts");
 
 describe("mapRankingResponseMembers", () => {
 	it("normalizes joined rows and preserves ranking/comment defaults", () => {

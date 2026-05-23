@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CCAData } from "@/features/cca/types/cca-data";
 import type { RecapData } from "@/features/ranking/types/recap";
 import { buildRecapSlides } from "@/features/ranking/utils/recap-slides";
-import type { User } from "@/types/User";
+import type { AuthenticatedUser } from "@/types/user";
 
 type UseRecapDataResult = {
 	isMounted: boolean;
@@ -15,7 +15,7 @@ type UseRecapDataResult = {
 };
 
 export function useRecapData(
-	user: User,
+	user: AuthenticatedUser,
 	onSeenStateChange?: (hasSeenRecap: boolean) => void,
 ): UseRecapDataResult {
 	const [loadingCcas, setLoadingCcas] = useState(Boolean(user.appointments?.length));
@@ -59,7 +59,7 @@ export function useRecapData(
 
 		setLoadingCcas(true);
 
-		fetch("/api/user/getCCAs")
+		fetch("/api/user/ccas")
 			.then(async (res) => {
 				if (!res.ok) {
 					throw new Error("Failed to fetch CCA recap data");

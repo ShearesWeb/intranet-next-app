@@ -58,15 +58,15 @@ export function useSubsidyDeclarations(ccaId: string | null): UseSubsidyDeclarat
 		setLoading(true);
 		setError(null);
 
-		fetch(`/api/holidaySubsidy/declarations/${ccaId}`)
+		fetch(`/api/holiday-subsidy/declarations/${ccaId}`)
 			.then(async (res) => {
-				const data = await res.json();
+				const json = await res.json();
 
 				if (!res.ok) {
-					throw new Error(data.error || "Failed to fetch subsidy declarations");
+					throw new Error(json.error || "Failed to fetch subsidy declarations");
 				}
 
-				return data as { positions?: PositionOption[]; subsidies?: SubsidyWithPosition[] };
+				return (json.data ?? json) as { positions?: PositionOption[]; subsidies?: SubsidyWithPosition[] };
 			})
 			.then((data) => {
 				if (!isMounted) return;
@@ -114,16 +114,16 @@ export function useSubsidyDeclarations(ccaId: string | null): UseSubsidyDeclarat
 			if (!confirm("Are you sure you want to delete this declaration?")) return;
 
 			try {
-				const response = await fetch(`/api/holidaySubsidy/declarations/${ccaId}`, {
+				const response = await fetch(`/api/holiday-subsidy/declarations/${ccaId}`, {
 					method: "DELETE",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({ subsidyId: declaration.id }),
 				});
 
-				const data = await response.json();
+				const json = await response.json();
 
 				if (!response.ok) {
-					throw new Error(data.error || "Failed to delete declaration");
+					throw new Error(json.error || "Failed to delete declaration");
 				}
 
 				setDeclarations((prev) => prev.filter((item) => item.id !== declaration.id));

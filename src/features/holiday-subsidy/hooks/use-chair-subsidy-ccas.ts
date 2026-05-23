@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import type { AuthenticatedUser } from "@/types/User";
+import type { AuthenticatedUser } from "@/types/user";
 
 export interface ChairSubsidyRow {
 	id: number;

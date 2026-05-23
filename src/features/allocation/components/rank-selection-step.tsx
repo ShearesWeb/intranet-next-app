@@ -1,10 +1,12 @@
 "use client";
 
 import React from "react";
-import { Info } from "lucide-react";
+import { Info, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { SelectionTable } from "@/components/table/selection-table";
-import { selectionColumns } from "@/features/allocation/utils/ranking-columns";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { OrderingTable, type OrderingTableColumn } from "@/components/table/ordering-table";
+import { rankingColumns } from "@/features/allocation/utils/ranking-columns";
 import type { RankablePosition } from "@/features/allocation/types/preferences";
 
 interface RankSelectionStepProps {
@@ -20,11 +22,41 @@ export function RankSelectionStep({
 	onToggle,
 	onProceed,
 }: RankSelectionStepProps) {
+	const [query, setQuery] = React.useState("");
 	const count = selectedIds.size;
+
+	const filtered = React.useMemo(() => {
+		const q = query.trim().toLowerCase();
+		if (!q) return allPositions;
+		return allPositions.filter(
+			(p) =>
+				p.name.toLowerCase().includes(q) ||
+				p.cca_name.toLowerCase().includes(q),
+		);
+	}, [allPositions, query]);
+
+	const columns = React.useMemo<OrderingTableColumn<RankablePosition>[]>(
+		() => [
+			{
+				accessorKey: "id",
+				header: "",
+				cell: (_value, row) => (
+					<Checkbox
+						checked={selectedIds.has(row.id)}
+						onCheckedChange={() => onToggle(row.id)}
+						aria-label={`Select ${row.name}`}
+					/>
+				),
+			},
+			...rankingColumns,
+		],
+		[selectedIds, onToggle],
+	);
+
 	return (
 		<div className="flex flex-col space-y-6 p-4 md:p-6">
 			<div className="flex flex-col gap-2">
-				<h1 className="text-2xl font-semibold">Pick CCAs you want to apply to</h1>
+				<h1 className="text-2xl font-semibold">Indicate your CCA preferences</h1>
 				<p className="text-muted-foreground">
 					Tick every position you&apos;d genuinely consider joining. You&apos;ll order them by
 					preference in the next step. Positions that are already full are hidden automatically.
@@ -40,27 +72,34 @@ export function RankSelectionStep({
 				</div>
 			</div>
 
-			<div className="flex items-center justify-between gap-3">
-				<div className="text-sm text-muted-foreground">
-					{count === 0
-						? "No positions selected yet."
-						: `${count} position${count === 1 ? "" : "s"} selected`}
+			<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+				<div className="relative max-w-sm flex-1">
+					<Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+					<Input
+						placeholder="Search by position or CCA…"
+						value={query}
+						onChange={(e) => setQuery(e.target.value)}
+						className="pl-9"
+					/>
 				</div>
-				<Button onClick={onProceed} disabled={count === 0}>
-					Next: Rank your picks →
-				</Button>
+				<div className="flex items-center gap-3">
+					<div className="text-sm text-muted-foreground">
+						{count === 0
+							? "No preferences selected"
+							: `${count} preference${count === 1 ? "" : "s"} selected`}
+					</div>
+					<Button onClick={onProceed} disabled={count === 0}>
+						Next: Order your preferences →
+					</Button>
+				</div>
 			</div>
 
-			<SelectionTable<RankablePosition, number>
-				data={allPositions}
-				columns={selectionColumns}
-				selectedIds={selectedIds}
-				onSelectionChange={onToggle}
-				idField="id"
-				searchColumn="name"
-				searchPlaceholder="Search by position name..."
-				pageSize={25}
-				emptyMessage="No positions available right now. Check back later or contact JCRC if you think this is a mistake."
+			<OrderingTable<RankablePosition>
+				data={filtered}
+				columns={columns}
+				draggable={false}
+				showRankColumn={false}
+				emptyMessage="No positions match your search."
 			/>
 		</div>
 	);

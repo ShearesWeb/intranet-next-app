@@ -19,8 +19,8 @@ export function AllocationGuideHero() {
 				stable, and impossible to game.
 			</p>
 			<div className="flex gap-3 pt-2">
-				<Link href="/dashboard/ccaAllocation/rank">
-					<Button size="lg">Start ranking →</Button>
+				<Link href="/dashboard/cca-allocation/rank">
+					<Button size="lg">Indicate your preferences →</Button>
 				</Link>
 			</div>
 		</div>

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getManagedCcaData } from "@/lib/managed-cca-data";
-import { fetchUserInfo } from "@/lib/fetch-user-info";
+import { fetchUserInfo } from "@/lib/auth/fetch-user-info";
 import { getCoreServiceDisabledApiResponse, isCoreServiceEnabled } from "@/lib/feature-flags";
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 
 export async function GET() {
 	try {

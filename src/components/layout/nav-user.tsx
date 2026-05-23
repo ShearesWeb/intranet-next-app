@@ -17,7 +17,7 @@ import {
 	SidebarMenuItem,
 	useSidebar,
 } from "@/components/ui/sidebar";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/lib/auth/auth-context";
 
 export function NavUser() {
 	const { isMobile } = useSidebar();

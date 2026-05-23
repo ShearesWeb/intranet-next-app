@@ -1,39 +1,51 @@
 "use client";
 
 import React from "react";
+import { type ColumnDef } from "@tanstack/react-table";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { SimpleTable, type SimpleTableColumn } from "@/components/table/simple-table";
-import { PositionTypeBadge } from "@/components/badges/position-type-badge";
+import { DataTable } from "@/components/table/data-table";
+import { PositionTypeBadge } from "@/components/badges";
 import type { ChairSubsidyRow } from "@/features/holiday-subsidy/hooks/use-chair-subsidy-ccas";
 
-const columns: SimpleTableColumn<ChairSubsidyRow>[] = [
+const columns: ColumnDef<ChairSubsidyRow>[] = [
 	{
 		accessorKey: "name",
-		header: "CCA",
-		cell: (value) => <div className="font-semibold">{String(value)}</div>,
+		header: ({ column }) => (
+			<div className="flex items-center gap-2">
+				<span className="font-semibold">CCA</span>
+				<Button
+					variant="ghost"
+					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+					className="h-8 w-8 p-0"
+				>
+					<ArrowUpDown className="h-4 w-4" />
+				</Button>
+			</div>
+		),
+		cell: ({ row }) => <div className="font-semibold">{String(row.getValue("name"))}</div>,
 	},
 	{
 		accessorKey: "position_name",
-		header: "Your Position",
+		header: () => <div className="font-semibold">Your Position</div>,
 		enableSorting: false,
-		cell: (_, row) => (
+		cell: ({ row }) => (
 			<PositionTypeBadge
-				value={row.position_name}
-				position_type={row.position_type}
+				value={row.original.position_name}
+				positionType={row.original.position_type}
 				className="capitalize"
 			/>
 		),
 	},
 	{
-		accessorKey: "actions" as keyof ChairSubsidyRow,
-		header: "Actions",
+		id: "actions",
+		header: () => <div className="font-semibold">Actions</div>,
 		enableSorting: false,
-		cell: (_, row) => (
+		cell: ({ row }) => (
 			<div className="flex flex-col sm:flex-row sm:items-center justify-end sm:justify-start gap-2 w-full sm:w-auto">
 				<Link
-					href={`/dashboard/holidaySubsidy/declaration/${encodeURIComponent(row.name)}?ccaId=${row.id}`}
+					href={`/dashboard/holiday-subsidy/declaration/${encodeURIComponent(row.original.name)}?ccaId=${row.original.id}`}
 				>
 					<Button size="sm" variant="outline" className="gap-2 px-3 py-2">
 						Subsidy Declaration
@@ -41,7 +53,7 @@ const columns: SimpleTableColumn<ChairSubsidyRow>[] = [
 					</Button>
 				</Link>
 				<Link
-					href={`/dashboard/holidaySubsidy/weekly/${encodeURIComponent(row.name)}?ccaId=${row.id}`}
+					href={`/dashboard/holiday-subsidy/weekly/${encodeURIComponent(row.original.name)}?ccaId=${row.original.id}`}
 				>
 					<Button size="sm" className="gap-2 px-3 py-2">
 						Weekly Commitment Declaration
@@ -55,7 +67,7 @@ const columns: SimpleTableColumn<ChairSubsidyRow>[] = [
 
 export function ChairCcaTable({ data }: { data: ChairSubsidyRow[] }) {
 	return (
-		<SimpleTable
+		<DataTable
 			data={data}
 			columns={columns}
 			searchColumn="name"

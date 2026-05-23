@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # scripts/setup-test-db.sh
 #
-# Boot the local Supabase stack, apply the canonical schema from the sibling
-# intranet repo via Liquibase, and load tests/fixtures/seed.sql.
+# Boot the local Supabase stack, apply the canonical schema from the
+# `vendor/intranet` submodule via Liquibase, and load tests/fixtures/seed.sql.
 #
 # Usage:
 #   ./scripts/setup-test-db.sh            # full bootstrap
@@ -10,7 +10,7 @@
 #
 # Env vars:
 #   INTRANET_REPO_PATH   absolute or relative path to the intranet repo
-#                        (default: ../intranet, resolved from this script's directory)
+#                        (default: vendor/intranet, the pinned submodule)
 #   SUPABASE_DB_URL      override DB connection string used for seed apply
 #                        (default: postgresql://supabase_admin:postgres@127.0.0.1:54322/postgres
 #                         — supabase_admin is the actual superuser in local Supabase and owns the
@@ -24,7 +24,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$REPO_ROOT"
 
-INTRANET_REPO_PATH="${INTRANET_REPO_PATH:-$REPO_ROOT/../intranet}"
+INTRANET_REPO_PATH="${INTRANET_REPO_PATH:-$REPO_ROOT/vendor/intranet}"
 SUPABASE_DB_URL="${SUPABASE_DB_URL:-postgresql://supabase_admin:postgres@127.0.0.1:54322/postgres}"
 LIQUIBASE_CHANGELOG="$INTRANET_REPO_PATH/db/changelogs/qa.changelog-master.xml"
 
@@ -36,8 +36,16 @@ fi
 log() { printf '[setup-test-db] %s\n' "$*"; }
 die() { printf '[setup-test-db] ERROR: %s\n' "$*" >&2; exit 1; }
 
+# Auto-init the vendor/intranet submodule when using the default path. This
+# means a fresh `git clone` (without --recurse-submodules) still produces a
+# working integration setup after one `npm run db:test:setup`.
+if [[ "$INTRANET_REPO_PATH" == "$REPO_ROOT/vendor/intranet" && ! -f "$LIQUIBASE_CHANGELOG" ]]; then
+	log "vendor/intranet submodule not initialized — running git submodule update --init"
+	git -C "$REPO_ROOT" submodule update --init --recursive -- vendor/intranet
+fi
+
 if [[ ! -f "$LIQUIBASE_CHANGELOG" ]]; then
-	die "Liquibase changelog not found at $LIQUIBASE_CHANGELOG. Set INTRANET_REPO_PATH or clone the intranet repo."
+	die "Liquibase changelog not found at $LIQUIBASE_CHANGELOG. Set INTRANET_REPO_PATH or run: git submodule update --init --recursive"
 fi
 
 if [[ "$RESEED_ONLY" -eq 0 ]]; then

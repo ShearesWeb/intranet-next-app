@@ -1,10 +1,58 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { animate, type PanInfo } from "framer-motion";
 import type { RecapSlide } from "@/features/ranking/types/recap";
 
-const swipeThreshold = 70;
+/** Attempt a cubic-bezier-style easing for the count-up. */
+function easeOutCubic(t: number): number {
+	return 1 - Math.pow(1 - t, 3);
+}
+
+/**
+ * Animate a numeric value from `from` to `to` using requestAnimationFrame.
+ * Returns a stop function.
+ */
+function animateValue(
+	from: number,
+	to: number,
+	duration: number,
+	delay: number,
+	onUpdate: (value: number) => void,
+): { stop: () => void } {
+	let rafId: number | null = null;
+	let stopped = false;
+
+	const delayMs = delay * 1000;
+	const durationMs = duration * 1000;
+
+	const timeoutId = setTimeout(() => {
+		if (stopped) return;
+		const startTime = performance.now();
+
+		const tick = (now: number) => {
+			if (stopped) return;
+			const elapsed = now - startTime;
+			const progress = Math.min(elapsed / durationMs, 1);
+			const eased = easeOutCubic(progress);
+			const current = from + (to - from) * eased;
+			onUpdate(current);
+
+			if (progress < 1) {
+				rafId = requestAnimationFrame(tick);
+			}
+		};
+
+		rafId = requestAnimationFrame(tick);
+	}, delayMs);
+
+	return {
+		stop: () => {
+			stopped = true;
+			clearTimeout(timeoutId);
+			if (rafId !== null) cancelAnimationFrame(rafId);
+		},
+	};
+}
 
 export function useRecapNavigation(slides: RecapSlide[], open: boolean) {
 	const [currentSlide, setCurrentSlide] = useState(0);
@@ -49,40 +97,24 @@ export function useRecapNavigation(slides: RecapSlide[], open: boolean) {
 		const from = displayCountRef.current;
 		const delta = Math.abs(target - from);
 
-		let controls: ReturnType<typeof animate>;
+		let duration: number;
+		let delay: number;
 
 		if (activeSlide.id === "reveal") {
-			const mid = from + (target - from) * 0.6;
-			controls = animate(from, [mid, target], {
-				times: [0, 0.7, 1],
-				duration: 2.2,
-				ease: [0.33, 1, 0.68, 1],
-				delay: 0.12,
-				onUpdate: (latest) => {
-					displayCountRef.current = Number(latest);
-					setDisplayCount(Math.round(Number(latest)));
-				},
-			});
+			duration = 2.2;
+			delay = 0.12;
 		} else if (activeSlide.id === "intro") {
-			controls = animate(from, target, {
-				duration: 1.4,
-				ease: [0.16, 1, 0.3, 1],
-				delay: 0.08,
-				onUpdate: (latest) => {
-					displayCountRef.current = latest;
-					setDisplayCount(Math.round(latest));
-				},
-			});
+			duration = 1.4;
+			delay = 0.08;
 		} else {
-			controls = animate(from, target, {
-				duration: Math.min(1.3, Math.max(0.7, delta * 0.06)),
-				ease: [0.22, 1, 0.36, 1],
-				onUpdate: (latest) => {
-					displayCountRef.current = latest;
-					setDisplayCount(Math.round(latest));
-				},
-			});
+			duration = Math.min(1.3, Math.max(0.7, delta * 0.06));
+			delay = 0;
 		}
+
+		const controls = animateValue(from, target, duration, delay, (latest) => {
+			displayCountRef.current = latest;
+			setDisplayCount(Math.round(latest));
+		});
 
 		return () => controls.stop();
 	}, [currentSlide, open, slides]);
@@ -98,15 +130,6 @@ export function useRecapNavigation(slides: RecapSlide[], open: boolean) {
 		});
 	};
 
-	const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-		if (info.offset.x <= -swipeThreshold) {
-			paginate(1);
-		}
-		if (info.offset.x >= swipeThreshold) {
-			paginate(-1);
-		}
-	};
-
 	return {
 		currentSlide,
 		setCurrentSlide,
@@ -114,6 +137,5 @@ export function useRecapNavigation(slides: RecapSlide[], open: boolean) {
 		setDirection,
 		displayCount,
 		paginate,
-		handleDragEnd,
 	};
 }

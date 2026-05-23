@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useMemo } from "react";
+import { type ColumnDef } from "@tanstack/react-table";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { PositionTypeBadge } from "@/components/badges/position-type-badge";
-import { SelectionTable, type SelectionTableColumn } from "@/components/table/selection-table";
+import { PositionTypeBadge } from "@/components/badges";
+import { DataTable } from "@/components/table/data-table";
 import type { WeeklyRow } from "@/features/holiday-subsidy/types/weekly";
 
 export interface WeeklyCommitmentTableProps {
@@ -22,33 +23,38 @@ export function WeeklyCommitmentTable({
 	onToggleSelected,
 	onChange,
 }: WeeklyCommitmentTableProps) {
-	const columns: SelectionTableColumn<WeeklyRow>[] = useMemo(
+	const columns: ColumnDef<WeeklyRow>[] = useMemo(
 		() => [
 			{
 				accessorKey: "name",
-				header: "Member",
-				cell: (_value, row) => (
+				header: () => <div className="font-semibold">Member</div>,
+				cell: ({ row }) => (
 					<div className="flex flex-col min-w-[180px]">
-						<span className="font-semibold text-sm md:text-base leading-tight">{row.name}</span>
-						<span className="text-xs text-muted-foreground mt-0.5">{row.email}</span>
+						<span className="font-semibold text-sm md:text-base leading-tight">
+							{row.original.name}
+						</span>
+						<span className="text-xs text-muted-foreground mt-0.5">{row.original.email}</span>
 					</div>
 				),
 			},
 			{
 				accessorKey: "role",
-				header: "Role",
-				cell: (value, row) => (
+				header: () => <div className="font-semibold">Role</div>,
+				cell: ({ row }) => (
 					<div className="min-w-[100px]">
-						<PositionTypeBadge value={String(value)} position_type={String(row.type)} />
+						<PositionTypeBadge
+							value={String(row.getValue("role"))}
+							positionType={String(row.original.type)}
+						/>
 					</div>
 				),
 			},
 			{
 				accessorKey: "type",
-				header: "Type",
-				cell: (value) => (
+				header: () => <div className="font-semibold">Type</div>,
+				cell: ({ row }) => (
 					<div className="min-w-[110px]">
-						<PositionTypeBadge value={String(value)} />
+						<PositionTypeBadge value={String(row.getValue("type"))} />
 					</div>
 				),
 			},
@@ -56,9 +62,9 @@ export function WeeklyCommitmentTable({
 				// Per-user `hours` is now an OVERRIDE on the envelope rate.
 				// Leaving the input empty inherits the envelope `approved_hours`.
 				accessorKey: "hours",
-				header: "Hours",
-				cell: (_value, row) => {
-					const isOverride = row.override_hours !== null;
+				header: () => <div className="font-semibold">Hours</div>,
+				cell: ({ row }) => {
+					const isOverride = row.original.override_hours !== null;
 					return (
 						<div className="flex items-center gap-2 min-w-[100px]">
 							<Input
@@ -67,16 +73,16 @@ export function WeeklyCommitmentTable({
 								max={168}
 								step={0.5}
 								className="w-20 text-center font-semibold"
-								value={isOverride ? String(row.override_hours) : ""}
+								value={isOverride ? String(row.original.override_hours) : ""}
 								onClick={(e) => e.stopPropagation()}
 								onMouseDown={(e) => e.stopPropagation()}
 								onChange={(e) => {
 									const next = e.target.value;
-									onChange(row.id, "override_hours", next === "" ? null : Number(next));
+									onChange(row.original.id, "override_hours", next === "" ? null : Number(next));
 								}}
-								placeholder={String(row.approved_hours)}
-								disabled={!row.has_approved_subsidy || !isWeekOpen}
-								aria-label={`Hours override (envelope rate ${row.approved_hours})`}
+								placeholder={String(row.original.approved_hours)}
+								disabled={!row.original.has_approved_subsidy || !isWeekOpen}
+								aria-label={`Hours override (envelope rate ${row.original.approved_hours})`}
 							/>
 							<span className="text-xs text-muted-foreground">hrs</span>
 						</div>
@@ -84,15 +90,13 @@ export function WeeklyCommitmentTable({
 				},
 			},
 			{
-				// Envelope-level justification is read-only here — it lives on
-				// the parent cca_subsidies row, set by the chair at envelope
-				// declaration time.
+				// Envelope-level justification is read-only here.
 				accessorKey: "justification",
-				header: "Justification",
-				cell: (_value, row) => (
+				header: () => <div className="font-semibold">Justification</div>,
+				cell: ({ row }) => (
 					<div className="min-w-[200px] max-w-[300px]">
 						<p className="text-xs text-muted-foreground whitespace-pre-line break-words line-clamp-3">
-							{row.justification || "—"}
+							{row.original.justification || "—"}
 						</p>
 					</div>
 				),
@@ -100,21 +104,21 @@ export function WeeklyCommitmentTable({
 			{
 				// Per-member chair note (cca_user_subsidies.comments).
 				accessorKey: "comments",
-				header: "Comments",
-				cell: (_value, row) => (
+				header: () => <div className="font-semibold">Comments</div>,
+				cell: ({ row }) => (
 					<div className="min-w-[250px] max-w-[400px]">
 						<Textarea
 							className="min-h-[70px] resize-none text-sm"
-							value={row.comments}
+							value={row.original.comments}
 							onClick={(e) => e.stopPropagation()}
 							onMouseDown={(e) => e.stopPropagation()}
-							onChange={(e) => onChange(row.id, "comments", e.target.value)}
+							onChange={(e) => onChange(row.original.id, "comments", e.target.value)}
 							placeholder={
-								row.has_approved_subsidy
+								row.original.has_approved_subsidy
 									? "Add a note for JCRC reviewers..."
 									: "No approved subsidy"
 							}
-							disabled={!row.has_approved_subsidy || !isWeekOpen}
+							disabled={!row.original.has_approved_subsidy || !isWeekOpen}
 						/>
 					</div>
 				),
@@ -124,10 +128,10 @@ export function WeeklyCommitmentTable({
 	);
 
 	return (
-		<SelectionTable<WeeklyRow, number>
+		<DataTable<WeeklyRow, number>
 			data={rows}
 			columns={columns}
-			selectionEnabled={isWeekOpen}
+			selectable={isWeekOpen}
 			selectedIds={selected}
 			onSelectionChange={onToggleSelected}
 			idField="id"

@@ -27,8 +27,9 @@ export function useApplicantRankings(userEmail: string | undefined) {
 				headers["Cache-Control"] = "no-cache";
 				headers["Pragma"] = "no-cache";
 			}
-			const response = await fetch("/api/chair/positions/forChair", { headers });
-			const data = await response.json();
+			const response = await fetch("/api/chair/positions/for-chair", { headers });
+			const json = await response.json();
+			const data = json.data ?? json;
 			setPositions(data.positions || []);
 			const orderMap: Record<number, number[]> = {};
 			const changesMap: Record<number, boolean> = {};
@@ -103,20 +104,14 @@ export function useApplicantRankings(userEmail: string | undefined) {
 		[checkForChanges],
 	);
 
-	const handleMoveApplicant = useCallback(
-		(positionIndex: number, applicantIndex: number, delta: number) => {
-			setPositions((prevPositions) => {
-				const newPositions = [...prevPositions];
-				const position = newPositions[positionIndex];
-				if (!position) return prevPositions;
-				const apps = [...position.applicants];
-				const targetIndex = applicantIndex + delta;
-				if (targetIndex < 0 || targetIndex >= apps.length) return prevPositions;
-				[apps[applicantIndex], apps[targetIndex]] = [apps[targetIndex], apps[applicantIndex]];
-				newPositions[positionIndex] = { ...position, applicants: apps };
-				checkForChanges(position.id, apps);
-				return newPositions;
-			});
+	const handleReorderApplicants = useCallback(
+		(positionId: number, newApplicants: Applicant[]) => {
+			setPositions((prevPositions) =>
+				prevPositions.map((pos) =>
+					pos.id === positionId ? { ...pos, applicants: newApplicants } : pos,
+				),
+			);
+			checkForChanges(positionId, newApplicants);
 		},
 		[checkForChanges],
 	);
@@ -127,7 +122,7 @@ export function useApplicantRankings(userEmail: string | undefined) {
 				const { toAdd, toRemove, rankings } = diffApplicantsForSave(position, originalOrders);
 
 				for (const userId of toAdd) {
-					const response = await fetch(`/api/chair/positions/${position.id}/addApplicant`, {
+					const response = await fetch(`/api/chair/positions/${position.id}/applicants`, {
 						method: "POST",
 						headers: { "Content-Type": "application/json" },
 						body: JSON.stringify({ user_id: userId }),
@@ -140,8 +135,8 @@ export function useApplicantRankings(userEmail: string | undefined) {
 				}
 
 				for (const userId of toRemove) {
-					const response = await fetch(`/api/chair/positions/${position.id}/removeApplicant`, {
-						method: "POST",
+					const response = await fetch(`/api/chair/positions/${position.id}/applicants`, {
+						method: "DELETE",
 						headers: { "Content-Type": "application/json" },
 						body: JSON.stringify({ user_id: userId }),
 					});
@@ -168,42 +163,50 @@ export function useApplicantRankings(userEmail: string | undefined) {
 				return true;
 			} catch (error) {
 				console.error("Error saving rankings:", error);
-				toast.error(error instanceof Error ? error.message : "Failed to save rankings");
+				toast.error(error instanceof Error ? error.message : "Failed to save preferences");
 				return false;
 			}
 		},
 		[originalOrders],
 	);
 
-	const handleSaveRankings = useCallback(
-		async (position: Position) => {
-			setIsSaving(true);
-			try {
+	const handleSaveAll = useCallback(async () => {
+		const dirty = positions.filter((p) => hasChanges[p.id]);
+		if (dirty.length === 0) return;
+		setIsSaving(true);
+		const failures: string[] = [];
+		try {
+			for (const position of dirty) {
 				const success = await saveRankingsForPosition(position);
-				if (success) {
-					await fetchPositions.current(true);
-					toast.success(`Rankings saved for ${position.name}!`);
-				} else {
-					toast.error("Failed to save rankings");
-				}
-			} catch {
-				toast.error("Failed to save rankings");
-			} finally {
-				setIsSaving(false);
+				if (!success) failures.push(position.name);
 			}
-		},
-		[saveRankingsForPosition],
-	);
+			await fetchPositions.current(true);
+			if (failures.length === 0) {
+				toast.success(
+					dirty.length === 1
+						? "Preferences saved!"
+						: `Preferences saved for ${dirty.length} positions`,
+				);
+			} else {
+				toast.error(`Failed to save: ${failures.join(", ")}`);
+			}
+		} finally {
+			setIsSaving(false);
+		}
+	}, [positions, hasChanges, saveRankingsForPosition]);
+
+	const hasAnyChanges = Object.values(hasChanges).some(Boolean);
 
 	return {
 		positions,
 		loading,
 		isSaving,
 		hasChanges,
+		hasAnyChanges,
 		mounted,
 		handleAddApplicant,
 		handleRemoveApplicant,
-		handleMoveApplicant,
-		handleSaveRankings,
+		handleReorderApplicants,
+		handleSaveAll,
 	};
 }

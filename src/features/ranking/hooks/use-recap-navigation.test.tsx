@@ -4,11 +4,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useRecapNavigation } from "@/features/ranking/hooks/use-recap-navigation";
 import type { RecapSlide } from "@/features/ranking/types/recap";
 
-vi.mock("framer-motion", () => ({
-	animate: vi.fn(() => ({ stop: vi.fn() })),
-	motion: { p: "p" },
-}));
-
 const makeSlides = (n: number): RecapSlide[] =>
 	Array.from({ length: n }, (_, i) => ({
 		id: `slide-${i}`,
@@ -101,50 +96,6 @@ describe("useRecapNavigation", () => {
 		});
 		expect(result.current?.currentSlide).toBe(1);
 		expect(result.current?.direction).toBe(-1);
-		unmount();
-	});
-
-	it("swipe offset beyond threshold triggers forward navigation", () => {
-		const slides = makeSlides(3);
-		const { result, unmount } = renderHook(slides, true);
-
-		const mockEvent = new MouseEvent("mouseup");
-		act(() => {
-			result.current?.handleDragEnd(mockEvent, {
-				offset: { x: -80, y: 0 },
-				velocity: { x: 0, y: 0 },
-				delta: { x: 0, y: 0 },
-				point: { x: 0, y: 0 },
-			} as import("framer-motion").PanInfo);
-		});
-
-		expect(result.current?.currentSlide).toBe(1);
-		unmount();
-	});
-
-	it("swipe offset beyond threshold triggers backward navigation", () => {
-		const slides = makeSlides(3);
-		const { result, unmount } = renderHook(slides, true);
-
-		// First go to slide 2
-		act(() => {
-			result.current?.paginate(1);
-		});
-		act(() => {
-			result.current?.paginate(1);
-		});
-
-		const mockEvent = new MouseEvent("mouseup");
-		act(() => {
-			result.current?.handleDragEnd(mockEvent, {
-				offset: { x: 80, y: 0 },
-				velocity: { x: 0, y: 0 },
-				delta: { x: 0, y: 0 },
-				point: { x: 0, y: 0 },
-			} as import("framer-motion").PanInfo);
-		});
-
-		expect(result.current?.currentSlide).toBe(1);
 		unmount();
 	});
 });

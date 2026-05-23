@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { HOLIDAY_WEEKS } from "@/features/holiday-subsidy/utils/holiday-weeks";
 import type {
@@ -17,19 +17,23 @@ export interface UseWeeklyApprovalsResult {
 	// Row + selection
 	rows: WeeklyApprovalRow[];
 	selected: Set<number>;
+	pendingStatus: Map<number, WeeklyApprovalStatus>;
 	toggleSelected: (id: number) => void;
 
 	// CCA display name
 	ccaName: string;
 
 	// State
-	loading: boolean;
+	saving: boolean;
 	isLoadingData: boolean;
 	error: string | null;
+	hasChanges: boolean;
 
 	// Actions
-	handleApprove: () => Promise<void>;
-	handleReject: () => Promise<void>;
+	stageApprove: () => void;
+	stageReject: () => void;
+	clearStaged: () => void;
+	save: () => Promise<void>;
 }
 
 export function useWeeklyApprovals(
@@ -39,26 +43,36 @@ export function useWeeklyApprovals(
 	const [weekIndex, setWeekIndex] = useState(0);
 	const [rows, setRows] = useState<WeeklyApprovalRow[]>([]);
 	const [selected, setSelected] = useState<Set<number>>(new Set());
-	const [loading, setLoading] = useState(false);
+	const [pendingStatus, setPendingStatus] = useState<Map<number, WeeklyApprovalStatus>>(new Map());
+	const [saving, setSaving] = useState(false);
 	const [isLoadingData, setIsLoadingData] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [ccaName, setCcaName] = useState(initialCcaName);
 
 	const weekInfo = HOLIDAY_WEEKS[weekIndex];
 
+	// Warn user before leaving page with unsaved changes
+	useEffect(() => {
+		const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+			if (pendingStatus.size > 0) {
+				e.preventDefault();
+				e.returnValue = "";
+				return "";
+			}
+		};
+		window.addEventListener("beforeunload", handleBeforeUnload);
+		return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+	}, [pendingStatus]);
+
 	// Fetch CCA display name from approvals endpoint
 	useEffect(() => {
 		if (!ccaId) return;
-
 		let isMounted = true;
-
-		fetch(`/api/holidaySubsidy/approvals/${ccaId}`)
+		fetch(`/api/holiday-subsidy/approvals/${ccaId}`)
 			.then(async (res) => {
-				const data = await res.json();
-				if (!res.ok) {
-					throw new Error(data.error || "Failed to fetch CCA details");
-				}
-				return data;
+				const json = await res.json();
+				if (!res.ok) throw new Error(json.error || "Failed to fetch CCA details");
+				return json.data ?? json;
 			})
 			.then((data) => {
 				if (!isMounted) return;
@@ -69,7 +83,6 @@ export function useWeeklyApprovals(
 				console.error("Error fetching CCA name:", err);
 				setCcaName("Unknown CCA");
 			});
-
 		return () => {
 			isMounted = false;
 		};
@@ -89,16 +102,19 @@ export function useWeeklyApprovals(
 
 			try {
 				const response = await fetch(
-					`/api/holidaySubsidy/approvals/weekly/${ccaId}/${weekInfo.id}`,
+					`/api/holiday-subsidy/approvals/weekly/${ccaId}/${weekInfo.id}`,
 				);
 
 				if (!response.ok) {
-					const data = await response.json();
-					throw new Error(data.error || "Failed to load data");
+					const json = await response.json();
+					throw new Error(json.error || "Failed to load data");
 				}
 
-				const data = await response.json();
-				setRows(data.submissions || []);
+				const json = await response.json();
+				const payload = json.data ?? json;
+				setRows(payload.submissions || []);
+				setSelected(new Set());
+				setPendingStatus(new Map());
 			} catch (err) {
 				console.error("Error fetching weekly approval data:", err);
 				setError(err instanceof Error ? err.message : "Failed to load approval data");
@@ -122,58 +138,96 @@ export function useWeeklyApprovals(
 		});
 	}, []);
 
-	const handleWeekChange = useCallback((newIndex: number) => {
-		setWeekIndex(newIndex);
-		setSelected(new Set());
-	}, []);
-
-	const runBatchUpdate = useCallback(
-		async (status: WeeklyApprovalStatus, verb: "approve" | "reject") => {
-			if (selected.size === 0) {
-				toast.error(`Please select at least one member to ${verb}.`);
-				return;
+	const handleWeekChange = useCallback(
+		(newIndex: number) => {
+			if (pendingStatus.size > 0) {
+				if (!confirm("You have unsaved changes. Discard them and switch weeks?")) return;
 			}
-
-			setLoading(true);
-			try {
-				const updates = rows
-					.filter((row) => selected.has(row.id))
-					.map((row) => ({
-						userSubsidyId: row.user_subsidy_id,
-						status,
-					}));
-
-				const response = await fetch(
-					`/api/holidaySubsidy/approvals/weekly/${ccaId}/${weekInfo.id}`,
-					{
-						method: "PATCH",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({ updates }),
-					},
-				);
-
-				if (!response.ok) {
-					const data = await response.json();
-					throw new Error(data.error || `Failed to ${verb}`);
-				}
-
-				setRows((prev) => prev.map((row) => (selected.has(row.id) ? { ...row, status } : row)));
-
-				const verbPast = verb === "approve" ? "Approved" : "Rejected";
-				toast.success(`${verbPast} ${selected.size} member(s).`);
-				setSelected(new Set());
-			} catch (err) {
-				console.error(`Error ${verb}ing:`, err);
-				toast.error(err instanceof Error ? err.message : `Failed to ${verb}. Please try again.`);
-			} finally {
-				setLoading(false);
-			}
+			setWeekIndex(newIndex);
+			setSelected(new Set());
+			setPendingStatus(new Map());
 		},
-		[ccaId, rows, selected, weekInfo.id],
+		[pendingStatus],
 	);
 
-	const handleApprove = useCallback(() => runBatchUpdate("approved", "approve"), [runBatchUpdate]);
-	const handleReject = useCallback(() => runBatchUpdate("rejected", "reject"), [runBatchUpdate]);
+	const stageStatus = useCallback(
+		(status: WeeklyApprovalStatus, verb: "approve" | "reject") => {
+			if (selected.size === 0) {
+				toast.error(`Select at least one member to ${verb}.`);
+				return;
+			}
+			setPendingStatus((prev) => {
+				const next = new Map(prev);
+				rows.forEach((row) => {
+					if (!selected.has(row.id)) return;
+					// If the new status matches what the server already has, drop the
+					// pending entry — it's a no-op.
+					if (row.status === status) {
+						next.delete(row.id);
+					} else {
+						next.set(row.id, status);
+					}
+				});
+				return next;
+			});
+			setSelected(new Set());
+		},
+		[rows, selected],
+	);
+
+	const stageApprove = useCallback(() => stageStatus("approved", "approve"), [stageStatus]);
+	const stageReject = useCallback(() => stageStatus("rejected", "reject"), [stageStatus]);
+
+	const clearStaged = useCallback(() => {
+		setPendingStatus(new Map());
+	}, []);
+
+	const save = useCallback(async () => {
+		if (pendingStatus.size === 0) {
+			toast.error("No staged changes to save.");
+			return;
+		}
+
+		setSaving(true);
+		try {
+			const updates = rows
+				.filter((row) => pendingStatus.has(row.id))
+				.map((row) => ({
+					userSubsidyId: row.user_subsidy_id,
+					status: pendingStatus.get(row.id)!,
+				}));
+
+			const response = await fetch(
+				`/api/holiday-subsidy/approvals/weekly/${ccaId}/${weekInfo.id}`,
+				{
+					method: "PATCH",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ updates }),
+				},
+			);
+
+			if (!response.ok) {
+				const json = await response.json();
+				throw new Error(json.error || "Failed to save");
+			}
+
+			setRows((prev) =>
+				prev.map((row) => {
+					const next = pendingStatus.get(row.id);
+					return next ? { ...row, status: next } : row;
+				}),
+			);
+			toast.success(`Saved ${updates.length} change(s) for ${weekInfo.label}.`);
+			setPendingStatus(new Map());
+		} catch (err) {
+			console.error("Error saving weekly approvals:", err);
+			toast.error(err instanceof Error ? err.message : "Failed to save. Please try again.");
+		} finally {
+			setSaving(false);
+		}
+	}, [ccaId, rows, pendingStatus, weekInfo.id, weekInfo.label]);
+
+	const hasChanges = useMemo(() => pendingStatus.size > 0, [pendingStatus]);
 
 	return {
 		weekIndex,
@@ -181,12 +235,16 @@ export function useWeeklyApprovals(
 		handleWeekChange,
 		rows,
 		selected,
+		pendingStatus,
 		toggleSelected,
 		ccaName,
-		loading,
+		saving,
 		isLoadingData,
 		error,
-		handleApprove,
-		handleReject,
+		hasChanges,
+		stageApprove,
+		stageReject,
+		clearStaged,
+		save,
 	};
 }

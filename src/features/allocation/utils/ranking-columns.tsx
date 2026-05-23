@@ -1,6 +1,5 @@
 import React from "react";
-import { PositionTypeBadge } from "@/components/badges/position-type-badge";
-import type { SelectionTableColumn } from "@/components/table/selection-table";
+import { PositionTypeBadge } from "@/components/badges";
 import type { OrderingTableColumn } from "@/components/table/ordering-table";
 import type { RankablePosition } from "@/features/allocation/types/preferences";
 
@@ -14,35 +13,7 @@ function SlotsLeftCell({ available, capacity }: { available: number; capacity: n
 	);
 }
 
-export const selectionColumns: SelectionTableColumn<RankablePosition>[] = [
-	{
-		accessorKey: "name",
-		header: "Position",
-		cell: (value) => <div className="font-medium">{String(value)}</div>,
-	},
-	{ accessorKey: "cca_name", header: "CCA" },
-	{
-		accessorKey: "position_type",
-		header: "Commitment",
-		cell: (value) => <PositionTypeBadge value={String(value)} />,
-	},
-	{
-		accessorKey: "available_capacity",
-		header: "Slots left",
-		cell: (value, row) => <SlotsLeftCell available={value as number} capacity={row.capacity} />,
-	},
-	{
-		accessorKey: "description",
-		header: "What it's about",
-		cell: (value) => (
-			<div className="line-clamp-2 max-w-md text-sm text-muted-foreground">
-				{String(value ?? "—")}
-			</div>
-		),
-	},
-];
-
-export const orderingColumns: OrderingTableColumn<RankablePosition>[] = [
+export const rankingColumns: OrderingTableColumn<RankablePosition>[] = [
 	{
 		accessorKey: "name",
 		header: "Position",

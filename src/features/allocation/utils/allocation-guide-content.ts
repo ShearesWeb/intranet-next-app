@@ -1,7 +1,7 @@
 export const ALGORITHM_STEPS = [
 	{
 		number: 1,
-		title: "You rank your picks",
+		title: "You set your preferences",
 		icon: "Users" as const,
 		description:
 			"You pick the positions you'd join and order them — favorite first. The algorithm starts by applying to your #1 on your behalf.",
@@ -25,21 +25,21 @@ export const ALGORITHM_STEPS = [
 export const FAQ_ITEMS = [
 	{
 		value: "item-1",
-		question: "How many CCAs should I rank?",
+		question: "How many CCAs should I list as preferences?",
 		answer:
-			"As many as you'd genuinely be happy joining. Ranking only one or two means the algorithm has nothing to fall back on if those fill up first — you may end up unmatched. There is no penalty for ranking many.",
+			"As many as you'd genuinely be happy joining. Listing only one or two means the algorithm has nothing to fall back on if those fill up first — you may end up unmatched. There is no penalty for listing many.",
 	},
 	{
 		value: "item-2",
-		question: "Will ranking a popular CCA #1 hurt my chances?",
+		question: "Will making a popular CCA my #1 preference hurt my chances?",
 		answer:
-			"No. The algorithm always tries your #1 first. Ranking a competitive CCA lower only makes it harder to get in — always rank what you actually want most at the top.",
+			"No. The algorithm always tries your #1 first. Ranking a competitive CCA lower only makes it harder to get in — always put what you actually want most at the top.",
 	},
 	{
 		value: "item-3",
-		question: "Can I change my picks after submitting?",
+		question: "Can I change my preferences after submitting?",
 		answer:
-			"Yes, anytime before the deadline. The algorithm runs only once submissions close — until then you can add, remove, and re-order your picks freely.",
+			"Yes, anytime before the deadline. The algorithm runs only once submissions close — until then you can add, remove, and re-order your preferences freely.",
 	},
 	{
 		value: "item-4",
@@ -51,7 +51,7 @@ export const FAQ_ITEMS = [
 		value: "item-5",
 		question: "What if I don't get matched to anything?",
 		answer:
-			"This happens when every CCA you ranked filled up with applicants they preferred. The fix is to rank more positions — especially less competitive ones as backups.",
+			"This happens when every CCA you listed filled up with applicants they preferred. The fix is to add more preferences — especially less competitive positions as backups.",
 	},
 	{
 		value: "item-6",

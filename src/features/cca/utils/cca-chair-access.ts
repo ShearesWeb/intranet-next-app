@@ -1,5 +1,5 @@
-import { AuthenticatedUser } from "@/types/User";
-import { createClient } from "@/utils/supabase/server";
+import { AuthenticatedUser } from "@/types/user";
+import { createClient } from "@/lib/supabase/server";
 
 /**
  * Discriminated-union access result. `degraded: true` indicates the result was

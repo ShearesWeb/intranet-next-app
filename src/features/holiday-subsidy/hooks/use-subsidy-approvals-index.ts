@@ -19,10 +19,11 @@ export function useSubsidyApprovalsIndex() {
 			try {
 				setError(null);
 				setLoading(true);
-				const response = await fetch("/api/holidaySubsidy/approvals");
+				const response = await fetch("/api/holiday-subsidy/approvals");
 				if (!response.ok) throw new Error("Failed to load approvals");
-				const data = await response.json();
-				const ccas = data.ccas as Array<{
+				const json = await response.json();
+				const payload = json.data ?? json;
+				const ccas = payload.ccas as Array<{
 					id: number;
 					name: string;
 					pendingDeclarations: number;

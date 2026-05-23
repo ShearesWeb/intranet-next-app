@@ -5,11 +5,11 @@ const mocks = vi.hoisted(() => ({
 	fetchUserInfo: vi.fn(),
 }));
 
-vi.mock("@/utils/supabase/server", () => ({
+vi.mock("@/lib/supabase/server", () => ({
 	createClient: mocks.createClient,
 }));
 
-vi.mock("@/lib/fetch-user-info", () => ({
+vi.mock("@/lib/auth/fetch-user-info", () => ({
 	fetchUserInfo: mocks.fetchUserInfo,
 }));
 
@@ -38,11 +38,11 @@ describe("auth callback route", () => {
 
 		const { GET } = await import("../callback/route");
 		const response = await GET(
-			new Request("http://localhost/auth/callback?code=valid&next=/dashboard/mycca"),
+			new Request("http://localhost/auth/callback?code=valid&next=/dashboard/my-cca"),
 		);
 
 		expect(response.status).toBe(307);
-		expect(response.headers.get("location")).toBe("http://localhost/dashboard/mycca");
+		expect(response.headers.get("location")).toBe("http://localhost/dashboard/my-cca");
 	});
 
 	it("signs out and redirects to /auth/login?reason=user_not_found when user not in DB", async () => {

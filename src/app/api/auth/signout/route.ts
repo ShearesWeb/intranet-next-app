@@ -1,10 +1,10 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import {
 	extractSupabaseProjref,
 	findForeignSupabaseCookies,
-} from "@/utils/supabase/cookie-eviction";
+} from "@/lib/supabase/cookie-eviction";
 
 // Legacy app-level user-cache cookies retired in 0ac4cb0. Listed here so the
 // signout sweep can clear them off any browser that still carries them.
