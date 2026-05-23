@@ -1,3 +1,5 @@
+"use client";
+
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -12,6 +14,9 @@ import type {
 	PendingChange,
 	UserSearchResult,
 } from "@/features/cca/types/members";
+import { getGroupFromStatus, getStatusLabel } from "@/features/cca/hooks/member-status-helpers";
+import { useMemberSearch } from "@/features/cca/hooks/use-member-search";
+import { useMemberSave } from "@/features/cca/hooks/use-member-save";
 
 type PositionOption = {
 	id: number;
@@ -57,36 +62,6 @@ const defaultPermissions: MemberPermissions = {
 	managementMessage: "",
 };
 
-const getGroupFromStatus = (status: CutStatus | undefined | null) => {
-	switch (status) {
-		case "ivp-ihg-team":
-			return "ivpIhgTeam";
-		case "ihg-team":
-			return "ihgTeam";
-		case "final-cut":
-			return "finalCut";
-		case "first-cut":
-			return "firstCut";
-		default:
-			return "members";
-	}
-};
-
-const getStatusLabel = (status: CutStatus | undefined | null) => {
-	switch (status) {
-		case "ivp-ihg-team":
-			return "Final Cut - IHG Team Members (IVP)";
-		case "ihg-team":
-			return "Final Cut - IHG Team Members";
-		case "final-cut":
-			return "Final Cut Members";
-		case "first-cut":
-			return "IVP Members";
-		default:
-			return "Members";
-	}
-};
-
 export function useCcaMembers(ccaId: string | null): UseCcaMembersReturn {
 	const router = useRouter();
 	const [originalGroupedMembers, setOriginalGroupedMembers] = useState<GroupedMembers>({});
@@ -97,15 +72,12 @@ export function useCcaMembers(ccaId: string | null): UseCcaMembersReturn {
 	const [allPositions, setAllPositions] = useState<PositionOption[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
-	const [saving, setSaving] = useState(false);
-	const [saveErrors, setSaveErrorsState] = useState<string[]>([]);
 	const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([]);
-	const [searchQuery, setSearchQueryState] = useState("");
-	const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
-	const [searchLoading, setSearchLoading] = useState(false);
 
 	const isSports = permissions.ccaType === "sports";
 	const isCulture = permissions.ccaType === "culture";
+
+	const search = useMemberSearch(ccaId);
 
 	const resetState = useCallback(() => {
 		setOriginalGroupedMembers({});
@@ -115,13 +87,9 @@ export function useCcaMembers(ccaId: string | null): UseCcaMembersReturn {
 		setMemberPositionId(null);
 		setAllPositions([]);
 		setError(null);
-		setSaving(false);
-		setSaveErrorsState([]);
 		setPendingChanges([]);
-		setSearchQueryState("");
-		setSearchResults([]);
-		setSearchLoading(false);
-	}, []);
+		search.clearSearch();
+	}, [search]);
 
 	const refetch = useCallback(async () => {
 		try {
@@ -166,51 +134,13 @@ export function useCcaMembers(ccaId: string | null): UseCcaMembersReturn {
 		void refetch();
 	}, [refetch, resetState]);
 
-	const setSearchQuery = useCallback((query: string) => {
-		setSearchQueryState(query);
-		if (query.trim().length < 2) {
-			setSearchResults([]);
-		}
-	}, []);
-
-	const setSaveErrors = useCallback((errors: string[]) => {
-		setSaveErrorsState(errors);
-	}, []);
-
-	const searchUser = useCallback(async () => {
-		const query = searchQuery.trim();
-		if (!ccaId) {
-			toast.error("CCA ID is required to search users");
-			setSearchResults([]);
-			return;
-		}
-
-		if (query.length < 2) {
-			toast.error("Please enter at least 2 characters to search");
-			setSearchResults([]);
-			return;
-		}
-
-		setSearchLoading(true);
-		try {
-			const response = await fetch(
-				`/api/cca/${ccaId}/search-users?query=${encodeURIComponent(query)}`,
-			);
-			const json = await response.json();
-			if (!response.ok) {
-				throw new Error(json.error || "Failed to search users");
-			}
-
-			setSearchResults(json.data || []);
-		} catch (error) {
-			console.error("Error searching users:", error);
-			const message = error instanceof Error ? error.message : "Failed to search users";
-			toast.error(message);
-			setSearchResults([]);
-		} finally {
-			setSearchLoading(false);
-		}
-	}, [ccaId, searchQuery]);
+	const { saving, saveErrors, setSaveErrors, saveAll } = useMemberSave(ccaId, {
+		pendingChanges,
+		permissions,
+		memberPositionId,
+		refetch,
+		setPendingChanges,
+	});
 
 	const currentMembers = useMemo(
 		() => Object.values(currentGroupedMembers).flat() as Member[],
@@ -280,10 +210,9 @@ export function useCcaMembers(ccaId: string | null): UseCcaMembersReturn {
 			}));
 
 			toast.success(`${userName} added to pending changes`);
-			setSearchQueryState("");
-			setSearchResults([]);
+			search.clearSearch();
 		},
-		[allPositions, currentMembers, pendingChanges, permissions],
+		[allPositions, currentMembers, pendingChanges, permissions, search],
 	);
 
 	const removeMember = useCallback(
@@ -478,147 +407,6 @@ export function useCcaMembers(ccaId: string | null): UseCcaMembersReturn {
 		[currentMembers, memberPositionId, permissions],
 	);
 
-	const saveAll = useCallback(async () => {
-		if (!permissions.canManageMembers) {
-			toast.error(permissions.managementMessage || "Member management is not available.");
-			return;
-		}
-
-		if (pendingChanges.length === 0) {
-			toast.error("No changes to save");
-			return;
-		}
-
-		setSaving(true);
-		setSaveErrorsState([]);
-		let successCount = 0;
-		let errorCount = 0;
-		const currentErrors: string[] = [];
-
-		try {
-			for (const change of pendingChanges) {
-				try {
-					if (change.type === "add") {
-						const response = await fetch(`/api/cca/${ccaId}/members`, {
-							method: "POST",
-							headers: { "Content-Type": "application/json" },
-							body: JSON.stringify({
-								user_id: change.user_id,
-								reason: "Added by lead/vice",
-								position_id: change.position_id,
-								commitment_period: change.new_commitment_period,
-							}),
-						});
-
-						const responseJson = await response.json().catch(() => ({}));
-						if (!response.ok) {
-							throw new Error(responseJson.error || "Failed to add member");
-						}
-
-						if (change.new_status !== undefined) {
-							const resolvedPositionId =
-								responseJson.data?.position_id || change.position_id || memberPositionId;
-
-							const statusResponse = await fetch(`/api/cca/${ccaId}/members`, {
-								method: "PATCH",
-								headers: { "Content-Type": "application/json" },
-								body: JSON.stringify({
-									user_id: change.user_id,
-									position_id: resolvedPositionId,
-									cut_status: change.new_status,
-								}),
-							});
-
-							const statusResponseJson = await statusResponse.json().catch(() => ({}));
-							if (!statusResponse.ok) {
-								throw new Error(
-									statusResponseJson.error || "Member added but failed to update status",
-								);
-							}
-						}
-
-						successCount++;
-					} else if (change.type === "remove") {
-						const response = await fetch(`/api/cca/${ccaId}/members`, {
-							method: "DELETE",
-							headers: { "Content-Type": "application/json" },
-							body: JSON.stringify({
-								user_id: change.user_id,
-								reason: "Removed by lead/vice",
-								position_id: change.position_id,
-							}),
-						});
-
-						if (!response.ok) {
-							const errorData = await response.json();
-							throw new Error(errorData.error || "Failed to remove member");
-						}
-
-						successCount++;
-					} else if (change.type === "update_status") {
-						if (!change.position_id && !memberPositionId) {
-							throw new Error("Missing position ID for status update");
-						}
-
-						const response = await fetch(`/api/cca/${ccaId}/members`, {
-							method: "PATCH",
-							headers: { "Content-Type": "application/json" },
-							body: JSON.stringify({
-								user_id: change.user_id,
-								position_id: change.position_id || memberPositionId,
-								cut_status: change.new_status,
-							}),
-						});
-
-						if (!response.ok) {
-							const errorData = await response.json();
-							throw new Error(errorData.error || "Failed to update member status");
-						}
-
-						successCount++;
-					} else if (change.type === "update_commitment") {
-						const response = await fetch(`/api/cca/${ccaId}/members`, {
-							method: "PATCH",
-							headers: { "Content-Type": "application/json" },
-							body: JSON.stringify({
-								user_id: change.user_id,
-								position_id: change.position_id || memberPositionId,
-								commitment_period: change.new_commitment_period,
-							}),
-						});
-
-						if (!response.ok) {
-							const errorData = await response.json();
-							throw new Error(errorData.error || "Failed to update commitment period");
-						}
-
-						successCount++;
-					}
-				} catch (error: unknown) {
-					console.error(`Error processing ${change.type} for ${change.user_name}:`, error);
-					errorCount++;
-					const errorMessage = error instanceof Error ? error.message : "Unknown error";
-					currentErrors.push(`${change.user_name}: ${errorMessage}`);
-				}
-			}
-
-			if (successCount > 0) {
-				toast.success(`Successfully processed ${successCount} changes`);
-			}
-
-			if (errorCount > 0) {
-				setSaveErrorsState(currentErrors);
-			}
-
-			await refetch();
-		} catch (error) {
-			console.error("Error saving members:", error);
-			toast.error("Failed to save changes");
-		} finally {
-			setSaving(false);
-		}
-	}, [ccaId, memberPositionId, pendingChanges, permissions, refetch]);
-
 	return {
 		groupedMembers: currentGroupedMembers,
 		cca,
@@ -631,11 +419,11 @@ export function useCcaMembers(ccaId: string | null): UseCcaMembersReturn {
 		saveErrors,
 		setSaveErrors,
 		pendingChanges,
-		searchQuery,
-		setSearchQuery,
-		searchResults,
-		searchLoading,
-		searchUser,
+		searchQuery: search.searchQuery,
+		setSearchQuery: search.setSearchQuery,
+		searchResults: search.searchResults,
+		searchLoading: search.searchLoading,
+		searchUser: search.searchUser,
 		addMember,
 		removeMember,
 		updateStatus,

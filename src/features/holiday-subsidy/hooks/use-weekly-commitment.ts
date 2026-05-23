@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { HOLIDAY_WEEKS, getEditableWeekIds } from "@/features/holiday-subsidy/utils/holiday-weeks";
+import { HOLIDAY_WEEKS } from "@/features/holiday-subsidy/utils/holiday-weeks";
 import type { WeeklyRow } from "@/features/holiday-subsidy/types/weekly";
+import { useWeekSelection } from "@/features/holiday-subsidy/hooks/use-week-selection";
 
 export interface UseWeeklyCommitmentResult {
 	// Week selection
@@ -30,15 +31,6 @@ export interface UseWeeklyCommitmentResult {
 }
 
 export function useWeeklyCommitment(ccaId: string | null): UseWeeklyCommitmentResult {
-	const [editableWeekIds, setEditableWeekIds] = useState<number[]>(() =>
-		getEditableWeekIds(new Date()),
-	);
-	const [weekIndex, setWeekIndex] = useState(() => {
-		const initialIndex = HOLIDAY_WEEKS.findIndex((week) =>
-			getEditableWeekIds(new Date()).includes(week.id),
-		);
-		return initialIndex >= 0 ? initialIndex : 0;
-	});
 	const [rows, setRows] = useState<WeeklyRow[]>([]);
 	const [selected, setSelected] = useState<Set<number>>(new Set());
 	const [dirtyRows, setDirtyRows] = useState<Set<number>>(new Set());
@@ -47,31 +39,16 @@ export function useWeeklyCommitment(ccaId: string | null): UseWeeklyCommitmentRe
 	const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	const weekInfo = HOLIDAY_WEEKS[weekIndex];
-	const isWeekOpen = editableWeekIds.includes(weekInfo.id);
-
-	// Re-evaluate editable weeks every minute so the UI updates around the grace
-	// deadline without requiring a refresh.
-	useEffect(() => {
-		const interval = setInterval(() => {
-			setEditableWeekIds(getEditableWeekIds(new Date()));
-		}, 60000);
-
-		return () => clearInterval(interval);
+	const resetDirtyState = useCallback(() => {
+		setHasUnsavedChanges(false);
+		setSelected(new Set());
+		setDirtyRows(new Set());
 	}, []);
 
-	// If the currently selected tab becomes uneditable (e.g. grace window closed
-	// while the user is on the page), snap to the first editable week.
-	useEffect(() => {
-		setWeekIndex((currentIndex) => {
-			if (editableWeekIds.includes(HOLIDAY_WEEKS[currentIndex]?.id)) {
-				return currentIndex;
-			}
-
-			const nextIndex = HOLIDAY_WEEKS.findIndex((week) => editableWeekIds.includes(week.id));
-			return nextIndex >= 0 ? nextIndex : currentIndex;
-		});
-	}, [editableWeekIds]);
+	const { weekIndex, editableWeekIds, weekInfo, isWeekOpen, handleWeekChange } = useWeekSelection({
+		hasUnsavedChanges,
+		onWeekChange: resetDirtyState,
+	});
 
 	// Fetch data when component mounts or week changes
 	useEffect(() => {
@@ -260,29 +237,6 @@ export function useWeeklyCommitment(ccaId: string | null): UseWeeklyCommitmentRe
 			setIsSaving(false);
 		}
 	}, [ccaId, rows, selected, dirtyRows, weekInfo.id]);
-
-	const handleWeekChange = useCallback(
-		(newIndex: number) => {
-			if (!editableWeekIds.includes(HOLIDAY_WEEKS[newIndex]?.id)) {
-				toast.error("Weekly declarations are closed for this week.");
-				return;
-			}
-
-			if (hasUnsavedChanges) {
-				if (confirm("You have unsaved changes. Do you want to discard them?")) {
-					setWeekIndex(newIndex);
-					setHasUnsavedChanges(false);
-					setSelected(new Set());
-					setDirtyRows(new Set());
-				}
-			} else {
-				setWeekIndex(newIndex);
-				setSelected(new Set());
-				setDirtyRows(new Set());
-			}
-		},
-		[editableWeekIds, hasUnsavedChanges],
-	);
 
 	return {
 		weekIndex,

@@ -1,5 +1,3 @@
-"use client";
-
 import { GuideFaq } from "@/features/holiday-subsidy/components/guide-faq";
 import { GuidePhaseCards } from "@/features/holiday-subsidy/components/guide-phase-card";
 import { GuideProcessOverview } from "@/features/holiday-subsidy/components/guide-process-overview";

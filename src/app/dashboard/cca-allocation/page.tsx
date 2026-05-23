@@ -1,6 +1,3 @@
-"use client";
-
-import React from "react";
 import { AllocationGuideHero } from "@/features/allocation/components/allocation-guide-hero";
 import { AllocationTips } from "@/features/allocation/components/allocation-tips";
 import { AllocationAlgorithmSteps } from "@/features/allocation/components/allocation-algorithm-steps";
