@@ -82,3 +82,8 @@ liquibase.properties
 
 # Local-only Supabase env for integration tests (regenerated from `supabase status`).
 .env.test
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
