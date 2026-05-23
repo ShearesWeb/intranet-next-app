@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-interface DragReorderState<TData> {
+interface DragReorderState {
   draggedIndex: number | null;
   dragOverIndex: number | null;
   isDropPending: boolean;
@@ -17,7 +17,7 @@ interface DragReorderHandlers {
   handleDrop: (e: React.DragEvent, dropIndex: number) => void;
 }
 
-interface UseDragReorderResult<TData> extends DragReorderState<TData>, DragReorderHandlers {
+interface UseDragReorderResult extends DragReorderState, DragReorderHandlers {
   getDragHandlers: (rowIndex: number) => {
     draggable: boolean;
     onDragStart: (e: React.DragEvent) => void;
@@ -35,7 +35,7 @@ const DROP_ANIMATION_DURATION_MS = 380;
 export function useDragReorder<TData>(
   data: TData[],
   onReorder?: (newData: TData[]) => void,
-): UseDragReorderResult<TData> {
+): UseDragReorderResult {
   const [draggedIndex, setDraggedIndex] = React.useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = React.useState<number | null>(null);
   const [isDropPending, setIsDropPending] = React.useState(false);

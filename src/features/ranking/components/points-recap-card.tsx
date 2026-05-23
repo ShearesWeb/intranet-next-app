@@ -29,7 +29,6 @@ export function PointsRecapCard({
 	const {
 		currentSlide,
 		setCurrentSlide,
-		direction,
 		setDirection,
 		displayCount,
 		paginate,
