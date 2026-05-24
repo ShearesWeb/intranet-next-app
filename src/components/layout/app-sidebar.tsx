@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { FileUser, Volleyball, House, LucideIcon } from "lucide-react";
+import { FileUser, Volleyball, House, CalendarDays, LucideIcon } from "lucide-react";
 
 import { NavMain } from "@/components/layout/nav-main";
 import { NavUser } from "@/components/layout/nav-user";
@@ -50,6 +50,33 @@ export const navOptions: NavItem[] = [
 		url: "/dashboard",
 		icon: House,
 		isActive: true,
+	},
+	{
+		title: "Facilities",
+		url: "/dashboard/facilities",
+		icon: CalendarDays,
+		isActive: true,
+		featureFlag: "facilities",
+		items: [
+			{
+				title: "My CCA Bookings",
+				url: "/dashboard/facilities/my-bookings",
+				chairOnly: true,
+				featureFlag: "facilities",
+			},
+			{
+				title: "Conflicts",
+				url: "/dashboard/facilities/conflicts",
+				chairOnly: true,
+				featureFlag: "facilities",
+			},
+			{
+				title: "Admin",
+				url: "/dashboard/facilities/admin",
+				jcrcOnly: true,
+				featureFlag: "facilities",
+			},
+		],
 	},
 	{
 		title: "My CCAs",
@@ -152,11 +179,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 					<SidebarMenuItem>
 						<SidebarMenuButton size="lg" asChild>
 							<Link href="/dashboard">
-								<Avatar className="flex size-8 items-center justify-center rounded-md">
+								<Avatar className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-amber-500 shadow-sm">
 									<AvatarImage src="/images/shweb-logo.png" />
 								</Avatar>
 								<div className="grid flex-1 text-left leading-tight">
-									<span className="truncate font-bold">Sheares Intranet</span>
+									<span className="truncate font-bold tracking-tight">Sheares Intranet</span>
 								</div>
 							</Link>
 						</SidebarMenuButton>
