@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth/auth-context";
-import { AppLayout } from "@/components/layout/app-layout";
 import { PageHeader } from "@/components/layout/page-header";
 import { MonthGrid } from "@/components/facilities/month-grid";
 import { DayDetailPanel } from "@/components/facilities/day-detail-panel";
@@ -54,12 +53,15 @@ export default function FacilitiesPage() {
     setLoading(true);
     try {
       const res = await fetch(`/api/facilities/slots?start=${start}&end=${end}`);
+      const json = await res.json();
       if (res.ok) {
-        const json = await res.json();
+        console.log("Facilities slots loaded:", json.data?.length ?? 0);
         setSlots(json.data ?? []);
+      } else {
+        console.error("Facilities slots API error:", json);
       }
-    } catch {
-      // silent — calendar shows empty
+    } catch (err) {
+      console.error("Facilities slots fetch error:", err);
     } finally {
       setLoading(false);
     }
@@ -94,7 +96,7 @@ export default function FacilitiesPage() {
   }
 
   return (
-    <AppLayout>
+    <>
       <PageHeader title="Facilities" description="Browse and claim venue slots for your CCA" />
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -153,6 +155,6 @@ export default function FacilitiesPage() {
           onSuccess={fetchSlots}
         />
       )}
-    </AppLayout>
+    </>
   );
 }

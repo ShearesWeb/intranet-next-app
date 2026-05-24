@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth/auth-context";
-import { AppLayout } from "@/components/layout/app-layout";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/layout/empty-state";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -105,19 +104,19 @@ export default function MyBookingsPage() {
 
   if (!chairCca) {
     return (
-      <AppLayout>
+      <>
         <PageHeader title="My CCA Bookings" />
         <EmptyState
           icon={Calendar}
           title="Not a CCA Chair"
           description="Only CCA chairs can view and manage bookings."
         />
-      </AppLayout>
+      </>
     );
   }
 
   return (
-    <AppLayout>
+    <>
       <PageHeader
         title="My CCA Bookings"
         description={`Manage facility bookings for ${chairCca.name}`}
@@ -179,7 +178,7 @@ export default function MyBookingsPage() {
           />
         </TabsContent>
       </Tabs>
-    </AppLayout>
+    </>
   );
 }
 

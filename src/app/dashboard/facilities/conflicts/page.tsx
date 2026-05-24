@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth/auth-context";
-import { AppLayout } from "@/components/layout/app-layout";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/layout/empty-state";
 import { ConflictCard } from "@/components/facilities/conflict-card";
@@ -46,7 +45,7 @@ export default function ConflictsPage() {
   );
 
   return (
-    <AppLayout>
+    <>
       <PageHeader
         title="Facility Conflicts"
         description="Active conflicts involving your CCA — resolve by yielding or contacting the other party"
@@ -72,6 +71,6 @@ export default function ConflictsPage() {
           ))}
         </div>
       )}
-    </AppLayout>
+    </>
   );
 }

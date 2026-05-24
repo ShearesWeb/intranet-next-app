@@ -1,9 +1,8 @@
-import { AppLayout } from "@/components/layout/app-layout";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function FacilitiesLoading() {
   return (
-    <AppLayout>
+    <>
       <Skeleton className="h-8 w-48 mb-2" />
       <Skeleton className="h-4 w-72 mb-6" />
       <div className="flex flex-col gap-6 lg:flex-row">
@@ -15,6 +14,6 @@ export default function FacilitiesLoading() {
           <Skeleton className="h-16 w-full" />
         </div>
       </div>
-    </AppLayout>
+    </>
   );
 }
