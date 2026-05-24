@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Spinner } from "@/components/ui/spinner";
+import { PageHeader } from "@/components/layout/page-header";
 import { DeclarationSectionCard } from "@/components/holiday-subsidy/declaration-section-card";
 import { SubsidyDeclarationFormDialog } from "@/components/holiday-subsidy/subsidy-declaration-form-dialog";
 import { useSubsidyDeclarations } from "@/hooks/use-subsidy-declarations";
@@ -17,13 +18,7 @@ import {
 	type DeclarationSection,
 } from "@/types/declarations";
 import { HOLIDAY_WEEK_OPTIONS } from "@/lib/holiday-subsidy/holiday-weeks";
-import { formatSubsidyStatus } from "@/lib/holiday-subsidy/declaration-mappers";
-
-const STATUS_ORDER: SubsidyStatus[] = [
-	SubsidyStatus.PENDING,
-	SubsidyStatus.APPROVED,
-	SubsidyStatus.REJECTED,
-];
+import { formatSubsidyStatus, STATUS_ORDER } from "@/lib/holiday-subsidy/declaration-mappers";
 
 export default function SubsidyDeclarationPage() {
 	const params = useParams();
@@ -71,38 +66,36 @@ export default function SubsidyDeclarationPage() {
 
 	return (
 		<div className="flex flex-col space-y-6 p-4 md:p-6">
-			<div className="flex items-start justify-between gap-4 flex-wrap">
-				<div className="space-y-1">
-					<h1 className="text-2xl font-semibold">Subsidy Declaration - {ccaName}</h1>
-					<p className="text-muted-foreground text-sm">
-						Submit and track your weekly subsidy declarations.
-					</p>
-				</div>
-				<div className="flex flex-wrap gap-2">
-					<Button asChild variant="outline" size="sm" className="gap-2">
-						<Link href="/dashboard/holiday-subsidy">
-							<ArrowLeft className="h-4 w-4" />
-							Back to CCAs
-						</Link>
-					</Button>
-					<Button size="sm" onClick={openCreateDialog}>
-						Declare New Subsidy
-					</Button>
-					{ccaId ? (
-						<SubsidyDeclarationFormDialog
-							ccaId={ccaId}
-							ccaName={ccaName}
-							positions={positions}
-							weekOptions={HOLIDAY_WEEK_OPTIONS}
-							open={dialogOpen}
-							editingDeclaration={editingDeclaration}
-							onOpenChange={handleDialogOpenChange}
-							onSubmitSuccess={handleDeclarationSaved}
-							mapSubsidyToDeclaration={mapApiSubsidy}
-						/>
-					) : null}
-				</div>
-			</div>
+			<PageHeader
+				title={`Subsidy Declaration - ${ccaName}`}
+				description="Submit and track your weekly subsidy declarations."
+				actions={
+					<div className="flex flex-wrap gap-2">
+						<Button asChild variant="outline" size="sm" className="gap-2">
+							<Link href="/dashboard/holiday-subsidy">
+								<ArrowLeft className="h-4 w-4" />
+								Back to CCAs
+							</Link>
+						</Button>
+						<Button size="sm" onClick={openCreateDialog}>
+							Declare New Subsidy
+						</Button>
+					</div>
+				}
+			/>
+			{ccaId ? (
+				<SubsidyDeclarationFormDialog
+					ccaId={ccaId}
+					ccaName={ccaName}
+					positions={positions}
+					weekOptions={HOLIDAY_WEEK_OPTIONS}
+					open={dialogOpen}
+					editingDeclaration={editingDeclaration}
+					onOpenChange={handleDialogOpenChange}
+					onSubmitSuccess={handleDeclarationSaved}
+					mapSubsidyToDeclaration={mapApiSubsidy}
+				/>
+			) : null}
 
 			{loading ? (
 				<div className="flex justify-center items-center py-12">

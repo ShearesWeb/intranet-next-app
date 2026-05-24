@@ -278,22 +278,25 @@ export function MemberGroupTable({
 	showActions = false,
 	showAddButton = false,
 }: MemberGroupTableProps) {
-	if (members.length === 0 && !showActions && !showAddButton) {
-		return null;
-	}
-
 	const isSports = ccaType === "sports";
 	const isCulture = ccaType === "culture";
 	const isSportsCulture = isSports || isCulture;
 
-	const columnsToUse = buildMemberColumns(
-		showActions,
-		canManage,
-		ccaType,
-		onRemoveMember,
-		onUpdateStatus,
-		onUpdateCommitment,
+	const columnsToUse = React.useMemo(
+		() => buildMemberColumns(
+			showActions,
+			canManage,
+			ccaType,
+			onRemoveMember,
+			onUpdateStatus,
+			onUpdateCommitment,
+		),
+		[showActions, canManage, ccaType, onRemoveMember, onUpdateStatus, onUpdateCommitment],
 	);
+
+	if (members.length === 0 && !showActions && !showAddButton) {
+		return null;
+	}
 
 	return (
 		<div className="mb-8">

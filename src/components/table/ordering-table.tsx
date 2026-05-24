@@ -52,7 +52,7 @@ export function OrderingTable<TData extends object>({
         header: "Rank",
         cell: (_value: unknown, _row: TData, index: number) => (
           <div className="flex">
-            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary text-primary-foreground font-bold text-lg">
+            <div className="flex items-center justify-center size-9 rounded-full bg-gradient-to-br from-primary to-orange-600 text-primary-foreground font-bold text-sm shadow-sm">
               {index + 1}
             </div>
           </div>
@@ -66,7 +66,7 @@ export function OrderingTable<TData extends object>({
   if (data.length === 0) {
     const colSpan = allColumns.length + (draggable ? 1 : 0);
     return (
-      <div className="rounded-md border">
+      <div className="rounded-lg border overflow-x-auto shadow-sm">
         <Table>
           <TableBody>
             <TableRow>
@@ -81,7 +81,7 @@ export function OrderingTable<TData extends object>({
   }
 
   return (
-    <div className="rounded-md border">
+    <div className="rounded-lg border overflow-x-auto shadow-sm">
       <Table>
         <TableHeader>
           <TableRow>
@@ -133,7 +133,7 @@ export function OrderingTable<TData extends object>({
                   <TableCell className="w-12">
                     <div className="cursor-grab active:cursor-grabbing">
                       <GripVertical
-                        className={`h-5 w-5 transition-colors duration-100 ${isDragging || isDragOver ? "text-primary" : "text-muted-foreground"}`}
+                        className={`size-5 transition-colors duration-100 ${isDragging || isDragOver ? "text-primary" : "text-muted-foreground"}`}
                       />
                     </div>
                   </TableCell>

@@ -74,7 +74,7 @@ export function AddApplicantDialog({ onAddApplicant, excludedIds = [] }: AddAppl
 		setOpen(false);
 	};
 
-	const excluded = new Set(excludedIds);
+	const excluded = React.useMemo(() => new Set(excludedIds), [excludedIds]);
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>

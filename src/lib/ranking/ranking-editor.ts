@@ -1,20 +1,18 @@
 import type { CommitmentPeriod, CutStatus } from "@/types/members";
-import type { RankingsApiMember } from "@/types/ranking-api";
+import type { RankingResponseMember } from "@/types/ranking-api";
+import type { CCAMember, PositionGroup, RankingSavePayload, ScoreField } from "@/types/ranking";
 import {
 	MAX_SAVE_PAYLOAD_BYTES,
 	POSITION_TYPE_ORDER,
 	RESIDENT_METRICS,
-	type CCAMember,
-	type PositionGroup,
-	type RankingSavePayload,
-	type ScoreField,
 	SCORE_OPTIONS,
-} from "@/types/ranking";
+} from "@/lib/ranking/constants";
 import {
 	getRankingScore,
 	hasRequiredRankingInputs,
 	isResidentPositionType,
 } from "@/lib/ranking/cca-ranking-metrics";
+import { formatCommitmentPeriod } from "@/lib/cca/member-helpers";
 
 const textEncoder = new TextEncoder();
 
@@ -26,13 +24,13 @@ export {
 	isResidentPositionType,
 };
 
-export type { PositionGroup, RankingsApiMember, ScoreField };
+export type { PositionGroup, RankingResponseMember, ScoreField };
 
 export function cloneMembers(items: CCAMember[]): CCAMember[] {
 	return items.map((member) => ({ ...member }));
 }
 
-export function rankMembersWithinPosition(members: CCAMember[], ccaType: string): CCAMember[] {
+function rankMembersWithinPosition(members: CCAMember[], ccaType: string): CCAMember[] {
 	const sorted = [...members].sort((a, b) => {
 		const aHasInputs = hasRequiredRankingInputs(a, { ccaType, positionType: a.position_type });
 		const bHasInputs = hasRequiredRankingInputs(b, { ccaType, positionType: b.position_type });
@@ -69,7 +67,7 @@ export function recalculateRankings(items: CCAMember[], ccaType: string): CCAMem
 	return ranked;
 }
 
-export function buildComparisonSnapshot(items: CCAMember[]) {
+function buildComparisonSnapshot(items: CCAMember[]) {
 	return JSON.stringify(
 		[...items]
 			.sort(
@@ -102,7 +100,7 @@ const toRankingSavePayload = (member: CCAMember): RankingSavePayload => ({
 	remarks: member.remarks,
 });
 
-export function buildMemberComparisonSnapshot(member: CCAMember) {
+function buildMemberComparisonSnapshot(member: CCAMember) {
 	return JSON.stringify({
 		user_id: member.user_id,
 		position_id: member.position_id,
@@ -182,18 +180,9 @@ export function formatCutStatus(status: unknown): string {
 	return status;
 }
 
-export function formatCommitmentPeriod(period: CommitmentPeriod | null | undefined): string {
-	const commitmentMap: Record<string, string> = {
-		"full-year": "Full Year",
-		"semester-1": "Semester 1",
-		"semester-2": "Semester 2",
-	};
+export { formatCommitmentPeriod };
 
-	if (!period) return "-";
-	return commitmentMap[period] || "-";
-}
-
-export function mapRankingsApiMemberToEditorMember(member: RankingsApiMember): CCAMember {
+export function mapRankingsApiMemberToEditorMember(member: RankingResponseMember): CCAMember {
 	return {
 		row_key: `${member.user_id}:${member.position_id}`,
 		user_id: member.user_id,
@@ -254,12 +243,4 @@ export function getUnrankedCount(members: CCAMember[], ccaType: string): number 
 
 export function getHasChanges(members: CCAMember[], initialMembers: CCAMember[]): boolean {
 	return buildComparisonSnapshot(members) !== buildComparisonSnapshot(initialMembers);
-}
-
-export function getScoreColumns(ccaType: string, positionType: string): ScoreField[] {
-	if (isResidentPositionType(positionType)) {
-		return RESIDENT_METRICS.map((metric) => metric.field);
-	}
-
-	return ccaType === "sports" ? ["attendance"] : ["attendance", "performance"];
 }

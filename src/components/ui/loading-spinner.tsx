@@ -41,9 +41,8 @@ export function LoadingSpinner({
 					style={{ width: "100px", height: "100px", margin: "-10px" }}
 				/>
 
-				{/* Pulsing Logo */}
 				<div
-					className="relative z-10 bg-background rounded-full p-2 shadow-lg animate-[pulse-logo_2s_ease-in-out_infinite]"
+					className="relative z-10 bg-background rounded-full p-2 shadow-lg shadow-primary/10 animate-[pulse-logo_2s_ease-in-out_infinite]"
 				>
 					<Image
 						src="/images/shweb-logo.png"

@@ -12,7 +12,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import type { CCAMember, PositionGroup, ScoreField } from "@/types/ranking";
-import { RESIDENT_METRICS, SCORE_OPTIONS } from "@/types/ranking";
+import { RESIDENT_METRICS, SCORE_OPTIONS } from "@/lib/ranking/constants";
 import {
 	formatCommitmentPeriod,
 	formatCutStatus,
@@ -95,7 +95,7 @@ export function PositionRankingCard({ group, ccaType, onFieldChange }: PositionR
 							{group.members.map((member) => (
 								<TableRow key={member.row_key}>
 									<TableCell>
-										<div className="ml-2 flex items-center justify-center w-10 h-10 rounded-full bg-primary text-primary-foreground font-bold text-lg">
+										<div className="ml-2 flex items-center justify-center size-10 rounded-full bg-primary text-primary-foreground font-bold text-lg">
 											{member.ranking}
 										</div>
 									</TableCell>

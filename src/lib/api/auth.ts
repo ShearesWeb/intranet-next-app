@@ -31,8 +31,3 @@ export async function requireJcrcOrAdminAccess() {
 	return user;
 }
 
-export async function requireAdminAccess() {
-	const user = await requireAuth();
-	if (!user.is_admin) throw new ApiError(403, "Unauthorized");
-	return user;
-}

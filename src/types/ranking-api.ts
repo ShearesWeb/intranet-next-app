@@ -64,10 +64,8 @@ export type RankingResponseMember = {
 	remarks: string | null;
 };
 
-export type RankingsApiMember = RankingResponseMember;
-
 export type RankingsApiResponse = {
-	members: RankingsApiMember[];
+	members: RankingResponseMember[];
 	cca_type?: string | null;
 	cca_name?: string | null;
 };

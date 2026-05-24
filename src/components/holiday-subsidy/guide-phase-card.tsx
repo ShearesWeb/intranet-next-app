@@ -1,13 +1,19 @@
+"use client";
+
 import { AlertCircleIcon, AlertTriangleIcon, CheckCircle2Icon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FadeIn } from "@/components/ui/fade-in";
 
 function Phase1Card() {
 	return (
-		<Card>
+		<Card className="relative overflow-hidden border-l-4 border-primary/60">
+			<span className="absolute -top-3 -right-3 text-7xl font-black text-primary/[0.06] select-none pointer-events-none">
+				1
+			</span>
 			<CardHeader>
-				<div className="space-y-2">
+				<div className="flex flex-col gap-2">
 					<CardTitle className="text-lg font-semibold">
 						Phase 1 — Initial Subsidy Declaration
 					</CardTitle>
@@ -17,7 +23,7 @@ function Phase1Card() {
 					</div>
 				</div>
 			</CardHeader>
-			<CardContent className="space-y-4">
+			<CardContent className="flex flex-col gap-4">
 				<p className="text-sm text-muted-foreground leading-relaxed">
 					Chairs declare subsidy requirements for the entire holiday period. For each position,
 					provide weekly hours and a sound justification.
@@ -27,15 +33,15 @@ function Phase1Card() {
 					re-enter the approval queue.
 				</p>
 				<Alert>
-					<AlertCircleIcon className="h-4 w-4" />
+					<AlertCircleIcon className="size-4" />
 					<AlertTitle className="text-sm font-semibold">Valid Justifications Required</AlertTitle>
-					<AlertDescription className="text-sm space-y-3">
+					<AlertDescription className="text-sm flex flex-col gap-3">
 						<p>
 							For <strong>each position</strong>, provide weekly hours and a sound justification
 							that is measurable and accurate.
 						</p>
 						<p className="font-medium">Example of valid justification:</p>
-						<div className="space-y-1">
+						<div className="flex flex-col gap-1">
 							<div>
 								<strong>CCA:</strong> Swim Team
 							</div>
@@ -62,7 +68,10 @@ function Phase1Card() {
 
 function Phase2Card() {
 	return (
-		<Card>
+		<Card className="relative overflow-hidden border-l-4 border-primary/60">
+			<span className="absolute -top-3 -right-3 text-7xl font-black text-primary/[0.06] select-none pointer-events-none">
+				2
+			</span>
 			<CardHeader>
 				<CardTitle className="text-lg font-semibold">Phase 2 — JCRC Approval</CardTitle>
 			</CardHeader>
@@ -79,9 +88,12 @@ function Phase2Card() {
 
 function Phase3Card() {
 	return (
-		<Card>
+		<Card className="relative overflow-hidden border-l-4 border-primary/60">
+			<span className="absolute -top-3 -right-3 text-7xl font-black text-primary/[0.06] select-none pointer-events-none">
+				3
+			</span>
 			<CardHeader>
-				<div className="space-y-2">
+				<div className="flex flex-col gap-2">
 					<CardTitle className="text-lg font-semibold">
 						Phase 3 — Weekly Commitment Declaration
 					</CardTitle>
@@ -91,7 +103,7 @@ function Phase3Card() {
 					</div>
 				</div>
 			</CardHeader>
-			<CardContent className="space-y-4">
+			<CardContent className="flex flex-col gap-4">
 				<p className="text-sm text-muted-foreground leading-relaxed">
 					Chairs must submit actual hours committed by each member weekly.
 				</p>
@@ -99,7 +111,7 @@ function Phase3Card() {
 					variant="destructive"
 					className="border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive"
 				>
-					<AlertTriangleIcon className="h-4 w-4" />
+					<AlertTriangleIcon className="size-4" />
 					<AlertTitle className="text-sm font-semibold">Weekly Deadline</AlertTitle>
 					<AlertDescription className="text-sm">
 						<p>
@@ -109,12 +121,12 @@ function Phase3Card() {
 						<p>Example: Week 1&apos;s Subsidies are due by Week 2 Tuesday 23:59</p>
 					</AlertDescription>
 				</Alert>
-				<div className="bg-muted/50 rounded-lg p-4 space-y-3">
+				<div className="bg-muted/50 rounded-lg p-4 flex flex-col gap-3">
 					<p className="text-sm text-muted-foreground leading-relaxed">
 						The interface auto-fills recommended values based on approved declarations from Phase 1.
 						You may decrease hours and add remarks, but you cannot increase them.
 					</p>
-					<ul className="space-y-2 text-sm text-muted-foreground">
+					<ul className="flex flex-col gap-2 text-sm text-muted-foreground">
 						<li className="flex items-start gap-2">
 							<span className="text-green-600 mt-0.5">•</span>
 							<span>
@@ -154,7 +166,7 @@ function Phase3Card() {
 					</ul>
 				</div>
 				<Alert>
-					<CheckCircle2Icon className="h-4 w-4" />
+					<CheckCircle2Icon className="size-4" />
 					<AlertTitle className="text-sm font-semibold">
 						Why the Interface Is Designed This Way
 					</AlertTitle>
@@ -180,7 +192,10 @@ function Phase3Card() {
 
 function Phase4Card() {
 	return (
-		<Card>
+		<Card className="relative overflow-hidden border-l-4 border-primary/60">
+			<span className="absolute -top-3 -right-3 text-7xl font-black text-primary/[0.06] select-none pointer-events-none">
+				4
+			</span>
 			<CardHeader>
 				<CardTitle className="text-lg font-semibold">Phase 4 — Final Subsidy Calculation</CardTitle>
 			</CardHeader>
@@ -194,13 +209,16 @@ function Phase4Card() {
 	);
 }
 
+const PHASE_CARDS = [Phase1Card, Phase2Card, Phase3Card, Phase4Card];
+
 export function GuidePhaseCards() {
 	return (
-		<div className="space-y-4">
-			<Phase1Card />
-			<Phase2Card />
-			<Phase3Card />
-			<Phase4Card />
+		<div className="flex flex-col gap-6">
+			{PHASE_CARDS.map((PhaseCard, i) => (
+				<FadeIn key={i} delay={i * 0.1}>
+					<PhaseCard />
+				</FadeIn>
+			))}
 		</div>
 	);
 }

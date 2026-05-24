@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { CommitmentPeriod, UserSearchResult } from "@/types/members";
-import { isChairPositionType } from "@/lib/cca/member-helpers";
+import { isChairPositionType } from "@/lib/cca/cca-chair-access";
 
 interface AddMemberModalProps {
 	open: boolean;

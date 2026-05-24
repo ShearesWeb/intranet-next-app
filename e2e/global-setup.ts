@@ -1,9 +1,9 @@
 import { warmSessionCache } from "./auth-harness";
-
-const PERSONA_KEYS = ["aria", "declan", "brielle"];
+import { authenticatedPersonas } from "../tests/fixtures/personas";
 
 export default async function globalSetup() {
-	console.log(`Warming session cache for ${PERSONA_KEYS.length} personas...`);
-	await warmSessionCache(PERSONA_KEYS);
+	const keys = authenticatedPersonas().map((p) => p.key);
+	console.log(`Warming session cache for ${keys.length} personas...`);
+	await warmSessionCache(keys);
 	console.log("Session cache ready.");
 }

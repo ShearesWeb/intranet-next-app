@@ -42,7 +42,7 @@ function projectSubsidyRow(row: {
  * arrive as `error.message` strings. Default to 400 because all known cases
  * are business-rule violations, not server failures.
  */
-export function mapSubsidyRpcError(message: string): { status: number; error: string } {
+function mapSubsidyRpcError(message: string): { status: number; error: string } {
 	if (message.includes("No authenticated user")) {
 		return { status: 401, error: "Unauthorized" };
 	}

@@ -1,10 +1,3 @@
-export interface CCAPosition {
-	cca_id: number;
-	cca_name: string;
-	position_id: number;
-	position_name: string;
-}
-
 export type PositionType =
 	| "lead"
 	| "vice"
@@ -32,34 +25,28 @@ export type CommitmentPeriod = "full-year" | "semester-1" | "semester-2";
  */
 export type CutStatus = "cut" | "active" | string;
 
-export interface UserAppointment extends CCAPosition {
-	position_type: PositionType;
+export interface UserAppointment {
+	cca_id: number;
+	cca_name: string;
+	position_id: number;
 	position_name: string;
+	position_type: PositionType;
 	points: number;
 	commitment_period: CommitmentPeriod;
 	cut_status: CutStatus | null;
 }
 
-/**
- * Role flags surfaced from `authenticated_user_roles`. These are *derived*
- * per query from the user's appointments and the reporting chain of their
- * position(s) — they are not stored as columns on `public.users`.
- *
- * Setting a user as `is_admin` is therefore not a settable flag; the value
- * is true iff the user holds a position with subordinate positions in the
- * reporting chain. Same applies to `is_jcrc` (derived from holding a JCRC
- * position) and `is_culture_sports_admin` (derived from chair appointments
- * whose CCA is of type `culture`/`sports`).
- *
- * See: intranet-wiki/wiki/entity/view/public.authenticated_user_info.md
- */
-export interface UserRoleFlags {
+export interface AuthenticatedUser {
+	/**
+	 * Role flags surfaced from `authenticated_user_roles`. These are *derived*
+	 * per query from the user's appointments and the reporting chain of their
+	 * position(s) — they are not stored as columns on `public.users`.
+	 *
+	 * See: intranet-wiki/wiki/entity/view/public.authenticated_user_info.md
+	 */
 	is_admin: boolean;
 	is_jcrc: boolean;
 	is_culture_sports_admin: boolean;
-}
-
-export interface AuthenticatedUser extends UserRoleFlags {
 	id: number;
 	name: string;
 	/**

@@ -12,7 +12,7 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, description, actions, backHref, backLabel }: PageHeaderProps) {
   return (
-    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 animate-[fade-in-up_0.3s_ease-out_both]">
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold">{title}</h1>
         {description && (

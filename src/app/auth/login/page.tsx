@@ -25,17 +25,22 @@ export default function LoginPage() {
 						</div>
 					</div>
 				</div>
-				<div
-					className="bg-muted hidden lg:flex bg-primary justify-center items-center relative"
-					style={{ height: "100vh" }}
-				>
-					<Image
-						src="/images/shweb-logo.png"
-						alt="Image"
-						width={480}
-						height={480}
-						className="w-1/2 object-cover dark:brightness-[0.2] dark:grayscale"
-					/>
+				<div className="hidden lg:flex h-screen bg-gradient-to-br from-primary via-orange-500 to-amber-500 justify-center items-center relative overflow-hidden">
+					<div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-white/10 blur-2xl" />
+					<div className="absolute top-1/3 -right-16 h-56 w-56 rounded-full bg-white/15 blur-xl" />
+					<div className="absolute -bottom-20 left-1/4 h-64 w-64 rounded-full bg-white/10 blur-2xl" />
+					<div className="relative z-10 flex flex-col items-center">
+						<Image
+							src="/images/shweb-logo.png"
+							alt="Image"
+							width={480}
+							height={480}
+							className="w-1/3 object-cover dark:brightness-[0.2] dark:grayscale"
+						/>
+						<p className="text-primary-foreground/90 text-2xl font-semibold mt-6">
+							Welcome back to Sheares
+						</p>
+					</div>
 				</div>
 			</div>
 		</Suspense>

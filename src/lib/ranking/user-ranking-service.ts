@@ -6,10 +6,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { ApiError } from "@/lib/api/errors";
-
-const STAGED_RANK_OFFSET = 1000;
-
-const NON_RANKABLE_POSITION_TYPES = "(lead,vice,resident)";
+import { STAGED_RANK_OFFSET, NON_RANKABLE_POSITION_TYPES_FILTER } from "@/lib/cca/position-service";
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -73,7 +70,7 @@ export async function getRankablePositions(userId: number): Promise<RankablePosi
 			`,
 		)
 		.gt("available_capacity", 0)
-		.not("position_type", "in", NON_RANKABLE_POSITION_TYPES)
+		.not("position_type", "in", NON_RANKABLE_POSITION_TYPES_FILTER)
 		.order("position_name", { ascending: true });
 
 	if (positionsError) {

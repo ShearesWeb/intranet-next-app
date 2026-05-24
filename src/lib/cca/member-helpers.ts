@@ -1,7 +1,4 @@
-import { isChairPositionType } from "@/lib/cca/cca-chair-access";
 import type { CommitmentPeriod, CutStatus } from "@/types/members";
-
-export { isChairPositionType };
 
 export const SPORTS_STATUS_OPTIONS: Array<{ status: CutStatus; label: string }> = [
 	{ status: "ivp-ihg-team", label: "Move to IHG Team (IVP)" },

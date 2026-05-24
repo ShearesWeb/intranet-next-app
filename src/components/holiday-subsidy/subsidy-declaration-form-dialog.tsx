@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import {
 	Dialog,
 	DialogClose,
@@ -167,9 +167,6 @@ export function SubsidyDeclarationFormDialog({
 		],
 	);
 
-	const weekOptionsMemo = useMemo(() => weekOptions, [weekOptions]);
-	const positionOptionsMemo = useMemo(() => positions, [positions]);
-
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent>
@@ -200,9 +197,9 @@ export function SubsidyDeclarationFormDialog({
 									positionId: Number(e.target.value),
 								}))
 							}
-							disabled={positionOptionsMemo.length === 0}
+							disabled={positions.length === 0}
 						>
-							{positionOptionsMemo.map((position) => (
+							{positions.map((position) => (
 								<option key={position.id} value={position.id}>
 									{position.name} ({position.position_type})
 								</option>
@@ -221,7 +218,7 @@ export function SubsidyDeclarationFormDialog({
 								}))
 							}
 						>
-							{weekOptionsMemo.map((week) => (
+							{weekOptions.map((week) => (
 								<option key={week.id} value={week.id}>
 									{week.label}
 								</option>
@@ -272,7 +269,7 @@ export function SubsidyDeclarationFormDialog({
 								Cancel
 							</Button>
 						</DialogClose>
-						<Button type="submit" disabled={submitting || positionOptionsMemo.length === 0}>
+						<Button type="submit" disabled={submitting || positions.length === 0}>
 							{submitting
 								? editingDeclaration
 									? "Updating..."

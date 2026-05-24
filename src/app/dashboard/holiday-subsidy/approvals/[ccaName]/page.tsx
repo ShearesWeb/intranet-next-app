@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PageHeader } from "@/components/layout/page-header";
 import { useAuth } from "@/lib/auth/auth-context";
 
 import { DeclarationSectionCard } from "@/components/holiday-subsidy/declaration-section-card";
@@ -17,14 +18,8 @@ import {
 	SubsidyStatus,
 	type DeclarationSection,
 } from "@/types/declarations";
-import { formatSubsidyStatus } from "@/lib/holiday-subsidy/declaration-mappers";
+import { formatSubsidyStatus, STATUS_ORDER } from "@/lib/holiday-subsidy/declaration-mappers";
 import { HOLIDAY_WEEK_OPTIONS } from "@/lib/holiday-subsidy/holiday-weeks";
-
-const STATUS_ORDER: SubsidyStatus[] = [
-	SubsidyStatus.PENDING,
-	SubsidyStatus.APPROVED,
-	SubsidyStatus.REJECTED,
-];
 
 type ApprovalAction = { label: string; target: SubsidyStatus; variant: "default" | "destructive" };
 
@@ -106,24 +101,20 @@ export default function HolidaySubsidyApprovalDetailsPage() {
 
 	return (
 		<div className="flex flex-col space-y-6 p-4 md:p-6">
-			<div className="flex items-start justify-between gap-4 flex-wrap">
-				<div className="space-y-1">
-					<h1 className="text-2xl font-semibold">
-						JCRC Holiday Subsidy Approvals - {ccaName || `CCA #${ccaId}`}
-					</h1>
-					<p className="text-muted-foreground text-sm">
-						Review, approve, or reject subsidy declarations for this CCA.
-					</p>
-				</div>
-				<div className="flex flex-wrap gap-2">
-					<Button variant="outline" size="sm" onClick={handleBack}>
-						← Back to approvals
-					</Button>
-					<Button onClick={save} disabled={!hasChanges || saving} size="sm">
-						{saving ? "Saving..." : "Save changes"}
-					</Button>
-				</div>
-			</div>
+			<PageHeader
+				title={`JCRC Holiday Subsidy Approvals - ${ccaName || `CCA #${ccaId}`}`}
+				description="Review, approve, or reject subsidy declarations for this CCA."
+				actions={
+					<div className="flex flex-wrap gap-2">
+						<Button variant="outline" size="sm" onClick={handleBack}>
+							← Back to approvals
+						</Button>
+						<Button onClick={save} disabled={!hasChanges || saving} size="sm">
+							{saving ? "Saving..." : "Save changes"}
+						</Button>
+					</div>
+				}
+			/>
 
 			<Separator />
 

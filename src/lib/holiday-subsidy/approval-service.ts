@@ -6,6 +6,7 @@ import { SubsidyStatus, SubsidyWithPosition, PositionOption } from "@/types/decl
 import { getWeekIdForDay } from "@/lib/holiday-subsidy/holiday-weeks";
 import { unwrapRelation } from "@/lib/supabase/helpers";
 import { ApiError } from "@/lib/api/errors";
+import { mapApproveRpcError } from "@/lib/holiday-subsidy/rpc-error-mappers";
 
 // ─── Types for the approvals index route ──────────────────────────
 
@@ -136,25 +137,6 @@ function projectEnvelope(row: EnvelopeFromApi): SubsidyWithPosition | null {
 				}
 			: null,
 	};
-}
-
-/**
- * Map approve_subsidy trigger errors to actionable HTTP status codes.
- */
-function mapApproveRpcError(message: string): { status: number; error: string } {
-	if (message.startsWith("Invalid transition")) {
-		return { status: 409, error: message };
-	}
-	if (message.startsWith("Only JCRC")) {
-		return { status: 403, error: message };
-	}
-	if (message.includes("not found") || message.includes("not accessible")) {
-		return { status: 404, error: message };
-	}
-	if (message.includes("only accepts")) {
-		return { status: 400, error: message };
-	}
-	return { status: 400, error: message };
 }
 
 // ─── Approvals Index (all CCAs with pending counts) ───────────────

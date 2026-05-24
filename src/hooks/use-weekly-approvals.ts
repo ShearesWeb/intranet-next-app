@@ -7,6 +7,7 @@ import type {
 	WeeklyApprovalRow,
 	WeeklyApprovalStatus,
 } from "@/types/weekly";
+import { useBeforeUnload } from "@/hooks/use-before-unload";
 
 export interface UseWeeklyApprovalsResult {
 	// Week selection
@@ -52,17 +53,7 @@ export function useWeeklyApprovals(
 	const weekInfo = HOLIDAY_WEEKS[weekIndex];
 
 	// Warn user before leaving page with unsaved changes
-	useEffect(() => {
-		const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-			if (pendingStatus.size > 0) {
-				e.preventDefault();
-				e.returnValue = "";
-				return "";
-			}
-		};
-		window.addEventListener("beforeunload", handleBeforeUnload);
-		return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-	}, [pendingStatus]);
+	useBeforeUnload(pendingStatus.size > 0);
 
 	// Fetch CCA display name from approvals endpoint
 	useEffect(() => {

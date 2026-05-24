@@ -1,5 +1,6 @@
+import path from "node:path";
 import { defineConfig } from "@playwright/test";
-import { SUPABASE_URL, ANON_KEY } from "./auth-harness";
+import { SUPABASE_URL, ANON_KEY, APP_URL, E2E_PORT } from "./auth-harness";
 
 export default defineConfig({
 	globalSetup: "./global-setup.ts",
@@ -10,7 +11,7 @@ export default defineConfig({
 	workers: process.env.CI ? 1 : undefined,
 	reporter: process.env.CI ? "github" : "html",
 	use: {
-		baseURL: process.env.APP_URL ?? "http://localhost:3000",
+		baseURL: APP_URL,
 		trace: "on-first-retry",
 	},
 	projects: [
@@ -18,12 +19,24 @@ export default defineConfig({
 			name: "chromium",
 			use: { browserName: "chromium" },
 		},
+		{
+			name: "headed",
+			fullyParallel: false,
+			use: {
+				browserName: "chromium",
+				headless: false,
+				launchOptions: { slowMo: 400 },
+			},
+		},
 	],
 	webServer: {
-		command: "npm run dev",
-		port: 3000,
+		command: `node_modules/.bin/next dev -p ${E2E_PORT}`,
+		cwd: path.resolve(__dirname, ".."),
+		port: E2E_PORT,
+		timeout: 60_000,
 		reuseExistingServer: !process.env.CI,
 		env: {
+			RTK_DISABLED: "1",
 			NEXT_PUBLIC_SUPABASE_URL: SUPABASE_URL,
 			NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY: ANON_KEY,
 			NEXT_PUBLIC_SUPABASE_ANON_KEY: ANON_KEY,

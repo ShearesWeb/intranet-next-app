@@ -8,10 +8,10 @@ import { cn } from "@/lib/utils";
  */
 export function DashboardPageSkeleton({ className }: { className?: string }) {
 	return (
-		<div className={cn("flex flex-col space-y-4 p-4 md:p-6", className)}>
+		<div className={cn("flex flex-col gap-4 p-4 md:p-6", className)}>
 			<Skeleton className="h-8 w-64" />
 			<Skeleton className="h-4 w-full max-w-2xl" />
-			<div className="space-y-3 pt-2">
+			<div className="flex flex-col gap-3 pt-2">
 				<Skeleton className="h-32 w-full" />
 				<Skeleton className="h-32 w-full" />
 				<Skeleton className="h-32 w-full" />
@@ -37,7 +37,7 @@ export function DashboardCardsSkeleton({
 		columns === 3 ? "md:grid-cols-3" : columns === 2 ? "md:grid-cols-2" : "grid-cols-1";
 
 	return (
-		<div className={cn("flex flex-col space-y-4 p-4 md:p-6", className)}>
+		<div className={cn("flex flex-col gap-4 p-4 md:p-6", className)}>
 			<Skeleton className="h-8 w-64" />
 			<Skeleton className="h-4 w-full max-w-2xl" />
 			<div className={cn("grid gap-4 pt-2", gridCols)}>
@@ -46,7 +46,7 @@ export function DashboardCardsSkeleton({
 						<CardHeader>
 							<Skeleton className="h-6 w-1/2" />
 						</CardHeader>
-						<CardContent className="space-y-3">
+						<CardContent className="flex flex-col gap-3">
 							<Skeleton className="h-4 w-full" />
 							<Skeleton className="h-4 w-3/4" />
 							<Skeleton className="h-10 w-32" />
@@ -72,7 +72,7 @@ export function DashboardTableSkeleton({
 	className?: string;
 }) {
 	return (
-		<div className={cn("flex flex-col space-y-4 p-4 md:p-6", className)}>
+		<div className={cn("flex flex-col gap-4 p-4 md:p-6", className)}>
 			<Skeleton className="h-8 w-64" />
 			<div className="flex items-center gap-2">
 				<Skeleton className="h-9 w-64" />
@@ -117,7 +117,7 @@ export function DashboardFormSkeleton({
 	className?: string;
 }) {
 	return (
-		<div className={cn("flex flex-col space-y-4 p-4 md:p-6", className)}>
+		<div className={cn("flex flex-col gap-4 p-4 md:p-6", className)}>
 			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 				<Skeleton className="h-8 w-72" />
 				<div className="flex gap-2">
@@ -126,9 +126,9 @@ export function DashboardFormSkeleton({
 				</div>
 			</div>
 			<Card className="border-none shadow-sm">
-				<CardContent className="space-y-4 p-6">
+				<CardContent className="flex flex-col gap-4 p-6">
 					{Array.from({ length: fields }).map((_, idx) => (
-						<div key={idx} className="space-y-2">
+						<div key={idx} className="flex flex-col gap-2">
 							<Skeleton className="h-4 w-32" />
 							<Skeleton className="h-10 w-full" />
 						</div>

@@ -8,7 +8,7 @@ export const SubsidyStatus = {
 
 export type SubsidyStatus = (typeof SubsidyStatus)[keyof typeof SubsidyStatus];
 
-export interface SubsidyRow {
+export interface SubsidyWithPosition {
 	id: number;
 	position_id: number;
 	day: string; // ISO "YYYY-MM-DD" date (SG-local week-start) — DB stores `day DATE`
@@ -17,9 +17,6 @@ export interface SubsidyRow {
 	justification: string | null;
 	status: SubsidyStatus;
 	rejection_reason?: string | null;
-}
-
-export interface SubsidyWithPosition extends SubsidyRow {
 	cca_positions?: {
 		id: number;
 		name: string;

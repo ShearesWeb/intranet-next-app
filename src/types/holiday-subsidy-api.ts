@@ -8,42 +8,6 @@ export interface JoinedPositionSummary {
 	cca_id?: number;
 }
 
-export interface JoinedUserSummary {
-	id: number;
-	name: string;
-	email: string;
-	room?: string | null;
-}
-
-export interface AppointmentWithSubsidy {
-	user_id: number;
-	position_id: number;
-	cca_positions: JoinedPositionSummary | JoinedPositionSummary[] | null;
-}
-
-export interface MemberWithDeclaration {
-	id: number;
-	user_id: number;
-	position_id: number;
-	position_type: string;
-	position_name: string;
-	user_name: string;
-	user_email: string;
-	hours: number | null;
-	comments: string | null;
-	justification?: string | null;
-}
-
-export interface UserSubsidyRecord {
-	id: number;
-	subsidy_id: number;
-	user_id: number;
-	hours: number | null;
-	comments: string | null;
-	status: SubsidyStatus | null;
-	rejection_reason: string | null;
-}
-
 export interface PositionSubsidyRecord {
 	id: number;
 	position_id: number;

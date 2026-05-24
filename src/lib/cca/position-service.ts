@@ -5,9 +5,9 @@ import { ApiError } from "@/lib/api/errors";
 import type { PositionType, UserAppointment } from "@/types/user";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-const NON_APPLICANT_POSITION_TYPES_FILTER = "(lead,vice,resident)";
+export const NON_RANKABLE_POSITION_TYPES_FILTER = "(lead,vice,resident)";
 const NON_APPLICANT_POSITION_TYPES = new Set(["lead", "vice", "resident"]);
-const STAGED_RANK_OFFSET = 1000;
+export const STAGED_RANK_OFFSET = 1000;
 
 export type RankingAccessPosition = {
 	id: UserAppointment["position_id"];
@@ -96,7 +96,7 @@ export async function getPositionsForChair() {
 		)
 		.in("cca_id", accessResult.data.authorizedCcaIds)
 		.gt("available_capacity", 0)
-		.not("position_type", "in", NON_APPLICANT_POSITION_TYPES_FILTER);
+		.not("position_type", "in", NON_RANKABLE_POSITION_TYPES_FILTER);
 
 	if (posError) {
 		console.error("Error fetching position availability:", posError);

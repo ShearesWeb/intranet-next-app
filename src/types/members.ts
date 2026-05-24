@@ -1,7 +1,8 @@
-import type { CcaType, PositionType } from "@/types/user";
+import type { CcaType, CommitmentPeriod, PositionType } from "@/types/user";
+
+export type { CommitmentPeriod };
 
 export type CutStatus = "ivp-ihg-team" | "ihg-team" | "final-cut" | "first-cut";
-export type CommitmentPeriod = "semester-1" | "semester-2" | "full-year";
 
 export interface Member {
 	user_id: number;
@@ -18,10 +19,8 @@ export interface Member {
 	commitment_period?: CommitmentPeriod | null;
 }
 
-export type PendingChangeType = "add" | "remove" | "cut" | "update_status" | "update_commitment";
-
 export interface PendingChange {
-	type: PendingChangeType;
+	type: "add" | "remove" | "cut" | "update_status" | "update_commitment";
 	user_id: number;
 	user_name: string;
 	user_email: string;
@@ -60,20 +59,16 @@ export interface MemberJoinPosition {
 	cca_id: number;
 }
 
-export interface MemberJoinUser {
-	id: number;
-	name: string;
-	email: string;
-	room: string;
-}
-
 export interface MemberWithJoins {
 	user_id: number;
 	points: number | null;
 	created_at: string;
 	cut_status: CutStatus | string | null;
 	commitment_period: CommitmentPeriod | null;
-	authenticated_user_directory: MemberJoinUser | MemberJoinUser[] | null;
+	authenticated_user_directory:
+		| { id: number; name: string; email: string; room: string }
+		| { id: number; name: string; email: string; room: string }[]
+		| null;
 	cca_positions: MemberJoinPosition | MemberJoinPosition[] | null;
 }
 

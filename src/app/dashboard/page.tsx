@@ -11,7 +11,7 @@ import { PointsRecapCard } from "@/components/ranking/points-recap-card";
 import { getCoreServiceFlags } from "@/lib/feature-flags";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { type LucideIcon, Users, Trophy, ClipboardList, ChevronRight } from "lucide-react";
+import { type LucideIcon, Users, Trophy, ClipboardList, ChevronRight, Zap, CalendarDays } from "lucide-react";
 
 interface ActionCardProps {
 	href: string;
@@ -64,6 +64,9 @@ export default function Dashboard() {
 			<Card className="border-none shadow-lg bg-gradient-to-r from-orange-50/50 to-white">
 				<CardHeader>
 					<div className="flex items-center gap-2 text-muted-foreground mb-1">
+						<CalendarDays className="h-5 w-5 text-orange-400" />
+						<span className="text-sm font-medium tabular-nums">{new Date().getDate()}</span>
+						<span className="text-muted-foreground/40">|</span>
 						<h2 className="text-xl font-medium">
 							{(() => {
 								const hour = new Date().getHours();
@@ -78,13 +81,14 @@ export default function Dashboard() {
 							{user.name || user.email}
 						</span>
 					</CardTitle>
+					<p className="text-sm text-muted-foreground mt-1">Here&apos;s what&apos;s happening today</p>
 				</CardHeader>
 			</Card>
 
 			{/* Content Grid */}
 			<div className="grid gap-6 md:grid-cols-2">
 				{/* Points Display Card */}
-				<Card className="border-none shadow-lg flex flex-col overflow-hidden relative">
+				<Card className="border-none shadow-lg flex flex-col overflow-hidden relative animate-[fade-in-up_0.3s_ease-out_both]" style={{ animationDelay: "0.1s" }}>
 					<CardHeader>
 						<CardTitle className="flex items-center gap-2">
 							<span>{hasSeenRecap ? "Your Final Hall Points" : "Your Points"}</span>
@@ -103,35 +107,44 @@ export default function Dashboard() {
 				</Card>
 
 				{/* Activity Section Card */}
-				<Card className="border-none shadow-lg">
+				<Card className="border-none shadow-lg animate-[fade-in-up_0.3s_ease-out_both]" style={{ animationDelay: "0.15s" }}>
 					<CardHeader>
-						<CardTitle>My Actions</CardTitle>
+						<CardTitle className="flex items-center gap-2">
+							<Zap className="h-5 w-5 text-orange-500" />
+							My Actions
+						</CardTitle>
 					</CardHeader>
 					<CardContent className="p-4 md:p-6">
 						<div className="grid gap-4">
-							<ActionCard
-								href="/dashboard/my-cca"
-								icon={Users}
-								title="My CCAs"
-								description="View your CCAs and Points"
-							/>
+							<div className="animate-[fade-in-up_0.3s_ease-out_both]" style={{ animationDelay: "0.1s" }}>
+								<ActionCard
+									href="/dashboard/my-cca"
+									icon={Users}
+									title="My CCAs"
+									description="View your CCAs and Points"
+								/>
+							</div>
 
 							{featureFlags.ccaApplications && (
-								<ActionCard
-									href="/dashboard/cca-allocation/rank"
-									icon={Trophy}
-									title="CCA Ranking"
-									description="Rank your CCA preferences"
-								/>
+								<div className="animate-[fade-in-up_0.3s_ease-out_both]" style={{ animationDelay: "0.15s" }}>
+									<ActionCard
+										href="/dashboard/cca-allocation/rank"
+										icon={Trophy}
+										title="CCA Ranking"
+										description="Rank your CCA preferences"
+									/>
+								</div>
 							)}
 
 							{featureFlags.ccaApplications && !roleLoading && isAuthorized && (
-								<ActionCard
-									href="/dashboard/cca-allocation/rank-applicants"
-									icon={ClipboardList}
-									title="Rank Applicants"
-									description="Rank applicants for your CCA"
-								/>
+								<div className="animate-[fade-in-up_0.3s_ease-out_both]" style={{ animationDelay: "0.2s" }}>
+									<ActionCard
+										href="/dashboard/cca-allocation/rank-applicants"
+										icon={ClipboardList}
+										title="Rank Applicants"
+										description="Rank applicants for your CCA"
+									/>
+								</div>
 							)}
 						</div>
 					</CardContent>

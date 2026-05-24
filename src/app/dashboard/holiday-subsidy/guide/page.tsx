@@ -1,19 +1,11 @@
-import { GuideFaq } from "@/components/holiday-subsidy/guide-faq";
-import { GuidePhaseCards } from "@/components/holiday-subsidy/guide-phase-card";
-import { GuideProcessOverview } from "@/components/holiday-subsidy/guide-process-overview";
+import { SubsidyFlowVisual } from "@/components/holiday-subsidy/subsidy-flow-visual";
+import { PageHeader } from "@/components/layout/page-header";
 
 export default function Guide() {
 	return (
-		<div className="flex flex-col space-y-6 p-4 md:p-6">
-			<div className="flex flex-col gap-2">
-				<h1 className="text-2xl font-semibold">Holiday Subsidy Guide</h1>
-				<p className="text-muted-foreground text-sm leading-relaxed">
-					Full process, requirements, and FAQs for the holiday subsidy system.
-				</p>
-			</div>
-			<GuideProcessOverview />
-			<GuidePhaseCards />
-			<GuideFaq />
+		<div className="flex flex-col gap-10 p-4 md:p-6">
+			<PageHeader title="Holiday Subsidy Guide" description="Full process, requirements, and FAQs for the holiday subsidy system." />
+			<SubsidyFlowVisual />
 		</div>
 	);
 }

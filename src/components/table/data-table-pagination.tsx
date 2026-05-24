@@ -10,17 +10,23 @@ interface DataTablePaginationProps<TData> {
 export function DataTablePagination<TData>({
   table,
 }: DataTablePaginationProps<TData>) {
+  const pageCount = table.getPageCount();
+  const currentPage = table.getState().pagination.pageIndex + 1;
+
+  if (pageCount <= 1) return null;
+
   return (
-    <div className="flex items-center justify-between">
-      <div className="text-sm text-muted-foreground">
-        Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+    <div className="flex items-center justify-between pt-2">
+      <div className="text-xs font-medium text-muted-foreground tabular-nums">
+        Page {currentPage} of {pageCount}
       </div>
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center gap-1.5">
         <Button
           variant="outline"
           size="sm"
           onClick={() => table.previousPage()}
           disabled={!table.getCanPreviousPage()}
+          className="h-8 px-3 text-xs"
         >
           Previous
         </Button>
@@ -29,6 +35,7 @@ export function DataTablePagination<TData>({
           size="sm"
           onClick={() => table.nextPage()}
           disabled={!table.getCanNextPage()}
+          className="h-8 px-3 text-xs"
         >
           Next
         </Button>

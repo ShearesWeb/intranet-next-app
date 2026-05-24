@@ -1,6 +1,6 @@
 "use client";
 
-import { Info } from "lucide-react";
+import { Info, ShieldX } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,8 +25,9 @@ export default function HolidaySubsidyLanding() {
 					title="Holiday Subsidy"
 					description="Review your CCAs, see pending hours, and jump straight into the subsidy declaration page for each role."
 				/>
-				<Card className="bg-muted/40">
+				<Card className="bg-gradient-to-br from-muted/40 to-background">
 					<CardContent className="flex flex-col gap-3 p-6">
+						<ShieldX className="h-8 w-8 text-muted-foreground/60 mb-2" />
 						<div className="text-lg font-semibold">You are not a chair/vice for any CCA.</div>
 						<p className="text-sm text-muted-foreground">
 							Only CCA leads and vice leads can submit holiday subsidy declarations. If you believe

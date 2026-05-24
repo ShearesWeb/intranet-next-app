@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { AlertCircle, ArrowLeft, Loader2, Save } from "lucide-react";
+import { AlertCircle, Loader2, Save } from "lucide-react";
 
 import { PositionRankingCard } from "@/components/ranking/position-ranking-card";
 import { useRankingEditor } from "@/hooks/use-ranking-editor";
@@ -11,6 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { PageHeader } from "@/components/layout/page-header";
 
 export default function CCARankingPage() {
 	const { user } = useAuth();
@@ -32,9 +32,11 @@ export default function CCARankingPage() {
 
 	return (
 		<div className="flex flex-col space-y-6 p-4 md:p-6">
-			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-				<h1 className="text-2xl font-semibold">Chair / Maincomm Ranking</h1>
-				<div className="flex flex-wrap items-center gap-2">
+			<PageHeader
+				title="Chair / Maincomm Ranking"
+				backHref="/dashboard/my-cca/admin"
+				backLabel="Back to my CCAs"
+				actions={
 					<Button onClick={() => void handleSave()} disabled={isSaving || !hasChanges} size="sm">
 						{isSaving ? (
 							<>
@@ -48,13 +50,8 @@ export default function CCARankingPage() {
 							</>
 						)}
 					</Button>
-					<Button asChild variant="outline" size="sm" className="gap-2">
-						<Link href="/dashboard/my-cca/admin">
-							<ArrowLeft className="h-4 w-4" /> Back to my CCAs
-						</Link>
-					</Button>
-				</div>
-			</div>
+				}
+			/>
 
 			{unrankedCount > 0 && (
 				<Alert>

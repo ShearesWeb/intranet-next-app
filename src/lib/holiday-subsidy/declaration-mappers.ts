@@ -43,6 +43,12 @@ export function coerceSubsidyStatus(value: unknown): SubsidyStatus {
 		: SubsidyStatusValues.PENDING;
 }
 
+export const STATUS_ORDER: SubsidyStatus[] = [
+	SubsidyStatusValues.PENDING,
+	SubsidyStatusValues.APPROVED,
+	SubsidyStatusValues.REJECTED,
+];
+
 export function formatSubsidyStatus(status: SubsidyStatus): string {
 	return status.charAt(0).toUpperCase() + status.slice(1);
 }

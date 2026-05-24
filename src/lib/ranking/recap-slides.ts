@@ -5,27 +5,13 @@ import type {
 	RecapSlide,
 	RecapTotals,
 } from "@/types/recap";
-import { isResidentPositionType } from "@/lib/ranking/cca-ranking-metrics";
 import type { AuthenticatedUser } from "@/types/user";
+import { isLeadershipRole, isBlockCcaName, isResidentBlockPosition } from "@/lib/ranking/recap-helpers";
 
-const leadershipPositionTypes = new Set(["lead", "vice", "maincomm", "subcomm"]);
 const ihgTeamStatuses = new Set(["ihg-team", "ivp-ihg-team"]);
 
 function formatCount(count: number, singular: string, plural = `${singular}s`) {
 	return `${count} ${count === 1 ? singular : plural}`;
-}
-
-function isLeadershipRole(cca: Pick<CCAData, "position_type" | "role">) {
-	const positionType = String(cca.position_type || "")
-		.trim()
-		.toLowerCase();
-	const role = String(cca.role || "")
-		.trim()
-		.toLowerCase();
-
-	return (
-		leadershipPositionTypes.has(positionType) || role.includes("lead") || role.includes("vice")
-	);
 }
 
 function truncateList(values: string[], maxVisible = 3) {
@@ -37,23 +23,7 @@ function truncateList(values: string[], maxVisible = 3) {
 	return [...visible, `${remaining} more`];
 }
 
-function isBlockCcaName(value?: string | null) {
-	return String(value || "")
-		.trim()
-		.toLowerCase()
-		.startsWith("block");
-}
-
-function isResidentBlockPosition(positionType?: string | null, role?: string | null) {
-	return (
-		isResidentPositionType(positionType) ||
-		String(role || "")
-			.trim()
-			.toLowerCase() === "resident"
-	);
-}
-
-export const RECAP_CATEGORY_CONFIG: RecapCategoryConfig[] = [
+const RECAP_CATEGORY_CONFIG: RecapCategoryConfig[] = [
 	{
 		id: "culture",
 		eyebrow: "Culture",

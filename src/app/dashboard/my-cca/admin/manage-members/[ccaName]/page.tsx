@@ -2,11 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { AlertCircleIcon, Volleyball } from "lucide-react";
+import { AlertCircleIcon, Users } from "lucide-react";
 import { useCcaMembers } from "@/hooks/use-cca-members";
 import { AddMemberModal } from "@/components/cca/add-member-modal";
 import { MemberGroupTable } from "@/components/cca/member-group-table";
@@ -192,12 +192,10 @@ export default function ManageMembersPage() {
 					))}
 				</div>
 			)}
-			<Alert>
-				<Volleyball className="size-4" />
-				<AlertTitle>
-					<strong>Total Members:</strong> {totalFilteredMembers}
-				</AlertTitle>
-			</Alert>
+			<div className="flex items-center gap-2 text-sm text-muted-foreground border-t pt-4">
+				<Users className="h-4 w-4" />
+				<span>Total Members: <strong className="text-foreground">{totalFilteredMembers}</strong></span>
+			</div>
 			<AddMemberModal
 				open={showAddMemberModal}
 				onOpenChange={setShowAddMemberModal}

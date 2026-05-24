@@ -7,6 +7,7 @@ import { JoinedPositionSummary, WeeklyApprovalSubmission } from "@/types/holiday
 import { getWeekDay, getWeekLabel, isWeekEditable } from "@/lib/holiday-subsidy/holiday-weeks";
 import { unwrapRelation } from "@/lib/supabase/helpers";
 import { ApiError } from "@/lib/api/errors";
+import { mapApproveRpcError } from "@/lib/holiday-subsidy/rpc-error-mappers";
 
 // ─── Helpers ──────────────────────────────────────────────────────
 
@@ -38,25 +39,6 @@ function mapUserSubsidyError(message: string): { status: number; error: string }
 	}
 	if (message.includes("No authenticated user")) {
 		return { status: 401, error: "Unauthorized" };
-	}
-	return { status: 400, error: message };
-}
-
-/**
- * Map approve_user_subsidy errors to consistent HTTP codes.
- */
-function mapApproveRpcError(message: string): { status: number; error: string } {
-	if (message.startsWith("Invalid transition")) {
-		return { status: 409, error: message };
-	}
-	if (message.startsWith("Only JCRC")) {
-		return { status: 403, error: message };
-	}
-	if (message.includes("not found") || message.includes("not accessible")) {
-		return { status: 404, error: message };
-	}
-	if (message.includes("only accepts")) {
-		return { status: 400, error: message };
 	}
 	return { status: 400, error: message };
 }

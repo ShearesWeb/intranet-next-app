@@ -21,7 +21,7 @@ export function DashboardError({ error, reset, segmentLabel }: DashboardErrorPro
 	const isDev = process.env.NODE_ENV !== "production";
 
 	return (
-		<div className="flex flex-col space-y-4 p-4">
+		<div className="flex flex-col gap-4 p-4">
 			<Card className="border-destructive/40 bg-destructive/5">
 				<CardHeader>
 					<CardTitle className="flex items-center gap-2 text-destructive">
@@ -29,7 +29,7 @@ export function DashboardError({ error, reset, segmentLabel }: DashboardErrorPro
 						<span>Something went wrong</span>
 					</CardTitle>
 				</CardHeader>
-				<CardContent className="space-y-4 text-sm">
+				<CardContent className="flex flex-col gap-4 text-sm">
 					{segmentLabel ? (
 						<p className="text-muted-foreground">
 							An unexpected error occurred while loading{" "}

@@ -149,14 +149,14 @@ export function DataTable<TData extends object, TId = number | string>({
   });
 
   return (
-    <div className={cn("w-full space-y-4", className)}>
+    <div className={cn("w-full flex flex-col gap-4", className)}>
       <DataTableToolbar
         table={table}
         searchColumn={searchColumn}
         searchPlaceholder={searchPlaceholder}
       />
 
-      <div className={cn("rounded-md border overflow-hidden", tableContainerClassName)}>
+      <div className={cn("rounded-lg border overflow-x-auto shadow-sm", tableContainerClassName)}>
         <Table className={cn(tablePadding, tableClassName)}>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (

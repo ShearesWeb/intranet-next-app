@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { HOLIDAY_WEEKS } from "@/lib/holiday-subsidy/holiday-weeks";
 import type { WeeklyRow } from "@/types/weekly";
 import { useWeekSelection } from "@/hooks/use-week-selection";
+import { useBeforeUnload } from "@/hooks/use-before-unload";
 
 export interface UseWeeklyCommitmentResult {
 	// Week selection
@@ -100,18 +101,7 @@ export function useWeeklyCommitment(ccaId: string | null): UseWeeklyCommitmentRe
 	}, [ccaId, isWeekOpen, weekInfo.id]);
 
 	// Warn user before leaving page with unsaved changes
-	useEffect(() => {
-		const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-			if (hasUnsavedChanges) {
-				e.preventDefault();
-				e.returnValue = "";
-				return "";
-			}
-		};
-
-		window.addEventListener("beforeunload", handleBeforeUnload);
-		return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-	}, [hasUnsavedChanges]);
+	useBeforeUnload(hasUnsavedChanges);
 
 	const handleChange = useCallback(
 		(id: number, key: keyof WeeklyRow, value: string | number | null) => {

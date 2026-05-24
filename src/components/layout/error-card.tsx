@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -12,7 +13,8 @@ interface ErrorCardProps {
 export function ErrorCard({ error, onRetry, backHref, backLabel }: ErrorCardProps) {
   return (
     <Card className="border-destructive/40 bg-destructive/5">
-      <CardContent className="flex flex-col items-center gap-4 p-6">
+      <CardContent className="flex flex-col items-center gap-4 py-12 px-6 min-h-[200px]">
+        <AlertTriangle className="h-10 w-10 text-destructive/70 mb-2" />
         <p className="text-destructive font-medium text-center">{error}</p>
         <div className="flex gap-2">
           {onRetry && (

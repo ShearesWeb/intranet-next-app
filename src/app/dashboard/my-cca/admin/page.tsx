@@ -2,7 +2,7 @@
 
 import React from "react";
 import { type ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown, Users, BarChart3 } from "lucide-react";
+import { Users, BarChart3, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/table/data-table";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -12,50 +12,12 @@ import { ErrorCard } from "@/components/layout/error-card";
 import Link from "next/link";
 import { useManagedCcas } from "@/hooks/use-managed-ccas";
 import type { CCAData } from "@/types/cca-data";
-import { PositionTypeBadge, CcaTypeBadge } from "@/components/badges";
+import { PositionTypeBadge } from "@/components/badges";
+import { ccaNameColumn, ccaTypeColumn } from "@/components/cca/cca-column-defs";
 
 const ccaTableColumns: ColumnDef<CCAData>[] = [
-	{
-		accessorKey: "name",
-		header: ({ column }) => (
-			<div className="flex items-center gap-2">
-				<span className="font-semibold">CCA</span>
-				<Button
-					variant="ghost"
-					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-					className="h-8 w-8 p-0"
-				>
-					<ArrowUpDown className="h-4 w-4" />
-				</Button>
-			</div>
-		),
-		cell: ({ row }) => (
-			<div className="flex flex-col gap-2 pr-4">
-				<strong className="font-semibold text-sm md:text-base">{row.getValue("name")}</strong>
-				{row.original.description && (
-					<div className="text-xs md:text-sm text-muted-foreground break-words whitespace-normal text-justify leading-relaxed line-clamp-5">
-						{row.original.description}
-					</div>
-				)}
-			</div>
-		),
-	},
-	{
-		accessorKey: "cca_type",
-		header: ({ column }) => (
-			<div className="flex items-center gap-2">
-				<span className="font-semibold">Type</span>
-				<Button
-					variant="ghost"
-					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-					className="h-8 w-8 p-0"
-				>
-					<ArrowUpDown className="h-4 w-4" />
-				</Button>
-			</div>
-		),
-		cell: ({ row }) => <CcaTypeBadge value={String(row.getValue("cca_type"))} className="text-xs" />,
-	},
+	ccaNameColumn,
+	ccaTypeColumn,
 	{
 		accessorKey: "positions",
 		header: () => <div className="font-semibold">Managed Positions</div>,
@@ -141,12 +103,14 @@ export default function CCAAdmin() {
 		<div className="flex flex-col space-y-6 p-4 md:p-6">
 			<PageHeader
 				title="CCA Admin"
+				description="Manage members and rankings for your CCAs."
 				backHref="/dashboard/my-cca"
 				backLabel="Back to My CCAs"
 			/>
 
 			{ccas.length === 0 ? (
 				<EmptyState
+					icon={ShieldCheck}
 					title="No manageable CCAs found."
 					description="You do not have admin permissions for any CCAs."
 				/>
