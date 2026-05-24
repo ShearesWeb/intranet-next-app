@@ -11,12 +11,12 @@ import type {
 	DeclarationSection,
 	SubsidyDeclaration,
 	WeekOption,
-} from "@/features/holiday-subsidy/types/declarations";
-import { SubsidyStatus } from "@/features/holiday-subsidy/types/declarations";
+} from "@/types/declarations";
+import { SubsidyStatus } from "@/types/declarations";
 import {
 	coerceSubsidyStatus,
 	formatSubsidyStatus,
-} from "@/features/holiday-subsidy/utils/declaration-mappers";
+} from "@/lib/holiday-subsidy/declaration-mappers";
 
 const statusVariant: Record<SubsidyStatus, "default" | "secondary" | "destructive"> = {
 	[SubsidyStatus.PENDING]: "secondary",

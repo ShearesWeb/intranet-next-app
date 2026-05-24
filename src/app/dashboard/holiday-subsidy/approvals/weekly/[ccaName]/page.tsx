@@ -4,10 +4,10 @@ import React from "react";
 import { useParams, useSearchParams } from "next/navigation";
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { HOLIDAY_WEEKS } from "@/features/holiday-subsidy/utils/holiday-weeks";
-import { useWeeklyApprovals } from "@/features/holiday-subsidy/hooks/use-weekly-approvals";
-import { WeeklyApprovalsTable } from "@/features/holiday-subsidy/components/weekly-approvals-table";
-import { WeeklyPageHeader } from "@/features/holiday-subsidy/components/weekly-page-header";
+import { HOLIDAY_WEEKS } from "@/lib/holiday-subsidy/holiday-weeks";
+import { useWeeklyApprovals } from "@/hooks/use-weekly-approvals";
+import { WeeklyApprovalsTable } from "@/components/holiday-subsidy/weekly-approvals-table";
+import { WeeklyPageHeader } from "@/components/holiday-subsidy/weekly-page-header";
 
 export default function WeeklyCommitmentApprovalPage() {
 	const params = useParams();

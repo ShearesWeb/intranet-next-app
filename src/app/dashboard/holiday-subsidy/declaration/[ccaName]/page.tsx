@@ -9,15 +9,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Spinner } from "@/components/ui/spinner";
-import { DeclarationSectionCard } from "@/features/holiday-subsidy/components/declaration-section-card";
-import { SubsidyDeclarationFormDialog } from "@/features/holiday-subsidy/components/subsidy-declaration-form-dialog";
-import { useSubsidyDeclarations } from "@/features/holiday-subsidy/hooks/use-subsidy-declarations";
+import { DeclarationSectionCard } from "@/components/holiday-subsidy/declaration-section-card";
+import { SubsidyDeclarationFormDialog } from "@/components/holiday-subsidy/subsidy-declaration-form-dialog";
+import { useSubsidyDeclarations } from "@/hooks/use-subsidy-declarations";
 import {
 	SubsidyStatus,
 	type DeclarationSection,
-} from "@/features/holiday-subsidy/types/declarations";
-import { HOLIDAY_WEEK_OPTIONS } from "@/features/holiday-subsidy/utils/holiday-weeks";
-import { formatSubsidyStatus } from "@/features/holiday-subsidy/utils/declaration-mappers";
+} from "@/types/declarations";
+import { HOLIDAY_WEEK_OPTIONS } from "@/lib/holiday-subsidy/holiday-weeks";
+import { formatSubsidyStatus } from "@/lib/holiday-subsidy/declaration-mappers";
 
 const STATUS_ORDER: SubsidyStatus[] = [
 	SubsidyStatus.PENDING,

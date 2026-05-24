@@ -8,10 +8,10 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, AlertCircle } from "lucide-react";
-import { HOLIDAY_WEEKS } from "@/features/holiday-subsidy/utils/holiday-weeks";
-import { useWeeklyCommitment } from "@/features/holiday-subsidy/hooks/use-weekly-commitment";
-import { WeeklyCommitmentTable } from "@/features/holiday-subsidy/components/weekly-commitment-table";
-import { WeeklyPageHeader } from "@/features/holiday-subsidy/components/weekly-page-header";
+import { HOLIDAY_WEEKS } from "@/lib/holiday-subsidy/holiday-weeks";
+import { useWeeklyCommitment } from "@/hooks/use-weekly-commitment";
+import { WeeklyCommitmentTable } from "@/components/holiday-subsidy/weekly-commitment-table";
+import { WeeklyPageHeader } from "@/components/holiday-subsidy/weekly-page-header";
 
 export default function WeeklyCommitmentPage() {
 	const searchParams = useSearchParams();

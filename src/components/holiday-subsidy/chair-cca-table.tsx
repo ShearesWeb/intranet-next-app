@@ -7,7 +7,7 @@ import { ArrowRight, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/table/data-table";
 import { PositionTypeBadge } from "@/components/badges";
-import type { ChairSubsidyRow } from "@/features/holiday-subsidy/hooks/use-chair-subsidy-ccas";
+import type { ChairSubsidyRow } from "@/hooks/use-chair-subsidy-ccas";
 
 const columns: ColumnDef<ChairSubsidyRow>[] = [
 	{

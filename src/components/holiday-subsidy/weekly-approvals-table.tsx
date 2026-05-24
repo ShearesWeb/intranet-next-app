@@ -9,7 +9,7 @@ import { Check, X, Info, AlertCircle } from "lucide-react";
 import type {
 	WeeklyApprovalRow,
 	WeeklyApprovalStatus,
-} from "@/features/holiday-subsidy/types/weekly";
+} from "@/types/weekly";
 
 export interface WeeklyApprovalsTableProps {
 	weekLabel: string;

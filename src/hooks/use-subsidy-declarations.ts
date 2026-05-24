@@ -5,11 +5,11 @@ import type {
 	PositionOption,
 	SubsidyDeclaration,
 	SubsidyWithPosition,
-} from "@/features/holiday-subsidy/types/declarations";
+} from "@/types/declarations";
 import {
 	buildPositionMap,
 	mapSubsidyToDeclaration,
-} from "@/features/holiday-subsidy/utils/declaration-mappers";
+} from "@/lib/holiday-subsidy/declaration-mappers";
 
 export interface UseSubsidyDeclarationsResult {
 	positions: PositionOption[];

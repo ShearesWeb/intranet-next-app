@@ -6,7 +6,7 @@ import { ApiError } from "@/lib/api/errors";
 import {
 	getWeeklyApprovals,
 	batchApproveWeekly,
-} from "@/features/holiday-subsidy/services/weekly-service";
+} from "@/lib/holiday-subsidy/weekly-service";
 
 type Params = {
 	params: Promise<{ "cca-id": string; "week-id": string }>;

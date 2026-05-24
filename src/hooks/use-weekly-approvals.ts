@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { HOLIDAY_WEEKS } from "@/features/holiday-subsidy/utils/holiday-weeks";
+import { HOLIDAY_WEEKS } from "@/lib/holiday-subsidy/holiday-weeks";
 import type {
 	WeeklyApprovalRow,
 	WeeklyApprovalStatus,
-} from "@/features/holiday-subsidy/types/weekly";
+} from "@/types/weekly";
 
 export interface UseWeeklyApprovalsResult {
 	// Week selection

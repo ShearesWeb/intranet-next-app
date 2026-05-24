@@ -7,8 +7,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useAuth } from "@/lib/auth/auth-context";
 import { PageHeader } from "@/components/layout/page-header";
-import { ChairCcaTable } from "@/features/holiday-subsidy/components/chair-cca-table";
-import { useChairSubsidyCcas } from "@/features/holiday-subsidy/hooks/use-chair-subsidy-ccas";
+import { ChairCcaTable } from "@/components/holiday-subsidy/chair-cca-table";
+import { useChairSubsidyCcas } from "@/hooks/use-chair-subsidy-ccas";
 
 export default function HolidaySubsidyLanding() {
 	const { user } = useAuth();

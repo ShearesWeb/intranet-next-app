@@ -2,8 +2,8 @@
 // and src/app/api/holidaySubsidy/approvals/[ccaId]/route.ts
 
 import { createClient } from "@/lib/supabase/server";
-import { SubsidyStatus, SubsidyWithPosition, PositionOption } from "@/features/holiday-subsidy/types/declarations";
-import { getWeekIdForDay } from "@/features/holiday-subsidy/utils/holiday-weeks";
+import { SubsidyStatus, SubsidyWithPosition, PositionOption } from "@/types/declarations";
+import { getWeekIdForDay } from "@/lib/holiday-subsidy/holiday-weeks";
 import { unwrapRelation } from "@/lib/supabase/helpers";
 import { ApiError } from "@/lib/api/errors";
 

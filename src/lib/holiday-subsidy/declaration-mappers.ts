@@ -3,8 +3,8 @@ import type {
 	SubsidyDeclaration,
 	SubsidyStatus,
 	SubsidyWithPosition,
-} from "@/features/holiday-subsidy/types/declarations";
-import { SubsidyStatus as SubsidyStatusValues } from "@/features/holiday-subsidy/types/declarations";
+} from "@/types/declarations";
+import { SubsidyStatus as SubsidyStatusValues } from "@/types/declarations";
 
 export function buildPositionMap(positions: PositionOption[]): Map<number, PositionOption> {
 	return positions.reduce((acc, position) => {

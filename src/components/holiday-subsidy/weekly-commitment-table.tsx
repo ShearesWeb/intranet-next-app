@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { PositionTypeBadge } from "@/components/badges";
 import { DataTable } from "@/components/table/data-table";
-import type { WeeklyRow } from "@/features/holiday-subsidy/types/weekly";
+import type { WeeklyRow } from "@/types/weekly";
 
 export interface WeeklyCommitmentTableProps {
 	rows: WeeklyRow[];

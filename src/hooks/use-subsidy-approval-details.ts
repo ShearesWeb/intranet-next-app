@@ -6,12 +6,12 @@ import type {
 	SubsidyDeclaration,
 	SubsidyStatus,
 	SubsidyWithPosition,
-} from "@/features/holiday-subsidy/types/declarations";
-import { SubsidyStatus as SubsidyStatusValues } from "@/features/holiday-subsidy/types/declarations";
+} from "@/types/declarations";
+import { SubsidyStatus as SubsidyStatusValues } from "@/types/declarations";
 import {
 	buildPositionMap,
 	mapSubsidyToDeclaration,
-} from "@/features/holiday-subsidy/utils/declaration-mappers";
+} from "@/lib/holiday-subsidy/declaration-mappers";
 
 interface ApprovalDetailPayload {
 	ccaName: string;

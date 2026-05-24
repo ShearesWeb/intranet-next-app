@@ -4,7 +4,7 @@ import {
 	AccordionItem,
 	AccordionTrigger,
 } from "@/components/ui/accordion";
-import { FAQ_ITEMS } from "@/features/holiday-subsidy/utils/holiday-subsidy-guide-content";
+import { FAQ_ITEMS } from "@/lib/holiday-subsidy/holiday-subsidy-guide-content";
 
 export function GuideFaq() {
 	return (

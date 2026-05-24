@@ -5,7 +5,7 @@ import { ApiError } from "@/lib/api/errors";
 import {
 	getApprovalDetails,
 	batchApprove,
-} from "@/features/holiday-subsidy/services/approval-service";
+} from "@/lib/holiday-subsidy/approval-service";
 
 type Params = {
 	params: Promise<{ "cca-id": string }>;

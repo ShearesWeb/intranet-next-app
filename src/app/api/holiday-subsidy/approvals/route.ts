@@ -1,7 +1,7 @@
 import { apiOk, handleApiError } from "@/lib/api/response";
 import { requireJcrcAccess } from "@/lib/api/auth";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
-import { getApprovalsIndex } from "@/features/holiday-subsidy/services/approval-service";
+import { getApprovalsIndex } from "@/lib/holiday-subsidy/approval-service";
 
 export async function GET() {
 	const disabledResponse = getCoreServiceDisabledApiResponse("holidaySubsidy");

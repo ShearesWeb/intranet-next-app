@@ -1,6 +1,6 @@
 import { FileCheck, CheckCircle, Users, Calculator } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { GUIDE_PHASES } from "@/features/holiday-subsidy/utils/holiday-subsidy-guide-content";
+import { GUIDE_PHASES } from "@/lib/holiday-subsidy/holiday-subsidy-guide-content";
 
 const PHASE_ICONS = [FileCheck, CheckCircle, Users, Calculator];
 

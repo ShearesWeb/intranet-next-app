@@ -6,7 +6,7 @@ import {
 	getDeclarations,
 	upsertDeclaration,
 	deleteDeclaration,
-} from "@/features/holiday-subsidy/services/declaration-service";
+} from "@/lib/holiday-subsidy/declaration-service";
 
 type Params = {
 	params: Promise<{ "cca-id": string }>;

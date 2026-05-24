@@ -1,6 +1,6 @@
 // Pure helpers that drive the "save" / "has changes" buttons on the chair
 // weekly-commitment page. The local WeeklyRow shape here intentionally subsets
-// the feature-level type (`@/features/holiday-subsidy/types/weekly`) — only
+// the feature-level type (`@/types/weekly`) — only
 // the fields these helpers read need to be present.
 
 export interface WeeklyRow {

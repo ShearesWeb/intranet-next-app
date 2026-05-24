@@ -1,5 +1,5 @@
 // Route-facing join contracts for holiday subsidy API handlers
-import type { SubsidyStatus } from "@/features/holiday-subsidy/types/declarations";
+import type { SubsidyStatus } from "@/types/declarations";
 
 export interface JoinedPositionSummary {
 	id: number;

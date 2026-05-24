@@ -7,7 +7,7 @@ import { ShieldCheck, ListChecks, ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DataTable } from "@/components/table/data-table";
-import type { CcaApprovalRow } from "@/features/holiday-subsidy/hooks/use-subsidy-approvals-index";
+import type { CcaApprovalRow } from "@/hooks/use-subsidy-approvals-index";
 
 const columns: ColumnDef<CcaApprovalRow>[] = [
 	{

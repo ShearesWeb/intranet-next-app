@@ -11,14 +11,14 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/lib/auth/auth-context";
 
-import { DeclarationSectionCard } from "@/features/holiday-subsidy/components/declaration-section-card";
-import { useSubsidyApprovalDetails } from "@/features/holiday-subsidy/hooks/use-subsidy-approval-details";
+import { DeclarationSectionCard } from "@/components/holiday-subsidy/declaration-section-card";
+import { useSubsidyApprovalDetails } from "@/hooks/use-subsidy-approval-details";
 import {
 	SubsidyStatus,
 	type DeclarationSection,
-} from "@/features/holiday-subsidy/types/declarations";
-import { formatSubsidyStatus } from "@/features/holiday-subsidy/utils/declaration-mappers";
-import { HOLIDAY_WEEK_OPTIONS } from "@/features/holiday-subsidy/utils/holiday-weeks";
+} from "@/types/declarations";
+import { formatSubsidyStatus } from "@/lib/holiday-subsidy/declaration-mappers";
+import { HOLIDAY_WEEK_OPTIONS } from "@/lib/holiday-subsidy/holiday-weeks";
 
 const STATUS_ORDER: SubsidyStatus[] = [
 	SubsidyStatus.PENDING,

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { HOLIDAY_WEEKS, getEditableWeekIds } from "@/features/holiday-subsidy/utils/holiday-weeks";
+import { HOLIDAY_WEEKS, getEditableWeekIds } from "@/lib/holiday-subsidy/holiday-weeks";
 
 export interface UseWeekSelectionOptions {
 	hasUnsavedChanges: boolean;

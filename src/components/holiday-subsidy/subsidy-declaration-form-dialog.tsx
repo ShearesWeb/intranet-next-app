@@ -20,7 +20,7 @@ import type {
 	SubsidyDeclaration,
 	SubsidyWithPosition,
 	WeekOption,
-} from "@/features/holiday-subsidy/types/declarations";
+} from "@/types/declarations";
 
 export type SubsidyDeclarationFormDialogProps = {
 	ccaId: string;

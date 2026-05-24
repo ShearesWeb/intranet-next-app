@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { HOLIDAY_WEEKS } from "@/features/holiday-subsidy/utils/holiday-weeks";
-import type { WeeklyRow } from "@/features/holiday-subsidy/types/weekly";
-import { useWeekSelection } from "@/features/holiday-subsidy/hooks/use-week-selection";
+import { HOLIDAY_WEEKS } from "@/lib/holiday-subsidy/holiday-weeks";
+import type { WeeklyRow } from "@/types/weekly";
+import { useWeekSelection } from "@/hooks/use-week-selection";
 
 export interface UseWeeklyCommitmentResult {
 	// Week selection

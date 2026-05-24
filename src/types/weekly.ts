@@ -1,5 +1,5 @@
 // Weekly commitment and approval flow contracts
-import type { SubsidyStatus } from "@/features/holiday-subsidy/types/declarations";
+import type { SubsidyStatus } from "@/types/declarations";
 
 export interface WeeklyRow {
 	id: number;

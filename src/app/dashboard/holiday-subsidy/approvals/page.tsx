@@ -4,8 +4,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useAuth } from "@/lib/auth/auth-context";
 import { PageHeader } from "@/components/layout/page-header";
-import { ApprovalCcaTable } from "@/features/holiday-subsidy/components/approval-cca-table";
-import { useSubsidyApprovalsIndex } from "@/features/holiday-subsidy/hooks/use-subsidy-approvals-index";
+import { ApprovalCcaTable } from "@/components/holiday-subsidy/approval-cca-table";
+import { useSubsidyApprovalsIndex } from "@/hooks/use-subsidy-approvals-index";
 
 export default function HolidaySubsidyApprovalsPage() {
 	const { user } = useAuth();

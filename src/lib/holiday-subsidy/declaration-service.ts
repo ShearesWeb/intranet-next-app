@@ -1,9 +1,9 @@
 // Service layer for holiday subsidy declaration operations.
 
 import { createClient } from "@/lib/supabase/server";
-import { SubsidyStatus } from "@/features/holiday-subsidy/types/declarations";
-import { PositionSubsidyRecord, PositionWithSubsidies } from "@/features/holiday-subsidy/types/api";
-import { getWeekDay, getWeekIdForDay } from "@/features/holiday-subsidy/utils/holiday-weeks";
+import { SubsidyStatus } from "@/types/declarations";
+import { PositionSubsidyRecord, PositionWithSubsidies } from "@/types/holiday-subsidy-api";
+import { getWeekDay, getWeekIdForDay } from "@/lib/holiday-subsidy/holiday-weeks";
 import { ApiError } from "@/lib/api/errors";
 
 /**

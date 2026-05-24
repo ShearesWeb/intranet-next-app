@@ -2,9 +2,9 @@
 // and src/app/api/holidaySubsidy/approvals/weekly/[ccaId]/[weekId]/route.ts
 
 import { createClient } from "@/lib/supabase/server";
-import { SubsidyStatus } from "@/features/holiday-subsidy/types/declarations";
-import { JoinedPositionSummary, WeeklyApprovalSubmission } from "@/features/holiday-subsidy/types/api";
-import { getWeekDay, getWeekLabel, isWeekEditable } from "@/features/holiday-subsidy/utils/holiday-weeks";
+import { SubsidyStatus } from "@/types/declarations";
+import { JoinedPositionSummary, WeeklyApprovalSubmission } from "@/types/holiday-subsidy-api";
+import { getWeekDay, getWeekLabel, isWeekEditable } from "@/lib/holiday-subsidy/holiday-weeks";
 import { unwrapRelation } from "@/lib/supabase/helpers";
 import { ApiError } from "@/lib/api/errors";
 

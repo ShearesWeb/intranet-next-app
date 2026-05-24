@@ -1,6 +1,6 @@
-import { GuideFaq } from "@/features/holiday-subsidy/components/guide-faq";
-import { GuidePhaseCards } from "@/features/holiday-subsidy/components/guide-phase-card";
-import { GuideProcessOverview } from "@/features/holiday-subsidy/components/guide-process-overview";
+import { GuideFaq } from "@/components/holiday-subsidy/guide-faq";
+import { GuidePhaseCards } from "@/components/holiday-subsidy/guide-phase-card";
+import { GuideProcessOverview } from "@/components/holiday-subsidy/guide-process-overview";
 
 export default function Guide() {
 	return (
