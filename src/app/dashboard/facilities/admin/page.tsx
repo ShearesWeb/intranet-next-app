@@ -57,6 +57,7 @@ export default function FacilitiesAdminPage() {
   const allActive = conflicts
     .sort((a, b) => a.days_until_booking - b.days_until_booking);
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   function handleOverride(facilityId: number, _winningCcaId: number) {
     const conflict = conflicts.find((c) => c.facility.id === facilityId);
     if (conflict) setOverrideTarget(conflict);
