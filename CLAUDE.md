@@ -107,7 +107,7 @@ A Next.js 15 intranet application for managing CCAs (Co-Curricular Activities), 
 - API route handlers: uppercase HTTP method names (`GET`, `POST`, `PATCH`, `DELETE`)
 ## Code Style
 - No dedicated Prettier config file detected -- relies on editor defaults
-- Indentation: mixed tabs and spaces (inconsistent across files -- `src/context/AuthContext.tsx` uses mixed tab/space indentation)
+- Indentation: mixed tabs and spaces (inconsistent across files)
 - Semicolons: present in most files but not enforced universally
 - String quotes: double quotes predominant in JSX and imports; single quotes appear in some files (e.g., `src/app/dashboard/mycca/page.tsx`)
 - Trailing commas: generally present after last property/parameter
@@ -138,14 +138,14 @@ A Next.js 15 intranet application for managing CCAs (Co-Curricular Activities), 
 - Standardized response envelope: `{ data: T, error: null }` on success, `{ data: null, error: string }` on error
 - Use `apiOk()`, `apiError()`, `handleApiError()` from `@/lib/api/response`
 - Use `requireAuth()`, `requireChairAccess()`, `requireJcrcAccess()` from `@/lib/api/auth`
-- Route handlers are thin (~30-60 lines) — business logic lives in `src/features/*/services/`
+- Route handlers are thin (~30-60 lines) — business logic lives in `src/lib/{domain}/services/`
 - RESTful resource routes: `GET /members`, `POST /members`, `DELETE /members` — not verb-based routes
 ## Error Handling
 - API routes: `try/catch` with `handleApiError()` in catch block
 - Auth guards throw `ApiError` (from `@/lib/api/errors`) — caught by route handlers
 - Toast notifications via `sonner` (`toast.error(...)`) for user-facing errors
 - `console.error()` for developer debugging
-- `AccessResult<T>` pattern in `src/features/cca/utils/cca-chair-access.ts` for authorization checks
+- `AccessResult<T>` pattern in `src/lib/cca/cca-chair-access.ts` for authorization checks
 ## Logging
 - `console.error("Error [context]:", error)` for unexpected errors
 - `console.warn(...)` for non-critical issues (e.g., cookie clearing failure)
@@ -157,9 +157,9 @@ A Next.js 15 intranet application for managing CCAs (Co-Curricular Activities), 
 - No file-level path comments unless useful for disambiguation
 ## State Management
 - No global state management library (no Redux, Zustand, Jotai)
-- `AuthContext` (`src/lib/auth/auth-context.tsx`) provides user session via React Context
+- `AuthContext` at `src/lib/auth/auth-context.tsx` provides user session via React Context
 - `useAuth()` hook is the single context consumer
-- `useRoleAuth()` hook in `src/features/cca/hooks/use-role-auth.ts` caches role data in `localStorage` with 5-minute TTL
+- `useRoleAuth()` hook in `src/hooks/use-role-auth.ts` caches role data in `localStorage` with 5-minute TTL
 - Read-only pages use server components with direct Supabase calls
 - Interactive pages use client-side `fetch()` in hooks
 ## Styling
@@ -173,11 +173,11 @@ A Next.js 15 intranet application for managing CCAs (Co-Curricular Activities), 
 - Default exports only for Next.js page/layout convention: `export default function Dashboard()`
 - Re-exports from UI components: `export { Button, buttonVariants }`
 - Not used. Each module is imported directly from its file path.
-- Pure business logic functions (no React dependencies) in `src/lib/`
-- Authorization: `src/lib/cca-chair-access.ts`, `src/lib/cca-management-access.ts`
+- Pure business logic functions (no React dependencies) in `src/lib/{domain}/`
+- Authorization: `src/lib/cca/cca-chair-access.ts`, `src/lib/cca/cca-management-access.ts`
 - Feature flags: `src/lib/feature-flags.ts`
-- Domain logic: `src/lib/cca-ranking-metrics.ts`, `src/lib/cca-ranking-comments.ts`, `src/lib/cca-cut-status.ts`
-- Data fetching (server-only): `src/lib/fetch-user-info.ts` (marked `"use server"`)
+- Domain logic: `src/lib/ranking/cca-ranking-metrics.ts`, `src/lib/ranking/cca-ranking-comments.ts`, `src/lib/cca/cca-cut-status.ts`
+- Data fetching (server-only): `src/lib/auth/fetch-user-info.ts` (marked `"use server"`)
 <!-- GSD:conventions-end -->
 
 <!-- GSD:architecture-start source:ARCHITECTURE.md -->
@@ -212,8 +212,8 @@ A Next.js 15 intranet application for managing CCAs (Co-Curricular Activities), 
 - Depends on: `@supabase/ssr`, environment variables
 - Used by: API routes (server client), AuthContext (browser client), middleware
 - Purpose: Session management, user identity resolution, route protection
-- Location: `src/middleware.ts`, `src/context/AuthContext.tsx`, `src/hoc/withAuth.tsx`, `src/lib/fetch-user-info.ts`
-- Contains: Middleware for route protection, React context for client-side auth state, HOC for page protection, server-side user info fetching
+- Location: `src/middleware.ts`, `src/lib/auth/auth-context.tsx`, `src/lib/auth/fetch-user-info.ts`
+- Contains: Middleware for route protection, React context for client-side auth state, server-side user info fetching
 - Depends on: Supabase Auth, `src/utils/supabase/`
 - Used by: All protected pages and API routes
 - Purpose: Shared TypeScript interfaces and types
@@ -223,17 +223,17 @@ A Next.js 15 intranet application for managing CCAs (Co-Curricular Activities), 
 - Used by: All layers
 ## Data Flow
 - Server state: No global store; each page fetches data via `fetch()` to API routes in `useEffect`
-- Client auth state: `AuthContext` at `src/context/AuthContext.tsx` provides `user`, `session`, `loading`, `signIn`, `signOut`
-- Role authorization: `useRoleAuth` hook at `src/hooks/useRoleAuth.ts` fetches and caches (localStorage, 5min TTL) role check results from `/api/user/checkRole`
+- Client auth state: `AuthContext` at `src/lib/auth/auth-context.tsx` provides `user`, `session`, `loading`, `signIn`, `signOut`
+- Role authorization: `useRoleAuth` hook at `src/hooks/use-role-auth.ts` fetches and caches (localStorage, 5min TTL) role check results from `/api/user/check-role`
 - Page-local state: `useState` and `useCallback` within individual page components
 - No Redux, Zustand, or other external state management library
 ## Key Abstractions
 - Purpose: Represents a fully resolved user with profile, role flags, and CCA appointments
 - Defined in: `src/types/User.ts`
-- Built by: `src/lib/fetch-user-info.ts` (`fetchUserInfo()`)
+- Built by: `src/lib/auth/fetch-user-info.ts` (`fetchUserInfo()`)
 - Pattern: Server-side resolution from JWT claims + Supabase DB view (`authenticated_user_info`)
 - Purpose: Encapsulates authorization check results with typed ok/error union
-- Defined in: `src/lib/cca-chair-access.ts` and `src/lib/cca-management-access.ts`
+- Defined in: `src/lib/cca/cca-chair-access.ts` and `src/lib/cca/cca-management-access.ts`
 - Pattern: `AccessResult<T> = { ok: true; data: T } | { ok: false; status: number; error: string }`
 - Used by: All CCA-related API routes to verify chair/management access before data operations
 - Purpose: Toggle entire feature domains on/off (memberRanking, ccaApplications, holidaySubsidy)
@@ -245,7 +245,7 @@ A Next.js 15 intranet application for managing CCAs (Co-Curricular Activities), 
 - Pattern: Wraps page content with `SidebarProvider` > `AppSidebar` + `SidebarInset` with auto-generated breadcrumbs from URL path
 - Used by: Every dashboard page component
 - Purpose: Metric-based ranking with CCA-type-specific scoring rules
-- Defined in: `src/lib/cca-ranking-metrics.ts` (metric keys, scoring), `src/lib/cca-ranking-comments.ts` (serialization/deserialization)
+- Defined in: `src/lib/ranking/cca-ranking-metrics.ts` (metric keys, scoring), `src/lib/ranking/cca-ranking-comments.ts` (serialization/deserialization)
 - Pattern: Different metric keys for sports (attendance), culture (attendance + performance), and resident (helpfulness + initiative + attitude) CCA types
 ## Entry Points
 - Location: `src/app/layout.tsx`
