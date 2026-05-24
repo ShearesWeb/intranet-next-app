@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import type { CCAMember } from "@/features/ranking/types/ranking";
-import type { RankingsApiResponse } from "@/features/ranking/types/ranking-api";
+import type { CCAMember } from "@/types/ranking";
+import type { RankingsApiResponse } from "@/types/ranking-api";
 import {
 	buildPositionGroups,
 	chunkRankingPayloads,
@@ -13,7 +13,7 @@ import {
 	mapRankingsApiMemberToEditorMember,
 	MAX_SAVE_PAYLOAD_BYTES,
 	recalculateRankings,
-} from "@/features/ranking/utils/ranking-editor";
+} from "@/lib/ranking/ranking-editor";
 
 type FieldValue = CCAMember[keyof CCAMember];
 

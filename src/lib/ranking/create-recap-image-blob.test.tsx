@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createRecapImageBlob } from "@/features/ranking/utils/create-recap-image-blob";
+import { createRecapImageBlob } from "@/lib/ranking/create-recap-image-blob";
 
 const originalCreateElement = document.createElement.bind(document);
 

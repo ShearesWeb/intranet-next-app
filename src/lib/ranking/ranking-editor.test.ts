@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import type { CCAMember, RankingSavePayload } from "@/features/ranking/types/ranking";
+import type { CCAMember, RankingSavePayload } from "@/types/ranking";
 import {
 	chunkRankingPayloads,
 	getChangedRankingPayloads,
 	recalculateRankings,
-} from "@/features/ranking/utils/ranking-editor";
+} from "@/lib/ranking/ranking-editor";
 
 function createMember(overrides: Partial<CCAMember> = {}): CCAMember {
 	const userId = overrides.user_id ?? 1;

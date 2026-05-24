@@ -3,7 +3,7 @@
 import { fetchUserId } from "@/lib/auth/fetch-user-info";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 import { apiOk, apiError, handleApiError } from "@/lib/api/response";
-import { getRankablePositions } from "@/features/ranking/services/user-ranking-service";
+import { getRankablePositions } from "@/lib/ranking/user-ranking-service";
 
 export async function GET() {
 	const disabledResponse = getCoreServiceDisabledApiResponse("ccaApplications");

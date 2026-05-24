@@ -11,13 +11,13 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import type { CCAMember, PositionGroup, ScoreField } from "@/features/ranking/types/ranking";
-import { RESIDENT_METRICS, SCORE_OPTIONS } from "@/features/ranking/types/ranking";
+import type { CCAMember, PositionGroup, ScoreField } from "@/types/ranking";
+import { RESIDENT_METRICS, SCORE_OPTIONS } from "@/types/ranking";
 import {
 	formatCommitmentPeriod,
 	formatCutStatus,
 	isResidentPositionType,
-} from "@/features/ranking/utils/ranking-editor";
+} from "@/lib/ranking/ranking-editor";
 
 type PositionRankingCardProps = {
 	group: PositionGroup;

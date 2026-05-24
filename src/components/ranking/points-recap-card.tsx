@@ -5,11 +5,11 @@ import Link from "next/link";
 import { Linkedin, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { useRecapData } from "@/features/ranking/hooks/use-recap-data";
-import { useRecapNavigation } from "@/features/ranking/hooks/use-recap-navigation";
-import { useRecapAudio } from "@/features/ranking/hooks/use-recap-audio";
-import { RecapSlideContent } from "@/features/ranking/components/recap-slide-content";
-import { createRecapImageBlob } from "@/features/ranking/utils/create-recap-image-blob";
+import { useRecapData } from "@/hooks/use-recap-data";
+import { useRecapNavigation } from "@/hooks/use-recap-navigation";
+import { useRecapAudio } from "@/hooks/use-recap-audio";
+import { RecapSlideContent } from "@/components/ranking/recap-slide-content";
+import { createRecapImageBlob } from "@/lib/ranking/create-recap-image-blob";
 import { cn } from "@/lib/utils";
 import type { AuthenticatedUser } from "@/types/user";
 

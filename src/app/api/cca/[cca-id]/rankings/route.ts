@@ -6,7 +6,7 @@ import {
 	loadCcaContext,
 	loadManagedRankingAccess,
 	mapRankingResponseMembers,
-} from "@/features/ranking/utils/ranking-route";
+} from "@/lib/ranking/ranking-route";
 import { fetchUserInfo } from "@/lib/auth/fetch-user-info";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 import type {
@@ -14,7 +14,7 @@ import type {
 	RankingAccessPosition,
 	RankingPayload,
 	RankingRow,
-} from "@/features/ranking/types/ranking-api";
+} from "@/types/ranking-api";
 
 export async function GET(
 	_request: Request,

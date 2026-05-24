@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { RecapSlide } from "@/features/ranking/types/recap";
+import type { RecapSlide } from "@/types/recap";
 
 /** Attempt a cubic-bezier-style easing for the count-up. */
 function easeOutCubic(t: number): number {

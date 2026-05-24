@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildRecapSlides } from "@/features/ranking/utils/recap-slides";
+import { buildRecapSlides } from "@/lib/ranking/recap-slides";
 
 const user = {
 	id: 1,

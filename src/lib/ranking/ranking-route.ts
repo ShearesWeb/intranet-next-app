@@ -3,19 +3,19 @@ import { normalizeCutStatusForCca } from "@/lib/cca/cca-cut-status";
 import {
 	buildRankingComments,
 	extractRankingCommentFields,
-} from "@/features/ranking/utils/cca-ranking-comments";
+} from "@/lib/ranking/cca-ranking-comments";
 import {
 	getRankingMetricKeys,
 	hasRequiredRankingInputs,
 	isResidentPositionType,
-} from "@/features/ranking/utils/cca-ranking-metrics";
+} from "@/lib/ranking/cca-ranking-metrics";
 import type {
 	AppointmentRow,
 	ManagedRankingAccessRow,
 	RankingPayload,
 	RankingResponseMember,
 	RankingRow,
-} from "@/features/ranking/types/ranking-api";
+} from "@/types/ranking-api";
 import { fetchUserInfo } from "@/lib/auth/fetch-user-info";
 import { createClient } from "@/lib/supabase/server";
 

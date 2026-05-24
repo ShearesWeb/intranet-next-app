@@ -1,5 +1,5 @@
 import type { CommitmentPeriod, CutStatus } from "@/types/members";
-import type { RankingsApiMember } from "@/features/ranking/types/ranking-api";
+import type { RankingsApiMember } from "@/types/ranking-api";
 import {
 	MAX_SAVE_PAYLOAD_BYTES,
 	POSITION_TYPE_ORDER,
@@ -9,12 +9,12 @@ import {
 	type RankingSavePayload,
 	type ScoreField,
 	SCORE_OPTIONS,
-} from "@/features/ranking/types/ranking";
+} from "@/types/ranking";
 import {
 	getRankingScore,
 	hasRequiredRankingInputs,
 	isResidentPositionType,
-} from "@/features/ranking/utils/cca-ranking-metrics";
+} from "@/lib/ranking/cca-ranking-metrics";
 
 const textEncoder = new TextEncoder();
 

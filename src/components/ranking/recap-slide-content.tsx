@@ -1,6 +1,6 @@
 "use client";
 
-import type { RecapSlide } from "@/features/ranking/types/recap";
+import type { RecapSlide } from "@/types/recap";
 
 export function RecapSlideContent({
 	slide,

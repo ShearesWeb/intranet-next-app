@@ -6,11 +6,11 @@ import type {
 	AppointmentRow,
 	RankingPayload,
 	RankingRow,
-} from "@/features/ranking/types/ranking-api";
+} from "@/types/ranking-api";
 import {
 	buildRankingsUpsertPayloads,
 	mapRankingResponseMembers,
-} from "@/features/ranking/utils/ranking-route";
+} from "@/lib/ranking/ranking-route";
 
 const routePath = resolve(process.cwd(), "src/app/api/cca/[cca-id]/rankings/route.ts");
 

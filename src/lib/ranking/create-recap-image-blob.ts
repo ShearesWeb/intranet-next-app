@@ -1,6 +1,6 @@
 import type { CCAData } from "@/types/cca-data";
-import type { RecapData } from "@/features/ranking/types/recap";
-import { isResidentPositionType } from "@/features/ranking/utils/cca-ranking-metrics";
+import type { RecapData } from "@/types/recap";
+import { isResidentPositionType } from "@/lib/ranking/cca-ranking-metrics";
 import type { AuthenticatedUser } from "@/types/user";
 
 const leadershipPositionTypes = new Set(["lead", "vice", "maincomm", "subcomm"]);

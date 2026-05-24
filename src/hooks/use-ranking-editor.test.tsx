@@ -2,7 +2,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { useRankingEditor } from "@/features/ranking/hooks/use-ranking-editor";
+import { useRankingEditor } from "@/hooks/use-ranking-editor";
 
 const toast = vi.hoisted(() => ({
 	success: vi.fn(),

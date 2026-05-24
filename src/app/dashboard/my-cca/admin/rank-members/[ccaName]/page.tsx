@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { AlertCircle, ArrowLeft, Loader2, Save } from "lucide-react";
 
-import { PositionRankingCard } from "@/features/ranking/components/position-ranking-card";
-import { useRankingEditor } from "@/features/ranking/hooks/use-ranking-editor";
+import { PositionRankingCard } from "@/components/ranking/position-ranking-card";
+import { useRankingEditor } from "@/hooks/use-ranking-editor";
 import { useAuth } from "@/lib/auth/auth-context";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";

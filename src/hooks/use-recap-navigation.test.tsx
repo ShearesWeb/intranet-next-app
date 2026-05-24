@@ -1,8 +1,8 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useRecapNavigation } from "@/features/ranking/hooks/use-recap-navigation";
-import type { RecapSlide } from "@/features/ranking/types/recap";
+import { useRecapNavigation } from "@/hooks/use-recap-navigation";
+import type { RecapSlide } from "@/types/recap";
 
 const makeSlides = (n: number): RecapSlide[] =>
 	Array.from({ length: n }, (_, i) => ({

@@ -7,7 +7,7 @@ import { useAuth } from "@/lib/auth/auth-context";
 import { useRoleAuth } from "@/hooks/use-role-auth";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { PointsRecapCard } from "@/features/ranking/components/points-recap-card";
+import { PointsRecapCard } from "@/components/ranking/points-recap-card";
 import { getCoreServiceFlags } from "@/lib/feature-flags";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
