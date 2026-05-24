@@ -1,7 +1,7 @@
-import { AllocationGuideHero } from "@/features/allocation/components/allocation-guide-hero";
-import { AllocationTips } from "@/features/allocation/components/allocation-tips";
-import { AllocationAlgorithmSteps } from "@/features/allocation/components/allocation-algorithm-steps";
-import { AllocationFAQ } from "@/features/allocation/components/allocation-faq";
+import { AllocationGuideHero } from "@/components/allocation/allocation-guide-hero";
+import { AllocationTips } from "@/components/allocation/allocation-tips";
+import { AllocationAlgorithmSteps } from "@/components/allocation/allocation-algorithm-steps";
+import { AllocationFAQ } from "@/components/allocation/allocation-faq";
 
 export default function CCAAllocationGuide() {
 	return (

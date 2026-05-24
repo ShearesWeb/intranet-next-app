@@ -4,8 +4,8 @@ import React from "react";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { OrderingTable } from "@/components/table/ordering-table";
-import { rankingColumns } from "@/features/allocation/utils/ranking-columns";
-import type { RankablePosition } from "@/features/allocation/types/preferences";
+import { rankingColumns } from "@/components/allocation/ranking-columns";
+import type { RankablePosition } from "@/types/preferences";
 
 interface RankOrderingStepProps {
 	selectedPositions: RankablePosition[];

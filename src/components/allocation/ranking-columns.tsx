@@ -1,7 +1,7 @@
 import React from "react";
 import { PositionTypeBadge } from "@/components/badges";
 import type { OrderingTableColumn } from "@/components/table/ordering-table";
-import type { RankablePosition } from "@/features/allocation/types/preferences";
+import type { RankablePosition } from "@/types/preferences";
 
 function SlotsLeftCell({ available, capacity }: { available: number; capacity: number }) {
 	const ratio = capacity > 0 ? available / capacity : 0;

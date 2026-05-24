@@ -1,6 +1,6 @@
 import { Brain, Users, Activity, Heart, CheckCircle2, XCircle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ALGORITHM_STEPS } from "@/features/allocation/utils/allocation-guide-content";
+import { ALGORITHM_STEPS } from "@/lib/allocation/allocation-guide-content";
 
 const STEP_ICONS = { Users, Activity, Heart } as const;
 

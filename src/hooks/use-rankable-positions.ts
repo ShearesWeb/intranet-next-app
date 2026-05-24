@@ -5,8 +5,8 @@ import { toast } from "sonner";
 import {
 	detectRankingSelectionChanges,
 	buildRankingsPayload,
-} from "@/features/allocation/utils/ranking-changes";
-import type { RankablePosition } from "@/features/allocation/types/preferences";
+} from "@/lib/allocation/ranking-changes";
+import type { RankablePosition } from "@/types/preferences";
 
 export type RankStep = "selection" | "ranking";
 

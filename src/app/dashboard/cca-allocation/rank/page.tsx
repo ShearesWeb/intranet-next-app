@@ -4,9 +4,9 @@
 import React from "react";
 import { useAuth } from "@/lib/auth/auth-context";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { useRankablePositions } from "@/features/allocation/hooks/use-rankable-positions";
-import { RankSelectionStep } from "@/features/allocation/components/rank-selection-step";
-import { RankOrderingStep } from "@/features/allocation/components/rank-ordering-step";
+import { useRankablePositions } from "@/hooks/use-rankable-positions";
+import { RankSelectionStep } from "@/components/allocation/rank-selection-step";
+import { RankOrderingStep } from "@/components/allocation/rank-ordering-step";
 
 export default function RankCCA() {
 	const { user } = useAuth();

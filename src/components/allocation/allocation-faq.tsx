@@ -7,7 +7,7 @@ import {
 	AccordionItem,
 	AccordionTrigger,
 } from "@/components/ui/accordion";
-import { FAQ_ITEMS } from "@/features/allocation/utils/allocation-guide-content";
+import { FAQ_ITEMS } from "@/lib/allocation/allocation-guide-content";
 
 export function AllocationFAQ() {
 	return (

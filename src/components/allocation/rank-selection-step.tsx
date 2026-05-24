@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { OrderingTable, type OrderingTableColumn } from "@/components/table/ordering-table";
-import { rankingColumns } from "@/features/allocation/utils/ranking-columns";
-import type { RankablePosition } from "@/features/allocation/types/preferences";
+import { rankingColumns } from "@/components/allocation/ranking-columns";
+import type { RankablePosition } from "@/types/preferences";
 
 interface RankSelectionStepProps {
 	allPositions: RankablePosition[];

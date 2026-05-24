@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/layout/empty-state";
-import { useApplicantRankings } from "@/features/allocation/hooks/use-applicant-rankings";
-import { PositionCard } from "@/features/allocation/components/position-card";
-import type { Position } from "@/features/allocation/types/applicants";
+import { useApplicantRankings } from "@/hooks/use-applicant-rankings";
+import { PositionCard } from "@/components/allocation/position-card";
+import type { Position } from "@/types/applicants";
 
 export default function RankApplicants() {
 	const { user } = useAuth();
