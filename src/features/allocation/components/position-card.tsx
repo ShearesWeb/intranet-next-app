@@ -7,7 +7,7 @@ import { PositionTypeBadge } from "@/components/badges";
 import { OrderingTable, type OrderingTableColumn } from "@/components/table/ordering-table";
 import { AddApplicantDialog } from "@/features/allocation/components/add-applicant-dialog";
 import type { Applicant, Position } from "@/features/allocation/types/applicants";
-import type { UserSearchResult } from "@/features/cca/types/members";
+import type { UserSearchResult } from "@/types/members";
 
 interface PositionCardProps {
 	position: Position;

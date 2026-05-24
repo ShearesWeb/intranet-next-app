@@ -10,8 +10,8 @@ import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/layout/empty-state";
 import { ErrorCard } from "@/components/layout/error-card";
 import Link from "next/link";
-import { useManagedCcas } from "@/features/cca/hooks/use-managed-ccas";
-import type { CCAData } from "@/features/cca/types/cca-data";
+import { useManagedCcas } from "@/hooks/use-managed-ccas";
+import type { CCAData } from "@/types/cca-data";
 import { PositionTypeBadge, CcaTypeBadge } from "@/components/badges";
 
 const ccaTableColumns: ColumnDef<CCAData>[] = [

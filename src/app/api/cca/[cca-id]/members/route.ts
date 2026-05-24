@@ -4,7 +4,7 @@ import {
 	addMember,
 	removeMember,
 	updateMember,
-} from "@/features/cca/services/member-service";
+} from "@/lib/cca/member-service";
 
 export async function GET(
 	_req: Request,

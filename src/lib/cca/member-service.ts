@@ -4,11 +4,11 @@ import { ApiError } from "@/lib/api/errors";
 import {
 	canManageCcaMembers,
 	getCcaMemberManagementDisabledMessage,
-} from "@/features/cca/utils/cca-member-management";
-import { normalizeCutStatusForCca } from "@/features/cca/utils/cca-cut-status";
-import { getManagedCcaAccess } from "@/features/cca/utils/cca-management-access";
+} from "@/lib/cca/cca-member-management";
+import { normalizeCutStatusForCca } from "@/lib/cca/cca-cut-status";
+import { getManagedCcaAccess } from "@/lib/cca/cca-management-access";
 import { fetchUserInfo } from "@/lib/auth/fetch-user-info";
-import type { MemberJoinPosition, MemberUpdate, MemberWithJoins } from "@/features/cca/types/members";
+import type { MemberJoinPosition, MemberUpdate, MemberWithJoins } from "@/types/members";
 
 interface TransformedMember {
 	user_id: number;

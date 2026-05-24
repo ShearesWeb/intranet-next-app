@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/api/auth";
 import { apiOk, apiError, handleApiError } from "@/lib/api/response";
-import { checkCcaAuthorization } from "@/features/cca/utils/cca-chair-access";
+import { checkCcaAuthorization } from "@/lib/cca/cca-chair-access";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 
 export async function GET(request: Request) {

@@ -1,5 +1,5 @@
-import { isChairPositionType } from "@/features/cca/utils/cca-chair-access";
-import type { CommitmentPeriod, CutStatus } from "@/features/cca/types/members";
+import { isChairPositionType } from "@/lib/cca/cca-chair-access";
+import type { CommitmentPeriod, CutStatus } from "@/types/members";
 
 export { isChairPositionType };
 

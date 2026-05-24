@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { diffApplicantsForSave } from "@/features/allocation/utils/applicant-diff";
 import type { Applicant, Position } from "@/features/allocation/types/applicants";
-import type { UserSearchResult } from "@/features/cca/types/members";
+import type { UserSearchResult } from "@/types/members";
 
 export function useApplicantRankings(userEmail: string | undefined) {
 	const [positions, setPositions] = useState<Position[]>([]);

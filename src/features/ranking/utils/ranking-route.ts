@@ -1,5 +1,5 @@
-import { getManagedCcaAccess } from "@/features/cca/utils/cca-management-access";
-import { normalizeCutStatusForCca } from "@/features/cca/utils/cca-cut-status";
+import { getManagedCcaAccess } from "@/lib/cca/cca-management-access";
+import { normalizeCutStatusForCca } from "@/lib/cca/cca-cut-status";
 import {
 	buildRankingComments,
 	extractRankingCommentFields,

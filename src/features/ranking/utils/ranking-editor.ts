@@ -1,4 +1,4 @@
-import type { CommitmentPeriod, CutStatus } from "@/features/cca/types/members";
+import type { CommitmentPeriod, CutStatus } from "@/types/members";
 import type { RankingsApiMember } from "@/features/ranking/types/ranking-api";
 import {
 	MAX_SAVE_PAYLOAD_BYTES,

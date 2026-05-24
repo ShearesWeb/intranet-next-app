@@ -1,4 +1,4 @@
-import type { CutStatus } from "@/features/cca/types/members";
+import type { CutStatus } from "@/types/members";
 
 export const getGroupFromStatus = (status: CutStatus | undefined | null) => {
 	switch (status) {

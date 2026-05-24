@@ -1,4 +1,4 @@
-import type { CCAData } from "@/features/cca/types/cca-data";
+import type { CCAData } from "@/types/cca-data";
 import type { AuthenticatedUser } from "@/types/user";
 
 export type RecapSlide = {

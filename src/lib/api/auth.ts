@@ -1,5 +1,5 @@
 import { fetchUserInfo } from "@/lib/auth/fetch-user-info";
-import { checkCcaAuthorization } from "@/features/cca/utils/cca-chair-access";
+import { checkCcaAuthorization } from "@/lib/cca/cca-chair-access";
 import { ApiError } from "./errors";
 
 export async function requireAuth() {

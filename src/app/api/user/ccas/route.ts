@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isCoreServiceEnabled } from "@/lib/feature-flags";
 import { requireAuth } from "@/lib/api/auth";
 import { apiOk, handleApiError } from "@/lib/api/response";
-import { isChairPositionType } from "@/features/cca/utils/cca-chair-access";
+import { isChairPositionType } from "@/lib/cca/cca-chair-access";
 import { getManagedCcaData } from "@/lib/managed-cca-data";
 import { CcaType } from "@/types/user";
 

@@ -4,7 +4,7 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/auth-context";
 
-import { useRoleAuth } from "@/features/cca/hooks/use-role-auth";
+import { useRoleAuth } from "@/hooks/use-role-auth";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { PointsRecapCard } from "@/features/ranking/components/points-recap-card";

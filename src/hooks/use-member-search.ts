@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 
-import type { UserSearchResult } from "@/features/cca/types/members";
+import type { UserSearchResult } from "@/types/members";
 
 interface UseMemberSearchReturn {
 	searchQuery: string;

@@ -1,4 +1,4 @@
-import type { CommitmentPeriod, CutStatus } from "@/features/cca/types/members";
+import type { CommitmentPeriod, CutStatus } from "@/types/members";
 
 export interface CCAMember {
 	row_key: string;

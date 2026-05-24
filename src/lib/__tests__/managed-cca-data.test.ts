@@ -10,7 +10,7 @@ vi.mock("@/lib/supabase/server", () => ({
 	createClient: mocks.createClient,
 }));
 
-vi.mock("@/features/cca/utils/cca-chair-access", () => ({
+vi.mock("@/lib/cca/cca-chair-access", () => ({
 	isChairPositionType: mocks.isChairPositionType,
 }));
 

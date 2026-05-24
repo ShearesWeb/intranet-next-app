@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { useAuth } from "@/lib/auth/auth-context";
-import type { CCAData } from "@/features/cca/types/cca-data";
+import type { CCAData } from "@/types/cca-data";
 
 interface UseManagedCcasReturn {
 	data: CCAData[];

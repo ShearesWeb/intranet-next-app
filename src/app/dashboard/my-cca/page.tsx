@@ -9,8 +9,8 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/layout/empty-state";
 import { ErrorCard } from "@/components/layout/error-card";
-import { useCcaList } from "@/features/cca/hooks/use-cca-list";
-import type { CCAData } from "@/features/cca/types/cca-data";
+import { useCcaList } from "@/hooks/use-cca-list";
+import type { CCAData } from "@/types/cca-data";
 import { PositionTypeBadge, CcaTypeBadge } from "@/components/badges";
 
 const ccaTableColumns: ColumnDef<CCAData>[] = [

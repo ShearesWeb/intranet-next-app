@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import type { CCAData } from "@/features/cca/types/cca-data";
+import type { CCAData } from "@/types/cca-data";
 import type { RecapData } from "@/features/ranking/types/recap";
 import { buildRecapSlides } from "@/features/ranking/utils/recap-slides";
 import type { AuthenticatedUser } from "@/types/user";

@@ -1,5 +1,5 @@
 import type { CcaType, PositionType } from "@/types/user";
-import type { CutStatus } from "@/features/cca/types/members";
+import type { CutStatus } from "@/types/members";
 
 export interface ManagedCcaPosition {
 	position_id: number;

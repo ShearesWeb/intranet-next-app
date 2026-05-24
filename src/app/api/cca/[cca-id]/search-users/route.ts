@@ -1,5 +1,5 @@
 import { apiOk, handleApiError } from "@/lib/api/response";
-import { searchUsers } from "@/features/cca/services/member-service";
+import { searchUsers } from "@/lib/cca/member-service";
 
 export async function GET(
 	request: Request,

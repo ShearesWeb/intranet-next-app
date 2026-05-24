@@ -4,7 +4,7 @@ const mocks = vi.hoisted(() => ({
 	checkCcaAuthorization: vi.fn(),
 }));
 
-vi.mock("@/features/cca/utils/cca-chair-access", () => ({
+vi.mock("@/lib/cca/cca-chair-access", () => ({
 	checkCcaAuthorization: mocks.checkCcaAuthorization,
 }));
 

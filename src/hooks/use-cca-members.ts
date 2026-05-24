@@ -13,10 +13,10 @@ import type {
 	MemberPermissions,
 	PendingChange,
 	UserSearchResult,
-} from "@/features/cca/types/members";
-import { getGroupFromStatus, getStatusLabel } from "@/features/cca/hooks/member-status-helpers";
-import { useMemberSearch } from "@/features/cca/hooks/use-member-search";
-import { useMemberSave } from "@/features/cca/hooks/use-member-save";
+} from "@/types/members";
+import { getGroupFromStatus, getStatusLabel } from "@/lib/cca/member-status-helpers";
+import { useMemberSearch } from "@/hooks/use-member-search";
+import { useMemberSave } from "@/hooks/use-member-save";
 
 type PositionOption = {
 	id: number;

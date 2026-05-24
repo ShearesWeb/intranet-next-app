@@ -1,6 +1,6 @@
 import { apiOk, handleApiError } from "@/lib/api/response";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
-import { addApplicant, removeApplicant } from "@/features/cca/services/position-service";
+import { addApplicant, removeApplicant } from "@/lib/cca/position-service";
 
 export async function POST(
 	req: Request,

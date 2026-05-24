@@ -14,12 +14,12 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { CommitmentPeriod, CutStatus, Member } from "@/features/cca/types/members";
+import type { CommitmentPeriod, CutStatus, Member } from "@/types/members";
 import {
 	CULTURE_STATUS_OPTIONS,
 	formatCommitmentPeriod,
 	SPORTS_STATUS_OPTIONS,
-} from "@/features/cca/utils/member-helpers";
+} from "@/lib/cca/member-helpers";
 import { MoreHorizontal } from "lucide-react";
 
 interface MemberGroupTableProps {

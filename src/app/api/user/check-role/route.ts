@@ -2,7 +2,7 @@
 // API route to check if a user has lead/vice roles and return their positions
 import { requireAuth } from "@/lib/api/auth";
 import { apiOk, handleApiError } from "@/lib/api/response";
-import { checkCcaAuthorization } from "@/features/cca/utils/cca-chair-access";
+import { checkCcaAuthorization } from "@/lib/cca/cca-chair-access";
 import { isCoreServiceEnabled } from "@/lib/feature-flags";
 
 const CACHE_HEADERS = { "Cache-Control": "no-store, private" };

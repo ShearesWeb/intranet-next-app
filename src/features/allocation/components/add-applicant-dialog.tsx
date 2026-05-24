@@ -13,7 +13,7 @@ import {
 	DialogDescription,
 	DialogTrigger,
 } from "@/components/ui/dialog";
-import type { UserSearchResult } from "@/features/cca/types/members";
+import type { UserSearchResult } from "@/types/members";
 
 interface AddApplicantDialogProps {
 	onAddApplicant: (user: UserSearchResult) => void;
