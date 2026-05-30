@@ -73,7 +73,7 @@
 		"eslint-config-next": "14.2.13",
 		"happy-dom": "^20.9.0",
 		"pg": "^8.21.0",
-		"postcss": "^8",
+		"postcss": "^8.5.10",
 		"prettier": "^3.8.2",
 		"tailwindcss": "^4.1.14",
 		"ts-node": "^10.9.2",
@@ -84,5 +84,11 @@
 		"vite-tsconfig-paths": "^5.1.4",
 		"vitest": "^4.1.4",
 		"wrangler": "^4.95.0"
+	},
+	"overrides": {
+		"@next/eslint-plugin-next": {
+			"glob": "^10.5.0"
+		},
+		"postcss": "$postcss"
 	}
 }
