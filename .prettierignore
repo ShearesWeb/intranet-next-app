@@ -1,6 +1,5 @@
 node_modules/
 .next/
-.sst/
 dist/
 coverage/
 package-lock.json

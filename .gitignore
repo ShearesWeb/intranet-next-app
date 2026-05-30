@@ -60,12 +60,13 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# sst
-.sst
-
-
 # open-next
 .open-next
+
+# cloudflare
+.dev.vars
+cloudflare-env.d.ts
+.wrangler/
 
 # playwright MCP artifacts (browser console logs from MCP tool runs)
 .playwright-mcp/
