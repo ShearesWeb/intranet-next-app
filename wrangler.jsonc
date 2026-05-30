@@ -1,0 +1,52 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "intranet",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2025-03-25",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "images": {
+    "binding": "IMAGES"
+  },
+  "observability": {
+    "enabled": true
+  },
+
+  // --- Production (top-level): worker "intranet", domain intranet.shweb.org ---
+  // Custom domains are attached by Terraform (cloudflare_workers_custom_domain),
+  // so no `routes` block here. Deploy with:  npm run deploy
+  "r2_buckets": [
+    {
+      "binding": "NEXT_INC_CACHE_R2_BUCKET",
+      "bucket_name": "prd-web-cache-intranet-web"
+    }
+  ],
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "intranet"
+    }
+  ],
+
+  "env": {
+    // --- Preprod: worker "intranet-preprod", domain intranet-beta.shweb.org ---
+    // Deploy with:  npm run deploy:preprod
+    "preprod": {
+      "r2_buckets": [
+        {
+          "binding": "NEXT_INC_CACHE_R2_BUCKET",
+          "bucket_name": "preprod-web-cache-intranet-web"
+        }
+      ],
+      "services": [
+        {
+          "binding": "WORKER_SELF_REFERENCE",
+          "service": "intranet-preprod"
+        }
+      ]
+    }
+  }
+}
