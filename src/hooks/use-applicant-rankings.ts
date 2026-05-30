@@ -1,13 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { diffApplicantsForSave } from "@/lib/allocation/applicant-diff";
-import type { Applicant, Position } from "@/types/applicants";
+import type { Applicant, CcaPositionGroup, Position } from "@/types/applicants";
 import type { UserSearchResult } from "@/types/members";
 
 export function useApplicantRankings(userEmail: string | undefined) {
 	const [positions, setPositions] = useState<Position[]>([]);
+	const [ccaOrder, setCcaOrder] = useState<Array<{ cca_id: number; cca_name: string }>>([]);
 	const [loading, setLoading] = useState(true);
 	const [isSaving, setIsSaving] = useState(false);
 	const [originalOrders, setOriginalOrders] = useState<Record<number, number[]>>({});
@@ -31,6 +32,7 @@ export function useApplicantRankings(userEmail: string | undefined) {
 			const json = await response.json();
 			const data = json.data ?? json;
 			setPositions(data.positions || []);
+			setCcaOrder((data.ccas || []).map((c: CcaPositionGroup) => ({ cca_id: c.cca_id, cca_name: c.cca_name })));
 			const orderMap: Record<number, number[]> = {};
 			const changesMap: Record<number, boolean> = {};
 			(data.positions || []).forEach((pos: Position) => {
@@ -197,8 +199,25 @@ export function useApplicantRankings(userEmail: string | undefined) {
 
 	const hasAnyChanges = Object.values(hasChanges).some(Boolean);
 
+	const ccaGroups = useMemo<CcaPositionGroup[]>(() => {
+		const map = new Map<number, CcaPositionGroup>();
+		for (const { cca_id, cca_name } of ccaOrder) {
+			map.set(cca_id, { cca_id, cca_name, positions: [] });
+		}
+		for (const pos of positions) {
+			let group = map.get(pos.cca_id);
+			if (!group) {
+				group = { cca_id: pos.cca_id, cca_name: pos.cca_name, positions: [] };
+				map.set(pos.cca_id, group);
+			}
+			group.positions.push(pos);
+		}
+		return Array.from(map.values()).filter((g) => g.positions.length > 0);
+	}, [positions, ccaOrder]);
+
 	return {
 		positions,
+		ccaGroups,
 		loading,
 		isSaving,
 		hasChanges,

@@ -33,12 +33,11 @@ export async function getSlotsWithClaims(
     .not("status", "in", "('cancelled','yielded')");
 
   if (claimsError) {
-    console.error("Error fetching facility claims:", claimsError);
-    throw new ApiError(500, "Failed to load facility claims");
+    console.error("Error fetching facility claims (non-fatal):", claimsError);
   }
 
   const claimsByFacility = new Map<number, FacilityClaim[]>();
-  for (const row of claims ?? []) {
+  for (const row of (claimsError ? [] : claims) ?? []) {
     const claim: FacilityClaim = {
       id: row.id,
       facility_id: row.facility_id,
@@ -176,6 +175,20 @@ export async function createClaim(
   };
 }
 
+export async function deleteClaim(claimId: number): Promise<void> {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("facility_claims")
+    .delete()
+    .eq("id", claimId);
+
+  if (error) {
+    console.error("Error deleting claim:", error);
+    throw new ApiError(500, "Failed to release booking — check RLS policies on facility_claims");
+  }
+}
+
 export async function updateClaimStatus(
   claimId: number,
   newStatus: "yielded" | "cancelled",
@@ -197,18 +210,20 @@ export async function updateClaimStatus(
     throw new ApiError(400, "Claim is already resolved");
   }
 
-  const { error: updateError } = await supabase
+  const { data: updated, error: updateError } = await supabase
     .from("facility_claims")
     .update({
       status: newStatus,
       resolved_at: new Date().toISOString(),
       resolved_by: userId,
     })
-    .eq("id", claimId);
+    .eq("id", claimId)
+    .select("id")
+    .single();
 
-  if (updateError) {
+  if (updateError || !updated) {
     console.error("Error updating claim status:", updateError);
-    throw new ApiError(500, "Failed to update claim");
+    throw new ApiError(500, "Failed to update claim — check RLS policies on facility_claims");
   }
 
   // Auto-approve: if only one conflicted claim remains, approve it

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { FileUser, Volleyball, House, CalendarDays, LucideIcon } from "lucide-react";
+import { FileUser, Volleyball, House, CalendarDays, Wallet, LucideIcon } from "lucide-react";
 
 import { NavMain } from "@/components/layout/nav-main";
 import { NavUser } from "@/components/layout/nav-user";
@@ -71,8 +71,8 @@ export const navOptions: NavItem[] = [
 				featureFlag: "facilities",
 			},
 			{
-				title: "Admin",
-				url: "/dashboard/facilities/admin",
+				title: "Manage Facilities",
+				url: "/dashboard/facilities/manage",
 				jcrcOnly: true,
 				featureFlag: "facilities",
 			},
@@ -105,7 +105,7 @@ export const navOptions: NavItem[] = [
 				featureFlag: "ccaApplications",
 			},
 			{
-				title: "Applicant Preferences",
+				title: "Chair Preferences",
 				url: "/dashboard/cca-allocation/rank-applicants",
 				chairOnly: true,
 				featureFlag: "ccaApplications",
@@ -115,19 +115,18 @@ export const navOptions: NavItem[] = [
 	{
 		title: "Holiday Subsidy",
 		url: "/dashboard/holiday-subsidy",
-		icon: FileUser,
+		icon: Wallet,
 		isActive: true,
-		adminOnly: true,
-		jcrcOnly: true,
 		featureFlag: "holidaySubsidy",
 		items: [
 			{
-				title: "Guide and FAQ",
-				url: "/dashboard/holiday-subsidy/guide",
+				title: "Subsidy Declarations",
+				url: "/dashboard/holiday-subsidy/declarations",
+				chairOnly: true,
 				featureFlag: "holidaySubsidy",
 			},
 			{
-				title: "JCRC Approvals",
+				title: "Approvals",
 				url: "/dashboard/holiday-subsidy/approvals",
 				jcrcOnly: true,
 				featureFlag: "holidaySubsidy",

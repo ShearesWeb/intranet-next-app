@@ -83,10 +83,44 @@ async function resolvePositionWithAccess(
 export async function getPositionsForChair() {
 	const supabase = await createClient();
 	const requestingUser = await fetchUserInfo();
-	const accessResult = await checkCcaAuthorization({ requestingUser });
 
-	if (!accessResult.ok) {
-		return { positions: [] };
+	if (!requestingUser) {
+		return { positions: [], ccas: [] };
+	}
+
+	// Use managed_cca_positions view to get ALL positions accessible via the
+	// reporting chain — not just CCAs where user holds lead/vice.
+	const { data: managedRows, error: managedError } = await supabase
+		.from("managed_cca_positions")
+		.select("cca_id, cca_name, positions");
+
+	if (managedError) {
+		console.error("Error fetching managed_cca_positions:", managedError);
+		throw new ApiError(500, "Failed to load managed positions");
+	}
+
+	// Extract all position IDs the user can manage
+	const managedPositionIds: number[] = [];
+	const ccaIdSet = new Set<number>();
+	for (const row of managedRows ?? []) {
+		ccaIdSet.add(row.cca_id);
+		const positions = (row.positions ?? []) as Array<{ position_id: number }>;
+		for (const p of positions) {
+			managedPositionIds.push(p.position_id);
+		}
+	}
+
+	// Also include CCAs from JWT lead/vice appointments (belt-and-suspenders)
+	const accessResult = await checkCcaAuthorization({ requestingUser });
+	if (accessResult.ok) {
+		for (const ccaId of accessResult.data.authorizedCcaIds) {
+			ccaIdSet.add(ccaId);
+		}
+	}
+
+	const authorizedCcaIds = Array.from(ccaIdSet);
+	if (authorizedCcaIds.length === 0) {
+		return { positions: [], ccas: [] };
 	}
 
 	const { data: allPositions, error: posError } = await supabase
@@ -94,7 +128,7 @@ export async function getPositionsForChair() {
 		.select(
 			"position_id, cca_id, position_name, position_type, capacity, available_capacity, cca_name",
 		)
-		.in("cca_id", accessResult.data.authorizedCcaIds)
+		.in("cca_id", authorizedCcaIds)
 		.gt("available_capacity", 0)
 		.not("position_type", "in", NON_RANKABLE_POSITION_TYPES_FILTER);
 
@@ -103,10 +137,22 @@ export async function getPositionsForChair() {
 		throw new ApiError(500, "Failed to load positions");
 	}
 
-	const typedPositions = (allPositions ?? []) as PositionAvailabilityRow[];
+	const allTypedPositions = (allPositions ?? []) as PositionAvailabilityRow[];
+
+	// For reporting-chain users, filter down to only positions they actually manage.
+	// Lead/vice holders see everything in their CCA; reporting-chain users see only
+	// the positions under them.
+	const leadViceCcaIds = new Set(
+		accessResult.ok ? accessResult.data.authorizedCcaIds : [],
+	);
+	const managedPositionIdSet = new Set(managedPositionIds);
+
+	const typedPositions = allTypedPositions.filter((p) =>
+		leadViceCcaIds.has(p.cca_id) || managedPositionIdSet.has(p.position_id),
+	);
 
 	if (typedPositions.length === 0) {
-		return { positions: [] };
+		return { positions: [], ccas: [] };
 	}
 
 	const positionIds = typedPositions.map((p) => p.position_id);
@@ -158,22 +204,33 @@ export async function getPositionsForChair() {
 		applicantsByPosition.set(row.position_id, arr);
 	}
 
-	const result = typedPositions.map((position) => {
+	const positions = typedPositions.map((position) => {
 		const applicants = applicantsByPosition.get(position.position_id) ?? [];
 		return {
 			id: position.position_id,
+			cca_id: position.cca_id,
 			name: position.position_name,
 			cca_name: position.cca_name,
-			total_capacity: position.capacity,
+			capacity: position.capacity,
 			available_capacity: position.available_capacity,
 			applied_count: applicants.length,
-			filled_positions: position.capacity - position.available_capacity,
 			position_type: position.position_type,
 			applicants,
 		};
 	});
 
-	return { positions: result };
+	// Group by CCA for the multi-CCA management UI
+	const ccaMap = new Map<number, { cca_id: number; cca_name: string; positions: typeof positions }>();
+	for (const pos of positions) {
+		const existing = ccaMap.get(pos.cca_id);
+		if (existing) {
+			existing.positions.push(pos);
+		} else {
+			ccaMap.set(pos.cca_id, { cca_id: pos.cca_id, cca_name: pos.cca_name, positions: [pos] });
+		}
+	}
+
+	return { positions, ccas: Array.from(ccaMap.values()) };
 }
 
 // ---------------------------------------------------------------------------

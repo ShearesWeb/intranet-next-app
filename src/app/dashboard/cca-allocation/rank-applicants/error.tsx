@@ -9,5 +9,5 @@ export default function Error({
 	error: Error & { digest?: string };
 	reset: () => void;
 }) {
-	return <DashboardError error={error} reset={reset} segmentLabel="Applicant Preferences" />;
+	return <DashboardError error={error} reset={reset} segmentLabel="Chair Preferences" />;
 }

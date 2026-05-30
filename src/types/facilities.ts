@@ -74,5 +74,4 @@ export interface CreateClaimPayload {
   facility_id: number;
   cca_id: number;
   activity: string;
-  recurrence_end_date?: string;
 }

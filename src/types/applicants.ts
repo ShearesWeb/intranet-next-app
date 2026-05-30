@@ -24,6 +24,7 @@ export interface Applicant {
  */
 export interface Position {
 	id: number;
+	cca_id: number;
 	name: string;
 	cca_name: string;
 	capacity: number;
@@ -31,4 +32,10 @@ export interface Position {
 	applied_count: number;
 	position_type: PositionType;
 	applicants: Applicant[];
+}
+
+export interface CcaPositionGroup {
+	cca_id: number;
+	cca_name: string;
+	positions: Position[];
 }

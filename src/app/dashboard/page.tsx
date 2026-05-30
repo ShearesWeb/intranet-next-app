@@ -141,8 +141,8 @@ export default function Dashboard() {
 									<ActionCard
 										href="/dashboard/cca-allocation/rank-applicants"
 										icon={ClipboardList}
-										title="Rank Applicants"
-										description="Rank applicants for your CCA"
+										title="Chair Preferences"
+										description="Rank applicants for your CCA positions"
 									/>
 								</div>
 							)}

@@ -10,6 +10,7 @@ import { TypeFilter } from "@/components/facilities/type-filter";
 import { ClaimDialog } from "@/components/facilities/claim-dialog";
 import { FacilitySlotWithClaims, BookingType } from "@/types/facilities";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 
 function getMonthRange(year: number, month: number) {
   const start = `${year}-${String(month + 1).padStart(2, "0")}-01`;
@@ -32,21 +33,14 @@ export default function FacilitiesPage() {
   const [typeFilter, setTypeFilter] = useState<BookingType[]>([]);
   const [claimSlot, setClaimSlot] = useState<FacilitySlotWithClaims | null>(null);
 
-  const isChair = useMemo(() => {
-    if (!user) return false;
-    if (user.is_admin) return true;
-    return user.appointments.some(
-      (a) => a.position_type === "lead" || a.position_type === "vice",
-    );
+  const chairCcas = useMemo(() => {
+    if (!user) return [];
+    return user.appointments
+      .filter((a) => a.position_type === "lead" || a.position_type === "vice")
+      .map((a) => ({ id: a.cca_id, name: a.cca_name }));
   }, [user]);
 
-  const chairCca = useMemo(() => {
-    if (!user) return null;
-    const appointment = user.appointments.find(
-      (a) => a.position_type === "lead" || a.position_type === "vice",
-    );
-    return appointment ? { id: appointment.cca_id, name: appointment.cca_name } : null;
-  }, [user]);
+  const isChair = chairCcas.length > 0;
 
   const fetchSlots = useCallback(async () => {
     const { start, end } = getMonthRange(year, month);
@@ -55,13 +49,10 @@ export default function FacilitiesPage() {
       const res = await fetch(`/api/facilities/slots?start=${start}&end=${end}`);
       const json = await res.json();
       if (res.ok) {
-        console.log("Facilities slots loaded:", json.data?.length ?? 0);
         setSlots(json.data ?? []);
-      } else {
-        console.error("Facilities slots API error:", json);
       }
-    } catch (err) {
-      console.error("Facilities slots fetch error:", err);
+    } catch {
+      // fetch failed
     } finally {
       setLoading(false);
     }
@@ -95,17 +86,33 @@ export default function FacilitiesPage() {
     setMonth(m);
   }
 
+  async function handleRelease(claimId: number) {
+    try {
+      const res = await fetch(`/api/facilities/claims/${claimId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const json = await res.json();
+        toast.error(json.error ?? "Failed to release");
+        return;
+      }
+      toast.success("Booking released");
+      fetchSlots();
+    } catch {
+      toast.error("Network error");
+    }
+  }
+
   return (
-    <>
+    <div className="flex flex-col space-y-6 p-4 md:p-6">
       <PageHeader title="Facilities" description="Browse and claim venue slots for your CCA" />
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <VenueFilter
           venues={allVenues}
           selected={venueFilter}
           onChange={setVenueFilter}
         />
-        <div className="mx-2 h-6 w-px bg-border" />
         <TypeFilter selected={typeFilter} onChange={setTypeFilter} />
       </div>
 
@@ -139,6 +146,7 @@ export default function FacilitiesPage() {
               slots={daySlots}
               isChair={isChair}
               onClaim={setClaimSlot}
+              onRelease={handleRelease}
             />
           ) : (
             <p className="text-sm text-muted-foreground">Select a day to view available slots.</p>
@@ -146,15 +154,12 @@ export default function FacilitiesPage() {
         </div>
       </div>
 
-      {chairCca && (
-        <ClaimDialog
-          slot={claimSlot}
-          ccaId={chairCca.id}
-          ccaName={chairCca.name}
-          onClose={() => setClaimSlot(null)}
-          onSuccess={fetchSlots}
-        />
-      )}
-    </>
+      <ClaimDialog
+        slot={claimSlot}
+        chairCcas={chairCcas}
+        onClose={() => setClaimSlot(null)}
+        onSuccess={fetchSlots}
+      />
+    </div>
   );
 }

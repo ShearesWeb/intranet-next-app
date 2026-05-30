@@ -1,7 +1,7 @@
 import { requireAuth } from "@/lib/api/auth";
 import { apiOk, apiError, handleApiError } from "@/lib/api/response";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
-import { updateClaimStatus } from "@/lib/facilities/facility-claims";
+import { updateClaimStatus, deleteClaim } from "@/lib/facilities/facility-claims";
 import { isChairOfCca, canManageFacilities } from "@/lib/facilities/facility-access";
 import { createClient } from "@/lib/supabase/server";
 
@@ -44,6 +44,38 @@ export async function PATCH(
     if (!authUser) return apiError("Auth session not found", 401);
 
     await updateClaimStatus(claimId, status, authUser.id);
+    return apiOk({ success: true });
+  } catch (e) {
+    return handleApiError(e);
+  }
+}
+
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const disabledResponse = getCoreServiceDisabledApiResponse("facilities");
+  if (disabledResponse) return disabledResponse;
+
+  try {
+    const user = await requireAuth();
+    const { id } = await params;
+    const claimId = Number(id);
+
+    const supabase = await createClient();
+    const { data: claim } = await supabase
+      .from("facility_claims")
+      .select("cca_id")
+      .eq("id", claimId)
+      .single();
+
+    if (!claim) return apiError("Claim not found", 404);
+
+    if (!isChairOfCca(user, claim.cca_id) && !canManageFacilities(user)) {
+      return apiError("Not authorized to release this booking", 403);
+    }
+
+    await deleteClaim(claimId);
     return apiOk({ success: true });
   } catch (e) {
     return handleApiError(e);

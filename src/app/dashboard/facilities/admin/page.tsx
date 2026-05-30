@@ -38,14 +38,14 @@ export default function FacilitiesAdminPage() {
 
   if (user && !user.is_jcrc && !user.is_admin) {
     return (
-      <>
+      <div className="flex flex-col space-y-6 p-4 md:p-6">
         <PageHeader title="Facilities Admin" />
         <EmptyState
           icon={Shield}
           title="Access Denied"
           description="Only JCRC members and admins can access this page."
         />
-      </>
+      </div>
     );
   }
 
@@ -63,7 +63,7 @@ export default function FacilitiesAdminPage() {
   }
 
   return (
-    <>
+    <div className="flex flex-col space-y-6 p-4 md:p-6">
       <PageHeader
         title="Facilities Admin"
         description="Manage escalated conflicts and override contested slot assignments"
@@ -136,6 +136,6 @@ export default function FacilitiesAdminPage() {
         onClose={() => setOverrideTarget(null)}
         onSuccess={fetchConflicts}
       />
-    </>
+    </div>
   );
 }

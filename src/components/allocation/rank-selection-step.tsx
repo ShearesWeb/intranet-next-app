@@ -1,11 +1,9 @@
 "use client";
 
 import React from "react";
-import { Info, Search } from "lucide-react";
+import { Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
-import { OrderingTable, type OrderingTableColumn } from "@/components/table/ordering-table";
+import { DataTable } from "@/components/table/data-table";
 import { rankingColumns } from "@/components/allocation/ranking-columns";
 import type { RankablePosition } from "@/types/preferences";
 
@@ -22,36 +20,7 @@ export function RankSelectionStep({
 	onToggle,
 	onProceed,
 }: RankSelectionStepProps) {
-	const [query, setQuery] = React.useState("");
 	const count = selectedIds.size;
-
-	const filtered = React.useMemo(() => {
-		const q = query.trim().toLowerCase();
-		if (!q) return allPositions;
-		return allPositions.filter(
-			(p) =>
-				p.name.toLowerCase().includes(q) ||
-				p.cca_name.toLowerCase().includes(q),
-		);
-	}, [allPositions, query]);
-
-	const columns = React.useMemo<OrderingTableColumn<RankablePosition>[]>(
-		() => [
-			{
-				accessorKey: "id",
-				header: "",
-				cell: (_value, row) => (
-					<Checkbox
-						checked={selectedIds.has(row.id)}
-						onCheckedChange={() => onToggle(row.id)}
-						aria-label={`Select ${row.name}`}
-					/>
-				),
-			},
-			...rankingColumns,
-		],
-		[selectedIds, onToggle],
-	);
 
 	return (
 		<div className="flex flex-col space-y-6 p-4 md:p-6">
@@ -72,34 +41,27 @@ export function RankSelectionStep({
 				</div>
 			</div>
 
-			<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-				<div className="relative max-w-sm flex-1">
-					<Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-					<Input
-						placeholder="Search by position or CCA…"
-						value={query}
-						onChange={(e) => setQuery(e.target.value)}
-						className="pl-9"
-					/>
+			<div className="flex items-center justify-between gap-3">
+				<div className="text-sm text-muted-foreground">
+					{count === 0
+						? "No preferences selected"
+						: `${count} preference${count === 1 ? "" : "s"} selected`}
 				</div>
-				<div className="flex items-center gap-3">
-					<div className="text-sm text-muted-foreground">
-						{count === 0
-							? "No preferences selected"
-							: `${count} preference${count === 1 ? "" : "s"} selected`}
-					</div>
-					<Button onClick={onProceed} disabled={count === 0}>
-						Next: Order your preferences →
-					</Button>
-				</div>
+				<Button onClick={onProceed} disabled={count === 0}>
+					Next: Order your preferences →
+				</Button>
 			</div>
 
-			<OrderingTable<RankablePosition>
-				data={filtered}
-				columns={columns}
-				draggable={false}
-				showRankColumn={false}
+			<DataTable
+				data={allPositions}
+				columns={rankingColumns}
+				searchColumn="cca_name"
+				searchPlaceholder="Search by position or CCA..."
+				pageSize={20}
 				emptyMessage="No positions match your search."
+				selectable
+				selectedIds={selectedIds}
+				onSelectionChange={onToggle}
 			/>
 		</div>
 	);

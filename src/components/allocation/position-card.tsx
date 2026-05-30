@@ -15,6 +15,7 @@ interface PositionCardProps {
 	onAddApplicant: (userData: UserSearchResult) => void;
 	onRemoveApplicant: (userId: number) => void;
 	onReorderApplicants: (newApplicants: Applicant[]) => void;
+	compact?: boolean;
 }
 
 export function PositionCard({
@@ -23,9 +24,8 @@ export function PositionCard({
 	onAddApplicant,
 	onRemoveApplicant,
 	onReorderApplicants,
+	compact = false,
 }: PositionCardProps) {
-	const underfilled = position.applicants.length < position.available_capacity;
-
 	const columns = React.useMemo<OrderingTableColumn<Applicant>[]>(
 		() => [
 			{
@@ -35,7 +35,7 @@ export function PositionCard({
 					<div>
 						<div className="font-medium">{row.name}</div>
 						<div className="text-sm text-muted-foreground">
-							{row.email} · Room {row.room}
+							{row.email} &middot; Room {row.room}
 						</div>
 					</div>
 				),
@@ -61,6 +61,29 @@ export function PositionCard({
 		[onRemoveApplicant],
 	);
 
+	if (compact) {
+		return (
+			<div className="flex flex-col gap-3">
+				<div className="flex items-center justify-between gap-2">
+					<div className="text-xs text-muted-foreground">
+						{position.available_capacity}/{position.capacity} available
+					</div>
+					<AddApplicantDialog
+						onAddApplicant={onAddApplicant}
+						excludedIds={position.applicants.map((a) => a.id)}
+					/>
+				</div>
+				<OrderingTable<Applicant>
+					data={position.applicants}
+					columns={columns}
+					onReorder={onReorderApplicants}
+					showRankColumn={true}
+					emptyMessage={'No applicants yet. Click "Add applicant" to find candidates.'}
+				/>
+			</div>
+		);
+	}
+
 	return (
 		<section className="flex flex-col gap-4">
 			<div className="flex flex-wrap items-start justify-between gap-3">
@@ -78,10 +101,7 @@ export function PositionCard({
 				</div>
 				<div className="flex items-center gap-3">
 					<div className="text-sm text-muted-foreground">
-						{position.applicants.length} of {position.available_capacity} filled
-						{underfilled && position.applicants.length > 0 && (
-							<span className="ml-2 font-medium text-amber-600">Under capacity</span>
-						)}
+						{position.available_capacity}/{position.capacity} available
 					</div>
 					<AddApplicantDialog
 						onAddApplicant={onAddApplicant}
@@ -95,7 +115,7 @@ export function PositionCard({
 				columns={columns}
 				onReorder={onReorderApplicants}
 				showRankColumn={true}
-				emptyMessage="No applicants yet. Click “Add applicant” to find candidates."
+				emptyMessage={'No applicants yet. Click "Add applicant" to find candidates.'}
 			/>
 		</section>
 	);

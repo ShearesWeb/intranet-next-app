@@ -4,7 +4,7 @@ import React from "react";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { OrderingTable } from "@/components/table/ordering-table";
-import { rankingColumns } from "@/components/allocation/ranking-columns";
+import { rankingOrderingColumns } from "@/components/allocation/ranking-columns";
 import type { RankablePosition } from "@/types/preferences";
 
 interface RankOrderingStepProps {
@@ -61,7 +61,7 @@ export function RankOrderingStep({
 
 			<OrderingTable
 				data={selectedPositions}
-				columns={rankingColumns}
+				columns={rankingOrderingColumns}
 				onReorder={onReorder}
 				showRankColumn={true}
 				emptyMessage="No positions selected."

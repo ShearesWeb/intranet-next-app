@@ -105,22 +105,23 @@ export async function getDeclarations(ccaId: number) {
 
 export async function upsertDeclaration(params: {
 	positionId: number;
-	weekId: number;
+	weekId?: number;
+	day?: string;
 	hours: number;
 	justification?: string | null;
 }) {
-	const { positionId, weekId, hours, justification } = params;
+	const { positionId, hours, justification } = params;
 
-	const day = getWeekDay(weekId);
+	let day: string | null = params.day ?? null;
+	if (!day && params.weekId) {
+		day = getWeekDay(params.weekId);
+	}
 	if (!day) {
-		throw new ApiError(400, "Unknown week");
+		throw new ApiError(400, "Either day or a valid weekId is required");
 	}
 
 	const supabase = await createClient();
 
-	// upsert_subsidy is SECURITY INVOKER; RLS enforces chain-of-managers,
-	// FK enforces position existence, and the RPC's own RAISE handles the
-	// approved-envelope case.
 	const { data, error: rpcError } = await supabase
 		.rpc("upsert_subsidy", {
 			p_position_id: positionId,

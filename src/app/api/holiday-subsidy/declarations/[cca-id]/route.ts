@@ -41,15 +41,16 @@ export async function POST(request: Request, { params }: Params) {
 		await requireChairAccess(ccaId);
 
 		const body = await request.json();
-		const { positionId, weekId, hours, justification } = body || {};
+		const { positionId, weekId, day, hours, justification } = body || {};
 
-		if (!positionId || !weekId || hours === undefined || hours === null) {
-			throw new ApiError(400, "Position, week, and hours are required");
+		if (!positionId || (!weekId && !day) || hours === undefined || hours === null) {
+			throw new ApiError(400, "Position, day (or week), and hours are required");
 		}
 
 		const result = await upsertDeclaration({
 			positionId: Number(positionId),
-			weekId: Number(weekId),
+			weekId: weekId ? Number(weekId) : undefined,
+			day: day ?? undefined,
 			hours: Number(hours),
 			justification: justification ?? null,
 		});

@@ -89,7 +89,7 @@ export function useCcaMembers(ccaId: string | null): UseCcaMembersReturn {
 		setError(null);
 		setPendingChanges([]);
 		search.clearSearch();
-	}, [search]);
+	}, [search.clearSearch]);
 
 	const refetch = useCallback(async () => {
 		try {

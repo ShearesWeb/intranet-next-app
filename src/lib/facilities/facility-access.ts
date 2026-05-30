@@ -7,7 +7,6 @@ export function getChairCcaIds(user: AuthenticatedUser): number[] {
 }
 
 export function isChairOfCca(user: AuthenticatedUser, ccaId: number): boolean {
-  if (user.is_admin) return true;
   return getChairCcaIds(user).includes(ccaId);
 }
 
