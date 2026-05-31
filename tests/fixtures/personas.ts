@@ -64,8 +64,8 @@ export const PERSONAS: readonly Persona[] = [
 		room: "SH/D/2/202",
 		stayPeriod: "full-year",
 		appointments: [{ ccaKey: "volleyball", positionName: "Vice Captain", points: 0 }],
-		// vice has no children in our graph → no flags
-		expected: { is_admin: false, is_jcrc: false, is_culture_sports_admin: false },
+		// vice has members reporting to it → is_admin; Volleyball is sports → is_culture_sports_admin
+		expected: { is_admin: true, is_jcrc: false, is_culture_sports_admin: true },
 	},
 	{
 		key: "sienna",
