@@ -56,7 +56,7 @@ export function SubsidyDayPanel({
 				<div className="rounded-lg border border-dashed p-8 text-center">
 					<p className="text-sm text-muted-foreground">
 						{isChair
-							? "No declarations on this day. Click \"Declare Subsidy\" to add one."
+							? 'No declarations on this day. Click "Declare Subsidy" to add one.'
 							: "No declarations on this day."}
 					</p>
 				</div>
@@ -145,9 +145,7 @@ function DeclRow({
 						<span
 							className={cn(
 								"inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium",
-								allApproved
-									? "bg-[#10b981]/15 text-[#10b981]"
-									: "bg-[#3b82f6]/15 text-[#3b82f6]",
+								allApproved ? "bg-[#10b981]/15 text-[#10b981]" : "bg-[#3b82f6]/15 text-[#3b82f6]",
 							)}
 						>
 							<Users className="h-2.5 w-2.5" />
@@ -160,10 +158,14 @@ function DeclRow({
 					)}
 				</div>
 				{decl.justification && (
-					<div className="mt-0.5 text-xs text-muted-foreground line-clamp-1">{decl.justification}</div>
+					<div className="mt-0.5 text-xs text-muted-foreground line-clamp-1">
+						{decl.justification}
+					</div>
 				)}
 				{decl.rejection_reason && (
-					<div className="mt-0.5 text-xs text-destructive line-clamp-1">{decl.rejection_reason}</div>
+					<div className="mt-0.5 text-xs text-destructive line-clamp-1">
+						{decl.rejection_reason}
+					</div>
 				)}
 			</td>
 			<td className="px-3 py-2.5 whitespace-nowrap">
@@ -174,9 +176,7 @@ function DeclRow({
 							variant="outline"
 							className={cn(
 								"h-7 text-xs",
-								noMembers
-									? "text-[#3b82f6] border-[#3b82f6]/30 hover:bg-[#3b82f6]/10"
-									: "",
+								noMembers ? "text-[#3b82f6] border-[#3b82f6]/30 hover:bg-[#3b82f6]/10" : "",
 							)}
 							onClick={() => onAssignMembers(decl)}
 						>
@@ -216,7 +216,12 @@ function DeclRow({
 						</Button>
 					)}
 					{isChair && isPending && onEdit && (
-						<Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => onEdit(decl)}>
+						<Button
+							size="sm"
+							variant="outline"
+							className="h-7 text-xs"
+							onClick={() => onEdit(decl)}
+						>
 							Edit
 						</Button>
 					)}

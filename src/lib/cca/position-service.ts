@@ -43,10 +43,7 @@ type DirectoryRow = {
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-async function resolvePositionWithAccess(
-	supabase: SupabaseClient,
-	positionIdStr: string,
-) {
+async function resolvePositionWithAccess(supabase: SupabaseClient, positionIdStr: string) {
 	const positionId = parseInt(positionIdStr, 10);
 	if (isNaN(positionId)) throw new ApiError(400, "Invalid position ID");
 
@@ -142,13 +139,11 @@ export async function getPositionsForChair() {
 	// For reporting-chain users, filter down to only positions they actually manage.
 	// Lead/vice holders see everything in their CCA; reporting-chain users see only
 	// the positions under them.
-	const leadViceCcaIds = new Set(
-		accessResult.ok ? accessResult.data.authorizedCcaIds : [],
-	);
+	const leadViceCcaIds = new Set(accessResult.ok ? accessResult.data.authorizedCcaIds : []);
 	const managedPositionIdSet = new Set(managedPositionIds);
 
-	const typedPositions = allTypedPositions.filter((p) =>
-		leadViceCcaIds.has(p.cca_id) || managedPositionIdSet.has(p.position_id),
+	const typedPositions = allTypedPositions.filter(
+		(p) => leadViceCcaIds.has(p.cca_id) || managedPositionIdSet.has(p.position_id),
 	);
 
 	if (typedPositions.length === 0) {
@@ -220,7 +215,10 @@ export async function getPositionsForChair() {
 	});
 
 	// Group by CCA for the multi-CCA management UI
-	const ccaMap = new Map<number, { cca_id: number; cca_name: string; positions: typeof positions }>();
+	const ccaMap = new Map<
+		number,
+		{ cca_id: number; cca_name: string; positions: typeof positions }
+	>();
 	for (const pos of positions) {
 		const existing = ccaMap.get(pos.cca_id);
 		if (existing) {
@@ -269,9 +267,7 @@ export async function addApplicant(positionIdStr: string, body: { user_id: numbe
 	}
 
 	const nextRanking =
-		currentApplicants && currentApplicants.length > 0
-			? (currentApplicants[0].rank || 0) + 1
-			: 1;
+		currentApplicants && currentApplicants.length > 0 ? (currentApplicants[0].rank || 0) + 1 : 1;
 
 	const { error: rpcError } = await supabase.rpc("upsert_cca_position_preference", {
 		p_position_id: positionId,

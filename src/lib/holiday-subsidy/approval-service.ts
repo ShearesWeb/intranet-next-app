@@ -452,10 +452,7 @@ export async function batchApprove(ccaId: number, updates: ApprovalUpdate[]) {
 		const statusOrder = [403, 409, 404, 400, 500];
 		const status = statusOrder.find((code) => failures.some((f) => f.status === code)) ?? 400;
 		throw Object.assign(
-			new ApiError(
-				status,
-				failures.map((f) => `subsidy ${f.subsidyId}: ${f.error}`).join("; "),
-			),
+			new ApiError(status, failures.map((f) => `subsidy ${f.subsidyId}: ${f.error}`).join("; ")),
 			{ failures },
 		);
 	}

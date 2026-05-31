@@ -13,10 +13,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { DeclarationSectionCard } from "@/components/holiday-subsidy/declaration-section-card";
 import { SubsidyDeclarationFormDialog } from "@/components/holiday-subsidy/subsidy-declaration-form-dialog";
 import { useSubsidyDeclarations } from "@/hooks/use-subsidy-declarations";
-import {
-	SubsidyStatus,
-	type DeclarationSection,
-} from "@/types/declarations";
+import { SubsidyStatus, type DeclarationSection } from "@/types/declarations";
 import { HOLIDAY_WEEK_OPTIONS } from "@/lib/holiday-subsidy/holiday-weeks";
 import { formatSubsidyStatus, STATUS_ORDER } from "@/lib/holiday-subsidy/declaration-mappers";
 

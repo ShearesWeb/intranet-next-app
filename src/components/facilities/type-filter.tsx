@@ -4,59 +4,57 @@ import { cn } from "@/lib/utils";
 import { BookingType, BOOKING_TYPE_CONFIG } from "@/types/facilities";
 
 interface TypeFilterProps {
-  selected: BookingType[];
-  onChange: (selected: BookingType[]) => void;
+	selected: BookingType[];
+	onChange: (selected: BookingType[]) => void;
 }
 
 const TYPES = Object.keys(BOOKING_TYPE_CONFIG) as BookingType[];
 
 export function TypeFilter({ selected, onChange }: TypeFilterProps) {
-  const allSelected = selected.length === 0;
+	const allSelected = selected.length === 0;
 
-  function toggle(type: BookingType) {
-    if (selected.includes(type)) {
-      onChange(selected.filter((t) => t !== type));
-    } else {
-      onChange([...selected, type]);
-    }
-  }
+	function toggle(type: BookingType) {
+		if (selected.includes(type)) {
+			onChange(selected.filter((t) => t !== type));
+		} else {
+			onChange([...selected, type]);
+		}
+	}
 
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      <button
-        onClick={() => onChange([])}
-        className={cn(
-          "rounded-full px-3 py-1 text-xs font-medium transition-colors",
-          allSelected
-            ? "bg-primary text-primary-foreground"
-            : "bg-muted text-muted-foreground hover:bg-muted/80",
-        )}
-      >
-        All Types
-      </button>
-      {TYPES.map((type) => {
-        const config = BOOKING_TYPE_CONFIG[type];
-        const isActive = selected.includes(type);
-        return (
-          <button
-            key={type}
-            onClick={() => toggle(type)}
-            className={cn(
-              "rounded-full px-3 py-1 text-xs font-medium transition-colors",
-              isActive
-                ? "text-white"
-                : "bg-muted text-muted-foreground hover:bg-muted/80",
-            )}
-            style={isActive ? { backgroundColor: config.color } : undefined}
-          >
-            <span
-              className="mr-1.5 inline-block h-2 w-2 rounded-full"
-              style={{ backgroundColor: config.color }}
-            />
-            {config.label}
-          </button>
-        );
-      })}
-    </div>
-  );
+	return (
+		<div className="flex flex-wrap gap-1.5">
+			<button
+				onClick={() => onChange([])}
+				className={cn(
+					"rounded-full px-3 py-1 text-xs font-medium transition-colors",
+					allSelected
+						? "bg-primary text-primary-foreground"
+						: "bg-muted text-muted-foreground hover:bg-muted/80",
+				)}
+			>
+				All Types
+			</button>
+			{TYPES.map((type) => {
+				const config = BOOKING_TYPE_CONFIG[type];
+				const isActive = selected.includes(type);
+				return (
+					<button
+						key={type}
+						onClick={() => toggle(type)}
+						className={cn(
+							"rounded-full px-3 py-1 text-xs font-medium transition-colors",
+							isActive ? "text-white" : "bg-muted text-muted-foreground hover:bg-muted/80",
+						)}
+						style={isActive ? { backgroundColor: config.color } : undefined}
+					>
+						<span
+							className="mr-1.5 inline-block h-2 w-2 rounded-full"
+							style={{ backgroundColor: config.color }}
+						/>
+						{config.label}
+					</button>
+				);
+			})}
+		</div>
+	);
 }

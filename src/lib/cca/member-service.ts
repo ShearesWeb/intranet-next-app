@@ -361,12 +361,17 @@ export async function updateMember(
 	}
 
 	const updates: MemberUpdate = {};
-	if (body.cut_status !== undefined) updates.cut_status = normalizedCutStatus as MemberUpdate["cut_status"];
-	if (body.commitment_period !== undefined) updates.commitment_period = body.commitment_period as MemberUpdate["commitment_period"];
+	if (body.cut_status !== undefined)
+		updates.cut_status = normalizedCutStatus as MemberUpdate["cut_status"];
+	if (body.commitment_period !== undefined)
+		updates.commitment_period = body.commitment_period as MemberUpdate["commitment_period"];
 
 	if (Object.keys(updates).length === 0) return;
 
-	if ((body.cut_status !== undefined || body.commitment_period !== undefined) && !body.position_id) {
+	if (
+		(body.cut_status !== undefined || body.commitment_period !== undefined) &&
+		!body.position_id
+	) {
 		throw new ApiError(400, "position_id is required for member updates");
 	}
 

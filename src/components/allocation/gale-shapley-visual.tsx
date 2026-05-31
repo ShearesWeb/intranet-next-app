@@ -79,8 +79,7 @@ const STEPS: Step[] = [
 	{
 		phase: "matching",
 		highlight: "alice",
-		description:
-			"Round 2 — Alice tries her 2nd choice: Band.\nBand already holds Carol.",
+		description: "Round 2 — Alice tries her 2nd choice: Band.\nBand already holds Carol.",
 		proposals: [
 			{ student: "alice", cca: "band", state: "proposing", choiceRank: 1 },
 			{ student: "bob", cca: "swim", state: "held", choiceRank: 0 },
@@ -216,7 +215,12 @@ export function GaleShapleyVisual() {
 			</div>
 
 			{/* SVG */}
-			<svg viewBox="0 0 700 280" className="w-full" role="img" aria-label="Gale-Shapley algorithm animation">
+			<svg
+				viewBox="0 0 700 280"
+				className="w-full"
+				role="img"
+				aria-label="Gale-Shapley algorithm animation"
+			>
 				<defs>
 					<filter id="gsSoftGlow" x="-50%" y="-50%" width="200%" height="200%">
 						<feGaussianBlur stdDeviation="8" result="blur" />
@@ -227,10 +231,26 @@ export function GaleShapleyVisual() {
 					</filter>
 				</defs>
 
-				<text x={SX} y={22} textAnchor="middle" fill="rgba(148,163,184,0.5)" fontSize="10" fontWeight="600" letterSpacing="0.1em">
+				<text
+					x={SX}
+					y={22}
+					textAnchor="middle"
+					fill="rgba(148,163,184,0.5)"
+					fontSize="10"
+					fontWeight="600"
+					letterSpacing="0.1em"
+				>
 					STUDENTS
 				</text>
-				<text x={CX} y={22} textAnchor="middle" fill="rgba(148,163,184,0.5)" fontSize="10" fontWeight="600" letterSpacing="0.1em">
+				<text
+					x={CX}
+					y={22}
+					textAnchor="middle"
+					fill="rgba(148,163,184,0.5)"
+					fontSize="10"
+					fontWeight="600"
+					letterSpacing="0.1em"
+				>
 					CCAs
 				</text>
 
@@ -249,10 +269,26 @@ export function GaleShapleyVisual() {
 					return (
 						<g key={`${p.student}-${p.cca}`}>
 							{match && (
-								<path d={d} stroke="#22c55e" strokeWidth={5} fill="none" opacity={0.12} filter="url(#gsSoftGlow)" className="transition-all duration-700" />
+								<path
+									d={d}
+									stroke="#22c55e"
+									strokeWidth={5}
+									fill="none"
+									opacity={0.12}
+									filter="url(#gsSoftGlow)"
+									className="transition-all duration-700"
+								/>
 							)}
 							{prop && (
-								<path d={d} stroke={lineColor} strokeWidth={4} fill="none" opacity={0.15} filter="url(#gsSoftGlow)" className="transition-all duration-700" />
+								<path
+									d={d}
+									stroke={lineColor}
+									strokeWidth={4}
+									fill="none"
+									opacity={0.15}
+									filter="url(#gsSoftGlow)"
+									className="transition-all duration-700"
+								/>
 							)}
 							<path
 								d={d}
@@ -262,11 +298,19 @@ export function GaleShapleyVisual() {
 								strokeLinecap="round"
 								strokeDasharray={prop ? "8 6" : rej ? "4 4" : "none"}
 								opacity={rej ? 0.2 : 0.9}
-								className={cn("transition-all duration-700", prop && "animate-[dash-flow_0.8s_linear_infinite]")}
+								className={cn(
+									"transition-all duration-700",
+									prop && "animate-[dash-flow_0.8s_linear_infinite]",
+								)}
 							/>
 							{rej && (
 								<g className="animate-[fade-in-scale_0.4s_ease-out_both]">
-									<circle cx={(SX + 20 + CX - 24) / 2} cy={(sy + cy) / 2} r={9} fill="rgba(239,68,68,0.15)" />
+									<circle
+										cx={(SX + 20 + CX - 24) / 2}
+										cy={(sy + cy) / 2}
+										r={9}
+										fill="rgba(239,68,68,0.15)"
+									/>
 									<text
 										x={(SX + 20 + CX - 24) / 2}
 										y={(sy + cy) / 2 + 1}
@@ -306,7 +350,14 @@ export function GaleShapleyVisual() {
 								/>
 							)}
 							{isHighlighted && (
-								<circle cx={SX} cy={y} fill={s.color} opacity={0.15} className="animate-[node-pulse_1.5s_ease-in-out_infinite]" r={26} />
+								<circle
+									cx={SX}
+									cy={y}
+									fill={s.color}
+									opacity={0.15}
+									className="animate-[node-pulse_1.5s_ease-in-out_infinite]"
+									r={26}
+								/>
 							)}
 							<circle
 								cx={SX}
@@ -329,11 +380,27 @@ export function GaleShapleyVisual() {
 								className="transition-all duration-500"
 							/>
 							{isMatched ? (
-								<text x={SX} y={y + 1} textAnchor="middle" dominantBaseline="central" fill="#22c55e" fontSize="12" className="animate-[fade-in-scale_0.4s_ease-out_both]">
+								<text
+									x={SX}
+									y={y + 1}
+									textAnchor="middle"
+									dominantBaseline="central"
+									fill="#22c55e"
+									fontSize="12"
+									className="animate-[fade-in-scale_0.4s_ease-out_both]"
+								>
 									✓
 								</text>
 							) : isUnmatched ? (
-								<text x={SX} y={y + 1} textAnchor="middle" dominantBaseline="central" fill="#ef4444" fontSize="12" opacity={0.6}>
+								<text
+									x={SX}
+									y={y + 1}
+									textAnchor="middle"
+									dominantBaseline="central"
+									fill="#ef4444"
+									fontSize="12"
+									opacity={0.6}
+								>
 									✗
 								</text>
 							) : (
@@ -354,7 +421,9 @@ export function GaleShapleyVisual() {
 								x={SX}
 								y={y + 30}
 								textAnchor="middle"
-								fill={isRejected || isUnmatched ? "rgba(148,163,184,0.35)" : "rgba(226,232,240,0.9)"}
+								fill={
+									isRejected || isUnmatched ? "rgba(148,163,184,0.35)" : "rgba(226,232,240,0.9)"
+								}
 								fontSize="11"
 								fontWeight="600"
 								className="transition-all duration-500"
@@ -368,9 +437,13 @@ export function GaleShapleyVisual() {
 				{/* CCA nodes */}
 				{CCAS.map((c, i) => {
 					const y = CCA_YS[i];
-					const held = current.proposals.filter((p) => p.cca === c.id && (p.state === "held" || p.state === "matched")).length;
+					const held = current.proposals.filter(
+						(p) => p.cca === c.id && (p.state === "held" || p.state === "matched"),
+					).length;
 					const isEval = current.highlightCca === c.id;
-					const hasIncoming = current.proposals.some((p) => p.cca === c.id && p.state === "proposing");
+					const hasIncoming = current.proposals.some(
+						(p) => p.cca === c.id && p.state === "proposing",
+					);
 					return (
 						<g key={c.id}>
 							{isSetup && (
@@ -423,10 +496,23 @@ export function GaleShapleyVisual() {
 							>
 								{held}/{c.capacity}
 							</text>
-							<text x={CX} y={y + 36} textAnchor="middle" fill="rgba(226,232,240,0.9)" fontSize="11" fontWeight="600">
+							<text
+								x={CX}
+								y={y + 36}
+								textAnchor="middle"
+								fill="rgba(226,232,240,0.9)"
+								fontSize="11"
+								fontWeight="600"
+							>
 								{c.name}
 							</text>
-							<text x={CX} y={y + 49} textAnchor="middle" fill="rgba(148,163,184,0.35)" fontSize="9">
+							<text
+								x={CX}
+								y={y + 49}
+								textAnchor="middle"
+								fill="rgba(148,163,184,0.35)"
+								fontSize="9"
+							>
 								1 slot
 							</text>
 						</g>
@@ -439,16 +525,25 @@ export function GaleShapleyVisual() {
 				<div
 					className={cn(
 						"rounded-lg px-3 py-2 border transition-all duration-500",
-						isSetup ? "border-orange-500/40 bg-slate-800/50" : "border-slate-800/30 bg-slate-900/30",
+						isSetup
+							? "border-orange-500/40 bg-slate-800/50"
+							: "border-slate-800/30 bg-slate-900/30",
 					)}
 				>
-					<p className="text-[10px] uppercase tracking-widest text-slate-500 mb-1.5 font-semibold">Student Preferences</p>
+					<p className="text-[10px] uppercase tracking-widest text-slate-500 mb-1.5 font-semibold">
+						Student Preferences
+					</p>
 					<div className="flex flex-col gap-1">
 						{STUDENTS.map((s) => {
-							const active = current.proposals.find((p) => p.student === s.id && p.state !== "rejected");
+							const active = current.proposals.find(
+								(p) => p.student === s.id && p.state !== "rejected",
+							);
 							return (
 								<div key={s.id} className="flex items-center gap-1.5 text-[11px]">
-									<span className="size-1.5 rounded-full shrink-0" style={{ background: s.color }} />
+									<span
+										className="size-1.5 rounded-full shrink-0"
+										style={{ background: s.color }}
+									/>
 									<span className="font-medium shrink-0" style={{ color: s.color }}>
 										{s.name}
 									</span>
@@ -472,14 +567,23 @@ export function GaleShapleyVisual() {
 				<div
 					className={cn(
 						"rounded-lg px-3 py-2 border transition-all duration-500",
-						isSetup ? "border-orange-500/40 bg-slate-800/50" : "border-slate-800/30 bg-slate-900/30",
+						isSetup
+							? "border-orange-500/40 bg-slate-800/50"
+							: "border-slate-800/30 bg-slate-900/30",
 					)}
 				>
-					<p className="text-[10px] uppercase tracking-widest text-slate-500 mb-1.5 font-semibold">Chair Rankings</p>
+					<p className="text-[10px] uppercase tracking-widest text-slate-500 mb-1.5 font-semibold">
+						Chair Rankings
+					</p>
 					<div className="flex flex-col gap-1">
 						{CCAS.map((c) => (
 							<div key={c.id} className="flex items-center gap-1.5 text-[11px]">
-								<span className={cn("font-medium shrink-0", current.highlightCca === c.id ? "text-yellow-300" : "text-slate-300")}>
+								<span
+									className={cn(
+										"font-medium shrink-0",
+										current.highlightCca === c.id ? "text-yellow-300" : "text-slate-300",
+									)}
+								>
 									{c.name}
 								</span>
 								<span className="text-slate-600 text-[10px]">({c.capacity})</span>
@@ -495,7 +599,9 @@ export function GaleShapleyVisual() {
 										</span>
 									);
 								})}
-								{c.id === "art" && <span className="text-slate-600 text-[10px] ml-1">(only 1 ranked!)</span>}
+								{c.id === "art" && (
+									<span className="text-slate-600 text-[10px] ml-1">(only 1 ranked!)</span>
+								)}
 							</div>
 						))}
 					</div>
@@ -506,7 +612,13 @@ export function GaleShapleyVisual() {
 			<div className="min-h-[72px] flex items-start justify-center mt-3 px-2">
 				<div key={step} className="animate-[fade-up_0.4s_ease-out_both] max-w-lg w-full">
 					{current.description.split("\n").map((line, i) => (
-						<p key={i} className={cn("text-sm leading-relaxed", line.startsWith("•") ? "text-slate-400 pl-3" : "text-slate-300")}>
+						<p
+							key={i}
+							className={cn(
+								"text-sm leading-relaxed",
+								line.startsWith("•") ? "text-slate-400 pl-3" : "text-slate-300",
+							)}
+						>
 							{line}
 						</p>
 					))}
@@ -558,7 +670,11 @@ export function GaleShapleyVisual() {
 							}}
 							className={cn(
 								"rounded-full transition-all duration-300",
-								i === step ? "size-2.5 bg-orange-500" : i < step ? "size-1.5 bg-orange-800" : "size-1.5 bg-slate-600 hover:bg-slate-500",
+								i === step
+									? "size-2.5 bg-orange-500"
+									: i < step
+										? "size-1.5 bg-orange-800"
+										: "size-1.5 bg-slate-600 hover:bg-slate-500",
 							)}
 						/>
 					))}

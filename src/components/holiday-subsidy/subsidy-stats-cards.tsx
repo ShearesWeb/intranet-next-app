@@ -47,10 +47,7 @@ export function SubsidyStatsCards({ declarations }: SubsidyStatsCardsProps) {
 	return (
 		<div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
 			{cards.map((card) => (
-				<div
-					key={card.label}
-					className="rounded-lg border bg-card p-4"
-				>
+				<div key={card.label} className="rounded-lg border bg-card p-4">
 					<div className="flex items-center gap-2">
 						<card.icon className="h-4 w-4" style={{ color: card.color }} />
 						<span className="text-xs font-medium text-muted-foreground">{card.label}</span>

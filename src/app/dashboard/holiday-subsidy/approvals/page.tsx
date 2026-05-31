@@ -131,7 +131,8 @@ export default function HolidaySubsidyApprovalsPage() {
 					<CardContent className="p-6 space-y-2">
 						<div className="text-lg font-semibold">JCRC access only</div>
 						<p className="text-sm text-muted-foreground">
-							This page is restricted to JCRC members responsible for approving subsidy declarations.
+							This page is restricted to JCRC members responsible for approving subsidy
+							declarations.
 						</p>
 					</CardContent>
 				</Card>

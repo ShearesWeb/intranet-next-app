@@ -7,11 +7,7 @@ import { DataTable } from "@/components/table/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type {
-	DeclarationSection,
-	SubsidyDeclaration,
-	WeekOption,
-} from "@/types/declarations";
+import type { DeclarationSection, SubsidyDeclaration, WeekOption } from "@/types/declarations";
 import { SubsidyStatus } from "@/types/declarations";
 import {
 	coerceSubsidyStatus,
@@ -150,10 +146,20 @@ export function DeclarationSectionCard({
 					enableSorting: false,
 					cell: ({ row }) => (
 						<div className="flex justify-start gap-2">
-							<Button variant="outline" size="sm" type="button" onClick={() => onEdit?.(row.original)}>
+							<Button
+								variant="outline"
+								size="sm"
+								type="button"
+								onClick={() => onEdit?.(row.original)}
+							>
 								Edit
 							</Button>
-							<Button variant="destructive" size="sm" type="button" onClick={() => onDelete?.(row.original)}>
+							<Button
+								variant="destructive"
+								size="sm"
+								type="button"
+								onClick={() => onDelete?.(row.original)}
+							>
 								Delete
 							</Button>
 						</div>

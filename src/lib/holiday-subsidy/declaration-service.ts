@@ -172,10 +172,7 @@ export async function deleteDeclaration(params: { ccaId: number; subsidyId: numb
 		throw new ApiError(400, "Only pending declarations can be deleted");
 	}
 
-	const { error: deleteError } = await supabase
-		.from("cca_subsidies")
-		.delete()
-		.eq("id", subsidyId);
+	const { error: deleteError } = await supabase.from("cca_subsidies").delete().eq("id", subsidyId);
 
 	if (deleteError) {
 		throw new ApiError(500, deleteError.message);

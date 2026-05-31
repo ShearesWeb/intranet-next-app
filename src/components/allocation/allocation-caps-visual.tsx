@@ -33,14 +33,12 @@ const STEPS: Step[] = [
 	{
 		phase: "maincomm",
 		highlights: ["bob"],
-		description:
-			"• Bob got 1 position (Art lead)\n• He has room for subcomm.",
+		description: "• Bob got 1 position (Art lead)\n• He has room for subcomm.",
 	},
 	{
 		phase: "maincomm",
 		highlights: ["carol"],
-		description:
-			"• Carol got 0 maincomm positions.\n• She has the most room for subcomm.",
+		description: "• Carol got 0 maincomm positions.\n• She has the most room for subcomm.",
 	},
 	{
 		phase: "caps",
@@ -102,7 +100,8 @@ export function AllocationCapsVisual() {
 		return () => clearTimeout(timer);
 	}, [step, isPlaying, current.phase]);
 
-	const showCaps = current.phase === "caps" || current.phase === "subcomm" || current.phase === "summary";
+	const showCaps =
+		current.phase === "caps" || current.phase === "subcomm" || current.phase === "summary";
 	const showSubcommState = current.phase === "subcomm" || current.phase === "summary";
 
 	return (
@@ -133,7 +132,15 @@ export function AllocationCapsVisual() {
 											: "bg-purple-500/15 text-purple-400",
 						)}
 					>
-						{current.phase === "summary" ? "Rule" : current.phase === "intro" ? "Intro" : current.phase === "maincomm" ? "Maincomm" : current.phase === "caps" ? "Caps" : "Subcomm"}
+						{current.phase === "summary"
+							? "Rule"
+							: current.phase === "intro"
+								? "Intro"
+								: current.phase === "maincomm"
+									? "Maincomm"
+									: current.phase === "caps"
+										? "Caps"
+										: "Subcomm"}
 					</span>
 					<span className="text-slate-500 text-xs font-mono tabular-nums">
 						{step + 1}/{STEPS.length}
@@ -191,9 +198,7 @@ export function AllocationCapsVisual() {
 									>
 										{s.name}
 									</span>
-									{isRemoved && (
-										<span className="block text-[10px] text-red-400/60">sits out</span>
-									)}
+									{isRemoved && <span className="block text-[10px] text-red-400/60">sits out</span>}
 								</div>
 							</div>
 
@@ -217,9 +222,7 @@ export function AllocationCapsVisual() {
 											))
 										)}
 									</div>
-									<p className="text-[11px] text-slate-500 mt-1">
-										{maincomm.count}/2 maincomm
-									</p>
+									<p className="text-[11px] text-slate-500 mt-1">{maincomm.count}/2 maincomm</p>
 								</div>
 							)}
 
@@ -247,10 +250,16 @@ export function AllocationCapsVisual() {
 												)}
 											</div>
 										))}
-										<span className={cn(
-											"text-xs font-semibold ml-1.5",
-											cap === 0 ? "text-red-400/60" : cap === 3 ? "text-emerald-400" : "text-yellow-400",
-										)}>
+										<span
+											className={cn(
+												"text-xs font-semibold ml-1.5",
+												cap === 0
+													? "text-red-400/60"
+													: cap === 3
+														? "text-emerald-400"
+														: "text-yellow-400",
+											)}
+										>
 											{cap} slot{cap !== 1 ? "s" : ""}
 										</span>
 									</div>

@@ -1,15 +1,7 @@
 import { apiOk, handleApiError } from "@/lib/api/response";
-import {
-	getMembers,
-	addMember,
-	removeMember,
-	updateMember,
-} from "@/lib/cca/member-service";
+import { getMembers, addMember, removeMember, updateMember } from "@/lib/cca/member-service";
 
-export async function GET(
-	_req: Request,
-	{ params }: { params: Promise<{ "cca-id": string }> },
-) {
+export async function GET(_req: Request, { params }: { params: Promise<{ "cca-id": string }> }) {
 	try {
 		const { "cca-id": ccaId } = await params;
 		const result = await getMembers(ccaId);
@@ -19,10 +11,7 @@ export async function GET(
 	}
 }
 
-export async function POST(
-	req: Request,
-	{ params }: { params: Promise<{ "cca-id": string }> },
-) {
+export async function POST(req: Request, { params }: { params: Promise<{ "cca-id": string }> }) {
 	try {
 		const { "cca-id": ccaId } = await params;
 		const body = await req.json();
@@ -33,10 +22,7 @@ export async function POST(
 	}
 }
 
-export async function DELETE(
-	req: Request,
-	{ params }: { params: Promise<{ "cca-id": string }> },
-) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ "cca-id": string }> }) {
 	try {
 		const { "cca-id": ccaId } = await params;
 		const body = await req.json();
@@ -47,10 +33,7 @@ export async function DELETE(
 	}
 }
 
-export async function PATCH(
-	req: Request,
-	{ params }: { params: Promise<{ "cca-id": string }> },
-) {
+export async function PATCH(req: Request, { params }: { params: Promise<{ "cca-id": string }> }) {
 	try {
 		const { "cca-id": ccaId } = await params;
 		const body = await req.json();

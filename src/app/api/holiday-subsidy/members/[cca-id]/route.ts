@@ -2,10 +2,7 @@ import { apiOk, handleApiError } from "@/lib/api/response";
 import { requireChairAccess } from "@/lib/api/auth";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 import { ApiError } from "@/lib/api/errors";
-import {
-	getMemberAssignments,
-	saveMemberAssignments,
-} from "@/lib/holiday-subsidy/member-service";
+import { getMemberAssignments, saveMemberAssignments } from "@/lib/holiday-subsidy/member-service";
 
 type Params = {
 	params: Promise<{ "cca-id": string }>;

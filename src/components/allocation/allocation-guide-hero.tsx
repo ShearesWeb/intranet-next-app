@@ -31,9 +31,9 @@ export function AllocationGuideHero() {
 				<FadeIn delay={0.2}>
 					<p className="max-w-2xl text-lg leading-relaxed text-muted-foreground">
 						Sheares Web uses the{" "}
-						<span className="font-semibold text-foreground">Gale–Shapley algorithm</span> — the
-						same Nobel Prize-winning method used to match medical students to residencies.
-						It&apos;s fair, stable, and impossible to game.
+						<span className="font-semibold text-foreground">Gale–Shapley algorithm</span> — the same
+						Nobel Prize-winning method used to match medical students to residencies. It&apos;s
+						fair, stable, and impossible to game.
 					</p>
 				</FadeIn>
 

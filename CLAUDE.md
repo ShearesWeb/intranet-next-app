@@ -34,7 +34,8 @@ A Next.js 15 intranet application for managing CCAs (Co-Curricular Activities), 
 - Tailwind CSS ^4.1.14 - Utility-first CSS framework (v4, uses `@import 'tailwindcss'` syntax)
 - SST 3.17.10 - Serverless deployment framework for AWS (`sst.config.ts`)
 - Pulumi - Infrastructure-as-code engine (used under SST)
-- Not detected - No test framework configured (no jest, vitest, or testing-library in dependencies)
+- Vitest ^4 - Unit (`src/**/*.test.ts`), component (`src/**/*.test.tsx`, happy-dom + Testing Library), and integration (`tests/integration/**`, live local Supabase) tests
+- Playwright ^1.60 - E2E tests (`e2e/specs/**`) driven by a persona-based role system (`tests/fixtures/personas.ts`); see `docs/TESTING.md`
 - PostCSS ^8 with `@tailwindcss/postcss` ^4.1.14 (`postcss.config.mjs`)
 - ESLint ^8 with `eslint-config-next` 14.2.13 (`.eslintrc.json`)
 - ts-node ^10.9.2 - Used for running scripts (`tsconfig.scripts.json`)
@@ -90,7 +91,15 @@ A Next.js 15 intranet application for managing CCAs (Co-Curricular Activities), 
 - `npm run build` - Build Next.js app
 - `npm run start` - Start production server
 - `npm run lint` - Run ESLint
+- `npm run typecheck` - Type-check app + test scopes (`tsconfig.json` + `tsconfig.test.json`)
+- `npm test` - Run unit + component tests (Vitest)
+- `npm run test:integration` - Run integration tests against a live local Supabase (needs `npm run db:test:setup` first)
+- `npm run e2e` - Run Playwright e2e tests (headless chromium)
+- `npm run e2e:personas` / `npm run e2e:login <persona>` / `npm run e2e:test <persona>` - Persona-based role switching for e2e + manual QA (see `docs/TESTING.md`)
+- `npm run db:test:setup` - Boot local Supabase, apply schema via Liquibase, seed fixtures (needs Docker + supabase CLI + liquibase + the `vendor/intranet` submodule)
+- `npm run fixtures:generate` - Regenerate `seed.sql` + `PERSONAS.md` after editing `tests/fixtures/personas.ts`
 - `npm run run-script` - Execute scripts via ts-node (`scripts/index.ts`)
+- **Testing guide: `docs/TESTING.md`** - Four test layers, the integration/e2e boundary, and the persona role-switching system
 <!-- GSD:stack-end -->
 
 <!-- GSD:conventions-start source:CONVENTIONS.md -->

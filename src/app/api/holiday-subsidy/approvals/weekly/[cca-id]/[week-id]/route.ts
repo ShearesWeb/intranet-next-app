@@ -3,10 +3,7 @@ import { apiOk, handleApiError } from "@/lib/api/response";
 import { requireJcrcOrAdminAccess } from "@/lib/api/auth";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 import { ApiError } from "@/lib/api/errors";
-import {
-	getWeeklyApprovals,
-	batchApproveWeekly,
-} from "@/lib/holiday-subsidy/weekly-service";
+import { getWeeklyApprovals, batchApproveWeekly } from "@/lib/holiday-subsidy/weekly-service";
 
 type Params = {
 	params: Promise<{ "cca-id": string; "week-id": string }>;
@@ -52,10 +49,7 @@ export async function PATCH(request: Request, { params }: Params) {
 	} catch (e) {
 		if (e instanceof ApiError && "failures" in e) {
 			const { failures } = e as ApiError & { failures: unknown[] };
-			return Response.json(
-				{ data: null, error: e.message, failures },
-				{ status: e.statusCode },
-			);
+			return Response.json({ data: null, error: e.message, failures }, { status: e.statusCode });
 		}
 		return handleApiError(e);
 	}

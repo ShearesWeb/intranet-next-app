@@ -35,9 +35,7 @@ export function SubsidyMemberApprovalTable({
 	const fetchMembers = useCallback(async () => {
 		setLoading(true);
 		try {
-			const res = await fetch(
-				`/api/holiday-subsidy/approvals/members/${ccaId}?day=${day}`,
-			);
+			const res = await fetch(`/api/holiday-subsidy/approvals/members/${ccaId}?day=${day}`);
 			const json = await res.json();
 			if (res.ok) {
 				setMembers(json.data?.members ?? []);
@@ -134,12 +132,8 @@ export function SubsidyMemberApprovalTable({
 				header: () => <div className="font-semibold">Member</div>,
 				cell: ({ row }) => (
 					<div className="flex flex-col min-w-[140px]">
-						<span className="font-semibold text-sm leading-tight">
-							{row.original.name}
-						</span>
-						<span className="text-xs text-muted-foreground mt-0.5">
-							{row.original.email}
-						</span>
+						<span className="font-semibold text-sm leading-tight">{row.original.name}</span>
+						<span className="text-xs text-muted-foreground mt-0.5">{row.original.email}</span>
 					</div>
 				),
 			},
@@ -227,9 +221,7 @@ export function SubsidyMemberApprovalTable({
 		<section className="flex flex-col gap-4">
 			<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 				<div>
-					<h2 className="text-lg font-semibold">
-						Member Approvals — {ccaName}
-					</h2>
+					<h2 className="text-lg font-semibold">Member Approvals — {ccaName}</h2>
 					<div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
 						<Info className="h-4 w-4 flex-shrink-0" />
 						<span>
@@ -239,7 +231,8 @@ export function SubsidyMemberApprovalTable({
 								</span>
 							) : pendingStatus.size > 0 ? (
 								<span className="font-medium text-amber-600">
-									{pendingStatus.size} staged change{pendingStatus.size === 1 ? "" : "s"} — click Save to apply
+									{pendingStatus.size} staged change{pendingStatus.size === 1 ? "" : "s"} — click
+									Save to apply
 								</span>
 							) : (
 								"Select members, then stage an approve or reject decision."

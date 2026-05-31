@@ -10,11 +10,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/layout/empty-state";
 import { useApplicantRankings } from "@/hooks/use-applicant-rankings";
 import { PositionCard } from "@/components/allocation/position-card";
-import {
-	Collapsible,
-	CollapsibleContent,
-	CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import type { CcaPositionGroup, Position } from "@/types/applicants";
 
 export default function RankApplicants() {
@@ -116,7 +112,9 @@ export default function RankApplicants() {
 					{/* Summary bar */}
 					<div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
 						<span>
-							{ccaGroups.length} CCA{ccaGroups.length > 1 ? "s" : ""} · {positions.length} position{positions.length > 1 ? "s" : ""} · {totalApplicants} applicant{totalApplicants !== 1 ? "s" : ""}
+							{ccaGroups.length} CCA{ccaGroups.length > 1 ? "s" : ""} · {positions.length} position
+							{positions.length > 1 ? "s" : ""} · {totalApplicants} applicant
+							{totalApplicants !== 1 ? "s" : ""}
 						</span>
 						<div className="ml-auto flex gap-2">
 							<Button variant="ghost" size="sm" onClick={expandAll}>
@@ -131,7 +129,8 @@ export default function RankApplicants() {
 					{hasAnyChanges && (
 						<div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/40 dark:bg-amber-950/30">
 							<p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-								You have unsaved changes in {dirtyCount} position{dirtyCount > 1 ? "s" : ""}. Don&apos;t forget to save!
+								You have unsaved changes in {dirtyCount} position{dirtyCount > 1 ? "s" : ""}.
+								Don&apos;t forget to save!
 							</p>
 						</div>
 					)}
@@ -178,9 +177,15 @@ function CcaSection({
 	hasChanges: Record<number, boolean>;
 	onToggleCca: () => void;
 	onTogglePosition: (id: number) => void;
-	onAddApplicant: (positionId: number, userData: import("@/types/members").UserSearchResult) => void;
+	onAddApplicant: (
+		positionId: number,
+		userData: import("@/types/members").UserSearchResult,
+	) => void;
 	onRemoveApplicant: (positionId: number, userId: number) => void;
-	onReorderApplicants: (positionId: number, newApplicants: import("@/types/applicants").Applicant[]) => void;
+	onReorderApplicants: (
+		positionId: number,
+		newApplicants: import("@/types/applicants").Applicant[],
+	) => void;
 }) {
 	const totalApplicants = group.positions.reduce((sum, p) => sum + p.applicants.length, 0);
 	const dirtyPositions = group.positions.filter((p) => hasChanges[p.id]);
@@ -203,7 +208,10 @@ function CcaSection({
 								{totalApplicants}
 							</span>
 							{dirtyPositions.length > 0 && (
-								<Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
+								<Badge
+									variant="outline"
+									className="border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200"
+								>
 									{dirtyPositions.length} unsaved
 								</Badge>
 							)}

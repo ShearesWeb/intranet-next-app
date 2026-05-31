@@ -1,7 +1,11 @@
 import type { CCAData } from "@/types/cca-data";
 import type { RecapData } from "@/types/recap";
 import type { AuthenticatedUser } from "@/types/user";
-import { isLeadershipRole, isBlockCcaName, isResidentBlockPosition } from "@/lib/ranking/recap-helpers";
+import {
+	isLeadershipRole,
+	isBlockCcaName,
+	isResidentBlockPosition,
+} from "@/lib/ranking/recap-helpers";
 
 export async function createRecapImageBlob(
 	user: AuthenticatedUser,

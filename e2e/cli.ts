@@ -202,11 +202,15 @@ switch (command) {
 		runTests(args[0], args.slice(1));
 		break;
 	default:
+		if (command) {
+			console.error(`Unknown command: "${command}"\n`);
+		}
 		console.error("Usage:");
 		console.error("  npm run e2e                         — run all e2e tests");
 		console.error("  npm run e2e:test <persona>          — run tests for one persona");
 		console.error("  npm run e2e:test <persona> --headed — same, with visible browser");
 		console.error("  npm run e2e:login <persona>         — open browser as persona");
 		console.error("  npm run e2e:personas                — list available personas");
+		printPersonas();
 		process.exit(1);
 }

@@ -25,7 +25,9 @@ function DesktopTimeline() {
 								</div>
 								<div className="flex flex-col items-center gap-0.5 text-center">
 									<span className="text-sm font-bold tracking-tight">{phase}</span>
-									<span className="text-xs text-muted-foreground leading-snug max-w-24">{label}</span>
+									<span className="text-xs text-muted-foreground leading-snug max-w-24">
+										{label}
+									</span>
 								</div>
 							</div>
 						</FadeIn>

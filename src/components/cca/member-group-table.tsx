@@ -283,14 +283,15 @@ export function MemberGroupTable({
 	const isSportsCulture = isSports || isCulture;
 
 	const columnsToUse = React.useMemo(
-		() => buildMemberColumns(
-			showActions,
-			canManage,
-			ccaType,
-			onRemoveMember,
-			onUpdateStatus,
-			onUpdateCommitment,
-		),
+		() =>
+			buildMemberColumns(
+				showActions,
+				canManage,
+				ccaType,
+				onRemoveMember,
+				onUpdateStatus,
+				onUpdateCommitment,
+			),
 		[showActions, canManage, ccaType, onRemoveMember, onUpdateStatus, onUpdateCommitment],
 	);
 

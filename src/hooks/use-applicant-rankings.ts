@@ -32,7 +32,12 @@ export function useApplicantRankings(userEmail: string | undefined) {
 			const json = await response.json();
 			const data = json.data ?? json;
 			setPositions(data.positions || []);
-			setCcaOrder((data.ccas || []).map((c: CcaPositionGroup) => ({ cca_id: c.cca_id, cca_name: c.cca_name })));
+			setCcaOrder(
+				(data.ccas || []).map((c: CcaPositionGroup) => ({
+					cca_id: c.cca_id,
+					cca_name: c.cca_name,
+				})),
+			);
 			const orderMap: Record<number, number[]> = {};
 			const changesMap: Record<number, boolean> = {};
 			(data.positions || []).forEach((pos: Position) => {

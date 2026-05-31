@@ -47,10 +47,12 @@ export function SubsidyMemberTable({ ccaId, ccaName, day, onSaved }: SubsidyMemb
 		fetchMembers();
 	}, [fetchMembers]);
 
-	function handleChange(userId: number, key: keyof MemberAssignment, value: string | number | null) {
-		setMembers((prev) =>
-			prev.map((m) => (m.user_id === userId ? { ...m, [key]: value } : m)),
-		);
+	function handleChange(
+		userId: number,
+		key: keyof MemberAssignment,
+		value: string | number | null,
+	) {
+		setMembers((prev) => prev.map((m) => (m.user_id === userId ? { ...m, [key]: value } : m)));
 	}
 
 	function toggleSelected(userId: number) {
@@ -153,7 +155,11 @@ export function SubsidyMemberTable({ ccaId, ccaName, day, onSaved }: SubsidyMemb
 								onMouseDown={(e) => e.stopPropagation()}
 								onChange={(e) => {
 									const next = e.target.value;
-									handleChange(row.original.user_id, "override_hours", next === "" ? null : Number(next));
+									handleChange(
+										row.original.user_id,
+										"override_hours",
+										next === "" ? null : Number(next),
+									);
 								}}
 								placeholder={String(row.original.approved_hours)}
 							/>

@@ -30,4 +30,3 @@ export async function requireJcrcOrAdminAccess() {
 	if (!user.is_jcrc && !user.is_admin) throw new ApiError(403, "Not authorized. JCRC access only.");
 	return user;
 }
-

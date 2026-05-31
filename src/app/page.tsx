@@ -42,7 +42,8 @@ const Page = async () => {
 								Welcome to the <span className="text-primary">Sheares Intranet</span>
 							</h1>
 							<p className="text-muted-foreground text-base lg:text-lg max-w-xl">
-								Manage your CCAs, track your points, and handle subsidy declarations — all in one place.
+								Manage your CCAs, track your points, and handle subsidy declarations — all in one
+								place.
 							</p>
 						</div>
 						<div className="mt-6 flex justify-center gap-3">

@@ -6,10 +6,7 @@ import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/table/data-table";
 import { PositionTypeBadge } from "@/components/badges";
 import { Check, X, Info, AlertCircle } from "lucide-react";
-import type {
-	WeeklyApprovalRow,
-	WeeklyApprovalStatus,
-} from "@/types/weekly";
+import type { WeeklyApprovalRow, WeeklyApprovalStatus } from "@/types/weekly";
 
 export interface WeeklyApprovalsTableProps {
 	weekLabel: string;
