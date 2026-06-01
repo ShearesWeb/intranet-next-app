@@ -58,14 +58,14 @@ test.describe("aria — regular resident", () => {
 		const page = await asPersona("aria");
 		await page.goto("/dashboard/cca-allocation/rank-applicants");
 		await expect(
-			page.getByRole("heading", { name: /Rank your applicant preferences/ }),
+			page.getByRole("heading", { name: /Chair preferences/i }),
 		).toBeVisible();
-		await expect(page.getByText("No CCA positions to manage.")).toBeVisible();
+		await expect(page.getByText("No CCA positions to manage")).toBeVisible();
 	});
 
 	test("@aria - holiday subsidy shows not authorized message", async ({ asPersona }) => {
 		const page = await asPersona("aria");
-		await page.goto("/dashboard/holiday-subsidy");
+		await page.goto("/dashboard/holiday-subsidy/declarations");
 		await expect(page.getByText(/not a chair/i)).toBeVisible();
 	});
 
@@ -119,7 +119,7 @@ test.describe("declan — volleyball captain", () => {
 		const page = await asPersona("declan");
 		await page.goto("/dashboard/cca-allocation/rank-applicants");
 		await expect(
-			page.getByRole("heading", { name: /Rank your applicant preferences/ }),
+			page.getByRole("heading", { name: /Chair preferences/i }),
 		).toBeVisible();
 	});
 
@@ -152,7 +152,7 @@ test.describe("jasper — JCRC blockcomm", () => {
 	test("@jasper - can access holiday subsidy", async ({ asPersona }) => {
 		const page = await asPersona("jasper");
 		await page.goto("/dashboard/holiday-subsidy");
-		await expect(page.getByRole("heading", { name: "Holiday Subsidy" })).toBeVisible();
+		await expect(page.getByRole("heading", { name: /Holiday Subsidy Guide/ })).toBeVisible();
 	});
 
 	test("@jasper - holiday subsidy approvals is accessible (not 'JCRC access only')", async ({ asPersona }) => {
@@ -160,7 +160,7 @@ test.describe("jasper — JCRC blockcomm", () => {
 		await page.goto("/dashboard/holiday-subsidy/approvals");
 		await expect(page.getByText(/JCRC access only/i)).not.toBeVisible();
 		await expect(
-			page.getByRole("heading", { name: /Holiday Subsidy Approvals/ }),
+			page.getByRole("heading", { name: /Subsidy Approvals/ }),
 		).toBeVisible();
 	});
 
@@ -179,7 +179,7 @@ test.describe("brielle — JCRC maincomm", () => {
 		await page.goto("/dashboard/holiday-subsidy/approvals");
 		await expect(page.getByText(/JCRC access only/i)).not.toBeVisible();
 		await expect(
-			page.getByRole("heading", { name: /Holiday Subsidy Approvals/ }),
+			page.getByRole("heading", { name: /Subsidy Approvals/ }),
 		).toBeVisible();
 	});
 
@@ -207,7 +207,7 @@ test.describe("sage — drama + JCRC", () => {
 		await page.goto("/dashboard/holiday-subsidy/approvals");
 		await expect(page.getByText(/JCRC access only/i)).not.toBeVisible();
 		await expect(
-			page.getByRole("heading", { name: /Holiday Subsidy Approvals/ }),
+			page.getByRole("heading", { name: /Subsidy Approvals/ }),
 		).toBeVisible();
 	});
 });

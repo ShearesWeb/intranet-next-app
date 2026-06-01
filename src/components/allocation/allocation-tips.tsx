@@ -56,9 +56,7 @@ export function AllocationTips() {
 											<Icon className="size-4 text-orange-600" />
 											<h3 className="font-semibold">{tip.title}</h3>
 										</div>
-										<p className="text-sm leading-relaxed text-muted-foreground">
-											{tip.body}
-										</p>
+										<p className="text-sm leading-relaxed text-muted-foreground">{tip.body}</p>
 									</div>
 								</CardContent>
 							</Card>

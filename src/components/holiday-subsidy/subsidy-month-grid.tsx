@@ -1,11 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import {
-	CalendarDeclaration,
-	SUBSIDY_DOT_CONFIG,
-	type SubsidyDotType,
-} from "@/types/declarations";
+import { CalendarDeclaration, SUBSIDY_DOT_CONFIG, type SubsidyDotType } from "@/types/declarations";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -126,7 +122,10 @@ export function SubsidyMonthGrid({
 								isSelected && "bg-primary text-primary-foreground",
 								!isSelected && isToday && "bg-primary/10 font-bold text-primary",
 								!isSelected && !isToday && hasDecls && "hover:bg-accent",
-								!isSelected && !isToday && !hasDecls && "text-muted-foreground/50 hover:bg-accent/50",
+								!isSelected &&
+									!isToday &&
+									!hasDecls &&
+									"text-muted-foreground/50 hover:bg-accent/50",
 							)}
 						>
 							<span className="text-xs">{day}</span>
@@ -147,14 +146,14 @@ export function SubsidyMonthGrid({
 			</div>
 
 			<div className="mt-3 flex flex-wrap gap-x-3 gap-y-1">
-				{(Object.entries(SUBSIDY_DOT_CONFIG) as [SubsidyDotType, { label: string; color: string }][]).map(
-					([key, cfg]) => (
-						<div key={key} className="flex items-center gap-1">
-							<span className="h-2 w-2 rounded-full" style={{ backgroundColor: cfg.color }} />
-							<span className="text-[10px] text-muted-foreground">{cfg.label}</span>
-						</div>
-					),
-				)}
+				{(
+					Object.entries(SUBSIDY_DOT_CONFIG) as [SubsidyDotType, { label: string; color: string }][]
+				).map(([key, cfg]) => (
+					<div key={key} className="flex items-center gap-1">
+						<span className="h-2 w-2 rounded-full" style={{ backgroundColor: cfg.color }} />
+						<span className="text-[10px] text-muted-foreground">{cfg.label}</span>
+					</div>
+				))}
 			</div>
 		</div>
 	);

@@ -41,9 +41,7 @@ export function LoadingSpinner({
 					style={{ width: "100px", height: "100px", margin: "-10px" }}
 				/>
 
-				<div
-					className="relative z-10 bg-background rounded-full p-2 shadow-lg shadow-primary/10 animate-[pulse-logo_2s_ease-in-out_infinite]"
-				>
+				<div className="relative z-10 bg-background rounded-full p-2 shadow-lg shadow-primary/10 animate-[pulse-logo_2s_ease-in-out_infinite]">
 					<Image
 						src="/images/shweb-logo.png"
 						alt="Loading"
@@ -56,9 +54,7 @@ export function LoadingSpinner({
 			</div>
 
 			{/* Loading Message */}
-			<div
-				className="flex flex-col items-center gap-2 animate-[fade-in-up_0.4s_ease-out_0.2s_both]"
-			>
+			<div className="flex flex-col items-center gap-2 animate-[fade-in-up_0.4s_ease-out_0.2s_both]">
 				<h3 className="text-lg font-medium text-foreground tracking-tight">{message}</h3>
 				<div className="flex gap-1">
 					{[0, 1, 2].map((i) => (

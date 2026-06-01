@@ -20,10 +20,7 @@ interface UseMemberSaveReturn {
 	saveAll: () => Promise<void>;
 }
 
-export function useMemberSave(
-	ccaId: string | null,
-	deps: UseMemberSaveDeps,
-): UseMemberSaveReturn {
+export function useMemberSave(ccaId: string | null, deps: UseMemberSaveDeps): UseMemberSaveReturn {
 	const { pendingChanges, permissions, memberPositionId, refetch } = deps;
 
 	const [saving, setSaving] = useState(false);

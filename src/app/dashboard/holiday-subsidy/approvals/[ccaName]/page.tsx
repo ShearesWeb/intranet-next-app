@@ -14,10 +14,7 @@ import { useAuth } from "@/lib/auth/auth-context";
 
 import { DeclarationSectionCard } from "@/components/holiday-subsidy/declaration-section-card";
 import { useSubsidyApprovalDetails } from "@/hooks/use-subsidy-approval-details";
-import {
-	SubsidyStatus,
-	type DeclarationSection,
-} from "@/types/declarations";
+import { SubsidyStatus, type DeclarationSection } from "@/types/declarations";
 import { formatSubsidyStatus, STATUS_ORDER } from "@/lib/holiday-subsidy/declaration-mappers";
 import { HOLIDAY_WEEK_OPTIONS } from "@/lib/holiday-subsidy/holiday-weeks";
 

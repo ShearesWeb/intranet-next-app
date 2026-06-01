@@ -1,0 +1,16 @@
+{
+	// Test type-scope. Extends the base config but re-includes the test files and
+	// test-only globals that tsconfig.json deliberately excludes, so production
+	// `tsc` never sees Vitest globals. Typechecked in CI via `npm run typecheck`
+	// (which runs both projects).
+	"extends": "./tsconfig.json",
+	"include": [
+		"tests/**/*.ts",
+		"tests/types/test-globals.d.ts",
+		"src/**/*.test.ts",
+		"src/**/*.test.tsx",
+		"src/test-utils/**/*.ts",
+		"src/test-utils/**/*.tsx"
+	],
+	"exclude": ["node_modules"]
+}

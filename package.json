@@ -18,7 +18,7 @@
 		"lint": "next lint",
 		"run-script": "ts-node -P tsconfig.scripts.json scripts/index.ts",
 		"start": "next start",
-		"typecheck": "tsc --noEmit",
+		"typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
 		"test": "vitest run",
 		"test:integration": "vitest run --config vitest.integration.config.mts",
 		"test:integration:watch": "vitest --config vitest.integration.config.mts",

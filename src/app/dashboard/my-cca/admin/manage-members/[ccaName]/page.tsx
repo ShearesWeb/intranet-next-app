@@ -115,11 +115,7 @@ export default function ManageMembersPage() {
 		return (
 			<div className="flex flex-col space-y-6 p-4 md:p-6">
 				<PageHeader title="CCA Members" />
-				<ErrorCard
-					error={error}
-					backHref="/dashboard/my-cca/admin"
-					backLabel="Back to My CCAs"
-				/>
+				<ErrorCard error={error} backHref="/dashboard/my-cca/admin" backLabel="Back to My CCAs" />
 			</div>
 		);
 
@@ -194,7 +190,9 @@ export default function ManageMembersPage() {
 			)}
 			<div className="flex items-center gap-2 text-sm text-muted-foreground border-t pt-4">
 				<Users className="h-4 w-4" />
-				<span>Total Members: <strong className="text-foreground">{totalFilteredMembers}</strong></span>
+				<span>
+					Total Members: <strong className="text-foreground">{totalFilteredMembers}</strong>
+				</span>
 			</div>
 			<AddMemberModal
 				open={showAddMemberModal}

@@ -1,9 +1,23 @@
 import { test, expect } from "../fixtures";
+import type { Page } from "@playwright/test";
+
+// The dashboard renders a <LoadingSpinner> until a client-side role fetch
+// (useRoleAuth) resolves; only then do the greeting + action cards appear.
+// Under heavy local parallelism that fetch can exceed Playwright's default 5s
+// timeout, so navigate and wait for the page to hydrate before asserting.
+// Waiting also makes the negative card assertions meaningful (a card is absent
+// on a LOADED dashboard, not merely because the spinner is still showing).
+async function gotoDashboard(page: Page): Promise<void> {
+	await page.goto("/dashboard");
+	await expect(
+		page.getByRole("main").getByText(/Good (Morning|Afternoon|Evening)/),
+	).toBeVisible({ timeout: 15_000 });
+}
 
 test.describe("dashboard", () => {
 	test("@aria - shows greeting with user name Aria Tan", async ({ asPersona }) => {
 		const page = await asPersona("aria");
-		await page.goto("/dashboard");
+		await gotoDashboard(page);
 		const main = page.getByRole("main");
 		await expect(main.getByText("Aria Tan")).toBeVisible();
 		await expect(
@@ -13,7 +27,7 @@ test.describe("dashboard", () => {
 
 	test("@declan - shows greeting with user name Declan Ho", async ({ asPersona }) => {
 		const page = await asPersona("declan");
-		await page.goto("/dashboard");
+		await gotoDashboard(page);
 		const main = page.getByRole("main");
 		await expect(main.getByText("Declan Ho")).toBeVisible();
 		await expect(
@@ -23,7 +37,7 @@ test.describe("dashboard", () => {
 
 	test("@aria - shows My Actions section", async ({ asPersona }) => {
 		const page = await asPersona("aria");
-		await page.goto("/dashboard");
+		await gotoDashboard(page);
 		await expect(page.getByRole("main").getByText("My Actions")).toBeVisible();
 	});
 
@@ -31,7 +45,7 @@ test.describe("dashboard", () => {
 		asPersona,
 	}) => {
 		const page = await asPersona("aria");
-		await page.goto("/dashboard");
+		await gotoDashboard(page);
 		const myCcasLink = page
 			.getByRole("main")
 			.getByRole("link", { name: /My CCAs/ });
@@ -41,29 +55,29 @@ test.describe("dashboard", () => {
 
 	test("@aria - shows CCA Ranking action card", async ({ asPersona }) => {
 		const page = await asPersona("aria");
-		await page.goto("/dashboard");
+		await gotoDashboard(page);
 		await expect(
 			page.getByRole("main").getByRole("link", { name: /CCA Ranking/ }),
 		).toBeVisible();
 	});
 
-	test("@aria - does not show Rank Applicants card (not a chair)", async ({
+	test("@aria - does not show Chair Preferences card (not a chair)", async ({
 		asPersona,
 	}) => {
 		const page = await asPersona("aria");
-		await page.goto("/dashboard");
+		await gotoDashboard(page);
 		await expect(
-			page.getByRole("main").getByRole("link", { name: /Rank Applicants/ }),
+			page.getByRole("main").getByRole("link", { name: /Chair Preferences/ }),
 		).not.toBeVisible();
 	});
 
-	test("@declan - shows Rank Applicants card (admin/chair)", async ({
+	test("@declan - shows Chair Preferences card (admin/chair)", async ({
 		asPersona,
 	}) => {
 		const page = await asPersona("declan");
-		await page.goto("/dashboard");
+		await gotoDashboard(page);
 		await expect(
-			page.getByRole("main").getByRole("link", { name: /Rank Applicants/ }),
+			page.getByRole("main").getByRole("link", { name: /Chair Preferences/ }),
 		).toBeVisible();
 	});
 
@@ -71,7 +85,7 @@ test.describe("dashboard", () => {
 		asPersona,
 	}) => {
 		const page = await asPersona("aria");
-		await page.goto("/dashboard");
+		await gotoDashboard(page);
 		await page
 			.getByRole("main")
 			.getByRole("link", { name: /My CCAs/ })

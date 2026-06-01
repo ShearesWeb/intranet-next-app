@@ -3,10 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { HOLIDAY_WEEKS } from "@/lib/holiday-subsidy/holiday-weeks";
-import type {
-	WeeklyApprovalRow,
-	WeeklyApprovalStatus,
-} from "@/types/weekly";
+import type { WeeklyApprovalRow, WeeklyApprovalStatus } from "@/types/weekly";
 import { useBeforeUnload } from "@/hooks/use-before-unload";
 
 export interface UseWeeklyApprovalsResult {

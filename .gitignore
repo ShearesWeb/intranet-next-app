@@ -49,6 +49,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# logs
+*.log
+/log/
+
 # local env files
 .env*.local
 .env
@@ -89,3 +93,6 @@ test-results/
 playwright-report/
 blob-report/
 e2e/.session-cache.json
+
+# Claude Code harness artifacts
+.claude/scheduled_tasks.lock

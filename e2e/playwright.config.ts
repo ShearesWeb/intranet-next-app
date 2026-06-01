@@ -9,7 +9,12 @@ export default defineConfig({
 	forbidOnly: !!process.env.CI,
 	retries: process.env.CI ? 2 : 0,
 	workers: process.env.CI ? 1 : undefined,
-	reporter: process.env.CI ? "github" : "html",
+	// In CI emit GitHub annotations AND a self-contained HTML report so failed
+	// runs can be uploaded as an artifact (see the e2e CI jobs). `open: never`
+	// keeps the report from trying to launch a browser on the runner.
+	reporter: process.env.CI
+		? [["github"], ["html", { open: "never", outputFolder: "playwright-report" }]]
+		: "html",
 	use: {
 		baseURL: APP_URL,
 		trace: "on-first-retry",

@@ -116,62 +116,72 @@ const STEPS: Step[] = [
 	{
 		phase: "setup",
 		highlight: "all",
-		description: "This is Swim Team.\nAlexis is the vice captain. She has 2 positions and 3 members.\nAlexis is the one who submits holiday subsidy for everyone.",
+		description:
+			"This is Swim Team.\nAlexis is the vice captain. She has 2 positions and 3 members.\nAlexis is the one who submits holiday subsidy for everyone.",
 	},
 	{
 		phase: "overview",
 		highlight: "chair",
-		description: "Alexis needs to do 2 things:\n  1. Declare how many hours each position worked, for each day, with a reason.\n  2. Declare how many hours each member worked, for each day, with a reason.\nShe must do step 1 first. Step 2 is locked until step 1 is approved.",
+		description:
+			"Alexis needs to do 2 things:\n  1. Declare how many hours each position worked, for each day, with a reason.\n  2. Declare how many hours each member worked, for each day, with a reason.\nShe must do step 1 first. Step 2 is locked until step 1 is approved.",
 	},
 	{
 		phase: "pos-decl",
 		highlight: "positions",
 		showPosHours: true,
-		description: "Step 1 - Position Subsidy\nFor each position, Alexis fills in the hours for every day\nand writes a reason for each entry.\nClick a position to see the daily breakdown.",
+		description:
+			"Step 1 - Position Subsidy\nFor each position, Alexis fills in the hours for every day\nand writes a reason for each entry.\nClick a position to see the daily breakdown.",
 	},
 	{
 		phase: "pos-approve",
 		highlight: "positions",
 		badge: "JCRC approved the position hours",
 		showPosHours: true,
-		description: "JCRC checks Alexis's numbers and approves them.\nThis doesn't give anyone money yet - it just autofills\nthe hours for the next step (member declarations).",
+		description:
+			"JCRC checks Alexis's numbers and approves them.\nThis doesn't give anyone money yet - it just autofills\nthe hours for the next step (member declarations).",
 	},
 	{
 		phase: "appt-locked",
 		highlight: "members",
 		showLocked: true,
-		description: "Step 2 - Member Subsidy\nThis was locked until JCRC approved step 1.\nNow Alexis declares how many hours each member actually worked -\nagain, for each day, with a reason.",
+		description:
+			"Step 2 - Member Subsidy\nThis was locked until JCRC approved step 1.\nNow Alexis declares how many hours each member actually worked -\nagain, for each day, with a reason.",
 	},
 	{
 		phase: "appt-decl",
 		highlight: "members",
 		showMemberDecl: true,
-		description: "By default, every member starts at 0 hours.\nAlexis fills in each day for each person.\nWayne missed 2 days (sick, personal) and left early once - reduced hours, with reason.\nRaegan did extra work Thu and Fri (admin duties, covered for Wayne) - added hours, with reason.\nEvery change needs a reason.",
+		description:
+			"By default, every member starts at 0 hours.\nAlexis fills in each day for each person.\nWayne missed 2 days (sick, personal) and left early once - reduced hours, with reason.\nRaegan did extra work Thu and Fri (admin duties, covered for Wayne) - added hours, with reason.\nEvery change needs a reason.",
 	},
 	{
 		phase: "appt-approve",
 		highlight: "members",
 		badge: "JCRC approved the member hours",
 		showMemberDecl: true,
-		description: "JCRC reviews Alexis's member declarations and approves.\nBoth steps are now done. The numbers are locked in.",
+		description:
+			"JCRC reviews Alexis's member declarations and approves.\nBoth steps are now done. The numbers are locked in.",
 	},
 	{
 		phase: "missed",
 		highlight: "none",
 		showMissed: true,
-		description: "What happens if Alexis doesn't submit anything?\nEvery member gets 0 hours. No declaration = no money.\nIt's the chair/vice's job. If they forget, nobody gets paid.",
+		description:
+			"What happens if Alexis doesn't submit anything?\nEvery member gets 0 hours. No declaration = no money.\nIt's the chair/vice's job. If they forget, nobody gets paid.",
 	},
 	{
 		phase: "calc",
 		highlight: "none",
 		showTotals: true,
-		description: "Sheares Web takes all the approved hours and calculates\nhow much money each member gets.",
+		description:
+			"Sheares Web takes all the approved hours and calculates\nhow much money each member gets.",
 	},
 	{
 		phase: "summary",
 		highlight: "all",
 		showTotals: true,
-		description: "That's it. Here's the whole process:\n• Chair/Vice declares hours per position, per day, with reasons (step 1).\n• JCRC approves. This unlocks step 2.\n• Chair/Vice declares hours per member, per day, with reasons (step 2). Default is 0.\n• JCRC approves again. Done.\n• If the chair/vice doesn't submit - everyone gets nothing.",
+		description:
+			"That's it. Here's the whole process:\n• Chair/Vice declares hours per position, per day, with reasons (step 1).\n• JCRC approves. This unlocks step 2.\n• Chair/Vice declares hours per member, per day, with reasons (step 2). Default is 0.\n• JCRC approves again. Done.\n• If the chair/vice doesn't submit - everyone gets nothing.",
 	},
 ];
 
@@ -214,7 +224,11 @@ function DayBreakdown({ days, accentColor }: { days: DayEntry[]; accentColor: st
 					<span className="text-[11px] font-mono text-slate-500 w-8 shrink-0">{d.day}</span>
 					{d.hrs > 0 ? (
 						<>
-							<span className={cn("text-sm font-bold font-mono w-6 text-right shrink-0", accentColor)}>{d.hrs}h</span>
+							<span
+								className={cn("text-sm font-bold font-mono w-6 text-right shrink-0", accentColor)}
+							>
+								{d.hrs}h
+							</span>
 							<span className="text-[11px] text-slate-400 min-w-0 truncate">{d.reason}</span>
 						</>
 					) : (
@@ -259,16 +273,16 @@ export function SubsidyFlowVisual() {
 	}, [step]);
 
 	const phaseStyles: Record<string, { label: string; style: string }> = {
-		"setup":        { label: "Setup",       style: "bg-blue-500/15 text-blue-400" },
-		"overview":     { label: "Overview",    style: "bg-blue-500/15 text-blue-400" },
-		"pos-decl":     { label: "Step 1",      style: "bg-orange-500/15 text-orange-400" },
-		"pos-approve":  { label: "Approved",    style: "bg-emerald-500/15 text-emerald-400" },
-		"appt-locked":  { label: "Step 2",      style: "bg-purple-500/15 text-purple-400" },
-		"appt-decl":    { label: "Step 2",      style: "bg-purple-500/15 text-purple-400" },
-		"appt-approve": { label: "Approved",    style: "bg-emerald-500/15 text-emerald-400" },
-		"missed":       { label: "Not Declared", style: "bg-red-500/15 text-red-400" },
-		"calc":         { label: "Calculation",  style: "bg-purple-500/15 text-purple-400" },
-		"summary":      { label: "Summary",     style: "bg-blue-500/15 text-blue-400" },
+		setup: { label: "Setup", style: "bg-blue-500/15 text-blue-400" },
+		overview: { label: "Overview", style: "bg-blue-500/15 text-blue-400" },
+		"pos-decl": { label: "Step 1", style: "bg-orange-500/15 text-orange-400" },
+		"pos-approve": { label: "Approved", style: "bg-emerald-500/15 text-emerald-400" },
+		"appt-locked": { label: "Step 2", style: "bg-purple-500/15 text-purple-400" },
+		"appt-decl": { label: "Step 2", style: "bg-purple-500/15 text-purple-400" },
+		"appt-approve": { label: "Approved", style: "bg-emerald-500/15 text-emerald-400" },
+		missed: { label: "Not Declared", style: "bg-red-500/15 text-red-400" },
+		calc: { label: "Calculation", style: "bg-purple-500/15 text-purple-400" },
+		summary: { label: "Summary", style: "bg-blue-500/15 text-blue-400" },
 	};
 
 	const ps = phaseStyles[current.phase];
@@ -286,16 +300,30 @@ export function SubsidyFlowVisual() {
 		>
 			{/* Header */}
 			<div className="flex items-center justify-between mb-4">
-				<h3 className="text-white/90 font-semibold text-sm md:text-base">How Holiday Subsidy Works</h3>
+				<h3 className="text-white/90 font-semibold text-sm md:text-base">
+					How Holiday Subsidy Works
+				</h3>
 				<div className="flex items-center gap-2">
-					<span className={cn("text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full", ps.style)}>{ps.label}</span>
-					<span className="text-slate-500 text-xs font-mono tabular-nums">{step + 1}/{STEPS.length}</span>
+					<span
+						className={cn(
+							"text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full",
+							ps.style,
+						)}
+					>
+						{ps.label}
+					</span>
+					<span className="text-slate-500 text-xs font-mono tabular-nums">
+						{step + 1}/{STEPS.length}
+					</span>
 				</div>
 			</div>
 
 			{/* Badge */}
 			{current.badge && (
-				<div key={`badge-${step}`} className="flex items-center justify-center mb-3 animate-[fade-in-scale_0.5s_ease-out_both]">
+				<div
+					key={`badge-${step}`}
+					className="flex items-center justify-center mb-3 animate-[fade-in-scale_0.5s_ease-out_both]"
+				>
 					<div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
 						<span className="text-emerald-400 text-[10px]">&#10003;</span>
 						<span className="text-emerald-400 text-xs font-medium">{current.badge}</span>
@@ -304,16 +332,30 @@ export function SubsidyFlowVisual() {
 			)}
 
 			{/* SVG Tree */}
-			<svg viewBox={`0 0 ${SVG_W} 280`} className="w-full mb-2" role="img" aria-label="CCA structure">
+			<svg
+				viewBox={`0 0 ${SVG_W} 280`}
+				className="w-full mb-2"
+				role="img"
+				aria-label="CCA structure"
+			>
 				{/* Curved connectors */}
-				<path d={curvePath(CHAIR_X, CHAIR_Y + 16, CHAIR_X, CCA_Y - 16)}
-					fill="none" stroke={hlChair ? "rgba(251,146,60,0.5)" : "rgba(148,163,184,0.12)"}
-					strokeWidth={1.5} className="transition-all duration-500" />
+				<path
+					d={curvePath(CHAIR_X, CHAIR_Y + 16, CHAIR_X, CCA_Y - 16)}
+					fill="none"
+					stroke={hlChair ? "rgba(251,146,60,0.5)" : "rgba(148,163,184,0.12)"}
+					strokeWidth={1.5}
+					className="transition-all duration-500"
+				/>
 
 				{POS_XS.map((px, i) => (
-					<path key={`cca-pos-${i}`} d={curvePath(CHAIR_X, CCA_Y + 16, px, POS_Y - 16)}
-						fill="none" stroke={hlPos ? "rgba(251,146,60,0.45)" : "rgba(148,163,184,0.1)"}
-						strokeWidth={1.5} className="transition-all duration-500" />
+					<path
+						key={`cca-pos-${i}`}
+						d={curvePath(CHAIR_X, CCA_Y + 16, px, POS_Y - 16)}
+						fill="none"
+						stroke={hlPos ? "rgba(251,146,60,0.45)" : "rgba(148,163,184,0.1)"}
+						strokeWidth={1.5}
+						className="transition-all duration-500"
+					/>
 				))}
 
 				{MEMBERS.map((mem) => {
@@ -322,34 +364,92 @@ export function SubsidyFlowVisual() {
 					const st = memStatus(mem.id);
 					const active = hlMem && current.highlight === "members";
 					const lineColor = active
-						? (st === "down" ? "rgba(239,68,68,0.5)" : st === "up" ? "rgba(34,197,94,0.5)" : `${mem.color}50`)
-						: hlMem ? `${mem.color}30` : "rgba(148,163,184,0.1)";
+						? st === "down"
+							? "rgba(239,68,68,0.5)"
+							: st === "up"
+								? "rgba(34,197,94,0.5)"
+								: `${mem.color}50`
+						: hlMem
+							? `${mem.color}30`
+							: "rgba(148,163,184,0.1)";
 					return (
-						<path key={`pos-mem-${mem.id}`} d={curvePath(POS_XS[posIdx], POS_Y + 16, mx, MEM_Y - 16)}
-							fill="none" stroke={lineColor} strokeWidth={1.5} className="transition-all duration-500" />
+						<path
+							key={`pos-mem-${mem.id}`}
+							d={curvePath(POS_XS[posIdx], POS_Y + 16, mx, MEM_Y - 16)}
+							fill="none"
+							stroke={lineColor}
+							strokeWidth={1.5}
+							className="transition-all duration-500"
+						/>
 					);
 				})}
 
 				{/* Alice (chair) */}
 				{hlChair && (
-					<circle cx={CHAIR_X} cy={CHAIR_Y} r={20} fill="#fb923c" opacity={0.06}
-						className="animate-[node-pulse_2s_ease-in-out_infinite]" />
+					<circle
+						cx={CHAIR_X}
+						cy={CHAIR_Y}
+						r={20}
+						fill="#fb923c"
+						opacity={0.06}
+						className="animate-[node-pulse_2s_ease-in-out_infinite]"
+					/>
 				)}
-				<circle cx={CHAIR_X} cy={CHAIR_Y} r={15} fill="rgba(15,23,42,0.95)"
+				<circle
+					cx={CHAIR_X}
+					cy={CHAIR_Y}
+					r={15}
+					fill="rgba(15,23,42,0.95)"
 					stroke={hlChair ? "#fb923c" : "rgba(148,163,184,0.15)"}
-					strokeWidth={1.5} className="transition-all duration-500" />
-				<text x={CHAIR_X} y={CHAIR_Y + 1} textAnchor="middle" dominantBaseline="central"
+					strokeWidth={1.5}
+					className="transition-all duration-500"
+				/>
+				<text
+					x={CHAIR_X}
+					y={CHAIR_Y + 1}
+					textAnchor="middle"
+					dominantBaseline="central"
 					fill={hlChair ? "#fb923c" : "rgba(148,163,184,0.3)"}
-					fontSize="11" fontWeight="700" className="transition-all duration-500">A</text>
-				<text x={CHAIR_X} y={CHAIR_Y - 22} textAnchor="middle"
+					fontSize="11"
+					fontWeight="700"
+					className="transition-all duration-500"
+				>
+					A
+				</text>
+				<text
+					x={CHAIR_X}
+					y={CHAIR_Y - 22}
+					textAnchor="middle"
 					fill={hlChair ? "rgba(251,146,60,0.7)" : "rgba(148,163,184,0.3)"}
-					fontSize="9" fontWeight="600" className="transition-all duration-500">Alexis (Vice Captain)</text>
+					fontSize="9"
+					fontWeight="600"
+					className="transition-all duration-500"
+				>
+					Alexis (Vice Captain)
+				</text>
 
 				{/* CCA node */}
-				<rect x={CHAIR_X - 58} y={CCA_Y - 15} width={116} height={30} rx={15}
-					fill="rgba(15,23,42,0.95)" stroke="#fb923c" strokeWidth={1.5} />
-				<text x={CHAIR_X} y={CCA_Y + 1} textAnchor="middle" dominantBaseline="central"
-					fill="#fb923c" fontSize="12" fontWeight="700">Swim Team</text>
+				<rect
+					x={CHAIR_X - 58}
+					y={CCA_Y - 15}
+					width={116}
+					height={30}
+					rx={15}
+					fill="rgba(15,23,42,0.95)"
+					stroke="#fb923c"
+					strokeWidth={1.5}
+				/>
+				<text
+					x={CHAIR_X}
+					y={CCA_Y + 1}
+					textAnchor="middle"
+					dominantBaseline="central"
+					fill="#fb923c"
+					fontSize="12"
+					fontWeight="700"
+				>
+					Swim Team
+				</text>
 
 				{/* Position nodes */}
 				{POSITIONS.map((pos, pi) => {
@@ -358,16 +458,40 @@ export function SubsidyFlowVisual() {
 					return (
 						<g key={pos.id}>
 							{hlPos && (
-								<rect x={px - w / 2 - 3} y={POS_Y - 17} width={w + 6} height={34} rx={8}
-									fill="#fb923c" opacity={0.06} className="animate-[node-pulse_2s_ease-in-out_infinite]" />
+								<rect
+									x={px - w / 2 - 3}
+									y={POS_Y - 17}
+									width={w + 6}
+									height={34}
+									rx={8}
+									fill="#fb923c"
+									opacity={0.06}
+									className="animate-[node-pulse_2s_ease-in-out_infinite]"
+								/>
 							)}
-							<rect x={px - w / 2} y={POS_Y - 15} width={w} height={30} rx={7}
+							<rect
+								x={px - w / 2}
+								y={POS_Y - 15}
+								width={w}
+								height={30}
+								rx={7}
 								fill="rgba(15,23,42,0.95)"
 								stroke={hlPos ? "rgba(251,146,60,0.6)" : "rgba(148,163,184,0.15)"}
-								strokeWidth={1.5} className="transition-all duration-500" />
-							<text x={px} y={POS_Y + 1} textAnchor="middle" dominantBaseline="central"
+								strokeWidth={1.5}
+								className="transition-all duration-500"
+							/>
+							<text
+								x={px}
+								y={POS_Y + 1}
+								textAnchor="middle"
+								dominantBaseline="central"
 								fill={hlPos ? "rgba(251,146,60,0.9)" : "rgba(226,232,240,0.5)"}
-								fontSize="11" fontWeight="600" className="transition-all duration-500">{pos.label}</text>
+								fontSize="11"
+								fontWeight="600"
+								className="transition-all duration-500"
+							>
+								{pos.label}
+							</text>
 						</g>
 					);
 				})}
@@ -378,24 +502,57 @@ export function SubsidyFlowVisual() {
 					const active = hlMem && current.highlight === "members";
 					const st = memStatus(mem.id);
 					const ringColor = active
-						? (st === "down" ? "#ef4444" : st === "up" ? "#22c55e" : mem.color)
+						? st === "down"
+							? "#ef4444"
+							: st === "up"
+								? "#22c55e"
+								: mem.color
 						: mem.color;
 					return (
 						<g key={mem.id}>
 							{active && (
-								<circle cx={mx} cy={MEM_Y} r={20} fill={ringColor} opacity={0.08}
-									className="animate-[node-pulse_2s_ease-in-out_infinite]" />
+								<circle
+									cx={mx}
+									cy={MEM_Y}
+									r={20}
+									fill={ringColor}
+									opacity={0.08}
+									className="animate-[node-pulse_2s_ease-in-out_infinite]"
+								/>
 							)}
-							<circle cx={mx} cy={MEM_Y} r={15} fill="rgba(15,23,42,0.95)"
+							<circle
+								cx={mx}
+								cy={MEM_Y}
+								r={15}
+								fill="rgba(15,23,42,0.95)"
 								stroke={hlMem ? ringColor : "rgba(148,163,184,0.15)"}
-								strokeWidth={1.5} opacity={hlMem ? 1 : 0.5}
-								className="transition-all duration-500" />
-							<text x={mx} y={MEM_Y + 1} textAnchor="middle" dominantBaseline="central"
+								strokeWidth={1.5}
+								opacity={hlMem ? 1 : 0.5}
+								className="transition-all duration-500"
+							/>
+							<text
+								x={mx}
+								y={MEM_Y + 1}
+								textAnchor="middle"
+								dominantBaseline="central"
 								fill={hlMem ? ringColor : "rgba(148,163,184,0.3)"}
-								fontSize="11" fontWeight="700" className="transition-all duration-500">{mem.name[0]}</text>
-							<text x={mx} y={MEM_Y + 28} textAnchor="middle"
+								fontSize="11"
+								fontWeight="700"
+								className="transition-all duration-500"
+							>
+								{mem.name[0]}
+							</text>
+							<text
+								x={mx}
+								y={MEM_Y + 28}
+								textAnchor="middle"
 								fill={hlMem ? "rgba(226,232,240,0.8)" : "rgba(148,163,184,0.3)"}
-								fontSize="9" fontWeight="600" className="transition-all duration-500">{mem.name}</text>
+								fontSize="9"
+								fontWeight="600"
+								className="transition-all duration-500"
+							>
+								{mem.name}
+							</text>
 						</g>
 					);
 				})}
@@ -403,14 +560,23 @@ export function SubsidyFlowVisual() {
 
 			{/* Position Hours - per day with reasons, expandable */}
 			{current.showPosHours && (
-				<div key={`pos-hrs-${step}`} className="mb-3 flex flex-col gap-2 animate-[fade-up_0.4s_ease-out_both]">
+				<div
+					key={`pos-hrs-${step}`}
+					className="mb-3 flex flex-col gap-2 animate-[fade-up_0.4s_ease-out_both]"
+				>
 					{POSITIONS.map((pos) => {
 						const total = posTotal(pos.id);
 						const isOpen = expandedId === `pos-${pos.id}`;
 						return (
-							<div key={pos.id} className="rounded-lg border border-orange-500/20 bg-orange-500/[0.04] overflow-hidden">
+							<div
+								key={pos.id}
+								className="rounded-lg border border-orange-500/20 bg-orange-500/[0.04] overflow-hidden"
+							>
 								<button
-									onClick={() => { setIsPlaying(false); setExpandedId(isOpen ? null : `pos-${pos.id}`); }}
+									onClick={() => {
+										setIsPlaying(false);
+										setExpandedId(isOpen ? null : `pos-${pos.id}`);
+									}}
 									className="w-full flex items-center gap-3 px-4 py-3 hover:bg-orange-500/[0.03] transition-colors"
 								>
 									<div className="flex-1 text-left">
@@ -421,19 +587,29 @@ export function SubsidyFlowVisual() {
 										<span className="text-2xl font-bold font-mono text-orange-400">{total}</span>
 										<span className="text-xs text-slate-500">hrs</span>
 									</div>
-									<ChevronDown className={cn("size-4 text-slate-500 transition-transform duration-200", isOpen && "rotate-180")} />
+									<ChevronDown
+										className={cn(
+											"size-4 text-slate-500 transition-transform duration-200",
+											isOpen && "rotate-180",
+										)}
+									/>
 								</button>
 								{isOpen && <DayBreakdown days={POS_DAILY[pos.id]} accentColor="text-orange-400" />}
 							</div>
 						);
 					})}
-					<p className="text-[11px] text-slate-600 text-center">For each position, Alexis fills in the hours and reason for every day.</p>
+					<p className="text-[11px] text-slate-600 text-center">
+						For each position, Alexis fills in the hours and reason for every day.
+					</p>
 				</div>
 			)}
 
 			{/* Locked state */}
 			{current.showLocked && (
-				<div key="locked" className="mb-3 rounded-lg border border-purple-500/20 bg-purple-500/[0.03] p-4 animate-[fade-up_0.4s_ease-out_both]">
+				<div
+					key="locked"
+					className="mb-3 rounded-lg border border-purple-500/20 bg-purple-500/[0.03] p-4 animate-[fade-up_0.4s_ease-out_both]"
+				>
 					<div className="flex items-center justify-center gap-3 flex-wrap">
 						<div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
 							<span className="text-emerald-400 text-xs">&#10003;</span>
@@ -441,10 +617,14 @@ export function SubsidyFlowVisual() {
 						</div>
 						<span className="text-slate-600 text-lg">&rarr;</span>
 						<div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20">
-							<span className="text-purple-400 text-[11px] font-medium">Step 2 is now unlocked</span>
+							<span className="text-purple-400 text-[11px] font-medium">
+								Step 2 is now unlocked
+							</span>
 						</div>
 					</div>
-					<p className="text-[11px] text-slate-500 text-center mt-2">You can&apos;t do step 2 until JCRC approves step 1.</p>
+					<p className="text-[11px] text-slate-500 text-center mt-2">
+						You can&apos;t do step 2 until JCRC approves step 1.
+					</p>
 				</div>
 			)}
 
@@ -462,21 +642,45 @@ export function SubsidyFlowVisual() {
 							const diff = total - pTotal;
 							const isOpen = expandedId === `mem-${mem.id}`;
 
-							const borderCn = st === "down" ? "border-red-500/25" : st === "up" ? "border-emerald-500/25" : "border-purple-500/20";
-							const bgCn = st === "down" ? "bg-red-500/[0.04]" : st === "up" ? "bg-emerald-500/[0.04]" : "bg-purple-500/[0.03]";
-							const accentCn = st === "down" ? "text-red-400" : st === "up" ? "text-emerald-400" : "text-purple-400";
+							const borderCn =
+								st === "down"
+									? "border-red-500/25"
+									: st === "up"
+										? "border-emerald-500/25"
+										: "border-purple-500/20";
+							const bgCn =
+								st === "down"
+									? "bg-red-500/[0.04]"
+									: st === "up"
+										? "bg-emerald-500/[0.04]"
+										: "bg-purple-500/[0.03]";
+							const accentCn =
+								st === "down"
+									? "text-red-400"
+									: st === "up"
+										? "text-emerald-400"
+										: "text-purple-400";
 
 							return (
-								<div key={mem.id} className={cn("rounded-lg border overflow-hidden", borderCn, bgCn)}>
+								<div
+									key={mem.id}
+									className={cn("rounded-lg border overflow-hidden", borderCn, bgCn)}
+								>
 									<button
-										onClick={() => { setIsPlaying(false); setExpandedId(isOpen ? null : `mem-${mem.id}`); }}
+										onClick={() => {
+											setIsPlaying(false);
+											setExpandedId(isOpen ? null : `mem-${mem.id}`);
+										}}
 										className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-800/20 transition-colors"
 									>
-										<span className="size-2.5 rounded-full shrink-0" style={{ background: mem.color }} />
+										<span
+											className="size-2.5 rounded-full shrink-0"
+											style={{ background: mem.color }}
+										/>
 										<div className="flex-1 text-left">
 											<p className="text-sm font-medium text-slate-300">{mem.name}</p>
 											<p className="text-[11px] text-slate-500">
-												{POSITIONS.find(p => p.id === mem.position)?.label} · Position: {pTotal}h
+												{POSITIONS.find((p) => p.id === mem.position)?.label} · Position: {pTotal}h
 											</p>
 										</div>
 										<div className="flex items-center gap-1.5">
@@ -485,12 +689,22 @@ export function SubsidyFlowVisual() {
 											<span className={cn("text-2xl font-bold font-mono", accentCn)}>{total}</span>
 											<span className="text-xs text-slate-500">hrs</span>
 											{diff !== 0 && (
-												<span className={cn("text-[10px] font-semibold", diff > 0 ? "text-emerald-500" : "text-red-500")}>
+												<span
+													className={cn(
+														"text-[10px] font-semibold",
+														diff > 0 ? "text-emerald-500" : "text-red-500",
+													)}
+												>
 													{diff > 0 ? `+${diff}` : diff} vs position
 												</span>
 											)}
 										</div>
-										<ChevronDown className={cn("size-4 text-slate-500 transition-transform duration-200", isOpen && "rotate-180")} />
+										<ChevronDown
+											className={cn(
+												"size-4 text-slate-500 transition-transform duration-200",
+												isOpen && "rotate-180",
+											)}
+										/>
 									</button>
 									{isOpen && <DayBreakdown days={MEM_DAILY[mem.id]} accentColor={accentCn} />}
 								</div>
@@ -502,13 +716,18 @@ export function SubsidyFlowVisual() {
 
 			{/* Missed state */}
 			{current.showMissed && (
-				<div key="missed" className="mb-3 rounded-lg border border-red-500/25 bg-red-500/[0.04] p-4 animate-[fade-up_0.4s_ease-out_both]">
+				<div
+					key="missed"
+					className="mb-3 rounded-lg border border-red-500/25 bg-red-500/[0.04] p-4 animate-[fade-up_0.4s_ease-out_both]"
+				>
 					<div className="flex items-center justify-center gap-3 mb-2">
 						<div className="size-10 rounded-full border-2 border-dashed border-red-500/40 flex items-center justify-center">
 							<span className="text-red-400 text-lg">&times;</span>
 						</div>
 						<div>
-							<p className="text-red-400 text-sm font-semibold">Chair didn&apos;t submit anything</p>
+							<p className="text-red-400 text-sm font-semibold">
+								Chair didn&apos;t submit anything
+							</p>
 							<p className="text-red-400/50 text-xs">Every single member gets $0.</p>
 						</div>
 					</div>
@@ -523,12 +742,17 @@ export function SubsidyFlowVisual() {
 							const total = memTotal(mem.id);
 							const st = memStatus(mem.id);
 							return (
-								<div key={mem.id} className={cn(
-									"rounded-lg border p-3 text-center",
-									st === "down" ? "border-red-500/20 bg-red-500/5"
-										: st === "up" ? "border-emerald-500/20 bg-emerald-500/5"
-										: "border-slate-800/40 bg-slate-900/30",
-								)}>
+								<div
+									key={mem.id}
+									className={cn(
+										"rounded-lg border p-3 text-center",
+										st === "down"
+											? "border-red-500/20 bg-red-500/5"
+											: st === "up"
+												? "border-emerald-500/20 bg-emerald-500/5"
+												: "border-slate-800/40 bg-slate-900/30",
+									)}
+								>
 									<div className="flex items-center justify-center gap-1.5 mb-1">
 										<span className="size-2 rounded-full" style={{ background: mem.color }} />
 										<span className="text-xs font-medium text-slate-300">{mem.name}</span>
@@ -546,10 +770,17 @@ export function SubsidyFlowVisual() {
 			<div className="min-h-[80px] flex items-start justify-center px-2 mt-1">
 				<div key={step} className="animate-[fade-up_0.4s_ease-out_both] max-w-lg w-full">
 					{current.description.split("\n").map((line, i) => (
-						<p key={i} className={cn(
-							"text-sm leading-relaxed",
-							line.startsWith("•") ? "text-slate-400 pl-3" : line.startsWith("  ") ? "text-slate-400 pl-4" : "text-slate-300",
-						)}>
+						<p
+							key={i}
+							className={cn(
+								"text-sm leading-relaxed",
+								line.startsWith("•")
+									? "text-slate-400 pl-3"
+									: line.startsWith("  ")
+										? "text-slate-400 pl-4"
+										: "text-slate-300",
+							)}
+						>
 							{line}
 						</p>
 					))}
@@ -558,35 +789,69 @@ export function SubsidyFlowVisual() {
 
 			{/* Controls */}
 			<div className="flex items-center justify-center gap-2 mt-3">
-				<Button variant="ghost" size="sm" disabled={step === 0}
-					onClick={() => { setIsPlaying(false); setStep((s) => Math.max(0, s - 1)); }}
-					className="text-slate-400 hover:text-white hover:bg-slate-800 size-8 p-0">
+				<Button
+					variant="ghost"
+					size="sm"
+					disabled={step === 0}
+					onClick={() => {
+						setIsPlaying(false);
+						setStep((s) => Math.max(0, s - 1));
+					}}
+					className="text-slate-400 hover:text-white hover:bg-slate-800 size-8 p-0"
+				>
 					<SkipBack className="size-4" />
 				</Button>
-				<Button variant="ghost" size="sm" onClick={() => setIsPlaying(!isPlaying)}
-					className="text-slate-400 hover:text-white hover:bg-slate-800 size-8 p-0">
+				<Button
+					variant="ghost"
+					size="sm"
+					onClick={() => setIsPlaying(!isPlaying)}
+					className="text-slate-400 hover:text-white hover:bg-slate-800 size-8 p-0"
+				>
 					{isPlaying ? <Pause className="size-4" /> : <Play className="size-4" />}
 				</Button>
-				<Button variant="ghost" size="sm" disabled={isFinished}
-					onClick={() => { setIsPlaying(false); setStep((s) => Math.min(STEPS.length - 1, s + 1)); }}
-					className="text-slate-400 hover:text-white hover:bg-slate-800 size-8 p-0">
+				<Button
+					variant="ghost"
+					size="sm"
+					disabled={isFinished}
+					onClick={() => {
+						setIsPlaying(false);
+						setStep((s) => Math.min(STEPS.length - 1, s + 1));
+					}}
+					className="text-slate-400 hover:text-white hover:bg-slate-800 size-8 p-0"
+				>
 					<SkipForward className="size-4" />
 				</Button>
 
 				<div className="flex items-center gap-1.5 mx-2">
 					{STEPS.map((_, i) => (
-						<button key={i} onClick={() => { setIsPlaying(false); setStep(i); }}
+						<button
+							key={i}
+							onClick={() => {
+								setIsPlaying(false);
+								setStep(i);
+							}}
 							className={cn(
 								"rounded-full transition-all duration-300",
-								i === step ? "size-2.5 bg-orange-500" : i < step ? "size-1.5 bg-orange-800" : "size-1.5 bg-slate-600 hover:bg-slate-500",
-							)} />
+								i === step
+									? "size-2.5 bg-orange-500"
+									: i < step
+										? "size-1.5 bg-orange-800"
+										: "size-1.5 bg-slate-600 hover:bg-slate-500",
+							)}
+						/>
 					))}
 				</div>
 
 				{isFinished && (
-					<Button variant="ghost" size="sm"
-						onClick={() => { setStep(0); setIsPlaying(true); }}
-						className="text-slate-400 hover:text-white hover:bg-slate-800 gap-1 text-xs h-7 px-2">
+					<Button
+						variant="ghost"
+						size="sm"
+						onClick={() => {
+							setStep(0);
+							setIsPlaying(true);
+						}}
+						className="text-slate-400 hover:text-white hover:bg-slate-800 gap-1 text-xs h-7 px-2"
+					>
 						<RotateCcw className="size-3" />
 						Replay
 					</Button>

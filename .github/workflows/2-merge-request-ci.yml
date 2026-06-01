@@ -3,6 +3,18 @@ name: Merge Request CI
 
 # Trigger:
 # - Runs when a pull request targets the `main` branch
+#
+# Jobs:
+#   - build-static-assets : fast verification gate (prettier/lint/typecheck/
+#                           fixtures/unit/build). No DB, no submodule.
+#   - integration-tests   : live local Supabase + vitest integration suite.
+#
+# REQUIRED SECRET — `SUBMODULE_SSH_KEY` (repo-scoped read-only deploy key)
+#   The integration job fetches the PRIVATE `vendor/intranet` submodule (a
+#   separate repo). The built-in GITHUB_TOKEN can't read a sibling private repo,
+#   so the job loads a read-only deploy key for ShearesWeb/intranet via
+#   ssh-agent (checkout uses GITHUB_TOKEN for this repo). One-time setup:
+#   docs/TESTING.md. The `build-static-assets` job does NOT need it.
 on:
   pull_request:
     branches:
@@ -82,3 +94,36 @@ jobs:
 
       - name: 11. 🚧 Build with Next.js
         run: ${{ steps.detect-pm.outputs.manager }} run build
+
+  integration-tests:
+    name: 🧬 Integration Tests (live Supabase)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 1. 🔑 Load vendor/intranet deploy key (ssh-agent)
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SUBMODULE_SSH_KEY }}
+
+      - name: 2. 📄 Checkout Repository (main repo only)
+        uses: actions/checkout@v4
+        # Submodules are intentionally NOT fetched here. Whenever actions/checkout
+        # fetches submodules it injects a global
+        #   url.https://github.com/.insteadOf git@github.com:
+        # rewrite and clones them over HTTPS with GITHUB_TOKEN — which can't read
+        # the private sibling repo (vendor/intranet), so the clone fails with
+        # "repository not found". That rewrite runs whenever submodules are
+        # requested and is NOT suppressed by persist-credentials: false. So the
+        # main repo is checked out over HTTPS here, then the submodule is fetched
+        # over SSH (ssh-agent deploy key) in the next step, free of the rewrite.
+
+      - name: 3. 🔗 Fetch private submodule over SSH (deploy key)
+        run: |
+          git submodule sync --recursive
+          git submodule update --init --force --recursive
+
+      - name: 4. 🧰 Setup Test Stack
+        uses: ./.github/actions/setup-test-stack
+
+      - name: 5. 🧬 Run Integration Tests
+        run: npm run test:integration

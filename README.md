@@ -170,6 +170,16 @@ Infrastructure is managed as code using Terraform with modular design:
 
 > **Note**: Infrastructure configuration details should be updated by the infrastructure team member. The current setup provides the foundation for AWS deployment with CloudFront, S3, and Route 53 integration.
 
+## Testing
+
+The app is tested across four layers — unit and component (Vitest), integration
+against a live local Supabase (Vitest), and end-to-end (Playwright). Switching
+between roles for tests and manual QA is done through the persona system
+(`npm run e2e:personas`, `npm run e2e:login <persona>`).
+
+See **[`docs/TESTING.md`](docs/TESTING.md)** for the full guide: how to run each
+layer, the integration-vs-e2e boundary, the persona → role table, and CI.
+
 ## CI/CD Pipeline
 
 ### GitHub Actions Workflows

@@ -26,7 +26,7 @@ These personas are the single source of truth for test data. The TS source is `t
 | `mason` | mason.lim.99@gmail.com | Mason Lim | SH/B/3/315 | Volleyball / Player | — | — | — |
 | `chloe` | chloe.ng.j@gmail.com | Chloe Ng | SH/C/1/108 | Volleyball / Team Manager | — | — | — |
 | `declan` | declanho.sg@gmail.com | Declan Ho | SH/A/4/412 | Volleyball / Captain | ✓ | — | ✓ |
-| `alexis` | alexis.goh.99@gmail.com | Alexis Goh | SH/D/2/202 | Volleyball / Vice Captain | — | — | — |
+| `alexis` | alexis.goh.99@gmail.com | Alexis Goh | SH/D/2/202 | Volleyball / Vice Captain | ✓ | — | ✓ |
 | `sienna` | sienna.lee.j@gmail.com | Sienna Lee | SH/B/2/210 | Choir / Chorister | — | — | — |
 | `kai` | kai.koh.96@gmail.com | Kai Koh | SH/C/4/401 | Choir / Conductor | ✓ | — | ✓ |
 | `harper` | harper.tan.2k@gmail.com | Harper Tan | SH/E/1/115 | SHWEB / Subcomm | — | — | — |
@@ -47,7 +47,7 @@ These personas are the single source of truth for test data. The TS source is `t
 | Captain | lead | — | 1 |
 | Vice Captain | vice | Captain | 1 |
 | Team Manager | team manager | Captain | 1 |
-| Player | member | Captain | 12 |
+| Player | member | Vice Captain | 12 |
 
 ### Basketball
 
@@ -56,7 +56,7 @@ These personas are the single source of truth for test data. The TS source is `t
 | Captain | lead | — | 1 |
 | Vice Captain | vice | Captain | 1 |
 | Team Manager | team manager | Captain | 1 |
-| Player | member | Captain | 12 |
+| Player | member | Vice Captain | 12 |
 
 ### Choir
 
@@ -64,7 +64,7 @@ These personas are the single source of truth for test data. The TS source is `t
 |---|---|---|---|
 | Conductor | lead | — | 1 |
 | Vice Conductor | vice | Conductor | 1 |
-| Chorister | member | Conductor | 20 |
+| Chorister | member | Vice Conductor | 20 |
 
 ### Dance
 
@@ -72,7 +72,7 @@ These personas are the single source of truth for test data. The TS source is `t
 |---|---|---|---|
 | Captain | lead | — | 1 |
 | Vice Captain | vice | Captain | 1 |
-| Dancer | member | Captain | 20 |
+| Dancer | member | Vice Captain | 20 |
 
 ### Drama
 
@@ -80,7 +80,7 @@ These personas are the single source of truth for test data. The TS source is `t
 |---|---|---|---|
 | Director | lead | — | 1 |
 | Assistant Director | vice | Director | 1 |
-| Cast | member | Director | 15 |
+| Cast | member | Assistant Director | 15 |
 
 ### SHWEB
 

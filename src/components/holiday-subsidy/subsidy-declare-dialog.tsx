@@ -31,7 +31,12 @@ export interface SubsidyDeclareDialogProps {
 
 function formatDisplayDate(dateStr: string): string {
 	const d = new Date(dateStr + "T00:00:00");
-	return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+	return d.toLocaleDateString("en-US", {
+		weekday: "long",
+		month: "long",
+		day: "numeric",
+		year: "numeric",
+	});
 }
 
 export function SubsidyDeclareDialog({
@@ -143,12 +148,8 @@ export function SubsidyDeclareDialog({
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent>
 				<DialogHeader>
-					<DialogTitle>
-						{editing ? "Edit Subsidy Declaration" : "Declare Subsidy"}
-					</DialogTitle>
-					<DialogDescription>
-						{formatDisplayDate(date)}
-					</DialogDescription>
+					<DialogTitle>{editing ? "Edit Subsidy Declaration" : "Declare Subsidy"}</DialogTitle>
+					<DialogDescription>{formatDisplayDate(date)}</DialogDescription>
 				</DialogHeader>
 				<form onSubmit={handleSubmit} className="space-y-4 pt-2">
 					{chairCcas.length > 1 && !editing ? (
@@ -225,8 +226,12 @@ export function SubsidyDeclareDialog({
 						</DialogClose>
 						<Button type="submit" disabled={submitting || positions.length === 0}>
 							{submitting
-								? editing ? "Updating..." : "Submitting..."
-								: editing ? "Update" : "Submit Declaration"}
+								? editing
+									? "Updating..."
+									: "Submitting..."
+								: editing
+									? "Update"
+									: "Submit Declaration"}
 						</Button>
 					</DialogFooter>
 				</form>
