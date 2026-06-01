@@ -38,6 +38,23 @@ export default async function globalSetup() {
 	console.log("DIAG getUser:", JSON.stringify({ err: gu.error?.message ?? null, email: gu.data?.user?.email ?? null }));
 	const v = await supabase.from("authenticated_user_info").select("id,email").maybeSingle();
 	console.log("DIAG view:", JSON.stringify({ err: v.error?.message ?? null, code: (v.error as { code?: string } | null)?.code ?? null, row: v.data }));
+
+	// DB-level probe: simulate PostgREST's authenticated claim injection and see
+	// whether auth.email() / internal.auth_user_id() actually resolve.
+	const { Client } = await import("pg");
+	const pg = new Client({ connectionString: process.env.SUPABASE_DB_URL });
+	await pg.connect();
+	const seed = await pg.query("SELECT id, email FROM users WHERE email = $1", ["declanho.sg@gmail.com"]);
+	console.log("DIAG pg seed row:", JSON.stringify(seed.rows));
+	const def = await pg.query("SELECT pg_get_functiondef('auth.email()'::regprocedure) AS def");
+	console.log("DIAG auth.email def:", JSON.stringify(def.rows[0]?.def));
+	await pg.query("SELECT set_config('request.jwt.claims', $1, false)", [
+		JSON.stringify({ email: "declanho.sg@gmail.com", role: "authenticated", sub: "x" }),
+	]);
+	const res = await pg.query("SELECT auth.email() AS auth_email, internal.auth_user_id() AS auth_uid");
+	console.log("DIAG resolution:", JSON.stringify(res.rows[0]));
+	await pg.end();
+
 	throw new Error("DIAG: intentional fast-fail after diagnostics — revert global-setup.ts");
 	// ---- END TEMP DIAGNOSTIC ---------------------------------------------
 }
