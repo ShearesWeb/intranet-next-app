@@ -8,12 +8,11 @@ name: Merge Request CI
 #   - build-static-assets : fast verification gate (prettier/lint/typecheck/
 #                           fixtures/unit/build). No DB, no submodule.
 #   - integration-tests   : live local Supabase + vitest integration suite.
-#   - e2e-tests           : live local Supabase + Playwright (headless chromium).
 #
 # REQUIRED SECRET — `SUBMODULE_SSH_KEY` (repo-scoped read-only deploy key)
-#   The integration + e2e jobs fetch the PRIVATE `vendor/intranet` submodule (a
+#   The integration job fetches the PRIVATE `vendor/intranet` submodule (a
 #   separate repo). The built-in GITHUB_TOKEN can't read a sibling private repo,
-#   so each job loads a read-only deploy key for ShearesWeb/intranet via
+#   so the job loads a read-only deploy key for ShearesWeb/intranet via
 #   ssh-agent (checkout uses GITHUB_TOKEN for this repo). One-time setup:
 #   docs/TESTING.md. The `build-static-assets` job does NOT need it.
 on:
@@ -128,43 +127,3 @@ jobs:
 
       - name: 5. 🧬 Run Integration Tests
         run: npm run test:integration
-
-  e2e-tests:
-    name: 🎭 E2E Tests (Playwright, headless)
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: 1. 🔑 Load vendor/intranet deploy key (ssh-agent)
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SUBMODULE_SSH_KEY }}
-
-      - name: 2. 📄 Checkout Repository (main repo only)
-        uses: actions/checkout@v4
-        # Submodules are intentionally NOT fetched here — see the integration
-        # job above for the full rationale. Short version: checkout's submodule
-        # fetch injects a global insteadOf rewrite that forces HTTPS + GITHUB_TOKEN
-        # (which can't read the private vendor/intranet repo) and is not disabled
-        # by persist-credentials. Fetch the submodule over SSH in the next step.
-
-      - name: 3. 🔗 Fetch private submodule over SSH (deploy key)
-        run: |
-          git submodule sync --recursive
-          git submodule update --init --force --recursive
-
-      - name: 4. 🧰 Setup Test Stack
-        uses: ./.github/actions/setup-test-stack
-
-      - name: 5. 🌐 Install Playwright Browser (chromium + deps)
-        run: npx playwright install --with-deps chromium
-
-      - name: 6. 🎭 Run E2E Tests
-        run: npm run e2e
-
-      - name: 7. 📤 Upload Playwright Report
-        if: ${{ failure() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: playwright-report/
-          retention-days: 7

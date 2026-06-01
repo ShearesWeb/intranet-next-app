@@ -5,7 +5,7 @@ name: Feature Branch CI
 # - Runs on every push to any non-trunk branch.
 # - Purpose: give developers fast feedback on each push before they open a PR.
 #   Runs the cheap layers only (static checks + unit/component tests).
-#   `next build`, integration, and E2E are reserved for the merge-request gate.
+#   `next build` and integration are reserved for the merge-request gate.
 
 on:
   push:
