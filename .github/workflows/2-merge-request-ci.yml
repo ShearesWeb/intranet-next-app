@@ -106,27 +106,27 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SUBMODULE_SSH_KEY }}
 
-      - name: 2. 📄 Checkout Repository (+ private submodule)
+      - name: 2. 📄 Checkout Repository (main repo only)
         uses: actions/checkout@v4
-        with:
-          # Main repo via the built-in GITHUB_TOKEN (HTTPS); the private SSH
-          # submodule via the deploy key loaded into ssh-agent above.
-          #
-          # persist-credentials: false is REQUIRED here. With the default (true),
-          # actions/checkout injects a global
-          #   url.https://github.com/.insteadOf git@github.com:
-          # rewrite so submodules fetch over HTTPS with GITHUB_TOKEN. That token
-          # can't read the private sibling repo, so the submodule clone fails with
-          # "repository 'https://github.com/ShearesWeb/intranet.git/' not found"
-          # and the ssh-agent deploy key is never used. Disabling credential
-          # persistence skips the rewrite so the submodule clones over SSH.
-          submodules: recursive
-          persist-credentials: false
+        # Submodules are intentionally NOT fetched here. Whenever actions/checkout
+        # fetches submodules it injects a global
+        #   url.https://github.com/.insteadOf git@github.com:
+        # rewrite and clones them over HTTPS with GITHUB_TOKEN — which can't read
+        # the private sibling repo (vendor/intranet), so the clone fails with
+        # "repository not found". That rewrite runs whenever submodules are
+        # requested and is NOT suppressed by persist-credentials: false. So the
+        # main repo is checked out over HTTPS here, then the submodule is fetched
+        # over SSH (ssh-agent deploy key) in the next step, free of the rewrite.
 
-      - name: 3. 🧰 Setup Test Stack
+      - name: 3. 🔗 Fetch private submodule over SSH (deploy key)
+        run: |
+          git submodule sync --recursive
+          git submodule update --init --force --recursive
+
+      - name: 4. 🧰 Setup Test Stack
         uses: ./.github/actions/setup-test-stack
 
-      - name: 4. 🧬 Run Integration Tests
+      - name: 5. 🧬 Run Integration Tests
         run: npm run test:integration
 
   e2e-tests:
@@ -139,33 +139,29 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SUBMODULE_SSH_KEY }}
 
-      - name: 2. 📄 Checkout Repository (+ private submodule)
+      - name: 2. 📄 Checkout Repository (main repo only)
         uses: actions/checkout@v4
-        with:
-          # Main repo via the built-in GITHUB_TOKEN (HTTPS); the private SSH
-          # submodule via the deploy key loaded into ssh-agent above.
-          #
-          # persist-credentials: false is REQUIRED here. With the default (true),
-          # actions/checkout injects a global
-          #   url.https://github.com/.insteadOf git@github.com:
-          # rewrite so submodules fetch over HTTPS with GITHUB_TOKEN. That token
-          # can't read the private sibling repo, so the submodule clone fails with
-          # "repository 'https://github.com/ShearesWeb/intranet.git/' not found"
-          # and the ssh-agent deploy key is never used. Disabling credential
-          # persistence skips the rewrite so the submodule clones over SSH.
-          submodules: recursive
-          persist-credentials: false
+        # Submodules are intentionally NOT fetched here — see the integration
+        # job above for the full rationale. Short version: checkout's submodule
+        # fetch injects a global insteadOf rewrite that forces HTTPS + GITHUB_TOKEN
+        # (which can't read the private vendor/intranet repo) and is not disabled
+        # by persist-credentials. Fetch the submodule over SSH in the next step.
 
-      - name: 3. 🧰 Setup Test Stack
+      - name: 3. 🔗 Fetch private submodule over SSH (deploy key)
+        run: |
+          git submodule sync --recursive
+          git submodule update --init --force --recursive
+
+      - name: 4. 🧰 Setup Test Stack
         uses: ./.github/actions/setup-test-stack
 
-      - name: 4. 🌐 Install Playwright Browser (chromium + deps)
+      - name: 5. 🌐 Install Playwright Browser (chromium + deps)
         run: npx playwright install --with-deps chromium
 
-      - name: 5. 🎭 Run E2E Tests
+      - name: 6. 🎭 Run E2E Tests
         run: npm run e2e
 
-      - name: 6. 📤 Upload Playwright Report
+      - name: 7. 📤 Upload Playwright Report
         if: ${{ failure() }}
         uses: actions/upload-artifact@v4
         with:
