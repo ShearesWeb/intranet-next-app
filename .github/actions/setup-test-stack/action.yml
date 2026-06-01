@@ -78,7 +78,12 @@ runs:
     - name: 6. 🟢 Install Supabase CLI
       uses: supabase/setup-cli@v1
       with:
-        version: 2.39.2
+        # Must be recent enough to parse supabase/config.toml. The config uses
+        # keys (auth.oauth_server, storage.analytics, storage.vector,
+        # storage.s3_protocol, db.health_timeout, auth.external.apple.email_optional)
+        # that older CLIs reject with "config has invalid keys". Keep this at or
+        # above the CLI version used to generate config.toml locally.
+        version: 2.102.0
 
     - name: 7. 🌱 Provision Schema + Seed (supabase start → liquibase → seed.sql)
       shell: bash
