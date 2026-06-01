@@ -111,7 +111,17 @@ jobs:
         with:
           # Main repo via the built-in GITHUB_TOKEN (HTTPS); the private SSH
           # submodule via the deploy key loaded into ssh-agent above.
+          #
+          # persist-credentials: false is REQUIRED here. With the default (true),
+          # actions/checkout injects a global
+          #   url.https://github.com/.insteadOf git@github.com:
+          # rewrite so submodules fetch over HTTPS with GITHUB_TOKEN. That token
+          # can't read the private sibling repo, so the submodule clone fails with
+          # "repository 'https://github.com/ShearesWeb/intranet.git/' not found"
+          # and the ssh-agent deploy key is never used. Disabling credential
+          # persistence skips the rewrite so the submodule clones over SSH.
           submodules: recursive
+          persist-credentials: false
 
       - name: 3. 🧰 Setup Test Stack
         uses: ./.github/actions/setup-test-stack
@@ -134,7 +144,17 @@ jobs:
         with:
           # Main repo via the built-in GITHUB_TOKEN (HTTPS); the private SSH
           # submodule via the deploy key loaded into ssh-agent above.
+          #
+          # persist-credentials: false is REQUIRED here. With the default (true),
+          # actions/checkout injects a global
+          #   url.https://github.com/.insteadOf git@github.com:
+          # rewrite so submodules fetch over HTTPS with GITHUB_TOKEN. That token
+          # can't read the private sibling repo, so the submodule clone fails with
+          # "repository 'https://github.com/ShearesWeb/intranet.git/' not found"
+          # and the ssh-agent deploy key is never used. Disabling credential
+          # persistence skips the rewrite so the submodule clones over SSH.
           submodules: recursive
+          persist-credentials: false
 
       - name: 3. 🧰 Setup Test Stack
         uses: ./.github/actions/setup-test-stack
