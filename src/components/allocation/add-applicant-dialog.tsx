@@ -123,10 +123,7 @@ export function AddApplicantDialog({ onAddApplicant, excludedIds = [] }: AddAppl
 							{results.map((user) => {
 								const isExcluded = excluded.has(user.id);
 								return (
-									<li
-										key={user.id}
-										className="flex items-center justify-between gap-3 px-4 py-3"
-									>
+									<li key={user.id} className="flex items-center justify-between gap-3 px-4 py-3">
 										<div className="min-w-0">
 											<div className="truncate font-medium">{user.name}</div>
 											<div className="truncate text-sm text-muted-foreground">

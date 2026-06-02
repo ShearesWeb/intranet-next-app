@@ -6,14 +6,14 @@ import { getAllConflicts } from "@/lib/facilities/facility-conflicts";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const disabledResponse = getCoreServiceDisabledApiResponse("facilities");
-  if (disabledResponse) return disabledResponse;
+	const disabledResponse = getCoreServiceDisabledApiResponse("facilities");
+	if (disabledResponse) return disabledResponse;
 
-  try {
-    await requireJcrcOrAdminAccess();
-    const conflicts = await getAllConflicts();
-    return apiOk(conflicts);
-  } catch (e) {
-    return handleApiError(e);
-  }
+	try {
+		await requireJcrcOrAdminAccess();
+		const conflicts = await getAllConflicts();
+		return apiOk(conflicts);
+	} catch (e) {
+		return handleApiError(e);
+	}
 }

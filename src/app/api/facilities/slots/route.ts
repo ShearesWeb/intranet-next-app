@@ -8,23 +8,23 @@ import { NextRequest } from "next/server";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
-  const disabledResponse = getCoreServiceDisabledApiResponse("facilities");
-  if (disabledResponse) return disabledResponse;
+	const disabledResponse = getCoreServiceDisabledApiResponse("facilities");
+	if (disabledResponse) return disabledResponse;
 
-  try {
-    const user = await requireAuth();
-    const { searchParams } = req.nextUrl;
-    const startDate = searchParams.get("start");
-    const endDate = searchParams.get("end");
+	try {
+		const user = await requireAuth();
+		const { searchParams } = req.nextUrl;
+		const startDate = searchParams.get("start");
+		const endDate = searchParams.get("end");
 
-    if (!startDate || !endDate) {
-      return apiOk([]);
-    }
+		if (!startDate || !endDate) {
+			return apiOk([]);
+		}
 
-    const userCcaIds = getChairCcaIds(user);
-    const slots = await getSlotsWithClaims(startDate, endDate, userCcaIds);
-    return apiOk(slots);
-  } catch (e) {
-    return handleApiError(e);
-  }
+		const userCcaIds = getChairCcaIds(user);
+		const slots = await getSlotsWithClaims(startDate, endDate, userCcaIds);
+		return apiOk(slots);
+	} catch (e) {
+		return handleApiError(e);
+	}
 }

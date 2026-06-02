@@ -26,13 +26,8 @@ export function PointsRecapCard({
 		user,
 		onSeenStateChange,
 	);
-	const {
-		currentSlide,
-		setCurrentSlide,
-		setDirection,
-		displayCount,
-		paginate,
-	} = useRecapNavigation(recap.slides, open);
+	const { currentSlide, setCurrentSlide, setDirection, displayCount, paginate } =
+		useRecapNavigation(recap.slides, open);
 	const { playRecapAudio, stopRecapAudio } = useRecapAudio();
 
 	// Touch swipe handling for slide navigation
@@ -91,12 +86,8 @@ export function PointsRecapCard({
 	return (
 		<>
 			<div className="relative flex min-h-[22rem] w-full flex-col justify-between overflow-hidden rounded-[32px] border border-orange-400/50 bg-gradient-to-br from-[#ff6a00] via-[#ff9500] to-[#ffb700] p-6 py-12 text-white shadow-lg shadow-orange-500/20 md:p-8 md:py-16">
-				<div
-					className="absolute -right-16 -top-16 h-52 w-52 rounded-full bg-white/30 blur-3xl animate-[pulse-blob_6s_ease-in-out_infinite]"
-				/>
-				<div
-					className="absolute -bottom-20 left-[-2rem] h-64 w-64 rounded-full bg-yellow-200/40 blur-3xl animate-[pulse-blob-alt_7s_ease-in-out_1s_infinite]"
-				/>
+				<div className="absolute -right-16 -top-16 h-52 w-52 rounded-full bg-white/30 blur-3xl animate-[pulse-blob_6s_ease-in-out_infinite]" />
+				<div className="absolute -bottom-20 left-[-2rem] h-64 w-64 rounded-full bg-yellow-200/40 blur-3xl animate-[pulse-blob-alt_7s_ease-in-out_1s_infinite]" />
 				<div className="relative z-10 flex h-full flex-col justify-between gap-8">
 					{!isMounted ? (
 						<div className="animate-pulse space-y-5">
@@ -119,9 +110,7 @@ export function PointsRecapCard({
 									</p>
 								</div>
 								{hasSeenRecap ? (
-									<div
-										className="pt-2 animate-[slide-fade-in_0.3s_ease-out_both]"
-									>
+									<div className="pt-2 animate-[slide-fade-in_0.3s_ease-out_both]">
 										<h3 className="text-7xl font-black leading-tight text-white md:text-8xl">
 											{user.points || 0}
 										</h3>

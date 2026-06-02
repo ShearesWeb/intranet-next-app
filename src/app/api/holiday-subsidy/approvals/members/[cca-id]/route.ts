@@ -52,10 +52,7 @@ export async function PATCH(request: Request, { params }: Params) {
 	} catch (e) {
 		if (e instanceof ApiError && "failures" in e) {
 			const { failures } = e as ApiError & { failures: unknown[] };
-			return Response.json(
-				{ data: null, error: e.message, failures },
-				{ status: e.statusCode },
-			);
+			return Response.json({ data: null, error: e.message, failures }, { status: e.statusCode });
 		}
 		return handleApiError(e);
 	}

@@ -11,7 +11,15 @@ import { PointsRecapCard } from "@/components/ranking/points-recap-card";
 import { getCoreServiceFlags } from "@/lib/feature-flags";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { type LucideIcon, Users, Trophy, ClipboardList, ChevronRight, Zap, CalendarDays } from "lucide-react";
+import {
+	type LucideIcon,
+	Users,
+	Trophy,
+	ClipboardList,
+	ChevronRight,
+	Zap,
+	CalendarDays,
+} from "lucide-react";
 
 interface ActionCardProps {
 	href: string;
@@ -81,14 +89,19 @@ export default function Dashboard() {
 							{user.name || user.email}
 						</span>
 					</CardTitle>
-					<p className="text-sm text-muted-foreground mt-1">Here&apos;s what&apos;s happening today</p>
+					<p className="text-sm text-muted-foreground mt-1">
+						Here&apos;s what&apos;s happening today
+					</p>
 				</CardHeader>
 			</Card>
 
 			{/* Content Grid */}
 			<div className="grid gap-6 md:grid-cols-2">
 				{/* Points Display Card */}
-				<Card className="border-none shadow-lg flex flex-col overflow-hidden relative animate-[fade-in-up_0.3s_ease-out_both]" style={{ animationDelay: "0.1s" }}>
+				<Card
+					className="border-none shadow-lg flex flex-col overflow-hidden relative animate-[fade-in-up_0.3s_ease-out_both]"
+					style={{ animationDelay: "0.1s" }}
+				>
 					<CardHeader>
 						<CardTitle className="flex items-center gap-2">
 							<span>{hasSeenRecap ? "Your Final Hall Points" : "Your Points"}</span>
@@ -107,7 +120,10 @@ export default function Dashboard() {
 				</Card>
 
 				{/* Activity Section Card */}
-				<Card className="border-none shadow-lg animate-[fade-in-up_0.3s_ease-out_both]" style={{ animationDelay: "0.15s" }}>
+				<Card
+					className="border-none shadow-lg animate-[fade-in-up_0.3s_ease-out_both]"
+					style={{ animationDelay: "0.15s" }}
+				>
 					<CardHeader>
 						<CardTitle className="flex items-center gap-2">
 							<Zap className="h-5 w-5 text-orange-500" />
@@ -116,7 +132,10 @@ export default function Dashboard() {
 					</CardHeader>
 					<CardContent className="p-4 md:p-6">
 						<div className="grid gap-4">
-							<div className="animate-[fade-in-up_0.3s_ease-out_both]" style={{ animationDelay: "0.1s" }}>
+							<div
+								className="animate-[fade-in-up_0.3s_ease-out_both]"
+								style={{ animationDelay: "0.1s" }}
+							>
 								<ActionCard
 									href="/dashboard/my-cca"
 									icon={Users}
@@ -126,7 +145,10 @@ export default function Dashboard() {
 							</div>
 
 							{featureFlags.ccaApplications && (
-								<div className="animate-[fade-in-up_0.3s_ease-out_both]" style={{ animationDelay: "0.15s" }}>
+								<div
+									className="animate-[fade-in-up_0.3s_ease-out_both]"
+									style={{ animationDelay: "0.15s" }}
+								>
 									<ActionCard
 										href="/dashboard/cca-allocation/rank"
 										icon={Trophy}
@@ -137,7 +159,10 @@ export default function Dashboard() {
 							)}
 
 							{featureFlags.ccaApplications && !roleLoading && isAuthorized && (
-								<div className="animate-[fade-in-up_0.3s_ease-out_both]" style={{ animationDelay: "0.2s" }}>
+								<div
+									className="animate-[fade-in-up_0.3s_ease-out_both]"
+									style={{ animationDelay: "0.2s" }}
+								>
 									<ActionCard
 										href="/dashboard/cca-allocation/rank-applicants"
 										icon={ClipboardList}

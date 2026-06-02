@@ -128,8 +128,22 @@ interface CcaLink {
 }
 
 function getStepState(phase: Phase): { slots: SlotVisual[]; links: CcaLink[]; showJcrc: boolean } {
-	const mon: SlotVisual = { id: "mon", label: "Seminar Room", day: "Mon", time: "7–9pm", y: SLOT_MON_Y, state: "available" };
-	const tue: SlotVisual = { id: "tue", label: "Seminar Room", day: "Tue", time: "7–9pm", y: SLOT_TUE_Y, state: "available" };
+	const mon: SlotVisual = {
+		id: "mon",
+		label: "Seminar Room",
+		day: "Mon",
+		time: "7–9pm",
+		y: SLOT_MON_Y,
+		state: "available",
+	};
+	const tue: SlotVisual = {
+		id: "tue",
+		label: "Seminar Room",
+		day: "Tue",
+		time: "7–9pm",
+		y: SLOT_TUE_Y,
+		state: "available",
+	};
 
 	switch (phase) {
 		case "intro":
@@ -142,7 +156,10 @@ function getStepState(phase: Phase): { slots: SlotVisual[]; links: CcaLink[]; sh
 			};
 		case "auto-2":
 			return {
-				slots: [{ ...mon, state: "approved" }, { ...tue, state: "approved" }],
+				slots: [
+					{ ...mon, state: "approved" },
+					{ ...tue, state: "approved" },
+				],
 				links: [
 					{ ccaId: "swim", slotId: "mon", state: "approved" },
 					{ ccaId: "dance", slotId: "tue", state: "approved" },
@@ -151,7 +168,10 @@ function getStepState(phase: Phase): { slots: SlotVisual[]; links: CcaLink[]; sh
 			};
 		case "contest":
 			return {
-				slots: [{ ...mon, state: "conflict" }, { ...tue, state: "approved" }],
+				slots: [
+					{ ...mon, state: "conflict" },
+					{ ...tue, state: "approved" },
+				],
 				links: [
 					{ ccaId: "swim", slotId: "mon", state: "conflict" },
 					{ ccaId: "band", slotId: "mon", state: "claiming" },
@@ -162,7 +182,10 @@ function getStepState(phase: Phase): { slots: SlotVisual[]; links: CcaLink[]; sh
 		case "conflict":
 		case "negotiate":
 			return {
-				slots: [{ ...mon, state: "conflict" }, { ...tue, state: "approved" }],
+				slots: [
+					{ ...mon, state: "conflict" },
+					{ ...tue, state: "approved" },
+				],
 				links: [
 					{ ccaId: "swim", slotId: "mon", state: "conflict" },
 					{ ccaId: "band", slotId: "mon", state: "conflict" },
@@ -172,7 +195,10 @@ function getStepState(phase: Phase): { slots: SlotVisual[]; links: CcaLink[]; sh
 			};
 		case "yield":
 			return {
-				slots: [{ ...mon, state: "approved" }, { ...tue, state: "approved" }],
+				slots: [
+					{ ...mon, state: "approved" },
+					{ ...tue, state: "approved" },
+				],
 				links: [
 					{ ccaId: "swim", slotId: "mon", state: "approved" },
 					{ ccaId: "band", slotId: "mon", state: "yielded" },
@@ -182,7 +208,10 @@ function getStepState(phase: Phase): { slots: SlotVisual[]; links: CcaLink[]; sh
 			};
 		case "no-yield":
 			return {
-				slots: [{ ...mon, state: "conflict" }, { ...tue, state: "approved" }],
+				slots: [
+					{ ...mon, state: "conflict" },
+					{ ...tue, state: "approved" },
+				],
 				links: [
 					{ ccaId: "swim", slotId: "mon", state: "conflict" },
 					{ ccaId: "band", slotId: "mon", state: "conflict" },
@@ -192,7 +221,10 @@ function getStepState(phase: Phase): { slots: SlotVisual[]; links: CcaLink[]; sh
 			};
 		case "jcrc":
 			return {
-				slots: [{ ...mon, state: "approved" }, { ...tue, state: "approved" }],
+				slots: [
+					{ ...mon, state: "approved" },
+					{ ...tue, state: "approved" },
+				],
 				links: [
 					{ ccaId: "swim", slotId: "mon", state: "approved" },
 					{ ccaId: "band", slotId: "mon", state: "rejected" },
@@ -202,7 +234,10 @@ function getStepState(phase: Phase): { slots: SlotVisual[]; links: CcaLink[]; sh
 			};
 		case "summary":
 			return {
-				slots: [{ ...mon, state: "approved" }, { ...tue, state: "approved" }],
+				slots: [
+					{ ...mon, state: "approved" },
+					{ ...tue, state: "approved" },
+				],
 				links: [
 					{ ccaId: "swim", slotId: "mon", state: "approved" },
 					{ ccaId: "band", slotId: "mon", state: "rejected" },
@@ -215,21 +250,31 @@ function getStepState(phase: Phase): { slots: SlotVisual[]; links: CcaLink[]; sh
 
 function linkColor(state: CcaLinkState, ccaColor: string): string {
 	switch (state) {
-		case "claiming": return ccaColor;
-		case "conflict": return "#f87171";
-		case "approved": return "#22c55e";
-		case "yielded": return "#94a3b8";
-		case "rejected": return "#94a3b8";
-		default: return "transparent";
+		case "claiming":
+			return ccaColor;
+		case "conflict":
+			return "#f87171";
+		case "approved":
+			return "#22c55e";
+		case "yielded":
+			return "#94a3b8";
+		case "rejected":
+			return "#94a3b8";
+		default:
+			return "transparent";
 	}
 }
 
 function slotBorderColor(state: SlotState): string {
 	switch (state) {
-		case "available": return "rgba(148,163,184,0.3)";
-		case "claimed": return "#fbbf24";
-		case "conflict": return "#f87171";
-		case "approved": return "#22c55e";
+		case "available":
+			return "rgba(148,163,184,0.3)";
+		case "claimed":
+			return "#fbbf24";
+		case "conflict":
+			return "#f87171";
+		case "approved":
+			return "#22c55e";
 	}
 }
 
@@ -294,7 +339,12 @@ export function BookingFlowVisual() {
 					How Facilities Booking Works
 				</h3>
 				<div className="flex items-center gap-2">
-					<span className={cn("text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full", ps.style)}>
+					<span
+						className={cn(
+							"text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full",
+							ps.style,
+						)}
+					>
 						{ps.label}
 					</span>
 					<span className="text-slate-500 text-xs font-mono tabular-nums">
@@ -320,27 +370,42 @@ export function BookingFlowVisual() {
 
 			{/* Badge */}
 			{current.badge && (
-				<div key={`badge-${step}`} className="flex items-center justify-center mb-3 animate-[fade-in-scale_0.5s_ease-out_both]">
-					<div className={cn(
-						"flex items-center gap-1.5 px-3 py-1 rounded-full border",
-						current.phase === "conflict"
-							? "bg-red-500/10 border-red-500/20"
-							: current.phase === "jcrc"
-								? "bg-purple-500/10 border-purple-500/20"
-								: "bg-emerald-500/10 border-emerald-500/20",
-					)}>
-						<span className={cn("text-[10px]",
-							current.phase === "conflict" ? "text-red-400"
-								: current.phase === "jcrc" ? "text-purple-400"
-									: "text-emerald-400",
-						)}>
+				<div
+					key={`badge-${step}`}
+					className="flex items-center justify-center mb-3 animate-[fade-in-scale_0.5s_ease-out_both]"
+				>
+					<div
+						className={cn(
+							"flex items-center gap-1.5 px-3 py-1 rounded-full border",
+							current.phase === "conflict"
+								? "bg-red-500/10 border-red-500/20"
+								: current.phase === "jcrc"
+									? "bg-purple-500/10 border-purple-500/20"
+									: "bg-emerald-500/10 border-emerald-500/20",
+						)}
+					>
+						<span
+							className={cn(
+								"text-[10px]",
+								current.phase === "conflict"
+									? "text-red-400"
+									: current.phase === "jcrc"
+										? "text-purple-400"
+										: "text-emerald-400",
+							)}
+						>
 							{current.phase === "conflict" ? "⚠" : "✓"}
 						</span>
-						<span className={cn("text-xs font-medium",
-							current.phase === "conflict" ? "text-red-400"
-								: current.phase === "jcrc" ? "text-purple-400"
-									: "text-emerald-400",
-						)}>
+						<span
+							className={cn(
+								"text-xs font-medium",
+								current.phase === "conflict"
+									? "text-red-400"
+									: current.phase === "jcrc"
+										? "text-purple-400"
+										: "text-emerald-400",
+							)}
+						>
 							{current.badge}
 						</span>
 					</div>
@@ -348,7 +413,12 @@ export function BookingFlowVisual() {
 			)}
 
 			{/* SVG */}
-			<svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} className="w-full" role="img" aria-label="Facilities booking flow animation">
+			<svg
+				viewBox={`0 0 ${SVG_W} ${SVG_H}`}
+				className="w-full"
+				role="img"
+				aria-label="Facilities booking flow animation"
+			>
 				<defs>
 					<filter id="fbSoftGlow" x="-50%" y="-50%" width="200%" height="200%">
 						<feGaussianBlur stdDeviation="8" result="blur" />
@@ -360,24 +430,73 @@ export function BookingFlowVisual() {
 				</defs>
 
 				{/* Column labels */}
-				<text x={CAL_X} y={22} textAnchor="middle" fill="rgba(148,163,184,0.5)" fontSize="10" fontWeight="600" letterSpacing="0.1em">
+				<text
+					x={CAL_X}
+					y={22}
+					textAnchor="middle"
+					fill="rgba(148,163,184,0.5)"
+					fontSize="10"
+					fontWeight="600"
+					letterSpacing="0.1em"
+				>
 					CALENDAR
 				</text>
-				<text x={SLOT_X} y={22} textAnchor="middle" fill="rgba(148,163,184,0.5)" fontSize="10" fontWeight="600" letterSpacing="0.1em">
+				<text
+					x={SLOT_X}
+					y={22}
+					textAnchor="middle"
+					fill="rgba(148,163,184,0.5)"
+					fontSize="10"
+					fontWeight="600"
+					letterSpacing="0.1em"
+				>
 					VENUE SLOTS
 				</text>
-				<text x={CCA_X} y={22} textAnchor="middle" fill="rgba(148,163,184,0.5)" fontSize="10" fontWeight="600" letterSpacing="0.1em">
+				<text
+					x={CCA_X}
+					y={22}
+					textAnchor="middle"
+					fill="rgba(148,163,184,0.5)"
+					fontSize="10"
+					fontWeight="600"
+					letterSpacing="0.1em"
+				>
 					CCAs
 				</text>
 
 				{/* Calendar */}
 				<g>
-					<rect x={CAL_X - 40} y={CAL_Y - 50} width={80} height={100} rx={8}
-						fill="rgba(15,23,42,0.95)" stroke="rgba(148,163,184,0.2)" strokeWidth={1.5} />
-					<rect x={CAL_X - 40} y={CAL_Y - 50} width={80} height={24} rx={8}
-						fill="rgba(251,146,60,0.1)" stroke="rgba(251,146,60,0.3)" strokeWidth={1.5} />
-					<text x={CAL_X} y={CAL_Y - 34} textAnchor="middle" dominantBaseline="central"
-						fill="#fb923c" fontSize="10" fontWeight="700">JUNE</text>
+					<rect
+						x={CAL_X - 40}
+						y={CAL_Y - 50}
+						width={80}
+						height={100}
+						rx={8}
+						fill="rgba(15,23,42,0.95)"
+						stroke="rgba(148,163,184,0.2)"
+						strokeWidth={1.5}
+					/>
+					<rect
+						x={CAL_X - 40}
+						y={CAL_Y - 50}
+						width={80}
+						height={24}
+						rx={8}
+						fill="rgba(251,146,60,0.1)"
+						stroke="rgba(251,146,60,0.3)"
+						strokeWidth={1.5}
+					/>
+					<text
+						x={CAL_X}
+						y={CAL_Y - 34}
+						textAnchor="middle"
+						dominantBaseline="central"
+						fill="#fb923c"
+						fontSize="10"
+						fontWeight="700"
+					>
+						JUNE
+					</text>
 
 					{[
 						{ label: "M", x: -24, highlighted: monHighlighted },
@@ -386,38 +505,84 @@ export function BookingFlowVisual() {
 						{ label: "T", x: 24, highlighted: false },
 					].map((day, i) => (
 						<g key={i}>
-							<text x={CAL_X + day.x} y={CAL_Y - 12} textAnchor="middle"
-								fill="rgba(148,163,184,0.4)" fontSize="8" fontWeight="600">{day.label}</text>
-							<rect x={CAL_X + day.x - 8} y={CAL_Y - 4} width={16} height={16} rx={3}
+							<text
+								x={CAL_X + day.x}
+								y={CAL_Y - 12}
+								textAnchor="middle"
+								fill="rgba(148,163,184,0.4)"
+								fontSize="8"
+								fontWeight="600"
+							>
+								{day.label}
+							</text>
+							<rect
+								x={CAL_X + day.x - 8}
+								y={CAL_Y - 4}
+								width={16}
+								height={16}
+								rx={3}
 								fill={day.highlighted ? "rgba(251,146,60,0.15)" : "rgba(15,23,42,0.5)"}
 								stroke={day.highlighted ? "rgba(251,146,60,0.4)" : "rgba(148,163,184,0.1)"}
-								strokeWidth={1} className="transition-all duration-500" />
-							<text x={CAL_X + day.x} y={CAL_Y + 5} textAnchor="middle" dominantBaseline="central"
-								fill={day.highlighted ? "#fb923c" : "rgba(148,163,184,0.3)"} fontSize="9"
-								className="transition-all duration-500">{i + 2}</text>
+								strokeWidth={1}
+								className="transition-all duration-500"
+							/>
+							<text
+								x={CAL_X + day.x}
+								y={CAL_Y + 5}
+								textAnchor="middle"
+								dominantBaseline="central"
+								fill={day.highlighted ? "#fb923c" : "rgba(148,163,184,0.3)"}
+								fontSize="9"
+								className="transition-all duration-500"
+							>
+								{i + 2}
+							</text>
 						</g>
 					))}
 
 					{[5, 6, 7, 8].map((d, i) => (
 						<g key={`r2-${i}`}>
-							<rect x={CAL_X + (i * 16 - 24) - 8} y={CAL_Y + 18} width={16} height={16} rx={3}
-								fill="rgba(15,23,42,0.5)" stroke="rgba(148,163,184,0.06)" strokeWidth={1} />
-							<text x={CAL_X + (i * 16 - 24)} y={CAL_Y + 27} textAnchor="middle" dominantBaseline="central"
-								fill="rgba(148,163,184,0.2)" fontSize="9">{d + 2}</text>
+							<rect
+								x={CAL_X + (i * 16 - 24) - 8}
+								y={CAL_Y + 18}
+								width={16}
+								height={16}
+								rx={3}
+								fill="rgba(15,23,42,0.5)"
+								stroke="rgba(148,163,184,0.06)"
+								strokeWidth={1}
+							/>
+							<text
+								x={CAL_X + (i * 16 - 24)}
+								y={CAL_Y + 27}
+								textAnchor="middle"
+								dominantBaseline="central"
+								fill="rgba(148,163,184,0.2)"
+								fontSize="9"
+							>
+								{d + 2}
+							</text>
 						</g>
 					))}
 				</g>
 
 				{/* Calendar → Slot dashed lines */}
 				{slots.map((slot) => (
-					<path key={`cal-${slot.id}`}
-						d={curvePath(CAL_X + 40, slot.id === "mon" ? CAL_Y - 4 : CAL_Y + 18, SLOT_X - 80, slot.y)}
+					<path
+						key={`cal-${slot.id}`}
+						d={curvePath(
+							CAL_X + 40,
+							slot.id === "mon" ? CAL_Y - 4 : CAL_Y + 18,
+							SLOT_X - 80,
+							slot.y,
+						)}
 						fill="none"
 						stroke={slotBorderColor(slot.state)}
 						strokeWidth={1}
 						strokeDasharray="4 4"
 						opacity={0.3}
-						className="transition-all duration-500" />
+						className="transition-all duration-500"
+					/>
 				))}
 
 				{/* CCA → Slot lines */}
@@ -435,14 +600,26 @@ export function BookingFlowVisual() {
 					return (
 						<g key={`${link.ccaId}-${link.slotId}`}>
 							{isApproved && (
-								<path d={curvePath(SLOT_X + 80, slot.y, CCA_X - 28, cy)}
-									stroke="#22c55e" strokeWidth={5} fill="none" opacity={0.12}
-									filter="url(#fbSoftGlow)" className="transition-all duration-700" />
+								<path
+									d={curvePath(SLOT_X + 80, slot.y, CCA_X - 28, cy)}
+									stroke="#22c55e"
+									strokeWidth={5}
+									fill="none"
+									opacity={0.12}
+									filter="url(#fbSoftGlow)"
+									className="transition-all duration-700"
+								/>
 							)}
 							{isActive && (
-								<path d={curvePath(SLOT_X + 80, slot.y, CCA_X - 28, cy)}
-									stroke={color} strokeWidth={4} fill="none" opacity={0.12}
-									filter="url(#fbSoftGlow)" className="transition-all duration-700" />
+								<path
+									d={curvePath(SLOT_X + 80, slot.y, CCA_X - 28, cy)}
+									stroke={color}
+									strokeWidth={4}
+									fill="none"
+									opacity={0.12}
+									filter="url(#fbSoftGlow)"
+									className="transition-all duration-700"
+								/>
 							)}
 							<path
 								d={curvePath(SLOT_X + 80, slot.y, CCA_X - 28, cy)}
@@ -452,24 +629,51 @@ export function BookingFlowVisual() {
 								strokeLinecap="round"
 								strokeDasharray={isActive ? "8 6" : isDead ? "4 4" : "none"}
 								opacity={isDead ? 0.2 : 0.9}
-								className={cn("transition-all duration-700", isActive && "animate-[dash-flow_0.8s_linear_infinite]")}
+								className={cn(
+									"transition-all duration-700",
+									isActive && "animate-[dash-flow_0.8s_linear_infinite]",
+								)}
 							/>
 							{isDead && (
 								<g className="animate-[fade-in-scale_0.4s_ease-out_both]">
-									<circle cx={(SLOT_X + 80 + CCA_X - 28) / 2} cy={(slot.y + cy) / 2} r={9}
-										fill="rgba(148,163,184,0.1)" />
-									<text x={(SLOT_X + 80 + CCA_X - 28) / 2} y={(slot.y + cy) / 2 + 1}
-										textAnchor="middle" dominantBaseline="central"
-										fill="#94a3b8" fontSize="11" fontWeight="bold">{"✕"}</text>
+									<circle
+										cx={(SLOT_X + 80 + CCA_X - 28) / 2}
+										cy={(slot.y + cy) / 2}
+										r={9}
+										fill="rgba(148,163,184,0.1)"
+									/>
+									<text
+										x={(SLOT_X + 80 + CCA_X - 28) / 2}
+										y={(slot.y + cy) / 2 + 1}
+										textAnchor="middle"
+										dominantBaseline="central"
+										fill="#94a3b8"
+										fontSize="11"
+										fontWeight="bold"
+									>
+										{"✕"}
+									</text>
 								</g>
 							)}
 							{isApproved && (
 								<g className="animate-[fade-in-scale_0.4s_ease-out_both]">
-									<circle cx={(SLOT_X + 80 + CCA_X - 28) / 2} cy={(slot.y + cy) / 2} r={9}
-										fill="rgba(34,197,94,0.1)" />
-									<text x={(SLOT_X + 80 + CCA_X - 28) / 2} y={(slot.y + cy) / 2 + 1}
-										textAnchor="middle" dominantBaseline="central"
-										fill="#22c55e" fontSize="11" fontWeight="bold">{"✓"}</text>
+									<circle
+										cx={(SLOT_X + 80 + CCA_X - 28) / 2}
+										cy={(slot.y + cy) / 2}
+										r={9}
+										fill="rgba(34,197,94,0.1)"
+									/>
+									<text
+										x={(SLOT_X + 80 + CCA_X - 28) / 2}
+										y={(slot.y + cy) / 2 + 1}
+										textAnchor="middle"
+										dominantBaseline="central"
+										fill="#22c55e"
+										fontSize="11"
+										fontWeight="bold"
+									>
+										{"✓"}
+									</text>
 								</g>
 							)}
 						</g>
@@ -484,26 +688,59 @@ export function BookingFlowVisual() {
 					return (
 						<g key={slot.id}>
 							{isConflict && (
-								<rect x={SLOT_X - 78} y={slot.y - 22} width={156} height={44} rx={10}
-									fill="#f87171" opacity={0.06}
-									className="animate-[node-pulse_1.5s_ease-in-out_infinite]" />
+								<rect
+									x={SLOT_X - 78}
+									y={slot.y - 22}
+									width={156}
+									height={44}
+									rx={10}
+									fill="#f87171"
+									opacity={0.06}
+									className="animate-[node-pulse_1.5s_ease-in-out_infinite]"
+								/>
 							)}
 							{isApproved && (
-								<rect x={SLOT_X - 78} y={slot.y - 22} width={156} height={44} rx={10}
-									fill="#22c55e" opacity={0.04} />
+								<rect
+									x={SLOT_X - 78}
+									y={slot.y - 22}
+									width={156}
+									height={44}
+									rx={10}
+									fill="#22c55e"
+									opacity={0.04}
+								/>
 							)}
-							<rect x={SLOT_X - 75} y={slot.y - 20} width={150} height={40} rx={8}
+							<rect
+								x={SLOT_X - 75}
+								y={slot.y - 20}
+								width={150}
+								height={40}
+								rx={8}
 								fill="rgba(15,23,42,0.95)"
 								stroke={borderColor}
 								strokeWidth={1.5}
-								className="transition-all duration-500" />
-							<text x={SLOT_X} y={slot.y - 5} textAnchor="middle" dominantBaseline="central"
+								className="transition-all duration-500"
+							/>
+							<text
+								x={SLOT_X}
+								y={slot.y - 5}
+								textAnchor="middle"
+								dominantBaseline="central"
 								fill={isApproved ? "#22c55e" : isConflict ? "#f87171" : "rgba(226,232,240,0.8)"}
-								fontSize="11" fontWeight="600" className="transition-all duration-500">
+								fontSize="11"
+								fontWeight="600"
+								className="transition-all duration-500"
+							>
 								{slot.label}
 							</text>
-							<text x={SLOT_X} y={slot.y + 10} textAnchor="middle" dominantBaseline="central"
-								fill="rgba(148,163,184,0.5)" fontSize="9">
+							<text
+								x={SLOT_X}
+								y={slot.y + 10}
+								textAnchor="middle"
+								dominantBaseline="central"
+								fill="rgba(148,163,184,0.5)"
+								fontSize="9"
+							>
 								{slot.day} {slot.time}
 							</text>
 						</g>
@@ -513,11 +750,25 @@ export function BookingFlowVisual() {
 				{/* Negotiate arrow */}
 				{isNegotiating && (
 					<g className="animate-[fade-in-scale_0.5s_ease-out_both]">
-						<line x1={CCA_X} y1={CCA_YS[0] + 22} x2={CCA_X} y2={CCA_YS[1] - 22}
-							stroke="#fbbf24" strokeWidth={1.5} strokeDasharray="4 3"
-							className="animate-[dash-flow_1s_linear_infinite]" />
-						<text x={CCA_X + 16} y={(CCA_YS[0] + CCA_YS[1]) / 2} textAnchor="start" dominantBaseline="central"
-							fill="#fbbf24" fontSize="9" fontWeight="600">
+						<line
+							x1={CCA_X}
+							y1={CCA_YS[0] + 22}
+							x2={CCA_X}
+							y2={CCA_YS[1] - 22}
+							stroke="#fbbf24"
+							strokeWidth={1.5}
+							strokeDasharray="4 3"
+							className="animate-[dash-flow_1s_linear_infinite]"
+						/>
+						<text
+							x={CCA_X + 16}
+							y={(CCA_YS[0] + CCA_YS[1]) / 2}
+							textAnchor="start"
+							dominantBaseline="central"
+							fill="#fbbf24"
+							fontSize="9"
+							fontWeight="600"
+						>
 							Negotiate
 						</text>
 					</g>
@@ -526,12 +777,37 @@ export function BookingFlowVisual() {
 				{/* JCRC node */}
 				{showJcrc && (
 					<g className="animate-[fade-in-scale_0.5s_ease-out_both]">
-						<line x1={JCRC_X} y1={JCRC_Y - 18} x2={SLOT_X} y2={SLOT_MON_Y + 20}
-							stroke="#a855f7" strokeWidth={1.5} strokeDasharray="6 4" opacity={0.5} />
-						<rect x={JCRC_X - 32} y={JCRC_Y - 14} width={64} height={28} rx={14}
-							fill="rgba(15,23,42,0.95)" stroke="#a855f7" strokeWidth={1.5} />
-						<text x={JCRC_X} y={JCRC_Y} textAnchor="middle" dominantBaseline="central"
-							fill="#a855f7" fontSize="11" fontWeight="700">JCRC</text>
+						<line
+							x1={JCRC_X}
+							y1={JCRC_Y - 18}
+							x2={SLOT_X}
+							y2={SLOT_MON_Y + 20}
+							stroke="#a855f7"
+							strokeWidth={1.5}
+							strokeDasharray="6 4"
+							opacity={0.5}
+						/>
+						<rect
+							x={JCRC_X - 32}
+							y={JCRC_Y - 14}
+							width={64}
+							height={28}
+							rx={14}
+							fill="rgba(15,23,42,0.95)"
+							stroke="#a855f7"
+							strokeWidth={1.5}
+						/>
+						<text
+							x={JCRC_X}
+							y={JCRC_Y}
+							textAnchor="middle"
+							dominantBaseline="central"
+							fill="#a855f7"
+							fontSize="11"
+							fontWeight="700"
+						>
+							JCRC
+						</text>
 					</g>
 				)}
 
@@ -539,37 +815,81 @@ export function BookingFlowVisual() {
 				{CCAS.map((cca, i) => {
 					const y = CCA_YS[i];
 					const link = links.find((l) => l.ccaId === cca.id);
-					const isActive = link && link.state !== "none" && link.state !== "yielded" && link.state !== "rejected";
+					const isActive =
+						link && link.state !== "none" && link.state !== "yielded" && link.state !== "rejected";
 					const isApproved = link?.state === "approved";
 					const isDead = link?.state === "yielded" || link?.state === "rejected";
 					return (
 						<g key={cca.id}>
 							{isActive && (
-								<circle cx={CCA_X} cy={y} r={28} fill={isApproved ? "#22c55e" : cca.color} opacity={0.06}
+								<circle
+									cx={CCA_X}
+									cy={y}
+									r={28}
+									fill={isApproved ? "#22c55e" : cca.color}
+									opacity={0.06}
 									className="animate-[node-pulse_1.5s_ease-in-out_infinite]"
-									style={{ animationDelay: `${i * 0.15}s` }} />
+									style={{ animationDelay: `${i * 0.15}s` }}
+								/>
 							)}
-							<circle cx={CCA_X} cy={y} r={22} fill={cca.color} opacity={0.08}
-								filter="url(#fbSoftGlow)" className="transition-all duration-500" />
-							<circle cx={CCA_X} cy={y} r={18}
+							<circle
+								cx={CCA_X}
+								cy={y}
+								r={22}
+								fill={cca.color}
+								opacity={0.08}
+								filter="url(#fbSoftGlow)"
+								className="transition-all duration-500"
+							/>
+							<circle
+								cx={CCA_X}
+								cy={y}
+								r={18}
 								fill="rgba(15,23,42,0.9)"
 								stroke={isApproved ? "#22c55e" : isDead ? "rgba(148,163,184,0.2)" : cca.color}
 								strokeWidth={isActive ? 2.5 : 2}
 								strokeDasharray={isDead ? "4 3" : "none"}
 								opacity={isDead ? 0.5 : 1}
-								className="transition-all duration-500" />
+								className="transition-all duration-500"
+							/>
 							{isApproved ? (
-								<text x={CCA_X} y={y + 1} textAnchor="middle" dominantBaseline="central"
-									fill="#22c55e" fontSize="13" className="animate-[fade-in-scale_0.4s_ease-out_both]">{"✓"}</text>
+								<text
+									x={CCA_X}
+									y={y + 1}
+									textAnchor="middle"
+									dominantBaseline="central"
+									fill="#22c55e"
+									fontSize="13"
+									className="animate-[fade-in-scale_0.4s_ease-out_both]"
+								>
+									{"✓"}
+								</text>
 							) : (
-								<text x={CCA_X} y={y + 1} textAnchor="middle" dominantBaseline="central"
+								<text
+									x={CCA_X}
+									y={y + 1}
+									textAnchor="middle"
+									dominantBaseline="central"
 									fill={isDead ? "rgba(148,163,184,0.3)" : cca.color}
-									fontSize="13" fontWeight="600" opacity={isDead ? 0.5 : 0.8}
-									className="transition-all duration-500">{cca.abbr}</text>
+									fontSize="13"
+									fontWeight="600"
+									opacity={isDead ? 0.5 : 0.8}
+									className="transition-all duration-500"
+								>
+									{cca.abbr}
+								</text>
 							)}
-							<text x={CCA_X} y={y + 34} textAnchor="middle"
+							<text
+								x={CCA_X}
+								y={y + 34}
+								textAnchor="middle"
 								fill={isDead ? "rgba(148,163,184,0.3)" : "rgba(226,232,240,0.9)"}
-								fontSize="10" fontWeight="600" className="transition-all duration-500">{cca.name}</text>
+								fontSize="10"
+								fontWeight="600"
+								className="transition-all duration-500"
+							>
+								{cca.name}
+							</text>
 						</g>
 					);
 				})}
@@ -584,19 +904,24 @@ export function BookingFlowVisual() {
 							const isApproved = link?.state === "approved";
 							const slot = isApproved ? slots.find((s) => s.id === link?.slotId) : null;
 							return (
-								<div key={cca.id} className={cn(
-									"rounded-lg border p-3 text-center",
-									isApproved
-										? "border-emerald-500/20 bg-emerald-500/5"
-										: "border-slate-800/40 bg-slate-900/30",
-								)}>
+								<div
+									key={cca.id}
+									className={cn(
+										"rounded-lg border p-3 text-center",
+										isApproved
+											? "border-emerald-500/20 bg-emerald-500/5"
+											: "border-slate-800/40 bg-slate-900/30",
+									)}
+								>
 									<div className="flex items-center justify-center gap-1.5 mb-1">
 										<span className="size-2 rounded-full" style={{ background: cca.color }} />
 										<span className="text-xs font-medium text-slate-300">{cca.name}</span>
 									</div>
 									{isApproved && slot ? (
 										<>
-											<p className="text-emerald-400 text-sm font-bold">{slot.day} {slot.time}</p>
+											<p className="text-emerald-400 text-sm font-bold">
+												{slot.day} {slot.time}
+											</p>
 											<p className="text-[10px] text-slate-600">{slot.label}</p>
 										</>
 									) : (
@@ -616,10 +941,13 @@ export function BookingFlowVisual() {
 			<div className="min-h-[72px] flex items-start justify-center mt-3 px-2">
 				<div key={step} className="animate-[fade-up_0.4s_ease-out_both] max-w-lg w-full">
 					{current.description.split("\n").map((line, i) => (
-						<p key={i} className={cn(
-							"text-sm leading-relaxed",
-							line.startsWith("•") ? "text-slate-400 pl-3" : "text-slate-300",
-						)}>
+						<p
+							key={i}
+							className={cn(
+								"text-sm leading-relaxed",
+								line.startsWith("•") ? "text-slate-400 pl-3" : "text-slate-300",
+							)}
+						>
 							{line}
 						</p>
 					))}
@@ -628,35 +956,69 @@ export function BookingFlowVisual() {
 
 			{/* Controls */}
 			<div className="flex items-center justify-center gap-2 mt-2">
-				<Button variant="ghost" size="sm" disabled={step === 0}
-					onClick={() => { setIsPlaying(false); setStep((s) => Math.max(0, s - 1)); }}
-					className="text-slate-400 hover:text-white hover:bg-slate-800 size-8 p-0">
+				<Button
+					variant="ghost"
+					size="sm"
+					disabled={step === 0}
+					onClick={() => {
+						setIsPlaying(false);
+						setStep((s) => Math.max(0, s - 1));
+					}}
+					className="text-slate-400 hover:text-white hover:bg-slate-800 size-8 p-0"
+				>
 					<SkipBack className="size-4" />
 				</Button>
-				<Button variant="ghost" size="sm" onClick={() => setIsPlaying(!isPlaying)}
-					className="text-slate-400 hover:text-white hover:bg-slate-800 size-8 p-0">
+				<Button
+					variant="ghost"
+					size="sm"
+					onClick={() => setIsPlaying(!isPlaying)}
+					className="text-slate-400 hover:text-white hover:bg-slate-800 size-8 p-0"
+				>
 					{isPlaying ? <Pause className="size-4" /> : <Play className="size-4" />}
 				</Button>
-				<Button variant="ghost" size="sm" disabled={isFinished}
-					onClick={() => { setIsPlaying(false); setStep((s) => Math.min(STEPS.length - 1, s + 1)); }}
-					className="text-slate-400 hover:text-white hover:bg-slate-800 size-8 p-0">
+				<Button
+					variant="ghost"
+					size="sm"
+					disabled={isFinished}
+					onClick={() => {
+						setIsPlaying(false);
+						setStep((s) => Math.min(STEPS.length - 1, s + 1));
+					}}
+					className="text-slate-400 hover:text-white hover:bg-slate-800 size-8 p-0"
+				>
 					<SkipForward className="size-4" />
 				</Button>
 
 				<div className="flex items-center gap-1.5 mx-2">
 					{STEPS.map((_, i) => (
-						<button key={i} onClick={() => { setIsPlaying(false); setStep(i); }}
+						<button
+							key={i}
+							onClick={() => {
+								setIsPlaying(false);
+								setStep(i);
+							}}
 							className={cn(
 								"rounded-full transition-all duration-300",
-								i === step ? "size-2.5 bg-orange-500" : i < step ? "size-1.5 bg-orange-800" : "size-1.5 bg-slate-600 hover:bg-slate-500",
-							)} />
+								i === step
+									? "size-2.5 bg-orange-500"
+									: i < step
+										? "size-1.5 bg-orange-800"
+										: "size-1.5 bg-slate-600 hover:bg-slate-500",
+							)}
+						/>
 					))}
 				</div>
 
 				{isFinished && (
-					<Button variant="ghost" size="sm"
-						onClick={() => { setStep(0); setIsPlaying(true); }}
-						className="text-slate-400 hover:text-white hover:bg-slate-800 gap-1 text-xs h-7 px-2">
+					<Button
+						variant="ghost"
+						size="sm"
+						onClick={() => {
+							setStep(0);
+							setIsPlaying(true);
+						}}
+						className="text-slate-400 hover:text-white hover:bg-slate-800 gap-1 text-xs h-7 px-2"
+					>
 						<RotateCcw className="size-3" />
 						Replay
 					</Button>

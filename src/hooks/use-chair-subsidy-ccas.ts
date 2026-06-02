@@ -26,5 +26,10 @@ export function useChairSubsidyCcas(user: AuthenticatedUser | null | undefined) 
 			}));
 	}, [user]);
 
-	return { subsidyData: subsidyCcas, loading: false, error: null, hasChairAccess: subsidyCcas.length > 0 };
+	return {
+		subsidyData: subsidyCcas,
+		loading: false,
+		error: null,
+		hasChairAccess: subsidyCcas.length > 0,
+	};
 }

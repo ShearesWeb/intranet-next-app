@@ -1,12 +1,11 @@
 import type { CCAData } from "@/types/cca-data";
-import type {
-	RecapCategoryConfig,
-	RecapData,
-	RecapSlide,
-	RecapTotals,
-} from "@/types/recap";
+import type { RecapCategoryConfig, RecapData, RecapSlide, RecapTotals } from "@/types/recap";
 import type { AuthenticatedUser } from "@/types/user";
-import { isLeadershipRole, isBlockCcaName, isResidentBlockPosition } from "@/lib/ranking/recap-helpers";
+import {
+	isLeadershipRole,
+	isBlockCcaName,
+	isResidentBlockPosition,
+} from "@/lib/ranking/recap-helpers";
 
 const ihgTeamStatuses = new Set(["ihg-team", "ivp-ihg-team"]);
 

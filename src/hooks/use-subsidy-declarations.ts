@@ -1,11 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type {
-	PositionOption,
-	SubsidyDeclaration,
-	SubsidyWithPosition,
-} from "@/types/declarations";
+import type { PositionOption, SubsidyDeclaration, SubsidyWithPosition } from "@/types/declarations";
 import {
 	buildPositionMap,
 	mapSubsidyToDeclaration,
@@ -66,7 +62,10 @@ export function useSubsidyDeclarations(ccaId: string | null): UseSubsidyDeclarat
 					throw new Error(json.error || "Failed to fetch subsidy declarations");
 				}
 
-				return (json.data ?? json) as { positions?: PositionOption[]; subsidies?: SubsidyWithPosition[] };
+				return (json.data ?? json) as {
+					positions?: PositionOption[];
+					subsidies?: SubsidyWithPosition[];
+				};
 			})
 			.then((data) => {
 				if (!isMounted) return;

@@ -70,6 +70,24 @@ if [[ "$RESEED_ONLY" -eq 0 ]]; then
 		DROP TABLE IF EXISTS storage.buckets CASCADE;
 	"
 
+	# Newer Supabase CLIs ship auth.email() stubbed to RETURN NULL (the helper is
+	# deprecated upstream in favour of auth.jwt() ->> 'email'). The schema's
+	# internal.auth_user_id() resolves the caller via auth.email(), so the stub
+	# makes every authenticated request resolve to no user — RLS returns zero rows
+	# and the app 401s on all persona traffic. Restore the pre-deprecation body so
+	# the local stack matches hosted Supabase, where auth.email() reads the JWT.
+	log "Restoring auth.email() (CLI ships it stubbed to NULL)"
+	psql "postgresql://supabase_admin:postgres@127.0.0.1:54322/postgres" -v ON_ERROR_STOP=1 -c "
+		CREATE OR REPLACE FUNCTION auth.email() RETURNS text
+		LANGUAGE sql STABLE
+		AS \$func\$
+			SELECT coalesce(
+				nullif(current_setting('request.jwt.claim.email', true), ''),
+				(nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'email')
+			)::text
+		\$func\$;
+	"
+
 	log "Applying Liquibase changelog from $INTRANET_REPO_PATH"
 	# Use supabase_admin (the actual superuser in local Supabase) so Liquibase
 	# can create objects in reserved schemas like auth/storage. The default

@@ -1,5 +1,6 @@
 import { dirname } from "path";
 import { fileURLToPath } from "url";
+import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -38,3 +39,6 @@ const nextConfig = {
 };
 
 export default nextConfig;
+
+// Enables Cloudflare bindings (getCloudflareContext) during `next dev`. No-op in prod.
+initOpenNextCloudflareForDev();

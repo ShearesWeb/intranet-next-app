@@ -81,7 +81,11 @@ export interface CalendarDeclaration {
 }
 
 // Dot semantics for the calendar
-export type SubsidyDotType = "pending" | "approved-needs-members" | "approved-complete" | "rejected";
+export type SubsidyDotType =
+	| "pending"
+	| "approved-needs-members"
+	| "approved-complete"
+	| "rejected";
 
 export const SUBSIDY_DOT_CONFIG: Record<SubsidyDotType, { label: string; color: string }> = {
 	pending: { label: "Pending", color: "#fbbf24" },

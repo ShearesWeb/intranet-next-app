@@ -54,7 +54,9 @@ const ccaTableColumns: ColumnDef<CCAData>[] = [
 			</div>
 		),
 		cell: ({ row }) => (
-			<div className="font-semibold text-center text-sm md:text-base">{String(row.getValue("points"))}</div>
+			<div className="font-semibold text-center text-sm md:text-base">
+				{String(row.getValue("points"))}
+			</div>
 		),
 	},
 ];

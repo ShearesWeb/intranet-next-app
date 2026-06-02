@@ -7,18 +7,18 @@ import { getChairCcaIds } from "@/lib/facilities/facility-access";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const disabledResponse = getCoreServiceDisabledApiResponse("facilities");
-  if (disabledResponse) return disabledResponse;
+	const disabledResponse = getCoreServiceDisabledApiResponse("facilities");
+	if (disabledResponse) return disabledResponse;
 
-  try {
-    const user = await requireAuth();
-    const ccaIds = getChairCcaIds(user);
+	try {
+		const user = await requireAuth();
+		const ccaIds = getChairCcaIds(user);
 
-    if (ccaIds.length === 0) return apiOk([]);
+		if (ccaIds.length === 0) return apiOk([]);
 
-    const conflicts = await getConflictsForCca(ccaIds);
-    return apiOk(conflicts);
-  } catch (e) {
-    return handleApiError(e);
-  }
+		const conflicts = await getConflictsForCca(ccaIds);
+		return apiOk(conflicts);
+	} catch (e) {
+		return handleApiError(e);
+	}
 }

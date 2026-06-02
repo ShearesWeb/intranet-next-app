@@ -48,9 +48,7 @@ export function AllocationAlgorithmSteps() {
 											</CardTitle>
 										</CardHeader>
 										<CardContent>
-											<p className="leading-relaxed text-muted-foreground">
-												{step.description}
-											</p>
+											<p className="leading-relaxed text-muted-foreground">{step.description}</p>
 										</CardContent>
 									</Card>
 								</div>
@@ -72,10 +70,9 @@ export function AllocationAlgorithmSteps() {
 						</CardHeader>
 						<CardContent>
 							<p className="leading-relaxed text-muted-foreground">
-								The result is a <strong>stable match</strong>: no two people can swap
-								allocations and both be happier than they are now. The algorithm produces
-								the same result every time, so you can&apos;t game it by changing the order
-								or timing of your submission.
+								The result is a <strong>stable match</strong>: no two people can swap allocations
+								and both be happier than they are now. The algorithm produces the same result every
+								time, so you can&apos;t game it by changing the order or timing of your submission.
 							</p>
 						</CardContent>
 					</Card>
@@ -91,12 +88,12 @@ export function AllocationAlgorithmSteps() {
 						</CardHeader>
 						<CardContent>
 							<p className="leading-relaxed text-muted-foreground">
-								&quot;If I list a popular CCA as my #1 preference, I have less chance than
-								someone who lists it as #2.&quot;
+								&quot;If I list a popular CCA as my #1 preference, I have less chance than someone
+								who lists it as #2.&quot;
 								<br />
 								<strong>False.</strong> The algorithm always tries your top preference first.
-								Ranking something lower can only hurt your odds — always put what you really
-								want at the top.
+								Ranking something lower can only hurt your odds — always put what you really want at
+								the top.
 							</p>
 						</CardContent>
 					</Card>

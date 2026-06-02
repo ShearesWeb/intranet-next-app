@@ -15,7 +15,9 @@ export function GuideFaq() {
 			<FadeIn>
 				<div className="flex flex-col gap-1 border-l-4 border-primary pl-3">
 					<div className="text-lg font-semibold">Frequently Asked Questions</div>
-					<p className="text-sm text-muted-foreground">Common questions about the subsidy process</p>
+					<p className="text-sm text-muted-foreground">
+						Common questions about the subsidy process
+					</p>
 				</div>
 			</FadeIn>
 			<FadeIn delay={0.1}>
