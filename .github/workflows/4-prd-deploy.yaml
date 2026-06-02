@@ -1,0 +1,70 @@
+# .github/workflows/4-prd-deploy.yaml
+name: Production Deploy (Cloudflare)
+
+# Trigger:
+#   - A clean semver tag `vX.Y.Z` (no `-beta` suffix) is pushed.
+#     Promotion from preprod -> prd is done manually in the GitHub web UI by
+#     creating the production tag/release with the `-beta` suffix removed
+#     (e.g. `v1.0.0-beta` -> `v1.0.0`). A tag created by a human in the UI
+#     triggers this workflow (unlike one created by GITHUB_TOKEN).
+#   - workflow_dispatch for manual re-deploys.
+#
+# The tag glob below intentionally has no suffix, so it matches `v1.0.0` but
+# NOT `v1.0.0-beta` — keeping the prd line cleanly separated from preprod.
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch: {}
+
+concurrency:
+  group: "prd-deploy"
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  deploy:
+    name: ⚙️ Deploy to Cloudflare (prd)
+    runs-on: ubuntu-latest
+
+    environment:
+      name: prd
+      url: https://intranet.shweb.org
+
+    env:
+      # Embedded into the client bundle at build time.
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY }}
+      # Consumed by the OpenNext/wrangler deploy step.
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+    steps:
+      - name: 1. 📄 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+
+      - name: 2. ⚙️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.22"
+          cache: npm
+
+      - name: 3. ⬇️ Restore Next.js Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            .next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-
+
+      - name: 4. 📦 Install Dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
+
+      - name: 5. 🚧 Build + Deploy with OpenNext (Cloudflare)
+        run: npm run deploy:prd
