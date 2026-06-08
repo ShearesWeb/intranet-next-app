@@ -15,6 +15,11 @@
     "enabled": true
   },
 
+  // This account has no workers.dev subdomain; routing is via Terraform custom
+  // domains (cloudflare_workers_custom_domain). Tell wrangler not to publish to
+  // workers.dev, otherwise `deploy` errors with "register a workers.dev subdomain".
+  "workers_dev": false,
+
   // --- Production (top-level): worker "intranet", domain intranet.shweb.org ---
   // Custom domains are attached by Terraform (cloudflare_workers_custom_domain),
   // so no `routes` block here. Deploy with:  npm run deploy
@@ -35,6 +40,7 @@
     // --- Preprod: worker "intranet-preprod", domain beta.intranet.shweb.org ---
     // Deploy with:  npm run deploy:preprod
     "preprod": {
+      "workers_dev": false,
       // `images` is a non-inheritable binding, so it must be repeated per env.
       "images": {
         "binding": "IMAGES"
