@@ -37,7 +37,7 @@
   ],
 
   "env": {
-    // --- Preprod: worker "intranet-preprod", domain beta.intranet.shweb.org ---
+    // --- Preprod: worker "intranet-preprod", domain intranet-beta.shweb.org ---
     // Deploy with:  npm run deploy:preprod
     "preprod": {
       "workers_dev": false,
