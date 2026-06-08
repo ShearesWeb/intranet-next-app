@@ -170,7 +170,9 @@ export default function HolidaySubsidyApprovalsPage() {
 					{loading ? (
 						<Skeleton className="mt-2 h-8 w-10" />
 					) : (
-						<div className="mt-2 text-2xl font-bold tabular-nums text-[#fbbf24]">{pendingCount}</div>
+						<div className="mt-2 text-2xl font-bold tabular-nums text-[#fbbf24]">
+							{pendingCount}
+						</div>
 					)}
 				</div>
 				<div className="rounded-lg border bg-card p-4">

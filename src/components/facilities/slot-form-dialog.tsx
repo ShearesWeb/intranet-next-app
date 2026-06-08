@@ -292,11 +292,7 @@ export function SlotFormDialog({
 					<Button variant="outline" onClick={onClose} disabled={submitting}>
 						Cancel
 					</Button>
-					<Button
-						onClick={handleSubmit}
-						isLoading={submitting}
-						loadingText="Creating…"
-					>
+					<Button onClick={handleSubmit} isLoading={submitting} loadingText="Creating…">
 						{recurring ? "Create Recurring Slots" : "Create Slot"}
 					</Button>
 				</DialogFooter>

@@ -122,12 +122,7 @@ export default function ManageMembersPage() {
 
 	const saveButton =
 		pendingChanges.length > 0 ? (
-			<Button
-				onClick={() => void saveAll()}
-				size="sm"
-				isLoading={saving}
-				loadingText="Saving…"
-			>
+			<Button onClick={() => void saveAll()} size="sm" isLoading={saving} loadingText="Saving…">
 				{`Save Members (${pendingChanges.length})`}
 			</Button>
 		) : undefined;

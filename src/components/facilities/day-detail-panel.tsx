@@ -74,10 +74,7 @@ export function DayDetailPanel({
 						<Skeleton className="h-4 w-24" />
 					</div>
 					{Array.from({ length: 4 }).map((_, i) => (
-						<div
-							key={i}
-							className="flex items-center gap-4 border-b px-3 py-3 last:border-0"
-						>
+						<div key={i} className="flex items-center gap-4 border-b px-3 py-3 last:border-0">
 							<Skeleton className="h-4 w-32" />
 							<Skeleton className="h-4 w-24" />
 							<Skeleton className="ml-auto h-4 w-16" />

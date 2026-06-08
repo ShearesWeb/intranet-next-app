@@ -256,11 +256,7 @@ export default function HolidaySubsidyPage() {
 						</DialogDescription>
 					</DialogHeader>
 					<DialogFooter>
-						<Button
-							variant="outline"
-							onClick={() => setPendingDelete(null)}
-							disabled={deleting}
-						>
+						<Button variant="outline" onClick={() => setPendingDelete(null)} disabled={deleting}>
 							Cancel
 						</Button>
 						<Button
