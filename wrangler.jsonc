@@ -35,6 +35,10 @@
     // --- Preprod: worker "intranet-preprod", domain beta.intranet.shweb.org ---
     // Deploy with:  npm run deploy:preprod
     "preprod": {
+      // `images` is a non-inheritable binding, so it must be repeated per env.
+      "images": {
+        "binding": "IMAGES"
+      },
       "r2_buckets": [
         {
           "binding": "NEXT_INC_CACHE_R2_BUCKET",
