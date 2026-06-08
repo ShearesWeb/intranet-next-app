@@ -9,6 +9,7 @@
 		"dev": "next dev",
 		"preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
 		"deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+		"deploy:prd": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
 		"deploy:preprod": "opennextjs-cloudflare build --env preprod && opennextjs-cloudflare deploy --env preprod",
 		"cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
 		"fixtures:check": "ts-node -P tsconfig.scripts.json tests/fixtures/generate.ts --check",
