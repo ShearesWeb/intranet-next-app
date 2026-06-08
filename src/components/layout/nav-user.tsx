@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { ChevronsUpDown, LogOut } from "lucide-react";
 
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
@@ -15,6 +16,7 @@ import {
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
+	SidebarMenuSkeleton,
 	useSidebar,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/lib/auth/auth-context";
@@ -22,9 +24,22 @@ import { useAuth } from "@/lib/auth/auth-context";
 export function NavUser() {
 	const { isMobile } = useSidebar();
 	const { user, signOut } = useAuth();
+	const [mounted, setMounted] = useState(false);
+	useEffect(() => setMounted(true), []);
 
 	if (!user) {
-		return null;
+		// SidebarMenuSkeleton picks a random bar width internally, so rendering it
+		// during SSR causes a hydration mismatch. Gate it behind mount: the server
+		// and the first client render both produce null (matching), then the
+		// skeleton appears client-side only while auth resolves.
+		if (!mounted) return null;
+		return (
+			<SidebarMenu>
+				<SidebarMenuItem>
+					<SidebarMenuSkeleton showIcon className="h-12" />
+				</SidebarMenuItem>
+			</SidebarMenu>
+		);
 	}
 
 	return (

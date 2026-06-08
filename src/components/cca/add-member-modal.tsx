@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { CommitmentPeriod, UserSearchResult } from "@/types/members";
 import { isChairPositionType } from "@/lib/cca/cca-chair-access";
@@ -170,23 +170,33 @@ export function AddMemberModal({
 								value={searchQuery}
 								onChange={(e) => onSearchQueryChange(e.target.value)}
 								onKeyDown={handleSearchKeyDown}
-								className="focus-visible:ring-[2px] focus-visible:ring-blue-500/20 focus-visible:border-blue-500 py-5 rounded-sm border border-gray-300 w-full pl-4"
+								className="focus-visible:ring-[2px] focus-visible:ring-primary/20 focus-visible:border-primary py-5 rounded-sm w-full pl-4"
 							/>
 							<Button
 								onClick={() => void onSearch()}
-								disabled={searchLoading}
-								className="bg-blue-500 text-white hover:bg-blue-400 px-8 py-3 shadow-md font-bold cursor-pointer"
+								isLoading={searchLoading}
+								loadingText="Searching…"
+								className="px-8"
 							>
-								{searchLoading ? "Searching..." : "Search"}
+								Search
 							</Button>
 						</div>
-						{searchLoading && (
-							<div className="flex items-center justify-center mt-4">
-								<LoadingSpinner message="Searching users..." fullHeight={false} />
-							</div>
-						)}
 						<div className="mt-4">
 							<div className="space-y-2 max-h-64 overflow-y-auto">
+								{searchLoading &&
+									searchResults.length === 0 &&
+									Array.from({ length: 3 }).map((_, idx) => (
+										<div
+											key={idx}
+											className="flex justify-between items-center p-3 border rounded-md"
+										>
+											<div className="flex flex-col gap-2">
+												<Skeleton className="h-4 w-40" />
+												<Skeleton className="h-3 w-24" />
+											</div>
+											<Skeleton className="h-8 w-16 rounded-md" />
+										</div>
+									))}
 								{searchResults.map((user) => {
 									const isAdded = existingMemberIds.includes(user.id);
 									return (

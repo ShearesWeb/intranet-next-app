@@ -1,15 +1,18 @@
 "use client";
 
+import { useState } from "react";
 import { FacilitySlotWithClaims, BOOKING_TYPE_CONFIG, SlotDisplayStatus } from "@/types/facilities";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 interface DayDetailPanelProps {
 	date: string;
 	slots: FacilitySlotWithClaims[];
 	isChair: boolean;
+	loading?: boolean;
 	onClaim: (slot: FacilitySlotWithClaims) => void;
-	onRelease?: (claimId: number) => void;
+	onRelease?: (claimId: number) => Promise<void> | void;
 }
 
 function formatDisplayDate(dateStr: string): string {
@@ -47,7 +50,14 @@ const STATUS_BADGE: Record<SlotDisplayStatus, { text: string; className: string 
 	pending: { text: "Pending", className: "bg-[#fbbf24]/15 text-[#fbbf24]" },
 };
 
-export function DayDetailPanel({ date, slots, isChair, onClaim, onRelease }: DayDetailPanelProps) {
+export function DayDetailPanel({
+	date,
+	slots,
+	isChair,
+	loading,
+	onClaim,
+	onRelease,
+}: DayDetailPanelProps) {
 	const sorted = [...slots].sort((a, b) => {
 		const vCmp = a.sub_venue.localeCompare(b.sub_venue);
 		if (vCmp !== 0) return vCmp;
@@ -58,7 +68,23 @@ export function DayDetailPanel({ date, slots, isChair, onClaim, onRelease }: Day
 		<div className="flex-1 min-w-0">
 			<h3 className="mb-3 text-lg font-semibold">{formatDisplayDate(date)}</h3>
 
-			{sorted.length === 0 ? (
+			{loading ? (
+				<div className="overflow-hidden rounded-lg border">
+					<div className="border-b bg-muted/50 px-3 py-2">
+						<Skeleton className="h-4 w-24" />
+					</div>
+					{Array.from({ length: 4 }).map((_, i) => (
+						<div
+							key={i}
+							className="flex items-center gap-4 border-b px-3 py-3 last:border-0"
+						>
+							<Skeleton className="h-4 w-32" />
+							<Skeleton className="h-4 w-24" />
+							<Skeleton className="ml-auto h-4 w-16" />
+						</div>
+					))}
+				</div>
+			) : sorted.length === 0 ? (
 				<p className="text-sm text-muted-foreground">No available slots on this day.</p>
 			) : (
 				<div className="overflow-hidden rounded-lg border">
@@ -99,15 +125,26 @@ function SlotRow({
 	slot: FacilitySlotWithClaims;
 	isChair: boolean;
 	onClaim: (slot: FacilitySlotWithClaims) => void;
-	onRelease?: (claimId: number) => void;
+	onRelease?: (claimId: number) => Promise<void> | void;
 }) {
+	const [releasing, setReleasing] = useState(false);
 	const status = getSlotStatus(slot);
 	const badge = STATUS_BADGE[status];
 	const typeConfig = BOOKING_TYPE_CONFIG[slot.type];
 	const canClaim = status === "available" && isChair;
 
+	async function handleRelease(claimId: number) {
+		if (!onRelease) return;
+		setReleasing(true);
+		try {
+			await onRelease(claimId);
+		} finally {
+			setReleasing(false);
+		}
+	}
+
 	return (
-		<tr className="border-b last:border-0 hover:bg-accent/30 transition-colors">
+		<tr className="group border-b last:border-0 hover:bg-accent/50 transition-colors">
 			<td className="px-3 py-2.5">
 				<div className="font-medium">{slot.sub_venue}</div>
 				{slot.venue !== slot.sub_venue && (
@@ -151,7 +188,7 @@ function SlotRow({
 						<Button
 							size="sm"
 							variant="outline"
-							className="h-7 text-xs"
+							className="h-7 text-xs transition-colors group-hover:border-primary/50 group-hover:bg-primary/5 group-hover:text-primary"
 							onClick={() => onClaim(slot)}
 						>
 							Claim
@@ -162,7 +199,9 @@ function SlotRow({
 							size="sm"
 							variant="outline"
 							className="h-7 text-xs"
-							onClick={() => onRelease(slot.user_cca_claim!.id)}
+							isLoading={releasing}
+							loadingText="Releasing…"
+							onClick={() => handleRelease(slot.user_cca_claim!.id)}
 						>
 							Release
 						</Button>
@@ -171,7 +210,7 @@ function SlotRow({
 						<Button
 							size="sm"
 							variant="outline"
-							className="h-7 text-xs text-[#f87171] border-[#f87171]/30 hover:bg-[#f87171]/10"
+							className="h-7 text-xs text-[#f87171] border-[#f87171]/30 hover:bg-[#f87171]/10 group-hover:border-[#f87171]/50"
 							onClick={() => onClaim(slot)}
 						>
 							Dispute

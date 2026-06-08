@@ -6,11 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { PositionTypeBadge } from "@/components/badges";
 import { DataTable } from "@/components/table/data-table";
+import { cn } from "@/lib/utils";
 import type { WeeklyRow } from "@/types/weekly";
 
 export interface WeeklyCommitmentTableProps {
 	rows: WeeklyRow[];
 	selected: Set<number>;
+	dirtyRows?: Set<number>;
 	isWeekOpen: boolean;
 	onToggleSelected: (id: number) => void;
 	onChange: (id: number, key: keyof WeeklyRow, value: string | number | null) => void;
@@ -19,6 +21,7 @@ export interface WeeklyCommitmentTableProps {
 export function WeeklyCommitmentTable({
 	rows,
 	selected,
+	dirtyRows,
 	isWeekOpen,
 	onToggleSelected,
 	onChange,
@@ -28,14 +31,31 @@ export function WeeklyCommitmentTable({
 			{
 				accessorKey: "name",
 				header: () => <div className="font-semibold">Member</div>,
-				cell: ({ row }) => (
-					<div className="flex flex-col min-w-[180px]">
-						<span className="font-semibold text-sm md:text-base leading-tight">
-							{row.original.name}
-						</span>
-						<span className="text-xs text-muted-foreground mt-0.5">{row.original.email}</span>
-					</div>
-				),
+				cell: ({ row }) => {
+					const dirty = dirtyRows?.has(row.original.id) ?? false;
+					return (
+						<div
+							data-dirty={dirty || undefined}
+							className={cn(
+								"flex flex-col min-w-[180px] -my-3 -ml-5 py-3 pl-5 pr-3",
+								dirty && "border-l-2 border-l-amber-500 bg-amber-50/60 dark:bg-amber-950/20",
+							)}
+						>
+							<div className="flex items-center gap-1.5">
+								<span className="font-semibold text-sm md:text-base leading-tight">
+									{row.original.name}
+								</span>
+								{dirty && (
+									<span
+										className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500"
+										aria-label="Unsaved changes"
+									/>
+								)}
+							</div>
+							<span className="text-xs text-muted-foreground mt-0.5">{row.original.email}</span>
+						</div>
+					);
+				},
 			},
 			{
 				accessorKey: "role",
@@ -72,7 +92,7 @@ export function WeeklyCommitmentTable({
 								min={0}
 								max={168}
 								step={0.5}
-								className="w-20 text-center font-semibold"
+								className="w-20 text-center font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
 								value={isOverride ? String(row.original.override_hours) : ""}
 								onClick={(e) => e.stopPropagation()}
 								onMouseDown={(e) => e.stopPropagation()}
@@ -108,7 +128,7 @@ export function WeeklyCommitmentTable({
 				cell: ({ row }) => (
 					<div className="min-w-[250px] max-w-[400px]">
 						<Textarea
-							className="min-h-[70px] resize-none text-sm"
+							className="min-h-[70px] resize-none text-sm disabled:opacity-60 disabled:cursor-not-allowed"
 							value={row.original.comments}
 							onClick={(e) => e.stopPropagation()}
 							onMouseDown={(e) => e.stopPropagation()}
@@ -124,7 +144,7 @@ export function WeeklyCommitmentTable({
 				),
 			},
 		],
-		[onChange, isWeekOpen],
+		[onChange, isWeekOpen, dirtyRows],
 	);
 
 	return (

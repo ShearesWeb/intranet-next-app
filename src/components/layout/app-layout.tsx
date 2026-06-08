@@ -1,7 +1,6 @@
 "use client";
 
 import { Fragment, ReactNode, useMemo } from "react";
-import { Separator } from "../ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "../ui/sidebar";
 import { AppSidebar, buildNavItems } from "./app-sidebar";
 import {
@@ -103,14 +102,18 @@ export function AppLayout({ children, breadcrumbOverride }: AppLayoutProps) {
 		return trail;
 	}, [pathname, flattenedNav, navLookup, pathParts]);
 
+	const currentPageTitle = useMemo(() => {
+		const trail = breadcrumbOverride || breadcrumbTrail;
+		return trail.length ? trail[trail.length - 1].name : "";
+	}, [breadcrumbOverride, breadcrumbTrail]);
+
 	return (
 		<SidebarProvider>
 			<AppSidebar />
 			<SidebarInset>
-				<header className="flex h-14 shrink-0 items-center gap-2 border-b border-border/40">
+				<header className="bg-background sticky top-0 z-40 flex h-14 shrink-0 items-center gap-2">
 					<div className="flex items-center gap-2 px-4">
 						<SidebarTrigger className="-ml-1" />
-						<Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
 						<Breadcrumb>
 							<BreadcrumbList>
 								{(breadcrumbOverride || breadcrumbTrail).map((seg, index) => {
@@ -159,10 +162,17 @@ export function AppLayout({ children, breadcrumbOverride }: AppLayoutProps) {
 								})}
 							</BreadcrumbList>
 						</Breadcrumb>
+						{currentPageTitle && (
+							<span className="text-foreground truncate text-sm font-medium md:hidden">
+								{currentPageTitle}
+							</span>
+						)}
 					</div>
 				</header>
 				<div className="flex justify-center px-4 sm:px-6 md:px-8 pb-8">
-					<section className="w-full animate-[fade-in_0.2s_ease-out]">{children}</section>
+					<section key={pathname} className="w-full animate-[fade-in_0.2s_ease-out]">
+						{children}
+					</section>
 				</div>
 			</SidebarInset>
 		</SidebarProvider>

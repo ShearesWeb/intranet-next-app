@@ -117,8 +117,9 @@ export function SubsidyMonthGrid({
 						<button
 							key={dateKey}
 							onClick={() => onSelectDate(dateKey)}
+							aria-pressed={isSelected}
 							className={cn(
-								"flex aspect-square flex-col items-center justify-center rounded-md text-sm transition-colors",
+								"flex aspect-square flex-col items-center justify-center rounded-md text-sm transition-all duration-150 active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
 								isSelected && "bg-primary text-primary-foreground",
 								!isSelected && isToday && "bg-primary/10 font-bold text-primary",
 								!isSelected && !isToday && hasDecls && "hover:bg-accent",
@@ -126,6 +127,8 @@ export function SubsidyMonthGrid({
 									!isToday &&
 									!hasDecls &&
 									"text-muted-foreground/50 hover:bg-accent/50",
+								// Days with declarations get a subtle inset ring that strengthens on hover.
+								!isSelected && hasDecls && "ring-1 ring-inset ring-primary/20 hover:ring-primary/40",
 							)}
 						>
 							<span className="text-xs">{day}</span>

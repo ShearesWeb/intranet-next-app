@@ -112,11 +112,13 @@ export function MonthGrid({
 							key={dateKey}
 							onClick={() => onSelectDate(dateKey)}
 							className={cn(
-								"flex aspect-square flex-col items-center justify-center rounded-md text-sm transition-colors",
-								isSelected && "bg-primary text-primary-foreground",
-								!isSelected && isToday && "bg-primary/10 font-bold text-primary",
+								"flex aspect-square cursor-pointer flex-col items-center justify-center rounded-md text-sm transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+								isSelected && "bg-primary font-semibold text-primary-foreground shadow-sm",
+								!isSelected &&
+									isToday &&
+									"bg-primary/10 font-bold text-primary ring-1 ring-inset ring-primary/40",
 								!isSelected && !isToday && hasSlots && "hover:bg-accent",
-								!isSelected && !isToday && !hasSlots && "text-muted-foreground/50",
+								!isSelected && !isToday && !hasSlots && "text-muted-foreground/50 hover:bg-accent/50",
 							)}
 						>
 							<span className="text-xs">{day}</span>
@@ -125,7 +127,7 @@ export function MonthGrid({
 									{dots.map((type) => (
 										<span
 											key={type}
-											className="h-1 w-1 rounded-full"
+											className="h-1.5 w-1.5 rounded-full"
 											style={{ backgroundColor: BOOKING_TYPE_CONFIG[type].color }}
 										/>
 									))}

@@ -3,7 +3,7 @@
 
 import React from "react";
 import { useAuth } from "@/lib/auth/auth-context";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { DashboardTableSkeleton } from "@/components/layout/dashboard-skeletons";
 import { useRankablePositions } from "@/hooks/use-rankable-positions";
 import { RankSelectionStep } from "@/components/allocation/rank-selection-step";
 import { RankOrderingStep } from "@/components/allocation/rank-ordering-step";
@@ -26,7 +26,7 @@ export default function RankCCA() {
 	} = useRankablePositions(user?.email);
 
 	if (loading) {
-		return <LoadingSpinner message="Loading your CCA preferences..." />;
+		return <DashboardTableSkeleton rows={8} cols={4} />;
 	}
 
 	if (currentStep === "selection") {

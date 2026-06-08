@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth/auth-context";
@@ -12,6 +12,7 @@ export function LoginForm() {
 	const searchParams = useSearchParams();
 	const next = searchParams.get("next") || undefined;
 	const reason = searchParams.get("reason");
+	const [isPending, setIsPending] = useState(false);
 
 	useEffect(() => {
 		if (!reason) return;
@@ -26,17 +27,19 @@ export function LoginForm() {
 	}, [reason]);
 
 	const handleSignIn = async () => {
+		setIsPending(true);
 		try {
 			await signIn(next);
 			toast.info("Logging in with Google...");
 		} catch (error) {
 			console.error("Sign-in error:", error);
 			toast.error("Sign in failed!");
+			setIsPending(false);
 		}
 	};
 
 	return (
-		<Card>
+		<Card className="hover:shadow-lg transition-shadow duration-200 focus-within:shadow-md">
 			<CardContent className="p-8 pt-4 pb-4 flex flex-col gap-8">
 				<div className="flex flex-col items-center gap-2 text-center">
 					<h1 className="text-2xl font-bold">Sheares Web Intranet</h1>
@@ -45,7 +48,13 @@ export function LoginForm() {
 					</p>
 				</div>
 				<div className="grid gap-6">
-					<Button className="w-full p-5" variant={"outline"} onClick={handleSignIn}>
+					<Button
+						className="w-full p-5"
+						variant={"outline"}
+						onClick={handleSignIn}
+						isLoading={isPending}
+						loadingText="Signing in…"
+					>
 						<svg
 							viewBox="-0.5 0 48 48"
 							version="1.1"

@@ -9,6 +9,15 @@ import { SubsidyDeclareDialog } from "@/components/holiday-subsidy/subsidy-decla
 import { SubsidyStatsCards } from "@/components/holiday-subsidy/subsidy-stats-cards";
 import { SubsidyMemberTable } from "@/components/holiday-subsidy/subsidy-member-table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import type { CalendarDeclaration, PositionOption } from "@/types/declarations";
 
@@ -32,6 +41,8 @@ export default function HolidaySubsidyPage() {
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [editingDecl, setEditingDecl] = useState<CalendarDeclaration | null>(null);
 	const [memberTarget, setMemberTarget] = useState<CalendarDeclaration | null>(null);
+	const [pendingDelete, setPendingDelete] = useState<CalendarDeclaration | null>(null);
+	const [deleting, setDeleting] = useState(false);
 
 	const chairCcas = useMemo(() => {
 		if (!user) return [];
@@ -117,8 +128,14 @@ export default function HolidaySubsidyPage() {
 		setDialogOpen(true);
 	}
 
-	async function handleDelete(decl: CalendarDeclaration) {
-		if (!confirm("Delete this declaration?")) return;
+	function handleDelete(decl: CalendarDeclaration) {
+		setPendingDelete(decl);
+	}
+
+	async function confirmDelete() {
+		if (!pendingDelete) return;
+		const decl = pendingDelete;
+		setDeleting(true);
 		try {
 			const res = await fetch(`/api/holiday-subsidy/declarations/${decl.cca_id}`, {
 				method: "DELETE",
@@ -131,9 +148,12 @@ export default function HolidaySubsidyPage() {
 				return;
 			}
 			toast.success("Declaration deleted");
+			setPendingDelete(null);
 			fetchDeclarations();
 		} catch {
 			toast.error("Network error");
+		} finally {
+			setDeleting(false);
 		}
 	}
 
@@ -159,7 +179,7 @@ export default function HolidaySubsidyPage() {
 				description="Declare and track holiday subsidy hours for your CCA."
 			/>
 
-			{!loading && <SubsidyStatsCards declarations={declarations} />}
+			<SubsidyStatsCards declarations={declarations} loading={loading} />
 
 			<div className="flex flex-col gap-6 lg:flex-row">
 				<div className="w-full lg:w-[320px] shrink-0">
@@ -219,6 +239,41 @@ export default function HolidaySubsidyPage() {
 				onOpenChange={setDialogOpen}
 				onSuccess={fetchDeclarations}
 			/>
+
+			<Dialog
+				open={pendingDelete !== null}
+				onOpenChange={(open) => {
+					if (!open && !deleting) setPendingDelete(null);
+				}}
+			>
+				<DialogContent className="sm:max-w-md">
+					<DialogHeader>
+						<DialogTitle>Delete declaration?</DialogTitle>
+						<DialogDescription>
+							{pendingDelete
+								? `This permanently removes the ${pendingDelete.position_name} subsidy declaration for ${pendingDelete.cca_name}. This action cannot be undone.`
+								: "This action cannot be undone."}
+						</DialogDescription>
+					</DialogHeader>
+					<DialogFooter>
+						<Button
+							variant="outline"
+							onClick={() => setPendingDelete(null)}
+							disabled={deleting}
+						>
+							Cancel
+						</Button>
+						<Button
+							variant="destructive"
+							onClick={confirmDelete}
+							isLoading={deleting}
+							loadingText="Deleting…"
+						>
+							Delete
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }

@@ -14,6 +14,7 @@ import { SaveErrorDialog } from "@/components/cca/save-error-dialog";
 import { PageHeader } from "@/components/layout/page-header";
 import { ErrorCard } from "@/components/layout/error-card";
 import { EmptyState } from "@/components/layout/empty-state";
+import { DashboardTableSkeleton } from "@/components/layout/dashboard-skeletons";
 
 export default function ManageMembersPage() {
 	const searchParams = useSearchParams();
@@ -110,7 +111,7 @@ export default function ManageMembersPage() {
 		showAddButton: boolean;
 	}>;
 
-	if (loading) return <LoadingSpinner message="Loading members..." />;
+	if (loading) return <DashboardTableSkeleton rows={6} cols={5} />;
 	if (error)
 		return (
 			<div className="flex flex-col space-y-6 p-4 md:p-6">
@@ -121,8 +122,13 @@ export default function ManageMembersPage() {
 
 	const saveButton =
 		pendingChanges.length > 0 ? (
-			<Button onClick={() => void saveAll()} disabled={saving} size="sm">
-				{saving ? "Saving..." : `Save Members (${pendingChanges.length})`}
+			<Button
+				onClick={() => void saveAll()}
+				size="sm"
+				isLoading={saving}
+				loadingText="Saving…"
+			>
+				{`Save Members (${pendingChanges.length})`}
 			</Button>
 		) : undefined;
 

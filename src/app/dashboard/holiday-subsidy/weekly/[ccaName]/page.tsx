@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { DashboardTableSkeleton } from "@/components/layout/dashboard-skeletons";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, AlertCircle } from "lucide-react";
 import { HOLIDAY_WEEKS } from "@/lib/holiday-subsidy/holiday-weeks";
@@ -25,6 +25,7 @@ export default function WeeklyCommitmentPage() {
 		handleWeekChange,
 		rows,
 		selected,
+		dirtyRows,
 		toggleSelected,
 		handleChange,
 		isLoading,
@@ -36,7 +37,7 @@ export default function WeeklyCommitmentPage() {
 	} = useWeeklyCommitment(ccaId);
 
 	if (isLoading) {
-		return <LoadingSpinner message="Loading weekly commitment data..." />;
+		return <DashboardTableSkeleton rows={6} cols={5} />;
 	}
 
 	if (error) {
@@ -102,7 +103,7 @@ export default function WeeklyCommitmentPage() {
 									key={week.id}
 									value={week.label}
 									disabled={!editableWeekIds.includes(week.id)}
-									className="flex flex-col items-start gap-1 px-4 py-3 rounded-lg border data-[state=inactive]:bg-background data-[state=inactive]:text-foreground data-[state=inactive]:border-border data-[state=inactive]:hover:border-primary/50 data-[state=inactive]:hover:bg-accent data-[state=active]:bg-primary/5 data-[state=active]:text-primary data-[state=active]:border-primary data-[state=active]:shadow-sm data-[state=active]:ring-2 data-[state=active]:ring-primary/20 transition-all"
+									className="after:hidden flex flex-col items-start gap-1 px-4 py-3 rounded-lg border data-[state=inactive]:bg-background data-[state=inactive]:text-foreground data-[state=inactive]:border-border data-[state=inactive]:hover:border-primary/50 data-[state=inactive]:hover:bg-accent data-[state=active]:bg-primary/5 data-[state=active]:text-primary data-[state=active]:border-primary data-[state=active]:shadow-sm data-[state=active]:ring-2 data-[state=active]:ring-primary/20 transition-all"
 								>
 									<span className="text-sm font-semibold">{week.label}</span>
 									<span
@@ -122,6 +123,7 @@ export default function WeeklyCommitmentPage() {
 				<WeeklyCommitmentTable
 					rows={rows}
 					selected={selected}
+					dirtyRows={dirtyRows}
 					isWeekOpen={isWeekOpen}
 					onToggleSelected={toggleSelected}
 					onChange={handleChange}

@@ -55,7 +55,7 @@ export function TabsList({ className, ...props }: React.HTMLAttributes<HTMLDivEl
 	return (
 		<div
 			className={cn(
-				"inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground",
+				"inline-flex w-full items-center justify-start gap-6 border-b border-border text-muted-foreground",
 				className,
 			)}
 			role="tablist"
@@ -82,10 +82,11 @@ export function TabsTrigger({ value, className, children, ...props }: TabsTrigge
 			aria-controls={`tab-content-${safeValue}`}
 			data-state={isActive ? "active" : "inactive"}
 			className={cn(
-				"inline-flex min-w-[100px] items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium",
-				"ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+				"relative inline-flex items-center justify-center gap-1.5 whitespace-nowrap px-1 pb-3 pt-1 text-sm font-medium text-muted-foreground transition-colors",
+				"hover:text-foreground focus-visible:text-foreground focus-visible:outline-none",
 				"disabled:pointer-events-none disabled:opacity-50",
-				"data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm",
+				"after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:origin-left after:scale-x-0 after:rounded-full after:bg-primary after:transition-transform after:duration-200 after:ease-out",
+				"data-[state=active]:text-foreground data-[state=active]:after:scale-x-100",
 				className,
 			)}
 			onClick={() => onValueChange?.(value)}
@@ -112,7 +113,7 @@ export function TabsContent({ value, className, children, ...props }: TabsConten
 			role="tabpanel"
 			id={`tab-content-${safeValue}`}
 			aria-labelledby={`tab-trigger-${safeValue}`}
-			className={cn("mt-2", className)}
+			className={cn("mt-4", className)}
 			{...props}
 		>
 			{children}

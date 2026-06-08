@@ -598,6 +598,35 @@
 	}
 }
 
+/* Skeleton loading sweep (left-to-right shine) */
+@keyframes skeleton-sweep {
+	0% {
+		transform: translateX(-100%);
+	}
+	100% {
+		transform: translateX(100%);
+	}
+}
+
+/* Radix Collapsible / nav expand + collapse */
+@keyframes collapsible-down {
+	from {
+		height: 0;
+	}
+	to {
+		height: var(--radix-collapsible-content-height);
+	}
+}
+
+@keyframes collapsible-up {
+	from {
+		height: var(--radix-collapsible-content-height);
+	}
+	to {
+		height: 0;
+	}
+}
+
 /* Premium selection color */
 ::selection {
 	background-color: oklch(0.7226 0.1621 49.3683 / 0.25);
@@ -666,4 +695,16 @@ textarea {
 }
 .stagger-6 {
 	animation-delay: 0.3s;
+}
+
+/* Respect users who ask the OS to minimise motion. */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	::before,
+	::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
 }

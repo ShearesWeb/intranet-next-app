@@ -5,7 +5,7 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/auth-context";
 
 import { useRoleAuth } from "@/hooks/use-role-auth";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { DashboardCardsSkeleton } from "@/components/layout/dashboard-skeletons";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { PointsRecapCard } from "@/components/ranking/points-recap-card";
 import { getCoreServiceFlags } from "@/lib/feature-flags";
@@ -45,7 +45,7 @@ function ActionCard({ href, icon: Icon, title, description }: ActionCardProps) {
 							{description}
 						</p>
 					</div>
-					<ChevronRight className="h-5 w-5 text-muted-foreground/50 transition-colors group-hover:text-orange-500" />
+					<ChevronRight className="h-5 w-5 text-muted-foreground/50 transition-colors transition-transform group-hover:text-orange-500 group-hover:translate-x-1" />
 				</div>
 			</div>
 		</Link>
@@ -63,13 +63,13 @@ export default function Dashboard() {
 	}, []);
 
 	if (!user) {
-		return <LoadingSpinner message="Loading dashboard..." />;
+		return <DashboardCardsSkeleton count={2} columns={2} />;
 	}
 
 	return (
 		<div className="flex flex-col space-y-6 p-4 md:p-6">
 			{/* Welcome Section */}
-			<Card className="border-none shadow-lg bg-gradient-to-r from-orange-50/50 to-white">
+			<Card className="group border-none shadow-lg bg-gradient-to-r from-orange-50/50 to-white">
 				<CardHeader>
 					<div className="flex items-center gap-2 text-muted-foreground mb-1">
 						<CalendarDays className="h-5 w-5 text-orange-400" />
@@ -85,7 +85,7 @@ export default function Dashboard() {
 						</h2>
 					</div>
 					<CardTitle className="text-3xl md:text-5xl font-[family-name:var(--font-fredoka)] tracking-wide">
-						<span className="bg-gradient-to-r from-orange-600 via-amber-500 to-orange-600 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient">
+						<span className="bg-gradient-to-r from-orange-600 via-amber-500 to-orange-600 bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient transition-colors group-hover:text-orange-600">
 							{user.name || user.email}
 						</span>
 					</CardTitle>

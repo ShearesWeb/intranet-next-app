@@ -8,8 +8,7 @@ import { DayDetailPanel } from "@/components/facilities/day-detail-panel";
 import { VenueFilter } from "@/components/facilities/venue-filter";
 import { TypeFilter } from "@/components/facilities/type-filter";
 import { ClaimDialog } from "@/components/facilities/claim-dialog";
-import { FacilitySlotWithClaims, BookingType } from "@/types/facilities";
-import { Skeleton } from "@/components/ui/skeleton";
+import { FacilitySlotWithClaims, FacilityClaim, BookingType } from "@/types/facilities";
 import { toast } from "sonner";
 
 function getMonthRange(year: number, month: number) {
@@ -84,6 +83,37 @@ export default function FacilitiesPage() {
 		setMonth(m);
 	}
 
+	function handleOptimisticClaim(slotId: number, ccaId: number, activity: string) {
+		const ccaName = chairCcas.find((c) => c.id === ccaId)?.name ?? "";
+		const pendingClaim: FacilityClaim = {
+			id: -Date.now(),
+			facility_id: slotId,
+			cca_id: ccaId,
+			cca_name: ccaName,
+			activity,
+			status: "pending",
+			recurrence_group: null,
+			claimed_by: user ? String(user.id) : "",
+			claimed_at: new Date().toISOString(),
+			resolved_at: null,
+			resolved_by: null,
+		};
+
+		let previous: FacilitySlotWithClaims | undefined;
+		setSlots((prev) =>
+			prev.map((s) => {
+				if (s.id !== slotId) return s;
+				previous = s;
+				return { ...s, claims: [...s.claims, pendingClaim], user_cca_claim: pendingClaim };
+			}),
+		);
+
+		return () => {
+			if (!previous) return;
+			setSlots((prev) => prev.map((s) => (s.id === slotId ? previous! : s)));
+		};
+	}
+
 	async function handleRelease(claimId: number) {
 		try {
 			const res = await fetch(`/api/facilities/claims/${claimId}`, {
@@ -112,33 +142,23 @@ export default function FacilitiesPage() {
 
 			<div className="flex flex-col gap-6 lg:flex-row">
 				<div className="w-full lg:w-[320px] shrink-0">
-					{loading ? (
-						<Skeleton className="h-[320px] w-full rounded-lg" />
-					) : (
-						<MonthGrid
-							year={year}
-							month={month}
-							selectedDate={selectedDate}
-							slots={filteredSlots}
-							onSelectDate={setSelectedDate}
-							onChangeMonth={handleChangeMonth}
-						/>
-					)}
+					<MonthGrid
+						year={year}
+						month={month}
+						selectedDate={selectedDate}
+						slots={filteredSlots}
+						onSelectDate={setSelectedDate}
+						onChangeMonth={handleChangeMonth}
+					/>
 				</div>
 
 				<div className="flex-1 min-w-0">
-					{loading ? (
-						<div className="space-y-3">
-							<Skeleton className="h-6 w-48" />
-							<Skeleton className="h-16 w-full" />
-							<Skeleton className="h-16 w-full" />
-							<Skeleton className="h-16 w-full" />
-						</div>
-					) : selectedDate ? (
+					{selectedDate ? (
 						<DayDetailPanel
 							date={selectedDate}
 							slots={daySlots}
 							isChair={isChair}
+							loading={loading}
 							onClaim={setClaimSlot}
 							onRelease={handleRelease}
 						/>
@@ -153,6 +173,7 @@ export default function FacilitiesPage() {
 				chairCcas={chairCcas}
 				onClose={() => setClaimSlot(null)}
 				onSuccess={fetchSlots}
+				onOptimisticClaim={handleOptimisticClaim}
 			/>
 		</div>
 	);

@@ -5,8 +5,8 @@ import { type ColumnDef } from "@tanstack/react-table";
 import { Users, BarChart3, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/table/data-table";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { PageHeader } from "@/components/layout/page-header";
+import { DashboardTableSkeleton } from "@/components/layout/dashboard-skeletons";
 import { EmptyState } from "@/components/layout/empty-state";
 import { ErrorCard } from "@/components/layout/error-card";
 import Link from "next/link";
@@ -49,7 +49,7 @@ export default function CCAAdmin() {
 	const { data: ccas, loading: loadingCCAs, error } = useManagedCcas();
 
 	if (loadingCCAs) {
-		return <LoadingSpinner message="Loading your CCA data..." />;
+		return <DashboardTableSkeleton rows={6} cols={4} />;
 	}
 
 	if (error && ccas.length === 0) {

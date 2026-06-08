@@ -26,9 +26,9 @@ export function TypeFilter({ selected, onChange }: TypeFilterProps) {
 			<button
 				onClick={() => onChange([])}
 				className={cn(
-					"rounded-full px-3 py-1 text-xs font-medium transition-colors",
+					"rounded-full px-3 py-1 text-xs font-medium transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
 					allSelected
-						? "bg-primary text-primary-foreground"
+						? "bg-primary text-primary-foreground shadow-sm"
 						: "bg-muted text-muted-foreground hover:bg-muted/80",
 				)}
 			>
@@ -42,14 +42,19 @@ export function TypeFilter({ selected, onChange }: TypeFilterProps) {
 						key={type}
 						onClick={() => toggle(type)}
 						className={cn(
-							"rounded-full px-3 py-1 text-xs font-medium transition-colors",
-							isActive ? "text-white" : "bg-muted text-muted-foreground hover:bg-muted/80",
+							"rounded-full px-3 py-1 text-xs font-medium transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+							isActive
+								? "text-white shadow-sm"
+								: "bg-muted text-muted-foreground hover:bg-muted/80",
 						)}
 						style={isActive ? { backgroundColor: config.color } : undefined}
 					>
 						<span
-							className="mr-1.5 inline-block h-2 w-2 rounded-full"
-							style={{ backgroundColor: config.color }}
+							className={cn(
+								"mr-1.5 inline-block h-2 w-2 rounded-full border",
+								isActive ? "border-white bg-transparent" : "border-transparent",
+							)}
+							style={isActive ? undefined : { backgroundColor: config.color }}
 						/>
 						{config.label}
 					</button>
