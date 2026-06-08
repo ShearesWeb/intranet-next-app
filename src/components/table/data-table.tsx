@@ -15,6 +15,7 @@ import {
 	useReactTable,
 } from "@tanstack/react-table";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
 	Table,
 	TableBody,
@@ -48,6 +49,8 @@ interface DataTableProps<TData, TId = number | string> {
 	selectedIds?: Set<TId>;
 	onSelectionChange?: (id: TId) => void;
 	idField?: keyof TData;
+	/** Render shimmer skeleton rows instead of data (e.g. during refetch/sort). */
+	isLoading?: boolean;
 }
 
 export function DataTable<TData extends object, TId = number | string>({
@@ -66,6 +69,7 @@ export function DataTable<TData extends object, TId = number | string>({
 	selectedIds,
 	onSelectionChange,
 	idField = "id" as keyof TData,
+	isLoading = false,
 }: DataTableProps<TData, TId>) {
 	const [sorting, setSorting] = React.useState<SortingState>([]);
 	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -172,7 +176,19 @@ export function DataTable<TData extends object, TId = number | string>({
 						))}
 					</TableHeader>
 					<TableBody>
-						{table.getRowModel().rows.length ? (
+						{isLoading ? (
+							Array.from({ length: Math.min(pageSize, 5) }).map((_, rowIndex) => (
+								<TableRow key={`skeleton-${rowIndex}`} className="hover:bg-transparent">
+									{tableColumns.map((_col, colIndex) => (
+										<TableCell key={colIndex}>
+											<Skeleton
+												className={cn("h-4", colIndex === 0 ? "w-2/3" : "w-full max-w-[8rem]")}
+											/>
+										</TableCell>
+									))}
+								</TableRow>
+							))
+						) : table.getRowModel().rows.length ? (
 							table.getRowModel().rows.map((row) => {
 								const id = row.original[idField] as TId;
 								const isSelected = selectionActive && selectedIds?.has(id);
@@ -183,9 +199,9 @@ export function DataTable<TData extends object, TId = number | string>({
 										key={row.id}
 										data-state={isSelected && "selected"}
 										className={cn(
-											"transition-colors hover:bg-muted/50",
-											isSelected && "bg-orange-50",
-											rowClickable && "cursor-pointer",
+											"transition-colors",
+											isSelected && "ring-1 ring-inset ring-primary/30",
+											rowClickable && "cursor-pointer hover:bg-orange-50/80",
 										)}
 										onClick={
 											rowClickable

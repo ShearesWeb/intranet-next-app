@@ -1,13 +1,16 @@
 "use client";
 
 import { CalendarDeclaration } from "@/types/declarations";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Clock, CheckCircle2, Users, XCircle } from "lucide-react";
 
 interface SubsidyStatsCardsProps {
 	declarations: CalendarDeclaration[];
+	/** Render shimmer placeholders for the counts while data is loading. */
+	loading?: boolean;
 }
 
-export function SubsidyStatsCards({ declarations }: SubsidyStatsCardsProps) {
+export function SubsidyStatsCards({ declarations, loading = false }: SubsidyStatsCardsProps) {
 	const pending = declarations.filter((d) => d.status === "pending").length;
 	const needsAction = declarations.filter(
 		(d) => d.status === "approved" && (d.member_count === 0 || d.pending_member_count > 0),
@@ -52,9 +55,13 @@ export function SubsidyStatsCards({ declarations }: SubsidyStatsCardsProps) {
 						<card.icon className="h-4 w-4" style={{ color: card.color }} />
 						<span className="text-xs font-medium text-muted-foreground">{card.label}</span>
 					</div>
-					<div className="mt-2 text-2xl font-bold tabular-nums" style={{ color: card.color }}>
-						{card.value}
-					</div>
+					{loading ? (
+						<Skeleton className="mt-2 h-8 w-10" />
+					) : (
+						<div className="mt-2 text-2xl font-bold tabular-nums" style={{ color: card.color }}>
+							{card.value}
+						</div>
+					)}
 				</div>
 			))}
 		</div>

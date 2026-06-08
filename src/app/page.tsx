@@ -28,7 +28,10 @@ const Page = async () => {
 			<div className="relative z-10 container">
 				<div className="mx-auto flex max-w-5xl flex-col items-center">
 					<div className="flex flex-col items-center gap-6 text-center">
-						<div className="rounded-xl bg-background/30 p-4 shadow-sm backdrop-blur-sm">
+						<div
+							className="rounded-xl bg-background/30 p-4 shadow-sm backdrop-blur-sm animate-[fade-in-up_0.3s_ease-out_both]"
+							style={{ animationDelay: "0.05s" }}
+						>
 							<Image
 								src="/images/shweb-logo.png"
 								alt="logo"
@@ -38,17 +41,26 @@ const Page = async () => {
 							/>
 						</div>
 						<div>
-							<h1 className="mb-4 text-2xl font-bold tracking-tight text-pretty lg:text-5xl">
+							<h1
+								className="mb-4 text-2xl font-bold tracking-tight text-pretty lg:text-5xl animate-[fade-in-up_0.3s_ease-out_both]"
+								style={{ animationDelay: "0.1s" }}
+							>
 								Welcome to the <span className="text-primary">Sheares Intranet</span>
 							</h1>
-							<p className="text-muted-foreground text-base lg:text-lg max-w-xl">
+							<p
+								className="text-muted-foreground text-base lg:text-lg max-w-xl animate-[fade-in-up_0.3s_ease-out_both]"
+								style={{ animationDelay: "0.15s" }}
+							>
 								Manage your CCAs, track your points, and handle subsidy declarations — all in one
 								place.
 							</p>
 						</div>
-						<div className="mt-6 flex justify-center gap-3">
+						<div
+							className="mt-6 flex justify-center gap-3 animate-[fade-in-up_0.3s_ease-out_both]"
+							style={{ animationDelay: "0.2s" }}
+						>
 							<Link href={"/auth/login"}>
-								<Button className="shadow-sm transition-all hover:shadow hover:scale-105 text-lg md:text-xl px-6 py-5 md:px-8 md:py-6">
+								<Button className="shadow-sm transition-all hover:shadow hover:scale-105 active:scale-[0.95] text-lg md:text-xl px-6 py-5 md:px-8 md:py-6">
 									Login Now
 								</Button>
 							</Link>

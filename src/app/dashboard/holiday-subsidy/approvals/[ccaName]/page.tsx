@@ -6,7 +6,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { DashboardFormSkeleton } from "@/components/layout/dashboard-skeletons";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/layout/page-header";
@@ -91,7 +91,7 @@ export default function HolidaySubsidyApprovalDetailsPage() {
 	}
 
 	if (loading) {
-		return <LoadingSpinner message="Loading subsidy approvals..." />;
+		return <DashboardFormSkeleton fields={4} />;
 	}
 
 	if (!ccaId) return null;
@@ -106,8 +106,14 @@ export default function HolidaySubsidyApprovalDetailsPage() {
 						<Button variant="outline" size="sm" onClick={handleBack}>
 							← Back to approvals
 						</Button>
-						<Button onClick={save} disabled={!hasChanges || saving} size="sm">
-							{saving ? "Saving..." : "Save changes"}
+						<Button
+							onClick={save}
+							disabled={!hasChanges}
+							isLoading={saving}
+							loadingText="Saving…"
+							size="sm"
+						>
+							Save changes
 						</Button>
 					</div>
 				}

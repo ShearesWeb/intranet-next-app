@@ -84,9 +84,9 @@ export function OverrideDialog({ conflict, onClose, onSuccess }: OverrideDialogP
 								<button
 									key={c.claim.id}
 									onClick={() => setSelectedCcaId(c.claim.cca_id)}
-									className={`w-full rounded-md border p-3 text-left text-sm transition-colors ${
+									className={`w-full rounded-md border p-3 text-left text-sm transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
 										selectedCcaId === c.claim.cca_id
-											? "border-primary bg-primary/5"
+											? "border-primary bg-primary/5 ring-1 ring-primary/40 shadow-sm"
 											: "border-border hover:bg-accent/50"
 									}`}
 								>
@@ -113,8 +113,13 @@ export function OverrideDialog({ conflict, onClose, onSuccess }: OverrideDialogP
 					<Button variant="outline" onClick={onClose} disabled={submitting}>
 						Cancel
 					</Button>
-					<Button onClick={handleOverride} disabled={submitting || !selectedCcaId}>
-						{submitting ? "Assigning..." : "Assign Slot"}
+					<Button
+						onClick={handleOverride}
+						isLoading={submitting}
+						loadingText="Assigning…"
+						disabled={!selectedCcaId}
+					>
+						Assign Slot
 					</Button>
 				</DialogFooter>
 			</DialogContent>

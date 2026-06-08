@@ -3,6 +3,7 @@
 import React from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { PositionTypeBadge } from "@/components/badges";
 import { OrderingTable, type OrderingTableColumn } from "@/components/table/ordering-table";
 import { AddApplicantDialog } from "@/components/allocation/add-applicant-dialog";
@@ -16,6 +17,8 @@ interface PositionCardProps {
 	onRemoveApplicant: (userId: number) => void;
 	onReorderApplicants: (newApplicants: Applicant[]) => void;
 	compact?: boolean;
+	/** Hide the CCA name label (e.g. on a per-CCA page where it's already in the header). */
+	hideCcaName?: boolean;
 }
 
 export function PositionCard({
@@ -25,6 +28,7 @@ export function PositionCard({
 	onRemoveApplicant,
 	onReorderApplicants,
 	compact = false,
+	hideCcaName = false,
 }: PositionCardProps) {
 	const columns = React.useMemo<OrderingTableColumn<Applicant>[]>(
 		() => [
@@ -48,9 +52,10 @@ export function PositionCard({
 						<Button
 							variant="ghost"
 							size="icon"
-							className="h-8 w-8 text-muted-foreground hover:text-destructive"
+							className="h-8 w-8 text-destructive/60 hover:bg-destructive/10 hover:text-destructive"
 							onClick={() => onRemoveApplicant(row.id)}
-							title="Remove applicant"
+							title={`Remove ${row.name}`}
+							aria-label={`Remove ${row.name}`}
 						>
 							<X className="h-4 w-4" />
 						</Button>
@@ -78,6 +83,9 @@ export function PositionCard({
 					columns={columns}
 					onReorder={onReorderApplicants}
 					showRankColumn={true}
+					showMoveControls={true}
+					searchable={position.applicants.length > 8}
+					searchPlaceholder="Search applicants by name, email or room..."
 					emptyMessage={'No applicants yet. Click "Add applicant" to find candidates.'}
 				/>
 			</div>
@@ -88,14 +96,19 @@ export function PositionCard({
 		<section className="flex flex-col gap-4">
 			<div className="flex flex-wrap items-start justify-between gap-3">
 				<div className="flex flex-col gap-1">
-					<div className="text-sm font-medium text-muted-foreground">{position.cca_name}</div>
+					{!hideCcaName && (
+						<div className="text-sm font-medium text-muted-foreground">{position.cca_name}</div>
+					)}
 					<div className="flex flex-wrap items-center gap-2">
 						<h2 className="text-lg font-semibold text-foreground">{position.name}</h2>
 						<PositionTypeBadge value={position.position_type} />
 						{hasChanges && (
-							<span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+							<Badge
+								variant="outline"
+								className="border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200"
+							>
 								Unsaved
-							</span>
+							</Badge>
 						)}
 					</div>
 				</div>
@@ -115,6 +128,9 @@ export function PositionCard({
 				columns={columns}
 				onReorder={onReorderApplicants}
 				showRankColumn={true}
+				showMoveControls={true}
+				searchable={position.applicants.length > 8}
+				searchPlaceholder="Search applicants by name, email or room..."
 				emptyMessage={'No applicants yet. Click "Add applicant" to find candidates.'}
 			/>
 		</section>

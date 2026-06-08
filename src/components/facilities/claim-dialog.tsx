@@ -24,6 +24,8 @@ interface ClaimDialogProps {
 	chairCcas: ChairCca[];
 	onClose: () => void;
 	onSuccess: () => void;
+	/** Optimistically mark a slot as claimed in the parent list. Return a revert fn. */
+	onOptimisticClaim?: (slotId: number, ccaId: number, activity: string) => () => void;
 }
 
 function formatTime(time: string): string {
@@ -34,7 +36,13 @@ function formatTime(time: string): string {
 	return `${displayHour}:${m} ${ampm}`;
 }
 
-export function ClaimDialog({ slot, chairCcas, onClose, onSuccess }: ClaimDialogProps) {
+export function ClaimDialog({
+	slot,
+	chairCcas,
+	onClose,
+	onSuccess,
+	onOptimisticClaim,
+}: ClaimDialogProps) {
 	const [activity, setActivity] = useState("");
 	const [selectedCcaId, setSelectedCcaId] = useState<number | null>(
 		chairCcas.length === 1 ? chairCcas[0].id : null,
@@ -57,6 +65,8 @@ export function ClaimDialog({ slot, chairCcas, onClose, onSuccess }: ClaimDialog
 		}
 
 		setSubmitting(true);
+		// Optimistically grey out / mark the slot as claimed to smooth the post-claim flicker.
+		const revert = onOptimisticClaim?.(slot!.id, selectedCcaId, activity.trim());
 		try {
 			const res = await fetch("/api/facilities/claims", {
 				method: "POST",
@@ -70,6 +80,7 @@ export function ClaimDialog({ slot, chairCcas, onClose, onSuccess }: ClaimDialog
 
 			const json = await res.json();
 			if (!res.ok) {
+				revert?.();
 				toast.error(json.error ?? "Failed to submit claim");
 				return;
 			}
@@ -84,6 +95,7 @@ export function ClaimDialog({ slot, chairCcas, onClose, onSuccess }: ClaimDialog
 			onSuccess();
 			onClose();
 		} catch {
+			revert?.();
 			toast.error("Network error — please try again");
 		} finally {
 			setSubmitting(false);
@@ -132,9 +144,9 @@ export function ClaimDialog({ slot, chairCcas, onClose, onSuccess }: ClaimDialog
 										key={cca.id}
 										type="button"
 										onClick={() => setSelectedCcaId(cca.id)}
-										className={`rounded-md border px-3 py-2 text-left text-sm transition-colors ${
+										className={`rounded-md border px-3 py-2 text-left text-sm transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
 											selectedCcaId === cca.id
-												? "border-primary bg-primary/5 font-medium text-primary"
+												? "border-primary bg-primary/5 font-medium text-primary ring-1 ring-primary/40 shadow-sm"
 												: "border-border hover:bg-accent"
 										}`}
 									>
@@ -160,12 +172,13 @@ export function ClaimDialog({ slot, chairCcas, onClose, onSuccess }: ClaimDialog
 					<Button variant="outline" onClick={onClose} disabled={submitting}>
 						Cancel
 					</Button>
-					<Button onClick={handleSubmit} disabled={submitting || !selectedCcaId}>
-						{submitting
-							? "Submitting..."
-							: selectedCca
-								? `Claim for ${selectedCca.name}`
-								: "Claim Slot"}
+					<Button
+						onClick={handleSubmit}
+						isLoading={submitting}
+						loadingText="Submitting…"
+						disabled={!selectedCcaId}
+					>
+						{selectedCca ? `Claim for ${selectedCca.name}` : "Claim Slot"}
 					</Button>
 				</DialogFooter>
 			</DialogContent>

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Plus, Search, Loader2, UserPlus } from "lucide-react";
+import { Plus, Search, Loader2, UserPlus, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -99,8 +99,19 @@ export function AddApplicantDialog({ onAddApplicant, excludedIds = [] }: AddAppl
 						placeholder="Search users…"
 						value={query}
 						onChange={(e) => setQuery(e.target.value)}
-						className="pl-9"
+						className="pl-9 pr-9"
 					/>
+					{query.length > 0 && (
+						<button
+							type="button"
+							onClick={() => setQuery("")}
+							aria-label="Clear search"
+							title="Clear search"
+							className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-1 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95"
+						>
+							<X className="h-4 w-4" />
+						</button>
+					)}
 				</div>
 
 				<div className="min-h-[200px] max-h-[320px] overflow-y-auto rounded-md border">
@@ -123,7 +134,15 @@ export function AddApplicantDialog({ onAddApplicant, excludedIds = [] }: AddAppl
 							{results.map((user) => {
 								const isExcluded = excluded.has(user.id);
 								return (
-									<li key={user.id} className="flex items-center justify-between gap-3 px-4 py-3">
+									<li
+										key={user.id}
+										onClick={isExcluded ? undefined : () => handleSelect(user)}
+										className={
+											isExcluded
+												? "flex items-center justify-between gap-3 rounded-md px-4 py-3"
+												: "flex cursor-pointer items-center justify-between gap-3 rounded-md px-4 py-3 transition-colors hover:bg-muted/50"
+										}
+									>
 										<div className="min-w-0">
 											<div className="truncate font-medium">{user.name}</div>
 											<div className="truncate text-sm text-muted-foreground">
@@ -138,7 +157,10 @@ export function AddApplicantDialog({ onAddApplicant, excludedIds = [] }: AddAppl
 										) : (
 											<Button
 												size="sm"
-												onClick={() => handleSelect(user)}
+												onClick={(e) => {
+													e.stopPropagation();
+													handleSelect(user);
+												}}
 												className="flex-shrink-0 gap-1.5"
 											>
 												<Plus className="h-4 w-4" />

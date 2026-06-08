@@ -29,9 +29,10 @@ export function PositionRankingCard({ group, ccaType, onFieldChange }: PositionR
 	const isResidentGroup = isResidentPositionType(group.position_type);
 	const renderScoreSelect = (member: CCAMember, field: ScoreField) => (
 		<select
+			key={`${member.row_key}-${field}-${member[field] || 0}`}
 			value={member[field] || 0}
 			onChange={(event) => onFieldChange(member.row_key, field, parseInt(event.target.value, 10))}
-			className="w-20 p-2 border rounded-md bg-background text-sm"
+			className="h-9 w-20 px-3 border rounded-md bg-transparent text-sm cursor-pointer transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:border-primary/60 animate-[fade-in-scale_200ms_ease-out]"
 		>
 			<option value={0}>-</option>
 			{SCORE_OPTIONS.map((score) => (
@@ -95,7 +96,10 @@ export function PositionRankingCard({ group, ccaType, onFieldChange }: PositionR
 							{group.members.map((member) => (
 								<TableRow key={member.row_key}>
 									<TableCell>
-										<div className="ml-2 flex items-center justify-center size-10 rounded-full bg-primary text-primary-foreground font-bold text-lg">
+										<div
+											key={member.ranking}
+											className="ml-2 flex items-center justify-center size-10 rounded-full bg-primary text-primary-foreground font-bold text-lg animate-[fade-in-scale_200ms_ease-out]"
+										>
 											{member.ranking}
 										</div>
 									</TableCell>

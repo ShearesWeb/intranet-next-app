@@ -23,10 +23,6 @@
 		"test:integration": "vitest run --config vitest.integration.config.mts",
 		"test:integration:watch": "vitest --config vitest.integration.config.mts",
 		"test:watch": "vitest",
-		"e2e": "playwright test --config e2e/playwright.config.ts --project chromium",
-		"e2e:headed": "playwright test --config e2e/playwright.config.ts --project headed --workers 1",
-		"e2e:ui": "playwright test --config e2e/playwright.config.ts --ui",
-		"e2e:test": "tsx e2e/cli.ts test",
 		"e2e:login": "tsx e2e/cli.ts login",
 		"e2e:personas": "tsx e2e/cli.ts personas"
 	},

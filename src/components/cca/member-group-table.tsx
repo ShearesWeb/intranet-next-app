@@ -135,7 +135,7 @@ function buildMemberColumns(
 							onChange={(e) =>
 								onUpdateCommitment(row.original.user_id, e.target.value as CommitmentPeriod)
 							}
-							className="border rounded p-1 text-sm bg-transparent cursor-pointer hover:bg-gray-100 w-28"
+							className="h-9 w-28 px-3 border rounded-md bg-transparent text-sm cursor-pointer transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:border-primary/60"
 							onClick={(e) => e.stopPropagation()}
 						>
 							<option value="full-year">Full Year</option>
@@ -236,9 +236,9 @@ function buildMemberColumns(
 							</DropdownMenu>
 						) : (
 							<Button
+								variant="destructive"
 								size="sm"
 								onClick={() => onRemoveMember(row.original.user_id, row.original.name)}
-								className="bg-red-500 text-white hover:bg-red-400 px-4 py-2 shadow-md font-bold cursor-pointer"
 							>
 								Remove
 							</Button>
@@ -315,7 +315,7 @@ export function MemberGroupTable({
 			</div>
 
 			{members.length === 0 ? (
-				<div className="p-4 border border-dashed border-gray-300 rounded-md text-gray-500">
+				<div className="p-4 border border-dashed rounded-md text-muted-foreground">
 					No {title.toLowerCase()} found.
 				</div>
 			) : (

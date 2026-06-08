@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/table/data-table";
 import { PositionTypeBadge } from "@/components/badges";
 import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Save, Info } from "lucide-react";
 import type { MemberAssignment } from "@/types/declarations";
@@ -25,6 +26,7 @@ export function SubsidyMemberTable({ ccaId, ccaName, day, onSaved }: SubsidyMemb
 	const [loading, setLoading] = useState(true);
 	const [saving, setSaving] = useState(false);
 	const [selected, setSelected] = useState<Set<number>>(new Set());
+	const [dirtyRows, setDirtyRows] = useState<Set<number>>(new Set());
 
 	const fetchMembers = useCallback(async () => {
 		setLoading(true);
@@ -35,6 +37,7 @@ export function SubsidyMemberTable({ ccaId, ccaName, day, onSaved }: SubsidyMemb
 				const fetched: MemberAssignment[] = json.data?.members ?? [];
 				setMembers(fetched);
 				setSelected(new Set(fetched.filter((m) => m.submitted).map((m) => m.user_id)));
+				setDirtyRows(new Set());
 			}
 		} catch {
 			toast.error("Failed to load members");
@@ -53,6 +56,7 @@ export function SubsidyMemberTable({ ccaId, ccaName, day, onSaved }: SubsidyMemb
 		value: string | number | null,
 	) {
 		setMembers((prev) => prev.map((m) => (m.user_id === userId ? { ...m, [key]: value } : m)));
+		setDirtyRows((prev) => new Set(prev).add(userId));
 	}
 
 	function toggleSelected(userId: number) {
@@ -118,12 +122,29 @@ export function SubsidyMemberTable({ ccaId, ccaName, day, onSaved }: SubsidyMemb
 			{
 				accessorKey: "name",
 				header: () => <div className="font-semibold">Member</div>,
-				cell: ({ row }) => (
-					<div className="flex flex-col min-w-[160px]">
-						<span className="font-semibold text-sm leading-tight">{row.original.name}</span>
-						<span className="text-xs text-muted-foreground mt-0.5">{row.original.email}</span>
-					</div>
-				),
+				cell: ({ row }) => {
+					const dirty = dirtyRows.has(row.original.user_id);
+					return (
+						<div
+							data-dirty={dirty || undefined}
+							className={cn(
+								"flex flex-col min-w-[160px] -my-3 -ml-5 py-3 pl-5 pr-3",
+								dirty && "border-l-2 border-l-amber-500 bg-amber-50/60 dark:bg-amber-950/20",
+							)}
+						>
+							<div className="flex items-center gap-1.5">
+								<span className="font-semibold text-sm leading-tight">{row.original.name}</span>
+								{dirty && (
+									<span
+										className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500"
+										aria-label="Unsaved changes"
+									/>
+								)}
+							</div>
+							<span className="text-xs text-muted-foreground mt-0.5">{row.original.email}</span>
+						</div>
+					);
+				},
 			},
 			{
 				accessorKey: "role",
@@ -206,7 +227,7 @@ export function SubsidyMemberTable({ ccaId, ccaName, day, onSaved }: SubsidyMemb
 				},
 			},
 		],
-		[],
+		[dirtyRows],
 	);
 
 	if (loading) {
@@ -245,9 +266,15 @@ export function SubsidyMemberTable({ ccaId, ccaName, day, onSaved }: SubsidyMemb
 						</span>
 					</div>
 				</div>
-				<Button onClick={handleSave} disabled={saving} size="sm" className="gap-2">
+				<Button
+					onClick={handleSave}
+					isLoading={saving}
+					loadingText="Saving…"
+					size="sm"
+					className="gap-2"
+				>
 					<Save className="h-4 w-4" />
-					{saving ? "Saving..." : "Save"}
+					Save
 				</Button>
 			</div>
 

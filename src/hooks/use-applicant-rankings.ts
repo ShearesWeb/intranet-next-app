@@ -6,7 +6,7 @@ import { diffApplicantsForSave } from "@/lib/allocation/applicant-diff";
 import type { Applicant, CcaPositionGroup, Position } from "@/types/applicants";
 import type { UserSearchResult } from "@/types/members";
 
-export function useApplicantRankings(userEmail: string | undefined) {
+export function useApplicantRankings(userEmail: string | undefined, opts?: { ccaId?: number }) {
 	const [positions, setPositions] = useState<Position[]>([]);
 	const [ccaOrder, setCcaOrder] = useState<Array<{ cca_id: number; cca_name: string }>>([]);
 	const [loading, setLoading] = useState(true);
@@ -177,8 +177,17 @@ export function useApplicantRankings(userEmail: string | undefined) {
 		[originalOrders],
 	);
 
+	// When an `opts.ccaId` is given, scope the view (and saving) to that one CCA.
+	// Positions for other CCAs stay loaded but, since they aren't rendered/edited,
+	// they never become dirty — so save is naturally limited to this CCA.
+	const ccaId = opts?.ccaId;
+	const scopedPositions = useMemo(
+		() => (ccaId == null ? positions : positions.filter((p) => p.cca_id === ccaId)),
+		[positions, ccaId],
+	);
+
 	const handleSaveAll = useCallback(async () => {
-		const dirty = positions.filter((p) => hasChanges[p.id]);
+		const dirty = scopedPositions.filter((p) => hasChanges[p.id]);
 		if (dirty.length === 0) return;
 		setIsSaving(true);
 		const failures: string[] = [];
@@ -200,9 +209,9 @@ export function useApplicantRankings(userEmail: string | undefined) {
 		} finally {
 			setIsSaving(false);
 		}
-	}, [positions, hasChanges, saveRankingsForPosition]);
+	}, [scopedPositions, hasChanges, saveRankingsForPosition]);
 
-	const hasAnyChanges = Object.values(hasChanges).some(Boolean);
+	const hasAnyChanges = scopedPositions.some((p) => hasChanges[p.id]);
 
 	const ccaGroups = useMemo<CcaPositionGroup[]>(() => {
 		const map = new Map<number, CcaPositionGroup>();
@@ -220,9 +229,14 @@ export function useApplicantRankings(userEmail: string | undefined) {
 		return Array.from(map.values()).filter((g) => g.positions.length > 0);
 	}, [positions, ccaOrder]);
 
+	const scopedCcaGroups = useMemo(
+		() => (ccaId == null ? ccaGroups : ccaGroups.filter((g) => g.cca_id === ccaId)),
+		[ccaGroups, ccaId],
+	);
+
 	return {
-		positions,
-		ccaGroups,
+		positions: scopedPositions,
+		ccaGroups: scopedCcaGroups,
 		loading,
 		isSaving,
 		hasChanges,

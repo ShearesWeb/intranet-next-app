@@ -74,7 +74,15 @@ export default function HolidaySubsidyApprovalsPage() {
 		setMemberTarget(null);
 	}
 
+	// Optimistically flip the declaration's local status, then reconcile with the
+	// server. On failure we restore the previous status and surface the error.
+	function applyOptimisticStatus(id: number, status: CalendarDeclaration["status"]) {
+		setDeclarations((prev) => prev.map((d) => (d.id === id ? { ...d, status } : d)));
+	}
+
 	async function handleApprove(decl: CalendarDeclaration) {
+		const previousStatus = decl.status;
+		applyOptimisticStatus(decl.id, "approved");
 		try {
 			const res = await fetch(`/api/holiday-subsidy/approvals/${decl.cca_id}`, {
 				method: "PATCH",
@@ -85,17 +93,21 @@ export default function HolidaySubsidyApprovalsPage() {
 			});
 			if (!res.ok) {
 				const json = await res.json();
+				applyOptimisticStatus(decl.id, previousStatus);
 				toast.error(json.error ?? "Failed to approve");
 				return;
 			}
 			toast.success(`Approved — ${decl.cca_name}`);
 			fetchDeclarations();
 		} catch {
+			applyOptimisticStatus(decl.id, previousStatus);
 			toast.error("Network error");
 		}
 	}
 
 	async function handleReject(decl: CalendarDeclaration) {
+		const previousStatus = decl.status;
+		applyOptimisticStatus(decl.id, "rejected");
 		try {
 			const res = await fetch(`/api/holiday-subsidy/approvals/${decl.cca_id}`, {
 				method: "PATCH",
@@ -106,6 +118,7 @@ export default function HolidaySubsidyApprovalsPage() {
 			});
 			if (!res.ok) {
 				const json = await res.json();
+				applyOptimisticStatus(decl.id, previousStatus);
 				toast.error(json.error ?? "Failed to reject");
 				return;
 			}
@@ -115,6 +128,7 @@ export default function HolidaySubsidyApprovalsPage() {
 			}
 			fetchDeclarations();
 		} catch {
+			applyOptimisticStatus(decl.id, previousStatus);
 			toast.error("Network error");
 		}
 	}
@@ -147,46 +161,58 @@ export default function HolidaySubsidyApprovalsPage() {
 				description="Review and approve CCA subsidy declarations across all CCAs."
 			/>
 
-			{!loading && (
-				<div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-					<div className="rounded-lg border bg-card p-4">
-						<div className="flex items-center gap-2">
-							<Clock className="h-4 w-4 text-[#fbbf24]" />
-							<span className="text-xs font-medium text-muted-foreground">Pending</span>
-						</div>
-						<div className="mt-2 text-2xl font-bold tabular-nums text-[#fbbf24]">
-							{pendingCount}
-						</div>
+			<div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+				<div className="rounded-lg border bg-card p-4">
+					<div className="flex items-center gap-2">
+						<Clock className="h-4 w-4 text-[#fbbf24]" />
+						<span className="text-xs font-medium text-muted-foreground">Pending</span>
 					</div>
-					<div className="rounded-lg border bg-card p-4">
-						<div className="flex items-center gap-2">
-							<Users className="h-4 w-4 text-[#3b82f6]" />
-							<span className="text-xs font-medium text-muted-foreground">Member Declarations</span>
-						</div>
+					{loading ? (
+						<Skeleton className="mt-2 h-8 w-10" />
+					) : (
+						<div className="mt-2 text-2xl font-bold tabular-nums text-[#fbbf24]">{pendingCount}</div>
+					)}
+				</div>
+				<div className="rounded-lg border bg-card p-4">
+					<div className="flex items-center gap-2">
+						<Users className="h-4 w-4 text-[#3b82f6]" />
+						<span className="text-xs font-medium text-muted-foreground">Member Declarations</span>
+					</div>
+					{loading ? (
+						<Skeleton className="mt-2 h-8 w-10" />
+					) : (
 						<div className="mt-2 text-2xl font-bold tabular-nums text-[#3b82f6]">
 							{memberReviewCount}
 						</div>
+					)}
+				</div>
+				<div className="rounded-lg border bg-card p-4">
+					<div className="flex items-center gap-2">
+						<CheckCircle2 className="h-4 w-4 text-[#10b981]" />
+						<span className="text-xs font-medium text-muted-foreground">Approved</span>
 					</div>
-					<div className="rounded-lg border bg-card p-4">
-						<div className="flex items-center gap-2">
-							<CheckCircle2 className="h-4 w-4 text-[#10b981]" />
-							<span className="text-xs font-medium text-muted-foreground">Approved</span>
-						</div>
+					{loading ? (
+						<Skeleton className="mt-2 h-8 w-10" />
+					) : (
 						<div className="mt-2 text-2xl font-bold tabular-nums text-[#10b981]">
 							{approvedCount}
 						</div>
+					)}
+				</div>
+				<div className="rounded-lg border bg-card p-4">
+					<div className="flex items-center gap-2">
+						<XCircle className="h-4 w-4 text-[#f87171]" />
+						<span className="text-xs font-medium text-muted-foreground">Rejected</span>
 					</div>
-					<div className="rounded-lg border bg-card p-4">
-						<div className="flex items-center gap-2">
-							<XCircle className="h-4 w-4 text-[#f87171]" />
-							<span className="text-xs font-medium text-muted-foreground">Rejected</span>
-						</div>
+					{loading ? (
+						<Skeleton className="mt-2 h-8 w-10" />
+					) : (
 						<div className="mt-2 text-2xl font-bold tabular-nums text-[#f87171]">
 							{rejectedCount}
 						</div>
-					</div>
+					)}
 				</div>
-			)}
+			</div>
 
 			<div className="flex flex-col gap-6 lg:flex-row">
 				<div className="w-full lg:w-[320px] shrink-0">

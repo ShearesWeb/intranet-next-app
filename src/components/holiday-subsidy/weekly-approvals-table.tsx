@@ -5,6 +5,8 @@ import { type ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/table/data-table";
 import { PositionTypeBadge } from "@/components/badges";
+import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
 import { Check, X, Info, AlertCircle } from "lucide-react";
 import type { WeeklyApprovalRow, WeeklyApprovalStatus } from "@/types/weekly";
 
@@ -54,12 +56,29 @@ export function WeeklyApprovalsTable({
 			{
 				accessorKey: "name",
 				header: () => <div className="font-semibold">Member</div>,
-				cell: ({ row }) => (
-					<div className="flex flex-col min-w-[120px]">
-						<span className="font-semibold text-sm leading-tight">{row.original.name}</span>
-						<span className="text-xs text-muted-foreground">{row.original.email}</span>
-					</div>
-				),
+				cell: ({ row }) => {
+					const staged = pendingStatus.has(row.original.id);
+					return (
+						<div
+							data-staged={staged || undefined}
+							className={cn(
+								"flex flex-col min-w-[120px] -my-2 -ml-3 py-2 pl-3 pr-2",
+								staged && "border-l-2 border-l-amber-500 bg-amber-50 dark:bg-amber-950/20",
+							)}
+						>
+							<div className="flex items-center gap-1.5">
+								<span className="font-semibold text-sm leading-tight">{row.original.name}</span>
+								{staged && (
+									<span
+										className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500"
+										aria-label="Staged change"
+									/>
+								)}
+							</div>
+							<span className="text-xs text-muted-foreground">{row.original.email}</span>
+						</div>
+					);
+				},
 			},
 			{
 				accessorKey: "role",
@@ -177,7 +196,7 @@ export function WeeklyApprovalsTable({
 			{isLoadingData ? (
 				<div className="flex items-center justify-center py-12">
 					<div className="flex flex-col items-center gap-2">
-						<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+						<Spinner className="h-8 w-8 text-primary" />
 						<p className="text-sm text-muted-foreground">Loading submissions...</p>
 					</div>
 				</div>

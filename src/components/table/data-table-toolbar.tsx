@@ -48,7 +48,7 @@ export function DataTableToolbar<TData>({
 						.map((column) => (
 							<DropdownMenuCheckboxItem
 								key={column.id}
-								className="capitalize"
+								className="capitalize transition-colors"
 								checked={column.getIsVisible()}
 								onCheckedChange={(value) => column.toggleVisibility(!!value)}
 							>

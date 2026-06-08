@@ -11,8 +11,8 @@ type ManagedSlot = FacilityBooking & { claim_count: number };
 interface ManageDayPanelProps {
 	date: string;
 	slots: ManagedSlot[];
-	onDelete: (id: number) => void;
-	onBatchDelete: (ids: number[]) => void;
+	onDelete: (id: number) => Promise<void> | void;
+	onBatchDelete: (ids: number[]) => Promise<void> | void;
 }
 
 function formatDisplayDate(dateStr: string): string {
@@ -34,6 +34,8 @@ function formatTime(time: string): string {
 
 export function ManageDayPanel({ date, slots, onDelete, onBatchDelete }: ManageDayPanelProps) {
 	const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+	const [batchDeleting, setBatchDeleting] = useState(false);
+	const [deletingId, setDeletingId] = useState<number | null>(null);
 
 	const sorted = [...slots].sort((a, b) => {
 		const vCmp = a.sub_venue.localeCompare(b.sub_venue);
@@ -60,6 +62,25 @@ export function ManageDayPanel({ date, slots, onDelete, onBatchDelete }: ManageD
 		}
 	}
 
+	async function handleBatchDelete() {
+		setBatchDeleting(true);
+		try {
+			await onBatchDelete([...selectedIds]);
+			setSelectedIds(new Set());
+		} finally {
+			setBatchDeleting(false);
+		}
+	}
+
+	async function handleDelete(id: number) {
+		setDeletingId(id);
+		try {
+			await onDelete(id);
+		} finally {
+			setDeletingId(null);
+		}
+	}
+
 	return (
 		<div className="flex-1 min-w-0">
 			<div className="mb-3 flex items-center justify-between">
@@ -69,10 +90,9 @@ export function ManageDayPanel({ date, slots, onDelete, onBatchDelete }: ManageD
 						variant="destructive"
 						size="sm"
 						className="gap-1.5"
-						onClick={() => {
-							onBatchDelete([...selectedIds]);
-							setSelectedIds(new Set());
-						}}
+						isLoading={batchDeleting}
+						loadingText={`Deleting ${selectedIds.size}…`}
+						onClick={handleBatchDelete}
 					>
 						<Trash2 className="h-3.5 w-3.5" />
 						Delete {selectedIds.size}
@@ -108,7 +128,7 @@ export function ManageDayPanel({ date, slots, onDelete, onBatchDelete }: ManageD
 							return (
 								<tr
 									key={slot.id}
-									className="border-b last:border-0 transition-colors hover:bg-accent/30"
+									className="group border-b last:border-0 transition-colors hover:bg-accent/50"
 								>
 									<td className="px-3 py-2.5">
 										<Checkbox
@@ -153,12 +173,13 @@ export function ManageDayPanel({ date, slots, onDelete, onBatchDelete }: ManageD
 										<Button
 											variant="ghost"
 											size="icon"
-											className="h-7 w-7 text-muted-foreground hover:text-destructive"
-											onClick={() => onDelete(slot.id)}
+											className="h-7 w-7 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+											isLoading={deletingId === slot.id}
+											onClick={() => handleDelete(slot.id)}
 											disabled={hasClaims}
 											title={hasClaims ? "Cannot delete — has active claims" : "Delete slot"}
 										>
-											<Trash2 className="h-3.5 w-3.5" />
+											{deletingId === slot.id ? null : <Trash2 className="h-3.5 w-3.5" />}
 										</Button>
 									</td>
 								</tr>

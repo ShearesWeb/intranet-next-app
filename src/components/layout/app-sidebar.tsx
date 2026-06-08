@@ -53,11 +53,16 @@ export const navOptions: NavItem[] = [
 	},
 	{
 		title: "Facilities",
-		url: "/dashboard/facilities",
+		url: "/dashboard/facilities/guide",
 		icon: CalendarDays,
 		isActive: true,
 		featureFlag: "facilities",
 		items: [
+			{
+				title: "Book Facilities",
+				url: "/dashboard/facilities",
+				featureFlag: "facilities",
+			},
 			{
 				title: "My CCA Bookings",
 				url: "/dashboard/facilities/my-bookings",

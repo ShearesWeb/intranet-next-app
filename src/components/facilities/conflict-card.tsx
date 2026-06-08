@@ -119,8 +119,14 @@ export function ConflictCard({
 				)}
 				<div className="ml-auto flex gap-2">
 					{userClaim && userClaim.claim.status === "conflicted" && (
-						<Button size="sm" variant="destructive" onClick={handleYield} disabled={yielding}>
-							{yielding ? "Yielding..." : "Yield"}
+						<Button
+							size="sm"
+							variant="destructive"
+							onClick={handleYield}
+							isLoading={yielding}
+							loadingText="Yielding…"
+						>
+							Yield
 						</Button>
 					)}
 					{showOverride && onOverride && (

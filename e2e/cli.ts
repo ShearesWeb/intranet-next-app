@@ -1,5 +1,5 @@
 import * as net from "node:net";
-import { spawn, spawnSync, type ChildProcess } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 import { chromium } from "@playwright/test";
 import { generateFreshSessionCookies, APP_URL, E2E_PORT, SUPABASE_URL, ANON_KEY } from "./auth-harness";
 import { PERSONAS } from "../tests/fixtures/personas";
@@ -154,29 +154,6 @@ async function login(personaKey: string): Promise<void> {
 	}
 }
 
-function runTests(personaKey: string, extra: string[]): void {
-	const persona = PERSONAS.find((p) => p.key === personaKey);
-	if (!persona) {
-		console.error(`Unknown persona: "${personaKey}"`);
-		console.error(`Run "npm run e2e:personas" to list available personas.`);
-		process.exit(1);
-	}
-
-	const playwrightArgs = [
-		"playwright",
-		"test",
-		"--config",
-		"e2e/playwright.config.ts",
-		"--grep",
-		`@${personaKey}`,
-		...extra,
-	];
-
-	console.log(`Running e2e tests for ${persona.name} (@${personaKey})...\n`);
-	const result = spawnSync("npx", playwrightArgs, { stdio: "inherit" });
-	process.exit(result.status ?? 1);
-}
-
 const rawArgs = process.argv.slice(2).filter((a) => a !== "--");
 const [command, ...args] = rawArgs;
 
@@ -194,23 +171,13 @@ switch (command) {
 			process.exit(1);
 		});
 		break;
-	case "test":
-		if (!args[0]) {
-			console.error("Usage: npm run e2e:test <persona> [--headed]");
-			process.exit(1);
-		}
-		runTests(args[0], args.slice(1));
-		break;
 	default:
 		if (command) {
 			console.error(`Unknown command: "${command}"\n`);
 		}
 		console.error("Usage:");
-		console.error("  npm run e2e                         — run all e2e tests");
-		console.error("  npm run e2e:test <persona>          — run tests for one persona");
-		console.error("  npm run e2e:test <persona> --headed — same, with visible browser");
-		console.error("  npm run e2e:login <persona>         — open browser as persona");
-		console.error("  npm run e2e:personas                — list available personas");
+		console.error("  npm run e2e:login <persona>   — open browser logged in as persona");
+		console.error("  npm run e2e:personas          — list available personas");
 		printPersonas();
 		process.exit(1);
 }

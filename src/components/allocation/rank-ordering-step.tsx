@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { OrderingTable } from "@/components/table/ordering-table";
 import { rankingOrderingColumns } from "@/components/allocation/ranking-columns";
@@ -24,6 +24,19 @@ export function RankOrderingStep({
 	onReorder,
 	onSave,
 }: RankOrderingStepProps) {
+	const [justSaved, setJustSaved] = React.useState(false);
+	const wasSaving = React.useRef(false);
+
+	React.useEffect(() => {
+		const finishedSaving = wasSaving.current && !isSaving && !hasChanges;
+		wasSaving.current = isSaving;
+		if (finishedSaving) {
+			setJustSaved(true);
+			const timer = window.setTimeout(() => setJustSaved(false), 1500);
+			return () => window.clearTimeout(timer);
+		}
+	}, [isSaving, hasChanges]);
+
 	return (
 		<div className="flex flex-col space-y-6 p-4 md:p-6">
 			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -38,11 +51,16 @@ export function RankOrderingStep({
 						<ArrowLeft className="h-4 w-4" />
 						Back to preferences
 					</Button>
-					<Button onClick={onSave} disabled={isSaving || !hasChanges}>
-						{isSaving ? (
+					<Button
+						onClick={onSave}
+						disabled={!hasChanges}
+						isLoading={isSaving}
+						loadingText="Saving…"
+					>
+						{justSaved ? (
 							<>
-								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-								Saving...
+								<Check className="h-4 w-4" />
+								Saved
 							</>
 						) : (
 							"Save preferences"

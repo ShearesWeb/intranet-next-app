@@ -47,6 +47,7 @@ export default function MyBookingsPage() {
 	const [slots, setSlots] = useState<FacilitySlotWithClaims[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [ccaFilter, setCcaFilter] = useState<number | null>(null);
+	const [busyClaimId, setBusyClaimId] = useState<number | null>(null);
 
 	const chairCcas = useMemo(() => {
 		if (!user) return [];
@@ -99,6 +100,7 @@ export default function MyBookingsPage() {
 	}, [filteredSlots, selectedDate]);
 
 	async function handleYield(claimId: number) {
+		setBusyClaimId(claimId);
 		try {
 			const res = await fetch(`/api/facilities/claims/${claimId}`, {
 				method: "PATCH",
@@ -114,10 +116,13 @@ export default function MyBookingsPage() {
 			fetchSlots();
 		} catch {
 			toast.error("Network error");
+		} finally {
+			setBusyClaimId(null);
 		}
 	}
 
 	async function handleRelease(claimId: number) {
+		setBusyClaimId(claimId);
 		try {
 			const res = await fetch(`/api/facilities/claims/${claimId}`, {
 				method: "DELETE",
@@ -131,6 +136,8 @@ export default function MyBookingsPage() {
 			fetchSlots();
 		} catch {
 			toast.error("Network error");
+		} finally {
+			setBusyClaimId(null);
 		}
 	}
 
@@ -159,9 +166,9 @@ export default function MyBookingsPage() {
 					<button
 						onClick={() => setCcaFilter(null)}
 						className={cn(
-							"rounded-full px-3 py-1 text-xs font-medium transition-colors",
+							"rounded-full px-3 py-1 text-xs font-medium transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
 							ccaFilter === null
-								? "bg-primary text-primary-foreground"
+								? "bg-primary text-primary-foreground shadow-sm"
 								: "bg-muted text-muted-foreground hover:bg-muted/80",
 						)}
 					>
@@ -172,9 +179,9 @@ export default function MyBookingsPage() {
 							key={cca.id}
 							onClick={() => setCcaFilter(ccaFilter === cca.id ? null : cca.id)}
 							className={cn(
-								"rounded-full px-3 py-1 text-xs font-medium transition-colors",
+								"rounded-full px-3 py-1 text-xs font-medium transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
 								ccaFilter === cca.id
-									? "bg-primary text-primary-foreground"
+									? "bg-primary text-primary-foreground shadow-sm"
 									: "bg-muted text-muted-foreground hover:bg-muted/80",
 							)}
 						>
@@ -246,7 +253,7 @@ export default function MyBookingsPage() {
 													return (
 														<tr
 															key={slot.id}
-															className="border-b last:border-0 hover:bg-accent/30 transition-colors"
+															className="border-b last:border-0 hover:bg-accent/50 transition-colors"
 														>
 															<td className="px-3 py-2.5">
 																<div className="font-medium">{slot.sub_venue}</div>
@@ -286,6 +293,8 @@ export default function MyBookingsPage() {
 																		size="sm"
 																		variant="destructive"
 																		className="h-7 text-xs"
+																		isLoading={busyClaimId === myClaim.id}
+																		loadingText="Yielding…"
 																		onClick={() => handleYield(myClaim.id)}
 																	>
 																		Yield
@@ -296,6 +305,8 @@ export default function MyBookingsPage() {
 																		size="sm"
 																		variant="outline"
 																		className="h-7 text-xs"
+																		isLoading={busyClaimId === myClaim.id}
+																		loadingText="Releasing…"
 																		onClick={() => handleRelease(myClaim.id)}
 																	>
 																		Release

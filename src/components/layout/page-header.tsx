@@ -23,9 +23,9 @@ export function PageHeader({ title, description, actions, backHref, backLabel }:
 				<div className="flex flex-wrap items-center gap-2">
 					{actions}
 					{backHref && (
-						<Button asChild variant="outline" size="sm" className="gap-2">
+						<Button asChild variant="outline" size="sm" className="group gap-2">
 							<Link href={backHref}>
-								<ArrowLeft className="h-4 w-4" />
+								<ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
 								{backLabel || "Back"}
 							</Link>
 						</Button>

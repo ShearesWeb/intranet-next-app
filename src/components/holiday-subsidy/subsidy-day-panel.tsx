@@ -1,9 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { CalendarDeclaration, SUBSIDY_STATUS_CONFIG } from "@/types/declarations";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Users } from "lucide-react";
+
+type DeclAction = (decl: CalendarDeclaration) => void | Promise<void>;
 
 interface SubsidyDayPanelProps {
 	date: string;
@@ -12,9 +15,9 @@ interface SubsidyDayPanelProps {
 	isJcrc: boolean;
 	onDeclare?: () => void;
 	onEdit?: (decl: CalendarDeclaration) => void;
-	onDelete?: (decl: CalendarDeclaration) => void;
-	onApprove?: (decl: CalendarDeclaration) => void;
-	onReject?: (decl: CalendarDeclaration) => void;
+	onDelete?: DeclAction;
+	onApprove?: DeclAction;
+	onReject?: DeclAction;
 	onAssignMembers?: (decl: CalendarDeclaration) => void;
 }
 
@@ -35,11 +38,24 @@ export function SubsidyDayPanel({
 	onReject,
 	onAssignMembers,
 }: SubsidyDayPanelProps) {
+	// Track the single in-flight row action as `${declId}:${action}` so only the
+	// actioned button spins while every other action button disables.
+	const [loadingKey, setLoadingKey] = useState<string | null>(null);
+
 	const sorted = [...declarations].sort((a, b) => {
 		const ccaCmp = a.cca_name.localeCompare(b.cca_name);
 		if (ccaCmp !== 0) return ccaCmp;
 		return a.position_name.localeCompare(b.position_name);
 	});
+
+	function runAction(decl: CalendarDeclaration, action: string, handler?: DeclAction) {
+		if (!handler) return;
+		const key = `${decl.id}:${action}`;
+		setLoadingKey(key);
+		Promise.resolve(handler(decl)).finally(() => {
+			setLoadingKey((current) => (current === key ? null : current));
+		});
+	}
 
 	return (
 		<div className="flex-1 min-w-0">
@@ -79,7 +95,9 @@ export function SubsidyDayPanel({
 									decl={decl}
 									isChair={isChair}
 									isJcrc={isJcrc}
+									loadingKey={loadingKey}
 									onEdit={onEdit}
+									onRunAction={runAction}
 									onDelete={onDelete}
 									onApprove={onApprove}
 									onReject={onReject}
@@ -98,7 +116,9 @@ function DeclRow({
 	decl,
 	isChair,
 	isJcrc,
+	loadingKey,
 	onEdit,
+	onRunAction,
 	onDelete,
 	onApprove,
 	onReject,
@@ -107,10 +127,12 @@ function DeclRow({
 	decl: CalendarDeclaration;
 	isChair: boolean;
 	isJcrc: boolean;
+	loadingKey: string | null;
 	onEdit?: (decl: CalendarDeclaration) => void;
-	onDelete?: (decl: CalendarDeclaration) => void;
-	onApprove?: (decl: CalendarDeclaration) => void;
-	onReject?: (decl: CalendarDeclaration) => void;
+	onRunAction: (decl: CalendarDeclaration, action: string, handler?: DeclAction) => void;
+	onDelete?: DeclAction;
+	onApprove?: DeclAction;
+	onReject?: DeclAction;
 	onAssignMembers?: (decl: CalendarDeclaration) => void;
 }) {
 	const statusConfig = SUBSIDY_STATUS_CONFIG[decl.status];
@@ -120,8 +142,12 @@ function DeclRow({
 	const allApproved = isApproved && decl.member_count > 0 && decl.pending_member_count === 0;
 	const remaining = decl.pending_member_count;
 
+	// Any in-flight action on this row disables its sibling buttons.
+	const busy = loadingKey !== null && loadingKey.startsWith(`${decl.id}:`);
+	const isLoadingAction = (action: string) => loadingKey === `${decl.id}:${action}`;
+
 	return (
-		<tr className="border-b last:border-0 hover:bg-accent/30 transition-colors">
+		<tr className="border-b last:border-0 hover:bg-accent/50 transition-colors">
 			<td className="px-3 py-2.5">
 				<div className="font-medium">{decl.cca_name}</div>
 			</td>
@@ -174,6 +200,7 @@ function DeclRow({
 						<Button
 							size="sm"
 							variant="outline"
+							disabled={busy}
 							className={cn(
 								"h-7 text-xs",
 								noMembers ? "text-[#3b82f6] border-[#3b82f6]/30 hover:bg-[#3b82f6]/10" : "",
@@ -188,6 +215,7 @@ function DeclRow({
 						<Button
 							size="sm"
 							variant="outline"
+							disabled={busy}
 							className="h-7 text-xs"
 							onClick={() => onAssignMembers(decl)}
 						>
@@ -199,8 +227,11 @@ function DeclRow({
 						<Button
 							size="sm"
 							variant="outline"
+							disabled={busy}
+							isLoading={isLoadingAction("approve")}
+							loadingText="Approving…"
 							className="h-7 text-xs text-[#10b981] border-[#10b981]/30 hover:bg-[#10b981]/10"
-							onClick={() => onApprove(decl)}
+							onClick={() => onRunAction(decl, "approve", onApprove)}
 						>
 							Approve
 						</Button>
@@ -209,8 +240,11 @@ function DeclRow({
 						<Button
 							size="sm"
 							variant="outline"
+							disabled={busy}
+							isLoading={isLoadingAction("reject")}
+							loadingText={isApproved ? "Revoking…" : "Rejecting…"}
 							className="h-7 text-xs text-destructive border-destructive/30 hover:bg-destructive/10"
-							onClick={() => onReject(decl)}
+							onClick={() => onRunAction(decl, "reject", onReject)}
 						>
 							{isApproved ? "Revoke" : "Reject"}
 						</Button>
@@ -219,6 +253,7 @@ function DeclRow({
 						<Button
 							size="sm"
 							variant="outline"
+							disabled={busy}
 							className="h-7 text-xs"
 							onClick={() => onEdit(decl)}
 						>
@@ -229,8 +264,11 @@ function DeclRow({
 						<Button
 							size="sm"
 							variant="outline"
+							disabled={busy}
+							isLoading={isLoadingAction("delete")}
+							loadingText="Deleting…"
 							className="h-7 text-xs text-destructive border-destructive/30 hover:bg-destructive/10"
-							onClick={() => onDelete(decl)}
+							onClick={() => onRunAction(decl, "delete", onDelete)}
 						>
 							Delete
 						</Button>

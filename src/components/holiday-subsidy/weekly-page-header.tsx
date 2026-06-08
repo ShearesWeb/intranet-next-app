@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 export interface WeeklyPageHeaderProps {
 	title: string;
@@ -65,15 +65,14 @@ export function WeeklyPageHeader({
 			<div className="flex flex-wrap gap-2">
 				{backButton}
 				{onSave && (
-					<Button onClick={onSave} disabled={saveDisabled} size="sm">
-						{isSaving ? (
-							<>
-								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-								{savingLabel}
-							</>
-						) : (
-							saveLabel
-						)}
+					<Button
+						onClick={onSave}
+						disabled={saveDisabled}
+						isLoading={isSaving}
+						loadingText={savingLabel}
+						size="sm"
+					>
+						{saveLabel}
 					</Button>
 				)}
 				{extraActions}

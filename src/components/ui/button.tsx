@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
+import { Loader2Icon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -39,19 +40,41 @@ function Button({
 	variant,
 	size,
 	asChild = false,
+	isLoading = false,
+	loadingText,
+	disabled,
+	children,
 	...props
 }: React.ComponentProps<"button"> &
 	VariantProps<typeof buttonVariants> & {
 		asChild?: boolean;
+		/** Shows an inline spinner, disables the button, and sets aria-busy. */
+		isLoading?: boolean;
+		/** Optional label to swap in while loading (defaults to existing children). */
+		loadingText?: React.ReactNode;
 	}) {
 	const Comp = asChild ? Slot : "button";
+
+	// Slot expects a single child, so the spinner is only injected for real buttons.
+	const showSpinner = isLoading && !asChild;
 
 	return (
 		<Comp
 			data-slot="button"
 			className={cn(buttonVariants({ variant, size, className }))}
+			disabled={asChild ? disabled : disabled || isLoading}
+			aria-busy={showSpinner || undefined}
 			{...props}
-		/>
+		>
+			{showSpinner ? (
+				<>
+					<Loader2Icon className="size-4 animate-spin" aria-hidden="true" />
+					{loadingText ?? children}
+				</>
+			) : (
+				children
+			)}
+		</Comp>
 	);
 }
 

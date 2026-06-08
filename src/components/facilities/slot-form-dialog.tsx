@@ -206,9 +206,9 @@ export function SlotFormDialog({
 									key={key}
 									type="button"
 									onClick={() => setType(key)}
-									className={`rounded-full border px-3 py-1 text-sm transition-colors ${
+									className={`rounded-full border px-3 py-1 text-sm transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
 										type === key
-											? "border-transparent text-white"
+											? "border-transparent text-white shadow-sm"
 											: "border-border text-foreground hover:bg-accent"
 									}`}
 									style={type === key ? { backgroundColor: config.color } : undefined}
@@ -268,9 +268,9 @@ export function SlotFormDialog({
 											key={day.value}
 											type="button"
 											onClick={() => toggleDay(day.value)}
-											className={`flex h-9 w-11 items-center justify-center rounded-md border text-sm font-medium transition-colors ${
+											className={`flex h-9 w-11 items-center justify-center rounded-md border text-sm font-medium transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
 												daysOfWeek.includes(day.value)
-													? "border-primary bg-primary text-primary-foreground"
+													? "border-primary bg-primary text-primary-foreground shadow-sm"
 													: "border-border text-foreground hover:bg-accent"
 											}`}
 										>
@@ -292,8 +292,12 @@ export function SlotFormDialog({
 					<Button variant="outline" onClick={onClose} disabled={submitting}>
 						Cancel
 					</Button>
-					<Button onClick={handleSubmit} disabled={submitting}>
-						{submitting ? "Creating..." : recurring ? "Create Recurring Slots" : "Create Slot"}
+					<Button
+						onClick={handleSubmit}
+						isLoading={submitting}
+						loadingText="Creating…"
+					>
+						{recurring ? "Create Recurring Slots" : "Create Slot"}
 					</Button>
 				</DialogFooter>
 			</DialogContent>

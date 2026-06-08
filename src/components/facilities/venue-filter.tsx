@@ -47,7 +47,7 @@ export function VenueFilter({ venues, selected, onChange }: VenueFilterProps) {
 			<button
 				onClick={() => setOpen(!open)}
 				className={cn(
-					"flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm transition-colors",
+					"flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
 					selected.length > 0
 						? "border-primary bg-primary/5 text-primary"
 						: "border-border text-foreground hover:bg-accent",

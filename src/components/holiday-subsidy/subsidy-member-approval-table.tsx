@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/table/data-table";
 import { PositionTypeBadge } from "@/components/badges";
 import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Check, X, Info, Save } from "lucide-react";
 import type { MemberApprovalRow } from "@/lib/holiday-subsidy/member-approval-service";
@@ -130,12 +131,29 @@ export function SubsidyMemberApprovalTable({
 			{
 				accessorKey: "name",
 				header: () => <div className="font-semibold">Member</div>,
-				cell: ({ row }) => (
-					<div className="flex flex-col min-w-[140px]">
-						<span className="font-semibold text-sm leading-tight">{row.original.name}</span>
-						<span className="text-xs text-muted-foreground mt-0.5">{row.original.email}</span>
-					</div>
-				),
+				cell: ({ row }) => {
+					const staged = pendingStatus.has(row.original.id);
+					return (
+						<div
+							data-staged={staged || undefined}
+							className={cn(
+								"flex flex-col min-w-[140px] -my-3 -ml-5 py-3 pl-5 pr-3",
+								staged && "border-l-2 border-l-amber-500 bg-amber-50 dark:bg-amber-950/20",
+							)}
+						>
+							<div className="flex items-center gap-1.5">
+								<span className="font-semibold text-sm leading-tight">{row.original.name}</span>
+								{staged && (
+									<span
+										className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500"
+										aria-label="Staged change"
+									/>
+								)}
+							</div>
+							<span className="text-xs text-muted-foreground mt-0.5">{row.original.email}</span>
+						</div>
+					);
+				},
 			},
 			{
 				accessorKey: "role",
@@ -263,12 +281,14 @@ export function SubsidyMemberApprovalTable({
 					</Button>
 					<Button
 						onClick={handleSave}
-						disabled={saving || pendingStatus.size === 0}
+						disabled={pendingStatus.size === 0}
+						isLoading={saving}
+						loadingText="Saving…"
 						size="sm"
 						className="gap-2"
 					>
 						<Save className="h-4 w-4" />
-						{saving ? "Saving..." : "Save"}
+						Save
 					</Button>
 				</div>
 			</div>
