@@ -64,3 +64,29 @@ To switch environments, re-init against the other backend (state key differs, so
 terraform init -reconfigure -backend-config=config/preprod.tfbackend
 terraform apply -var-file=config/preprod.tfvars
 ```
+
+## CI/CD
+
+The deploy workflows run this same `init` + `apply` **before** the Worker deploy, so the
+R2 cache bucket exists when wrangler binds it:
+
+- `.github/workflows/3-preprod-deploy.yaml` → `preprod.tfbackend` / `preprod.tfvars`, then `npm run deploy:preprod`
+- `.github/workflows/4-prd-deploy.yaml` → `prd.tfbackend` / `prd.tfvars`, then `npm run deploy:prd`
+
+The env vars above are backed by these **GitHub Actions secrets** (set on the `preprod` and
+`prd` environments):
+
+| Env var in CI | GitHub secret |
+|---|---|
+| `TF_VAR_cloudflare_account_id` + `CLOUDFLARE_ACCOUNT_ID` | `CLOUDFLARE_ACCOUNT_ID` |
+| `TF_VAR_cloudflare_api_token` + `CLOUDFLARE_API_TOKEN` | `CLOUDFLARE_API_TOKEN` |
+| `AWS_ACCESS_KEY_ID` | `R2_ACCESS_KEY_ID` |
+| `AWS_SECRET_ACCESS_KEY` | `R2_SECRET_ACCESS_KEY` |
+| `NEXT_PUBLIC_SUPABASE_URL` / `…PUBLISHABLE_DEFAULT_KEY` | same names (build-time) |
+
+`AWS_ENDPOINT_URL_S3` is derived in-workflow from `CLOUDFLARE_ACCOUNT_ID`.
+
+**Bootstrap order (one-time, per env):** custom domains stay off (`enable_custom_domains = false`
+in the tfvars) until the Worker has been deployed at least once — CI's pre-deploy `apply` only
+creates the R2 bucket. After the first successful deploy, flip the tfvars flag to `true` so the
+next CI run attaches `intranet-beta.shweb.org` / `intranet.shweb.org`.

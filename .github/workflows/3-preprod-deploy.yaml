@@ -95,7 +95,7 @@ jobs:
 
     environment:
       name: preprod
-      url: https://beta.intranet.shweb.org
+      url: https://intranet-beta.shweb.org
 
     env:
       # Embedded into the client bundle at build time.
