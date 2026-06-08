@@ -32,7 +32,7 @@
   ],
 
   "env": {
-    // --- Preprod: worker "intranet-preprod", domain intranet-beta.shweb.org ---
+    // --- Preprod: worker "intranet-preprod", domain beta.intranet.shweb.org ---
     // Deploy with:  npm run deploy:preprod
     "preprod": {
       "r2_buckets": [

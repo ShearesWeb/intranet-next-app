@@ -95,7 +95,7 @@ jobs:
 
     environment:
       name: preprod
-      url: https://intranet-beta.shweb.org
+      url: https://beta.intranet.shweb.org
 
     env:
       # Embedded into the client bundle at build time.
@@ -131,5 +131,27 @@ jobs:
       - name: 4. 📦 Install Dependencies
         run: npm ci --prefer-offline --no-audit --no-fund
 
-      - name: 5. 🚧 Build + Deploy with OpenNext (Cloudflare)
+      # Provision Cloudflare infra (R2 cache bucket + custom domain) before the
+      # Worker deploy, so the R2 binding in wrangler.jsonc resolves. State lives
+      # in R2 (s3 backend); preprod uses key preprod/intranet-web/terraform.tfstate.
+      - name: 5. 🏗️ Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: 6. ☁️ Terraform Apply (preprod infra)
+        working-directory: infra
+        env:
+          # Cloudflare provider (api_token = var.cloudflare_api_token).
+          TF_VAR_cloudflare_account_id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          # R2 (s3-compatible) state backend.
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_ENDPOINT_URL_S3: https://${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
+        run: |
+          terraform init -backend-config=config/preprod.tfbackend
+          terraform apply -var-file=config/preprod.tfvars -auto-approve
+
+      - name: 7. 🚧 Build + Deploy with OpenNext (Cloudflare)
         run: npm run deploy:preprod

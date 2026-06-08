@@ -38,22 +38,13 @@ afterEach(() => {
 function render(props: Partial<React.ComponentProps<typeof OrderingTable<Row>>> = {}) {
 	act(() => {
 		root.render(
-			<OrderingTable<Row>
-				data={DATA}
-				columns={COLUMNS}
-				showMoveControls
-				searchable
-				{...props}
-			/>,
+			<OrderingTable<Row> data={DATA} columns={COLUMNS} showMoveControls searchable {...props} />,
 		);
 	});
 }
 
 function setInputValue(input: HTMLInputElement, value: string) {
-	const setter = Object.getOwnPropertyDescriptor(
-		window.HTMLInputElement.prototype,
-		"value",
-	)!.set!;
+	const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")!.set!;
 	act(() => {
 		setter.call(input, value);
 		input.dispatchEvent(new Event("input", { bubbles: true }));

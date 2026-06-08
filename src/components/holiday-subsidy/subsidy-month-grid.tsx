@@ -128,7 +128,9 @@ export function SubsidyMonthGrid({
 									!hasDecls &&
 									"text-muted-foreground/50 hover:bg-accent/50",
 								// Days with declarations get a subtle inset ring that strengthens on hover.
-								!isSelected && hasDecls && "ring-1 ring-inset ring-primary/20 hover:ring-primary/40",
+								!isSelected &&
+									hasDecls &&
+									"ring-1 ring-inset ring-primary/20 hover:ring-primary/40",
 							)}
 						>
 							<span className="text-xs">{day}</span>

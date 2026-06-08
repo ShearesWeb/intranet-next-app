@@ -123,7 +123,10 @@ export function ManageMonthGrid({
 									isToday &&
 									"bg-primary/10 font-bold text-primary ring-1 ring-inset ring-primary/40",
 								!isSelected && !isToday && hasSlots && "hover:bg-accent",
-								!isSelected && !isToday && !hasSlots && "text-muted-foreground/50 hover:bg-accent/50",
+								!isSelected &&
+									!isToday &&
+									!hasSlots &&
+									"text-muted-foreground/50 hover:bg-accent/50",
 							)}
 						>
 							<span className="text-xs">{day}</span>
