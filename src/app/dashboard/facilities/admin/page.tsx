@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/layout/empty-state";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FacilityTypeBadges } from "@/components/facilities/facility-type-badges";
 import { FacilityAddDialog } from "@/components/facilities/facility-add-dialog";
@@ -35,6 +36,7 @@ export default function AdminFacilitiesPage() {
 	const [schedules, setSchedules] = useState<BookingSchedule[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [addOpen, setAddOpen] = useState(false);
+	const [facilityQuery, setFacilityQuery] = useState("");
 	const [slotOpen, setSlotOpen] = useState(false);
 	const [editing, setEditing] = useState<SlotEditTarget | null>(null);
 	const [selected, setSelected] = useState<{ day: number; cluster: Cluster } | null>(null);
@@ -94,6 +96,12 @@ export default function AdminFacilitiesPage() {
 	const activeFacilities = useMemo(() => facilities.filter((f) => f.active), [facilities]);
 	const weekWaves = useMemo(() => buildWeek(slots).waves, [slots]);
 
+	const filteredFacilities = useMemo(() => {
+		const q = facilityQuery.trim().toLowerCase();
+		if (!q) return facilities;
+		return facilities.filter((f) => `${f.venue} ${f.sub_venue}`.toLowerCase().includes(q));
+	}, [facilities, facilityQuery]);
+
 	if (user && !user.is_jcrc) {
 		return (
 			<div className="flex flex-col space-y-6 p-4 md:p-6">
@@ -123,8 +131,13 @@ export default function AdminFacilitiesPage() {
 
 				{/* Facilities */}
 				<TabsContent value="facilities">
-					<div className="mb-4 flex items-center justify-between gap-3">
-						<h3 className="text-sm font-medium text-muted-foreground">All facilities</h3>
+					<div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+						<Input
+							value={facilityQuery}
+							onChange={(e) => setFacilityQuery(e.target.value)}
+							placeholder="Search facilities…"
+							className="h-9 max-w-xs"
+						/>
 						<Button size="sm" className="gap-1.5" onClick={() => setAddOpen(true)}>
 							<Plus className="h-4 w-4" />
 							Add facility
@@ -134,11 +147,17 @@ export default function AdminFacilitiesPage() {
 						<Skeleton className="h-40 w-full" />
 					) : facilities.length === 0 ? (
 						<EmptyState icon={Building2} title="No facilities" description="Add one to get started." />
+					) : filteredFacilities.length === 0 ? (
+						<EmptyState
+							icon={Building2}
+							title="No matches"
+							description={`No facilities match "${facilityQuery}".`}
+						/>
 					) : (
 						<div className="space-y-6">
-							{TYPE_ORDER.filter((t) => facilities.some((f) => f.type === t)).map((t) => {
+							{TYPE_ORDER.filter((t) => filteredFacilities.some((f) => f.type === t)).map((t) => {
 								const cfg = FACILITY_TYPE_CONFIG[t];
-								const list = facilities.filter((f) => f.type === t);
+								const list = filteredFacilities.filter((f) => f.type === t);
 								return (
 									<div key={t}>
 										<div className="mb-2 flex items-center gap-2">
