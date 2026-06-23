@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Facility, FacilityType, WEEKDAY_LABELS, formatHour } from "@/types/facilities";
-import { groupFacilitiesByType } from "@/lib/facilities/facility-picker";
+import { FacilitySelect } from "@/components/facilities/facility-select";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -39,7 +39,6 @@ export function ScheduleSlotDialog({
 	onClose,
 	onSuccess,
 }: ScheduleSlotDialogProps) {
-	const [query, setQuery] = useState("");
 	const [facilityId, setFacilityId] = useState<number | null>(null);
 	const [days, setDays] = useState<number[]>([]);
 	const [hours, setHours] = useState<number[]>([]);
@@ -50,7 +49,6 @@ export function ScheduleSlotDialog({
 	// Reset to sensible defaults each time the dialog opens.
 	useEffect(() => {
 		if (!open) return;
-		setQuery("");
 		setActivity("");
 		setPriority(1);
 		setDays(defaultDay != null ? [defaultDay] : []);
@@ -62,7 +60,6 @@ export function ScheduleSlotDialog({
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [open]);
 
-	const groups = useMemo(() => groupFacilitiesByType(facilities, query), [facilities, query]);
 	const selectedFacility = useMemo(
 		() => facilities.find((f) => f.id === facilityId) ?? null,
 		[facilities, facilityId],
@@ -128,50 +125,10 @@ export function ScheduleSlotDialog({
 					<DialogTitle>Add schedule slot</DialogTitle>
 				</DialogHeader>
 				<div className="space-y-4">
-					{/* Facility — searchable, grouped by type */}
+					{/* Facility — standard dropdown with search, grouped by type */}
 					<div className="space-y-1.5">
-						<Label htmlFor="facility-search">Facility</Label>
-						<Input
-							id="facility-search"
-							value={query}
-							onChange={(e) => setQuery(e.target.value)}
-							placeholder="Search facilities…"
-						/>
-						<div className="max-h-40 overflow-y-auto rounded-md border" data-testid="facility-list">
-							{groups.length === 0 ? (
-								<p className="px-3 py-2 text-xs text-muted-foreground">No matching facilities.</p>
-							) : (
-								groups.map((g) => (
-									<div key={g.type}>
-										<div className="sticky top-0 flex items-center gap-1.5 bg-muted/80 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide backdrop-blur">
-											<span className="h-2 w-2 rounded-full" style={{ backgroundColor: g.color }} />
-											{g.label}
-										</div>
-										{g.facilities.map((f) => (
-											<button
-												key={f.id}
-												type="button"
-												onClick={() => setFacilityId(f.id)}
-												className={cn(
-													"flex w-full items-center justify-between gap-2 px-2.5 py-1.5 text-left text-xs hover:bg-accent",
-													facilityId === f.id && "bg-primary/10",
-												)}
-											>
-												<span className="truncate font-medium">{f.sub_venue}</span>
-												{f.venue !== f.sub_venue && (
-													<span className="truncate text-[10px] text-muted-foreground">{f.venue}</span>
-												)}
-											</button>
-										))}
-									</div>
-								))
-							)}
-						</div>
-						{selectedFacility && (
-							<p className="text-[10px] text-muted-foreground">
-								Selected: <span className="font-medium">{selectedFacility.sub_venue}</span>
-							</p>
-						)}
+						<Label>Facility</Label>
+						<FacilitySelect facilities={facilities} value={facilityId} onChange={setFacilityId} />
 					</div>
 
 					{/* Days — multi-select */}
