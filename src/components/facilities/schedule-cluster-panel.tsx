@@ -2,10 +2,16 @@
 
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Cluster, ScheduleSlot, WaveInfo } from "@/lib/facilities/schedule-grid";
+import {
+	Cluster,
+	ScheduleSlot,
+	ScheduleWindow,
+	WaveInfo,
+	mergeContiguous,
+} from "@/lib/facilities/schedule-grid";
 import { WEEKDAY_LABELS, formatHour } from "@/types/facilities";
 import { toast } from "sonner";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Pencil } from "lucide-react";
 
 interface ScheduleClusterPanelProps {
 	day: number;
@@ -14,6 +20,7 @@ interface ScheduleClusterPanelProps {
 	waves: WaveInfo[];
 	onChanged: () => void;
 	onAddSlot: () => void;
+	onEditWindow: (day: number, window: ScheduleWindow) => void;
 }
 
 export function ScheduleClusterPanel({
@@ -23,8 +30,9 @@ export function ScheduleClusterPanel({
 	waves,
 	onChanged,
 	onAddSlot,
+	onEditWindow,
 }: ScheduleClusterPanelProps) {
-	const [busyId, setBusyId] = useState<number | null>(null);
+	const [busyKey, setBusyKey] = useState<string | null>(null);
 
 	const colorByPriority = useMemo(() => {
 		const m = new Map<number, WaveInfo>();
@@ -32,33 +40,36 @@ export function ScheduleClusterPanel({
 		return m;
 	}, [waves]);
 
-	// Raw rows in this cluster's day + hour span — these carry ids for deletion.
-	const rows = useMemo(
-		() =>
-			schedules
-				.filter(
-					(s) =>
-						s.day_of_week === day && s.hour >= cluster.startHour && s.hour < cluster.endHour,
-				)
-				.sort((a, b) => a.priority - b.priority || a.sub_venue.localeCompare(b.sub_venue) || a.hour - b.hour),
-		[schedules, day, cluster],
-	);
+	// Rows in this cluster's day + hour span, merged into contiguous windows
+	// (so 7,8,9,10 read as one "7–11pm" window, not four rows).
+	const windows = useMemo(() => {
+		const rows = schedules.filter(
+			(s) => s.day_of_week === day && s.hour >= cluster.startHour && s.hour < cluster.endHour,
+		);
+		return mergeContiguous(rows).sort(
+			(a, b) => a.priority - b.priority || a.sub_venue.localeCompare(b.sub_venue),
+		);
+	}, [schedules, day, cluster]);
 
-	async function remove(id: number) {
-		setBusyId(id);
+	async function removeWindow(w: ScheduleWindow) {
+		const key = w.ids.join(",");
+		setBusyKey(key);
 		try {
-			const res = await fetch(`/api/facilities/schedules?id=${id}`, { method: "DELETE" });
-			if (!res.ok) {
-				const json = await res.json();
-				toast.error(json.error ?? "Failed to remove slot");
-				return;
+			const results = await Promise.all(
+				w.ids.map((id) =>
+					fetch(`/api/facilities/schedules?id=${id}`, { method: "DELETE" }).then((r) => r.ok),
+				),
+			);
+			if (results.some((ok) => !ok)) {
+				toast.error("Some slots could not be removed");
+			} else {
+				toast.success("Slots removed");
 			}
-			toast.success("Slot removed");
 			onChanged();
 		} catch {
 			toast.error("Network error");
 		} finally {
-			setBusyId(null);
+			setBusyKey(null);
 		}
 	}
 
@@ -78,11 +89,12 @@ export function ScheduleClusterPanel({
 			</div>
 
 			<div className="space-y-1.5">
-				{rows.map((s) => {
-					const info = colorByPriority.get(s.priority);
+				{windows.map((w) => {
+					const info = colorByPriority.get(w.priority);
+					const key = w.ids.join(",");
 					return (
 						<div
-							key={s.id}
+							key={key}
 							className="flex items-center gap-2 rounded-md border bg-card px-2.5 py-1.5 text-xs"
 						>
 							<span
@@ -93,16 +105,24 @@ export function ScheduleClusterPanel({
 								{info?.wave ?? "?"}
 							</span>
 							<div className="min-w-0 flex-1">
-								<div className="truncate font-medium">{s.sub_venue}</div>
+								<div className="truncate font-medium">{w.sub_venue}</div>
 								<div className="truncate text-[10px] text-muted-foreground">
-									{formatHour(s.hour)}
-									{s.reboks_activity ? ` · ${s.reboks_activity}` : ""}
+									{formatHour(w.startHour)} – {formatHour(w.endHour)}
+									{w.reboks_activity ? ` · ${w.reboks_activity}` : ""}
 								</div>
 							</div>
 							<button
 								type="button"
-								disabled={busyId === s.id}
-								onClick={() => remove(s.id)}
+								onClick={() => onEditWindow(day, w)}
+								className="text-muted-foreground hover:text-primary"
+								aria-label="Edit slot"
+							>
+								<Pencil className="h-3.5 w-3.5" />
+							</button>
+							<button
+								type="button"
+								disabled={busyKey === key}
+								onClick={() => removeWindow(w)}
 								className="text-muted-foreground hover:text-destructive disabled:opacity-50"
 								aria-label="Remove slot"
 							>

@@ -114,6 +114,73 @@ function mergeBlocks(slots: ScheduleSlot[]): MergedBlock[] {
 	return out;
 }
 
+/** A contiguous run of hours for one (facility, activity, wave), with its row ids. */
+export interface ScheduleWindow {
+	facility_id: number;
+	venue: string;
+	sub_venue: string;
+	priority: number;
+	reboks_activity: string | null;
+	startHour: number;
+	endHour: number; // exclusive
+	hours: number[];
+	ids: number[];
+}
+
+/**
+ * Collapse schedule rows into contiguous-hour windows, grouped by
+ * (facility, activity, priority). Each window keeps the underlying row ids so
+ * callers can edit/delete the whole run. Sorted by start hour.
+ */
+export function mergeContiguous(slots: ScheduleSlot[]): ScheduleWindow[] {
+	const groups = new Map<string, ScheduleSlot[]>();
+	for (const s of slots) {
+		pushTo(groups, `${s.facility_id}|${s.reboks_activity ?? ""}|${s.priority}`, s);
+	}
+
+	const out: ScheduleWindow[] = [];
+	for (const group of groups.values()) {
+		const byHour = new Map<number, ScheduleSlot[]>();
+		for (const s of group) pushTo(byHour, s.hour, s);
+		const hours = [...byHour.keys()].sort((a, b) => a - b);
+		const sample = group[0];
+
+		let runStart = hours[0];
+		let prev = hours[0];
+		let ids: number[] = [...byHour.get(hours[0])!.map((s) => s.id)];
+		const flush = (endHourExclusive: number) => {
+			const runHours: number[] = [];
+			for (let h = runStart; h < endHourExclusive; h++) runHours.push(h);
+			out.push({
+				facility_id: sample.facility_id,
+				venue: sample.venue,
+				sub_venue: sample.sub_venue,
+				priority: sample.priority,
+				reboks_activity: sample.reboks_activity,
+				startHour: runStart,
+				endHour: endHourExclusive,
+				hours: runHours,
+				ids,
+			});
+		};
+
+		for (let i = 1; i < hours.length; i++) {
+			if (hours[i] === prev + 1) {
+				prev = hours[i];
+				ids = ids.concat(byHour.get(hours[i])!.map((s) => s.id));
+				continue;
+			}
+			flush(prev + 1);
+			runStart = hours[i];
+			prev = hours[i];
+			ids = [...byHour.get(hours[i])!.map((s) => s.id)];
+		}
+		flush(prev + 1);
+	}
+
+	return out.sort((a, b) => a.startHour - b.startHour);
+}
+
 export function buildWeek(slots: ScheduleSlot[]): WeekModel {
 	const priorities = [...new Set(slots.map((s) => s.priority))].sort((a, b) => a - b);
 	const waves: WaveInfo[] = priorities.map((priority, i) => ({

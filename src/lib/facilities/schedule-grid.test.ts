@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildWeek, waveColor, type ScheduleSlot } from "./schedule-grid";
+import { buildWeek, mergeContiguous, waveColor, type ScheduleSlot } from "./schedule-grid";
 
 function slot(p: Partial<ScheduleSlot>): ScheduleSlot {
 	return {
@@ -74,5 +74,40 @@ describe("buildWeek", () => {
 		const week = buildWeek([slot({ day_of_week: 1 })]);
 		expect(week.days).toHaveLength(7);
 		expect(week.days[0].clusters).toEqual([]);
+	});
+});
+
+describe("mergeContiguous", () => {
+	it("merges a facility's contiguous hours into one window carrying all row ids", () => {
+		const windows = mergeContiguous([
+			slot({ id: 11, facility_id: 1, hour: 19, priority: 0 }),
+			slot({ id: 12, facility_id: 1, hour: 20, priority: 0 }),
+			slot({ id: 13, facility_id: 1, hour: 21, priority: 0 }),
+		]);
+		expect(windows).toHaveLength(1);
+		expect(windows[0]).toMatchObject({ startHour: 19, endHour: 22 });
+		expect(windows[0].hours).toEqual([19, 20, 21]);
+		expect(windows[0].ids.sort()).toEqual([11, 12, 13]);
+	});
+
+	it("splits non-contiguous hours into separate windows", () => {
+		const windows = mergeContiguous([
+			slot({ id: 1, facility_id: 1, hour: 19 }),
+			slot({ id: 2, facility_id: 1, hour: 20 }),
+			slot({ id: 3, facility_id: 1, hour: 22 }),
+		]);
+		expect(windows.map((w) => [w.startHour, w.endHour])).toEqual([
+			[19, 21],
+			[22, 23],
+		]);
+	});
+
+	it("keeps different facilities, activities, or waves in separate windows", () => {
+		const windows = mergeContiguous([
+			slot({ id: 1, facility_id: 1, hour: 19, priority: 0 }),
+			slot({ id: 2, facility_id: 2, hour: 19, priority: 0 }),
+			slot({ id: 3, facility_id: 1, hour: 19, priority: 1 }),
+		]);
+		expect(windows).toHaveLength(3);
 	});
 });

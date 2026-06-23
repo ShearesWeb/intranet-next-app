@@ -19,6 +19,16 @@ import { cn } from "@/lib/utils";
 const DISPLAY_DAYS = [1, 2, 3, 4, 5, 6, 0]; // Mon-first
 const HOURS = Array.from({ length: 18 }, (_, i) => i + 6); // 6am … 11pm
 
+/** When set, the dialog edits an existing window: it deletes these rows then recreates. */
+export interface SlotEditTarget {
+	ids: number[];
+	facilityId: number;
+	day: number;
+	hours: number[];
+	priority: number;
+	reboks_activity: string | null;
+}
+
 interface ScheduleSlotDialogProps {
 	open: boolean;
 	facilities: Facility[];
@@ -26,6 +36,7 @@ interface ScheduleSlotDialogProps {
 	defaultType?: FacilityType;
 	defaultDay?: number;
 	defaultHour?: number;
+	editing?: SlotEditTarget | null;
 	onClose: () => void;
 	onSuccess: () => void;
 }
@@ -36,6 +47,7 @@ export function ScheduleSlotDialog({
 	defaultType,
 	defaultDay,
 	defaultHour,
+	editing,
 	onClose,
 	onSuccess,
 }: ScheduleSlotDialogProps) {
@@ -46,9 +58,17 @@ export function ScheduleSlotDialog({
 	const [activity, setActivity] = useState<string>("");
 	const [submitting, setSubmitting] = useState(false);
 
-	// Reset to sensible defaults each time the dialog opens.
+	// Prefill from the edit target, else reset to sensible defaults, each time it opens.
 	useEffect(() => {
 		if (!open) return;
+		if (editing) {
+			setActivity(editing.reboks_activity ?? "");
+			setPriority(editing.priority || 1);
+			setDays([editing.day]);
+			setHours([...editing.hours]);
+			setFacilityId(editing.facilityId);
+			return;
+		}
 		setActivity("");
 		setPriority(1);
 		setDays(defaultDay != null ? [defaultDay] : []);
@@ -91,6 +111,14 @@ export function ScheduleSlotDialog({
 		const combos = days.flatMap((day) => hours.map((hour) => ({ day, hour })));
 		setSubmitting(true);
 		try {
+			// Editing = replace: drop the old window's rows, then recreate from the form.
+			if (editing) {
+				await Promise.all(
+					editing.ids.map((id) =>
+						fetch(`/api/facilities/schedules?id=${id}`, { method: "DELETE" }).catch(() => undefined),
+					),
+				);
+			}
 			const results = await Promise.all(
 				combos.map(({ day, hour }) =>
 					fetch("/api/facilities/schedules", {
@@ -122,7 +150,7 @@ export function ScheduleSlotDialog({
 		<Dialog open={open} onOpenChange={(o) => !o && onClose()}>
 			<DialogContent className="max-w-lg">
 				<DialogHeader>
-					<DialogTitle>Add schedule slot</DialogTitle>
+					<DialogTitle>{editing ? "Edit schedule slot" : "Add schedule slot"}</DialogTitle>
 				</DialogHeader>
 				<div className="space-y-4">
 					{/* Facility — standard dropdown with search, grouped by type */}

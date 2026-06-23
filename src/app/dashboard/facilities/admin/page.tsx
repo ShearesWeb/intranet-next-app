@@ -12,7 +12,10 @@ import { FacilityTypeBadges } from "@/components/facilities/facility-type-badges
 import { FacilityAddDialog } from "@/components/facilities/facility-add-dialog";
 import { ScheduleWeek } from "@/components/facilities/schedule-week";
 import { ScheduleClusterPanel } from "@/components/facilities/schedule-cluster-panel";
-import { ScheduleSlotDialog } from "@/components/facilities/schedule-slot-dialog";
+import {
+	ScheduleSlotDialog,
+	type SlotEditTarget,
+} from "@/components/facilities/schedule-slot-dialog";
 import { ManageConflicts } from "@/components/facilities/manage-conflicts";
 import { buildWeek, type Cluster, type ScheduleSlot } from "@/lib/facilities/schedule-grid";
 import {
@@ -33,6 +36,7 @@ export default function AdminFacilitiesPage() {
 	const [loading, setLoading] = useState(true);
 	const [addOpen, setAddOpen] = useState(false);
 	const [slotOpen, setSlotOpen] = useState(false);
+	const [editing, setEditing] = useState<SlotEditTarget | null>(null);
 	const [selected, setSelected] = useState<{ day: number; cluster: Cluster } | null>(null);
 
 	const fetchAll = useCallback(async () => {
@@ -181,6 +185,7 @@ export default function AdminFacilitiesPage() {
 							className="gap-1.5"
 							onClick={() => {
 								setSelected(null);
+								setEditing(null);
 								setSlotOpen(true);
 							}}
 						>
@@ -204,7 +209,21 @@ export default function AdminFacilitiesPage() {
 									schedules={slots}
 									waves={weekWaves}
 									onChanged={fetchAll}
-									onAddSlot={() => setSlotOpen(true)}
+									onAddSlot={() => {
+										setEditing(null);
+										setSlotOpen(true);
+									}}
+									onEditWindow={(day, w) => {
+										setEditing({
+											ids: w.ids,
+											facilityId: w.facility_id,
+											day,
+											hours: w.hours,
+											priority: w.priority,
+											reboks_activity: w.reboks_activity,
+										});
+										setSlotOpen(true);
+									}}
 								/>
 							)}
 						</div>
@@ -224,6 +243,7 @@ export default function AdminFacilitiesPage() {
 				defaultType={type}
 				defaultDay={selected?.day}
 				defaultHour={selected?.cluster.startHour}
+				editing={editing}
 				onClose={() => setSlotOpen(false)}
 				onSuccess={fetchAll}
 			/>
