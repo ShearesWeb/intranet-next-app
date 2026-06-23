@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 const DISPLAY_DAYS = [1, 2, 3, 4, 5, 6, 0]; // Mon-first
-const HOURS = Array.from({ length: 18 }, (_, i) => i + 6); // 6am … 11pm
+const HOURS = Array.from({ length: 17 }, (_, i) => i + 6); // 6am … 10pm (last slot 10–11pm)
 
 /** When set, the dialog edits an existing window: it deletes these rows then recreates. */
 export interface SlotEditTarget {
