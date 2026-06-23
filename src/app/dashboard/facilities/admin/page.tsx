@@ -1,137 +1,234 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth/auth-context";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/layout/empty-state";
-import { ConflictCard } from "@/components/facilities/conflict-card";
-import { OverrideDialog } from "@/components/facilities/override-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ConflictView } from "@/types/facilities";
-import { toast } from "sonner";
-import { Shield, AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { FacilityTypeBadges } from "@/components/facilities/facility-type-badges";
+import { FacilityAddDialog } from "@/components/facilities/facility-add-dialog";
+import { ScheduleWeek } from "@/components/facilities/schedule-week";
+import { ScheduleClusterPanel } from "@/components/facilities/schedule-cluster-panel";
+import { ScheduleSlotDialog } from "@/components/facilities/schedule-slot-dialog";
+import { ManageConflicts } from "@/components/facilities/manage-conflicts";
+import { buildWeek, type Cluster, type ScheduleSlot } from "@/lib/facilities/schedule-grid";
+import {
+	BookingSchedule,
+	Facility,
+	FacilityType,
+	FACILITY_TYPE_CONFIG,
+} from "@/types/facilities";
+import { Shield, Plus, Building2 } from "lucide-react";
 
-export default function FacilitiesAdminPage() {
+const TYPE_ORDER: FacilityType[] = ["sheares", "reboks", "nus", "external"];
+
+export default function AdminFacilitiesPage() {
 	const { user } = useAuth();
-	const [conflicts, setConflicts] = useState<ConflictView[]>([]);
+	const [type, setType] = useState<FacilityType>("reboks");
+	const [facilities, setFacilities] = useState<Facility[]>([]);
+	const [schedules, setSchedules] = useState<BookingSchedule[]>([]);
 	const [loading, setLoading] = useState(true);
-	const [overrideTarget, setOverrideTarget] = useState<ConflictView | null>(null);
+	const [addOpen, setAddOpen] = useState(false);
+	const [slotOpen, setSlotOpen] = useState(false);
+	const [selected, setSelected] = useState<{ day: number; cluster: Cluster } | null>(null);
 
-	const fetchConflicts = useCallback(async () => {
+	const fetchAll = useCallback(async () => {
 		setLoading(true);
 		try {
-			const res = await fetch("/api/facilities/admin/conflicts");
-			if (res.ok) {
-				const json = await res.json();
-				setConflicts(json.data ?? []);
-			}
-		} catch {
-			toast.error("Failed to load conflicts");
+			const [fRes, sRes] = await Promise.all([
+				fetch("/api/facilities/catalog"),
+				fetch("/api/facilities/schedules"),
+			]);
+			if (fRes.ok) setFacilities((await fRes.json()).data ?? []);
+			if (sRes.ok) setSchedules((await sRes.json()).data ?? []);
 		} finally {
 			setLoading(false);
 		}
 	}, []);
 
 	useEffect(() => {
-		fetchConflicts();
-	}, [fetchConflicts]);
+		fetchAll();
+	}, [fetchAll]);
 
-	if (user && !user.is_jcrc && !user.is_admin) {
+	// Materialise non-reboks bookable slots when viewing a non-reboks schedule (JCRC session).
+	useEffect(() => {
+		if (type !== "reboks") {
+			fetch("/api/facilities/bookings/materialize", { method: "POST" }).catch(() => undefined);
+		}
+	}, [type]);
+
+	const facilitiesById = useMemo(() => {
+		const m = new Map<number, Facility>();
+		for (const f of facilities) m.set(f.id, f);
+		return m;
+	}, [facilities]);
+
+	// Flatten schedules of the active type into ScheduleSlot[] for the week editor.
+	const slots: ScheduleSlot[] = useMemo(() => {
+		const out: ScheduleSlot[] = [];
+		for (const s of schedules) {
+			const f = facilitiesById.get(s.facility_id);
+			if (!f || f.type !== type) continue;
+			out.push({
+				id: s.id,
+				facility_id: s.facility_id,
+				venue: f.venue,
+				sub_venue: f.sub_venue,
+				type: f.type,
+				day_of_week: s.day_of_week,
+				hour: s.hour,
+				priority: s.priority,
+				reboks_activity: s.reboks_activity,
+			});
+		}
+		return out;
+	}, [schedules, facilitiesById, type]);
+
+	const typeFacilities = useMemo(
+		() => facilities.filter((f) => f.type === type && f.active),
+		[facilities, type],
+	);
+	const weekWaves = useMemo(() => buildWeek(slots).waves, [slots]);
+
+	if (user && !user.is_jcrc) {
 		return (
 			<div className="flex flex-col space-y-6 p-4 md:p-6">
-				<PageHeader title="Facilities Admin" />
+				<PageHeader title="Manage Facilities" />
 				<EmptyState
 					icon={Shield}
 					title="Access Denied"
-					description="Only JCRC members and admins can access this page."
+					description="Only JCRC members can manage facilities."
 				/>
 			</div>
 		);
 	}
 
-	const escalated = conflicts
-		.filter((c) => c.escalated)
-		.sort((a, b) => a.days_until_booking - b.days_until_booking);
-
-	const allActive = conflicts.sort((a, b) => a.days_until_booking - b.days_until_booking);
-
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	function handleOverride(facilityId: number, _winningCcaId: number) {
-		const conflict = conflicts.find((c) => c.facility.id === facilityId);
-		if (conflict) setOverrideTarget(conflict);
-	}
-
 	return (
 		<div className="flex flex-col space-y-6 p-4 md:p-6">
 			<PageHeader
-				title="Facilities Admin"
-				description="Manage escalated conflicts and override contested slot assignments"
+				title="Manage Facilities"
+				description="Add facilities, define booking schedules, and resolve conflicts"
 			/>
 
-			<Tabs defaultValue="escalated">
+			<Tabs defaultValue="schedules">
 				<TabsList>
-					<TabsTrigger value="escalated">
-						Escalated ({escalated.length})
-						{escalated.length > 0 && <AlertTriangle className="ml-1 h-3 w-3 text-[#f87171]" />}
-					</TabsTrigger>
-					<TabsTrigger value="all">All Conflicts ({allActive.length})</TabsTrigger>
+					<TabsTrigger value="facilities">Facilities</TabsTrigger>
+					<TabsTrigger value="schedules">Schedules</TabsTrigger>
+					<TabsTrigger value="conflicts">Conflicts</TabsTrigger>
 				</TabsList>
 
-				<TabsContent value="escalated">
+				{/* Facilities */}
+				<TabsContent value="facilities">
+					<div className="mb-4 flex items-center justify-between gap-3">
+						<h3 className="text-sm font-medium text-muted-foreground">All facilities</h3>
+						<Button size="sm" className="gap-1.5" onClick={() => setAddOpen(true)}>
+							<Plus className="h-4 w-4" />
+							Add facility
+						</Button>
+					</div>
 					{loading ? (
-						<p className="py-8 text-center text-sm text-muted-foreground">Loading...</p>
-					) : escalated.length === 0 ? (
-						<EmptyState
-							icon={Shield}
-							title="No escalated conflicts"
-							description="Conflicts auto-escalate 3 days before the booking date."
-						/>
+						<Skeleton className="h-40 w-full" />
+					) : facilities.length === 0 ? (
+						<EmptyState icon={Building2} title="No facilities" description="Add one to get started." />
 					) : (
-						<div className="mt-3 space-y-3">
-							{escalated.map((conflict) => (
-								<ConflictCard
-									key={conflict.facility.id}
-									conflict={conflict}
-									userCcaIds={[]}
-									onYield={fetchConflicts}
-									showOverride
-									onOverride={handleOverride}
-								/>
-							))}
+						<div className="space-y-6">
+							{TYPE_ORDER.filter((t) => facilities.some((f) => f.type === t)).map((t) => {
+								const cfg = FACILITY_TYPE_CONFIG[t];
+								const list = facilities.filter((f) => f.type === t);
+								return (
+									<div key={t}>
+										<div className="mb-2 flex items-center gap-2">
+											<span
+												className="h-2.5 w-2.5 rounded-full"
+												style={{ backgroundColor: cfg.color }}
+											/>
+											<h4 className="text-sm font-semibold">{cfg.label}</h4>
+											<span className="text-xs text-muted-foreground">({list.length})</span>
+										</div>
+										<div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+											{list.map((f) => (
+												<div
+													key={f.id}
+													className="flex items-center justify-between gap-2 rounded-lg border px-3 py-2.5"
+												>
+													<div className="min-w-0">
+														<div className="truncate font-medium">{f.sub_venue}</div>
+														{f.venue !== f.sub_venue && (
+															<div className="truncate text-xs text-muted-foreground">{f.venue}</div>
+														)}
+													</div>
+													{!f.active && (
+														<Badge variant="secondary" className="shrink-0 text-[10px]">
+															Inactive
+														</Badge>
+													)}
+												</div>
+											))}
+										</div>
+									</div>
+								);
+							})}
 						</div>
 					)}
 				</TabsContent>
 
-				<TabsContent value="all">
+				{/* Schedules */}
+				<TabsContent value="schedules">
+					<div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+						<FacilityTypeBadges value={type} onChange={setType} />
+						<Button
+							size="sm"
+							className="gap-1.5"
+							onClick={() => {
+								setSelected(null);
+								setSlotOpen(true);
+							}}
+						>
+							<Plus className="h-4 w-4" />
+							Add slot
+						</Button>
+					</div>
+
 					{loading ? (
-						<p className="py-8 text-center text-sm text-muted-foreground">Loading...</p>
-					) : allActive.length === 0 ? (
-						<EmptyState
-							icon={Shield}
-							title="No active conflicts"
-							description="All slot claims are uncontested."
-						/>
+						<Skeleton className="h-48 w-full" />
 					) : (
-						<div className="mt-3 space-y-3">
-							{allActive.map((conflict) => (
-								<ConflictCard
-									key={conflict.facility.id}
-									conflict={conflict}
-									userCcaIds={[]}
-									onYield={fetchConflicts}
-									showOverride
-									onOverride={handleOverride}
+						<div className="space-y-4">
+							<ScheduleWeek
+								schedules={slots}
+								onSelectCluster={(day, cluster) => setSelected({ day, cluster })}
+							/>
+							{selected && (
+								<ScheduleClusterPanel
+									day={selected.day}
+									cluster={selected.cluster}
+									schedules={slots}
+									waves={weekWaves}
+									onChanged={fetchAll}
+									onAddSlot={() => setSlotOpen(true)}
 								/>
-							))}
+							)}
 						</div>
 					)}
+				</TabsContent>
+
+				{/* Conflicts */}
+				<TabsContent value="conflicts">
+					<ManageConflicts />
 				</TabsContent>
 			</Tabs>
 
-			<OverrideDialog
-				conflict={overrideTarget}
-				onClose={() => setOverrideTarget(null)}
-				onSuccess={fetchConflicts}
+			<FacilityAddDialog open={addOpen} onClose={() => setAddOpen(false)} onSuccess={fetchAll} />
+			<ScheduleSlotDialog
+				open={slotOpen}
+				type={type}
+				facilities={typeFacilities}
+				defaultDay={selected?.day}
+				defaultHour={selected?.cluster.startHour}
+				onClose={() => setSlotOpen(false)}
+				onSuccess={fetchAll}
 			/>
 		</div>
 	);
