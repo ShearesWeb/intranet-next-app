@@ -8,7 +8,8 @@ import { DayDetailPanel } from "@/components/facilities/day-detail-panel";
 import { VenueFilter } from "@/components/facilities/venue-filter";
 import { TypeFilter } from "@/components/facilities/type-filter";
 import { ClaimDialog } from "@/components/facilities/claim-dialog";
-import { FacilitySlotWithClaims, FacilityClaim, BookingType } from "@/types/facilities";
+import { MyCcaBookings } from "@/components/facilities/my-cca-bookings";
+import { BookingWithClaims, FacilityType } from "@/types/facilities";
 import { toast } from "sonner";
 
 function getMonthRange(year: number, month: number) {
@@ -24,11 +25,11 @@ export default function FacilitiesPage() {
 	const [year, setYear] = useState(today.getFullYear());
 	const [month, setMonth] = useState(today.getMonth());
 	const [selectedDate, setSelectedDate] = useState<string>(today.toISOString().split("T")[0]);
-	const [slots, setSlots] = useState<FacilitySlotWithClaims[]>([]);
+	const [bookings, setBookings] = useState<BookingWithClaims[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [venueFilter, setVenueFilter] = useState<string[]>([]);
-	const [typeFilter, setTypeFilter] = useState<BookingType[]>([]);
-	const [claimSlot, setClaimSlot] = useState<FacilitySlotWithClaims | null>(null);
+	const [typeFilter, setTypeFilter] = useState<FacilityType[]>([]);
+	const [claimBooking, setClaimBooking] = useState<BookingWithClaims | null>(null);
 
 	const chairCcas = useMemo(() => {
 		if (!user) return [];
@@ -39,15 +40,13 @@ export default function FacilitiesPage() {
 
 	const isChair = chairCcas.length > 0;
 
-	const fetchSlots = useCallback(async () => {
+	const fetchBookings = useCallback(async () => {
 		const { start, end } = getMonthRange(year, month);
 		setLoading(true);
 		try {
-			const res = await fetch(`/api/facilities/slots?start=${start}&end=${end}`);
+			const res = await fetch(`/api/facilities/bookings?start=${start}&end=${end}`);
 			const json = await res.json();
-			if (res.ok) {
-				setSlots(json.data ?? []);
-			}
+			if (res.ok) setBookings(json.data ?? []);
 		} catch {
 			// fetch failed
 		} finally {
@@ -56,76 +55,38 @@ export default function FacilitiesPage() {
 	}, [year, month]);
 
 	useEffect(() => {
-		fetchSlots();
-	}, [fetchSlots]);
+		fetchBookings();
+	}, [fetchBookings]);
 
 	const allVenues = useMemo(() => {
 		const set = new Set<string>();
-		for (const s of slots) set.add(s.sub_venue);
+		for (const b of bookings) set.add(b.sub_venue);
 		return [...set].sort();
-	}, [slots]);
+	}, [bookings]);
 
-	const filteredSlots = useMemo(() => {
-		return slots.filter((s) => {
-			if (venueFilter.length > 0 && !venueFilter.includes(s.sub_venue)) return false;
-			if (typeFilter.length > 0 && !typeFilter.includes(s.type)) return false;
+	const filtered = useMemo(() => {
+		return bookings.filter((b) => {
+			if (venueFilter.length > 0 && !venueFilter.includes(b.sub_venue)) return false;
+			if (typeFilter.length > 0 && !typeFilter.includes(b.type)) return false;
 			return true;
 		});
-	}, [slots, venueFilter, typeFilter]);
+	}, [bookings, venueFilter, typeFilter]);
 
-	const daySlots = useMemo(() => {
+	const dayBookings = useMemo(() => {
 		if (!selectedDate) return [];
-		return filteredSlots.filter((s) => s.booked_date === selectedDate);
-	}, [filteredSlots, selectedDate]);
+		return filtered.filter((b) => b.booked_date === selectedDate);
+	}, [filtered, selectedDate]);
 
-	function handleChangeMonth(y: number, m: number) {
-		setYear(y);
-		setMonth(m);
-	}
-
-	function handleOptimisticClaim(slotId: number, ccaId: number, activity: string) {
-		const ccaName = chairCcas.find((c) => c.id === ccaId)?.name ?? "";
-		const pendingClaim: FacilityClaim = {
-			id: -Date.now(),
-			facility_id: slotId,
-			cca_id: ccaId,
-			cca_name: ccaName,
-			activity,
-			status: "pending",
-			recurrence_group: null,
-			claimed_by: user ? String(user.id) : "",
-			claimed_at: new Date().toISOString(),
-			resolved_at: null,
-			resolved_by: null,
-		};
-
-		let previous: FacilitySlotWithClaims | undefined;
-		setSlots((prev) =>
-			prev.map((s) => {
-				if (s.id !== slotId) return s;
-				previous = s;
-				return { ...s, claims: [...s.claims, pendingClaim], user_cca_claim: pendingClaim };
-			}),
-		);
-
-		return () => {
-			if (!previous) return;
-			setSlots((prev) => prev.map((s) => (s.id === slotId ? previous! : s)));
-		};
-	}
-
-	async function handleRelease(claimId: number) {
+	async function handleWithdraw(claimId: number) {
 		try {
-			const res = await fetch(`/api/facilities/claims/${claimId}`, {
-				method: "DELETE",
-			});
+			const res = await fetch(`/api/facilities/claims/${claimId}`, { method: "DELETE" });
 			if (!res.ok) {
 				const json = await res.json();
-				toast.error(json.error ?? "Failed to release");
+				toast.error(json.error ?? "Failed to withdraw");
 				return;
 			}
-			toast.success("Booking released");
-			fetchSlots();
+			toast.success("Claim withdrawn");
+			fetchBookings();
 		} catch {
 			toast.error("Network error");
 		}
@@ -146,9 +107,12 @@ export default function FacilitiesPage() {
 						year={year}
 						month={month}
 						selectedDate={selectedDate}
-						slots={filteredSlots}
+						bookings={filtered}
 						onSelectDate={setSelectedDate}
-						onChangeMonth={handleChangeMonth}
+						onChangeMonth={(y, m) => {
+							setYear(y);
+							setMonth(m);
+						}}
 					/>
 				</div>
 
@@ -156,11 +120,11 @@ export default function FacilitiesPage() {
 					{selectedDate ? (
 						<DayDetailPanel
 							date={selectedDate}
-							slots={daySlots}
+							bookings={dayBookings}
 							isChair={isChair}
 							loading={loading}
-							onClaim={setClaimSlot}
-							onRelease={handleRelease}
+							onClaim={setClaimBooking}
+							onWithdraw={handleWithdraw}
 						/>
 					) : (
 						<p className="text-sm text-muted-foreground">Select a day to view available slots.</p>
@@ -168,12 +132,17 @@ export default function FacilitiesPage() {
 				</div>
 			</div>
 
+			{isChair && (
+				<div className="border-t pt-6">
+					<MyCcaBookings />
+				</div>
+			)}
+
 			<ClaimDialog
-				slot={claimSlot}
+				booking={claimBooking}
 				chairCcas={chairCcas}
-				onClose={() => setClaimSlot(null)}
-				onSuccess={fetchSlots}
-				onOptimisticClaim={handleOptimisticClaim}
+				onClose={() => setClaimBooking(null)}
+				onSuccess={fetchBookings}
 			/>
 		</div>
 	);

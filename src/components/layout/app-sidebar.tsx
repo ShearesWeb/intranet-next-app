@@ -64,20 +64,8 @@ export const navOptions: NavItem[] = [
 				featureFlag: "facilities",
 			},
 			{
-				title: "My CCA Bookings",
-				url: "/dashboard/facilities/my-bookings",
-				chairOnly: true,
-				featureFlag: "facilities",
-			},
-			{
-				title: "Conflicts",
-				url: "/dashboard/facilities/conflicts",
-				chairOnly: true,
-				featureFlag: "facilities",
-			},
-			{
 				title: "Manage Facilities",
-				url: "/dashboard/facilities/manage",
+				url: "/dashboard/facilities/admin",
 				jcrcOnly: true,
 				featureFlag: "facilities",
 			},
