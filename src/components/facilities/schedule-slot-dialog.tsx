@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
 	Dialog,
 	DialogContent,
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Facility, FacilityType, WEEKDAY_LABELS, formatHour } from "@/types/facilities";
+import { groupFacilitiesByType } from "@/lib/facilities/facility-picker";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -20,8 +21,9 @@ const HOURS = Array.from({ length: 18 }, (_, i) => i + 6); // 6am … 11pm
 
 interface ScheduleSlotDialogProps {
 	open: boolean;
-	type: FacilityType;
 	facilities: Facility[];
+	/** Pre-select the first facility of this type when opening (the active editor tab). */
+	defaultType?: FacilityType;
 	defaultDay?: number;
 	defaultHour?: number;
 	onClose: () => void;
@@ -30,28 +32,54 @@ interface ScheduleSlotDialogProps {
 
 export function ScheduleSlotDialog({
 	open,
-	type,
 	facilities,
+	defaultType,
 	defaultDay,
 	defaultHour,
 	onClose,
 	onSuccess,
 }: ScheduleSlotDialogProps) {
-	const isReboks = type === "reboks";
-	const [facilityId, setFacilityId] = useState<number | null>(facilities[0]?.id ?? null);
-	const [day, setDay] = useState<number>(defaultDay ?? 1);
-	const [hours, setHours] = useState<number[]>(defaultHour != null ? [defaultHour] : []);
+	const [query, setQuery] = useState("");
+	const [facilityId, setFacilityId] = useState<number | null>(null);
+	const [days, setDays] = useState<number[]>([]);
+	const [hours, setHours] = useState<number[]>([]);
 	const [priority, setPriority] = useState<number>(1);
 	const [activity, setActivity] = useState<string>("");
 	const [submitting, setSubmitting] = useState(false);
 
-	function toggleHour(h: number) {
-		setHours((prev) => (prev.includes(h) ? prev.filter((x) => x !== h) : [...prev, h].sort((a, b) => a - b)));
+	// Reset to sensible defaults each time the dialog opens.
+	useEffect(() => {
+		if (!open) return;
+		setQuery("");
+		setActivity("");
+		setPriority(1);
+		setDays(defaultDay != null ? [defaultDay] : []);
+		setHours(defaultHour != null ? [defaultHour] : []);
+		const def =
+			(defaultType && facilities.find((f) => f.active && f.type === defaultType)) ??
+			facilities.find((f) => f.active);
+		setFacilityId(def?.id ?? null);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [open]);
+
+	const groups = useMemo(() => groupFacilitiesByType(facilities, query), [facilities, query]);
+	const selectedFacility = useMemo(
+		() => facilities.find((f) => f.id === facilityId) ?? null,
+		[facilities, facilityId],
+	);
+	const isReboks = selectedFacility?.type === "reboks";
+
+	function toggleIn(list: number[], value: number): number[] {
+		return list.includes(value) ? list.filter((x) => x !== value) : [...list, value].sort((a, b) => a - b);
 	}
 
 	async function submit() {
 		if (facilityId == null) {
 			toast.error("Pick a facility");
+			return;
+		}
+		if (days.length === 0) {
+			toast.error("Pick at least one day");
 			return;
 		}
 		if (hours.length === 0) {
@@ -62,10 +90,12 @@ export function ScheduleSlotDialog({
 			toast.error("REBOKS slots need an activity name");
 			return;
 		}
+
+		const combos = days.flatMap((day) => hours.map((hour) => ({ day, hour })));
 		setSubmitting(true);
 		try {
 			const results = await Promise.all(
-				hours.map((hour) =>
+				combos.map(({ day, hour }) =>
 					fetch("/api/facilities/schedules", {
 						method: "POST",
 						headers: { "Content-Type": "application/json" },
@@ -80,9 +110,8 @@ export function ScheduleSlotDialog({
 				),
 			);
 			const failed = results.filter((ok) => !ok).length;
-			if (failed > 0) toast.warning(`${failed} slot(s) could not be added`);
-			else toast.success("Schedule updated");
-			setHours([]);
+			if (failed > 0) toast.warning(`${failed} of ${combos.length} slot(s) could not be added`);
+			else toast.success(`${combos.length} slot(s) added`);
 			onSuccess();
 			onClose();
 		} catch {
@@ -99,39 +128,64 @@ export function ScheduleSlotDialog({
 					<DialogTitle>Add schedule slot</DialogTitle>
 				</DialogHeader>
 				<div className="space-y-4">
+					{/* Facility — searchable, grouped by type */}
 					<div className="space-y-1.5">
-						<Label>Facility</Label>
-						<div className="flex max-h-28 flex-wrap gap-1.5 overflow-y-auto">
-							{facilities.length === 0 && (
-								<p className="text-xs text-muted-foreground">No facilities for this type yet.</p>
+						<Label htmlFor="facility-search">Facility</Label>
+						<Input
+							id="facility-search"
+							value={query}
+							onChange={(e) => setQuery(e.target.value)}
+							placeholder="Search facilities…"
+						/>
+						<div className="max-h-40 overflow-y-auto rounded-md border" data-testid="facility-list">
+							{groups.length === 0 ? (
+								<p className="px-3 py-2 text-xs text-muted-foreground">No matching facilities.</p>
+							) : (
+								groups.map((g) => (
+									<div key={g.type}>
+										<div className="sticky top-0 flex items-center gap-1.5 bg-muted/80 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide backdrop-blur">
+											<span className="h-2 w-2 rounded-full" style={{ backgroundColor: g.color }} />
+											{g.label}
+										</div>
+										{g.facilities.map((f) => (
+											<button
+												key={f.id}
+												type="button"
+												onClick={() => setFacilityId(f.id)}
+												className={cn(
+													"flex w-full items-center justify-between gap-2 px-2.5 py-1.5 text-left text-xs hover:bg-accent",
+													facilityId === f.id && "bg-primary/10",
+												)}
+											>
+												<span className="truncate font-medium">{f.sub_venue}</span>
+												{f.venue !== f.sub_venue && (
+													<span className="truncate text-[10px] text-muted-foreground">{f.venue}</span>
+												)}
+											</button>
+										))}
+									</div>
+								))
 							)}
-							{facilities.map((f) => (
-								<button
-									key={f.id}
-									type="button"
-									onClick={() => setFacilityId(f.id)}
-									className={cn(
-										"rounded-md border px-2 py-1 text-xs",
-										facilityId === f.id ? "border-primary bg-primary/10" : "hover:bg-accent",
-									)}
-								>
-									{f.sub_venue}
-								</button>
-							))}
 						</div>
+						{selectedFacility && (
+							<p className="text-[10px] text-muted-foreground">
+								Selected: <span className="font-medium">{selectedFacility.sub_venue}</span>
+							</p>
+						)}
 					</div>
 
+					{/* Days — multi-select */}
 					<div className="space-y-1.5">
-						<Label>Day</Label>
+						<Label>Days</Label>
 						<div className="flex flex-wrap gap-1.5">
 							{DISPLAY_DAYS.map((d) => (
 								<button
 									key={d}
 									type="button"
-									onClick={() => setDay(d)}
+									onClick={() => setDays((prev) => toggleIn(prev, d))}
 									className={cn(
 										"rounded-md border px-2.5 py-1 text-xs",
-										day === d ? "border-primary bg-primary/10" : "hover:bg-accent",
+										days.includes(d) ? "border-primary bg-primary/10" : "hover:bg-accent",
 									)}
 								>
 									{WEEKDAY_LABELS[d]}
@@ -140,6 +194,7 @@ export function ScheduleSlotDialog({
 						</div>
 					</div>
 
+					{/* Hours — multi-select */}
 					<div className="space-y-1.5">
 						<Label>Hours</Label>
 						<div className="flex flex-wrap gap-1">
@@ -147,7 +202,7 @@ export function ScheduleSlotDialog({
 								<button
 									key={h}
 									type="button"
-									onClick={() => toggleHour(h)}
+									onClick={() => setHours((prev) => toggleIn(prev, h))}
 									className={cn(
 										"rounded border px-1.5 py-0.5 text-[10px] tabular-nums",
 										hours.includes(h) ? "border-primary bg-primary/10" : "hover:bg-accent",
@@ -160,7 +215,7 @@ export function ScheduleSlotDialog({
 					</div>
 
 					{isReboks && (
-						<div className="grid grid-cols-2 gap-3">
+						<div className="grid grid-cols-2 gap-3" data-testid="reboks-fields">
 							<div className="space-y-1.5">
 								<Label htmlFor="priority">Wave (priority)</Label>
 								<Input

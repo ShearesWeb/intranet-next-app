@@ -87,10 +87,7 @@ export default function AdminFacilitiesPage() {
 		return out;
 	}, [schedules, facilitiesById, type]);
 
-	const typeFacilities = useMemo(
-		() => facilities.filter((f) => f.type === type && f.active),
-		[facilities, type],
-	);
+	const activeFacilities = useMemo(() => facilities.filter((f) => f.active), [facilities]);
 	const weekWaves = useMemo(() => buildWeek(slots).waves, [slots]);
 
 	if (user && !user.is_jcrc) {
@@ -223,8 +220,8 @@ export default function AdminFacilitiesPage() {
 			<FacilityAddDialog open={addOpen} onClose={() => setAddOpen(false)} onSuccess={fetchAll} />
 			<ScheduleSlotDialog
 				open={slotOpen}
-				type={type}
-				facilities={typeFacilities}
+				facilities={activeFacilities}
+				defaultType={type}
 				defaultDay={selected?.day}
 				defaultHour={selected?.cluster.startHour}
 				onClose={() => setSlotOpen(false)}
