@@ -78,6 +78,7 @@ export function useCcaMembers(ccaId: string | null): UseCcaMembersReturn {
 	const isCulture = permissions.ccaType === "culture";
 
 	const search = useMemberSearch(ccaId);
+	const { clearSearch } = search;
 
 	const resetState = useCallback(() => {
 		setOriginalGroupedMembers({});
@@ -88,8 +89,8 @@ export function useCcaMembers(ccaId: string | null): UseCcaMembersReturn {
 		setAllPositions([]);
 		setError(null);
 		setPendingChanges([]);
-		search.clearSearch();
-	}, [search.clearSearch]);
+		clearSearch();
+	}, [clearSearch]);
 
 	const refetch = useCallback(async () => {
 		try {

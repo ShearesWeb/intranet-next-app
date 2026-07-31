@@ -31,7 +31,7 @@ export default function FacilitiesPage() {
 	} = useApiQuery<BookingWithClaims[]>(
 		`/api/facilities/bookings?start=${monthRange.start}&end=${monthRange.end}`,
 	);
-	const bookings = data ?? [];
+	const bookings = useMemo(() => data ?? [], [data]);
 
 	const allVenues = useMemo(() => {
 		const set = new Set<string>();

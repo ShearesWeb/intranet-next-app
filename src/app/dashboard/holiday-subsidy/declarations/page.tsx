@@ -48,7 +48,7 @@ export default function HolidaySubsidyPage() {
 				(json as { data?: { declarations?: CalendarDeclaration[] } }).data?.declarations ?? [],
 		},
 	);
-	const declarations = data ?? [];
+	const declarations = useMemo(() => data ?? [], [data]);
 
 	const fetchPositions = useCallback(async () => {
 		if (!chairCcas.length) return;
