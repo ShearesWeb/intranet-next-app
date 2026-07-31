@@ -18,5 +18,5 @@ export function deriveCcaRankingStatus(group: CcaPositionGroup): CcaRankingStatu
 export const CCA_RANKING_STATUS_LABELS: Record<CcaRankingStatus, string> = {
 	ranked: "Ranked",
 	"needs-ranking": "Needs ranking",
-	"no-applicants": "No applicants",
+	"no-applicants": "No candidates",
 };

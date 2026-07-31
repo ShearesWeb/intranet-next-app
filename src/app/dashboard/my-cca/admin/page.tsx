@@ -12,35 +12,24 @@ import { ErrorCard } from "@/components/layout/error-card";
 import Link from "next/link";
 import { useManagedCcas } from "@/hooks/use-managed-ccas";
 import type { CCAData } from "@/types/cca-data";
-import { PositionTypeBadge } from "@/components/badges";
+import { RankingProgressBar } from "@/components/ranking/ranking-progress-bar";
 import { ccaNameColumn, ccaTypeColumn } from "@/components/cca/cca-column-defs";
 
 const ccaTableColumns: ColumnDef<CCAData>[] = [
 	ccaNameColumn,
 	ccaTypeColumn,
 	{
-		accessorKey: "positions",
-		header: () => <div className="font-semibold">Managed Positions</div>,
+		accessorKey: "ranking_progress",
+		header: () => <div className="font-semibold">Ranking Progress</div>,
 		enableSorting: false,
 		cell: ({ row }) => {
-			const positions = row.original.positions ?? [];
+			const progress = row.original.ranking_progress;
 
-			if (positions.length === 0) {
-				return <div className="text-xs text-muted-foreground">No managed positions</div>;
+			if (!progress) {
+				return <div className="text-xs text-muted-foreground">-</div>;
 			}
 
-			return (
-				<div className="flex min-w-[12rem] flex-col items-start gap-2">
-					{positions.map((position) => (
-						<PositionTypeBadge
-							key={position.position_id}
-							value={position.position_name}
-							positionType={position.position_type}
-							className="text-xs"
-						/>
-					))}
-				</div>
-			);
+			return <RankingProgressBar ranked={progress.ranked} total={progress.total} />;
 		},
 	},
 ];
@@ -55,7 +44,7 @@ export default function CCAAdmin() {
 	if (error && ccas.length === 0) {
 		return (
 			<div className="flex flex-col space-y-6 p-4 md:p-6">
-				<PageHeader title="CCA Admin" />
+				<PageHeader title="CCA Ranking" />
 				<ErrorCard error={error} onRetry={() => window.location.reload()} />
 			</div>
 		);
@@ -102,7 +91,7 @@ export default function CCAAdmin() {
 	return (
 		<div className="flex flex-col space-y-6 p-4 md:p-6">
 			<PageHeader
-				title="CCA Admin"
+				title="CCA Ranking"
 				description="Manage members and rankings for your CCAs."
 				backHref="/dashboard/my-cca"
 				backLabel="Back to My CCAs"

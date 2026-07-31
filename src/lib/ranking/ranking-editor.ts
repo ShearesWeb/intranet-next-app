@@ -1,12 +1,7 @@
 import type { CommitmentPeriod, CutStatus } from "@/types/members";
 import type { RankingResponseMember } from "@/types/ranking-api";
-import type { CCAMember, PositionGroup, RankingSavePayload, ScoreField } from "@/types/ranking";
-import {
-	MAX_SAVE_PAYLOAD_BYTES,
-	POSITION_TYPE_ORDER,
-	RESIDENT_METRICS,
-	SCORE_OPTIONS,
-} from "@/lib/ranking/constants";
+import type { CCAMember, PositionGroup, RankingSavePayload } from "@/types/ranking";
+import { MAX_SAVE_PAYLOAD_BYTES, POSITION_TYPE_ORDER } from "@/lib/ranking/constants";
 import {
 	getRankingScore,
 	hasRequiredRankingInputs,
@@ -16,15 +11,9 @@ import { formatCommitmentPeriod } from "@/lib/cca/member-helpers";
 
 const textEncoder = new TextEncoder();
 
-export {
-	MAX_SAVE_PAYLOAD_BYTES,
-	POSITION_TYPE_ORDER,
-	RESIDENT_METRICS,
-	SCORE_OPTIONS,
-	isResidentPositionType,
-};
+export { MAX_SAVE_PAYLOAD_BYTES, isResidentPositionType };
 
-export type { PositionGroup, RankingResponseMember, ScoreField };
+export type { PositionGroup, RankingResponseMember };
 
 export function cloneMembers(items: CCAMember[]): CCAMember[] {
 	return items.map((member) => ({ ...member }));
@@ -160,24 +149,6 @@ export function chunkRankingPayloads(
 	}
 
 	return chunks;
-}
-
-export function formatCutStatus(status: unknown): string {
-	if (typeof status !== "string" || status.trim().length === 0) return "-";
-
-	const normalized = status
-		.toLowerCase()
-		.trim()
-		.replace(/[_\s]+/g, "-");
-	const statusMap: Record<string, string> = {
-		"ivp-ihg-team": "IVP & IHG Team",
-		"ihg-team": "IHG Team Only",
-		"final-cut": "Final Cut",
-		"first-cut": "IVP",
-	};
-
-	if (statusMap[normalized]) return statusMap[normalized];
-	return status;
 }
 
 export { formatCommitmentPeriod };

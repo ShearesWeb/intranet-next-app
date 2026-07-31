@@ -3,17 +3,19 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import {
 	Dialog,
-	DialogClose,
 	DialogContent,
 	DialogDescription,
-	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+	SubsidyDeclarationFields,
+	SubsidyDeclarationFormFooter,
+	SubsidyFormField,
+	SubsidyFormSelect,
+	validateDeclarationForm,
+} from "@/components/holiday-subsidy/subsidy-declaration-form";
 
 import type {
 	PositionOption,
@@ -100,14 +102,11 @@ export function SubsidyDeclarationFormDialog({
 			setFormError(null);
 			setSubmitting(true);
 
-			if (
-				!formState.positionId ||
-				!formState.weekId ||
-				formState.hours === "" ||
-				Number(formState.hours) <= 0 ||
-				!formState.justification.trim()
-			) {
-				setFormError("All fields are required and hours must be greater than 0.");
+			const validationError = !formState.weekId
+				? "All fields are required and hours must be greater than 0."
+				: validateDeclarationForm(formState);
+			if (validationError) {
+				setFormError(validationError);
 				setSubmitting(false);
 				return;
 			}
@@ -155,10 +154,7 @@ export function SubsidyDeclarationFormDialog({
 		[
 			ccaId,
 			editingDeclaration,
-			formState.hours,
-			formState.justification,
-			formState.positionId,
-			formState.weekId,
+			formState,
 			mapSubsidyToDeclaration,
 			onOpenChange,
 			onSubmitSuccess,
@@ -182,103 +178,40 @@ export function SubsidyDeclarationFormDialog({
 					</DialogDescription>
 				</DialogHeader>
 				<form onSubmit={handleSubmit} className="space-y-4 pt-2">
-					<div className="space-y-1">
-						<label className="text-sm font-medium text-foreground">CCA</label>
+					<SubsidyFormField label="CCA">
 						<Input value={ccaName} disabled />
-					</div>
-					<div className="space-y-1">
-						<label className="text-sm font-medium text-foreground">CCA Position</label>
-						<select
-							className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-							value={formState.positionId}
-							onChange={(e) =>
-								setFormState((prev) => ({
-									...prev,
-									positionId: Number(e.target.value),
-								}))
-							}
-							disabled={positions.length === 0}
-						>
-							{positions.map((position) => (
-								<option key={position.id} value={position.id}>
-									{position.name} ({position.position_type})
-								</option>
-							))}
-						</select>
-					</div>
-					<div className="space-y-1">
-						<label className="text-sm font-medium text-foreground">Week</label>
-						<select
-							className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-							value={formState.weekId}
-							onChange={(e) =>
-								setFormState((prev) => ({
-									...prev,
-									weekId: Number(e.target.value),
-								}))
-							}
-						>
-							{weekOptions.map((week) => (
-								<option key={week.id} value={week.id}>
-									{week.label}
-								</option>
-							))}
-						</select>
-					</div>
-					<div className="space-y-1">
-						<label className="text-sm font-medium text-foreground">Hours</label>
-						<Input
-							type="number"
-							min={0}
-							step={0.5}
-							placeholder="e.g., 4"
-							value={formState.hours}
-							onChange={(e) =>
-								setFormState((prev) => ({
-									...prev,
-									hours: e.target.value,
-								}))
-							}
-							required
-						/>
-					</div>
-					<div className="space-y-1">
-						<label className="text-sm font-medium text-foreground">Justification</label>
-						<Textarea
-							placeholder="Briefly describe the activities and time spent."
-							value={formState.justification}
-							onChange={(e) =>
-								setFormState((prev) => ({
-									...prev,
-									justification: e.target.value,
-								}))
-							}
-							required
-						/>
-					</div>
+					</SubsidyFormField>
+					<SubsidyDeclarationFields
+						positionLabel="CCA Position"
+						positions={positions}
+						values={formState}
+						onChange={(patch) => setFormState((prev) => ({ ...prev, ...patch }))}
+					>
+						<SubsidyFormField label="Week">
+							<SubsidyFormSelect
+								value={formState.weekId}
+								onChange={(e) =>
+									setFormState((prev) => ({
+										...prev,
+										weekId: Number(e.target.value),
+									}))
+								}
+							>
+								{weekOptions.map((week) => (
+									<option key={week.id} value={week.id}>
+										{week.label}
+									</option>
+								))}
+							</SubsidyFormSelect>
+						</SubsidyFormField>
+					</SubsidyDeclarationFields>
 
-					{formError ? (
-						<Alert variant="destructive">
-							<AlertDescription>{formError}</AlertDescription>
-						</Alert>
-					) : null}
-
-					<DialogFooter>
-						<DialogClose asChild>
-							<Button type="button" variant="secondary" disabled={submitting}>
-								Cancel
-							</Button>
-						</DialogClose>
-						<Button type="submit" disabled={submitting || positions.length === 0}>
-							{submitting
-								? editingDeclaration
-									? "Updating..."
-									: "Submitting..."
-								: editingDeclaration
-									? "Update Declaration"
-									: "Submit Declaration"}
-						</Button>
-					</DialogFooter>
+					<SubsidyDeclarationFormFooter
+						formError={formError}
+						submitting={submitting}
+						isEdit={Boolean(editingDeclaration)}
+						submitDisabled={positions.length === 0}
+					/>
 				</form>
 			</DialogContent>
 		</Dialog>

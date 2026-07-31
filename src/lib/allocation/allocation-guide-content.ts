@@ -1,27 +1,3 @@
-export const ALGORITHM_STEPS = [
-	{
-		number: 1,
-		title: "You set your preferences",
-		icon: "Users" as const,
-		description:
-			"You pick the positions you'd join and order them — favorite first. The algorithm starts by applying to your #1 on your behalf.",
-	},
-	{
-		number: 2,
-		title: "CCAs sort applicants",
-		icon: "Activity" as const,
-		description:
-			"Each CCA looks at every applicant and tentatively holds onto the ones they prefer (up to their capacity). Anyone bumped tries their next preference.",
-	},
-	{
-		number: 3,
-		title: "Repeat until stable",
-		icon: "Heart" as const,
-		description:
-			"Bumped applicants try #2, then #3, and so on. The algorithm stops when no one is moving — the result is mathematically stable: no pair can swap and be happier.",
-	},
-] as const;
-
 export const FAQ_ITEMS = [
 	{
 		value: "item-1",

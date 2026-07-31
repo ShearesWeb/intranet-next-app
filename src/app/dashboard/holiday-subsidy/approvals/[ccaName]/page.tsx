@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -13,6 +13,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { useAuth } from "@/lib/auth/auth-context";
 
 import { DeclarationSectionCard } from "@/components/holiday-subsidy/declaration-section-card";
+import { useBeforeUnload } from "@/hooks/use-before-unload";
 import { useSubsidyApprovalDetails } from "@/hooks/use-subsidy-approval-details";
 import { SubsidyStatus, type DeclarationSection } from "@/types/declarations";
 import { formatSubsidyStatus, STATUS_ORDER } from "@/lib/holiday-subsidy/declaration-mappers";
@@ -55,18 +56,7 @@ export default function HolidaySubsidyApprovalDetailsPage() {
 	);
 
 	// Warn user before leaving page with unsaved changes
-	useEffect(() => {
-		const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-			if (hasChanges) {
-				e.preventDefault();
-				e.returnValue = "";
-				return "";
-			}
-		};
-
-		window.addEventListener("beforeunload", handleBeforeUnload);
-		return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-	}, [hasChanges]);
+	useBeforeUnload(hasChanges);
 
 	const handleBack = useCallback(() => {
 		if (hasChanges && !confirm("You have unsaved changes. Leave without saving?")) return;

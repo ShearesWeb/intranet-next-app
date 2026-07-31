@@ -1,0 +1,12 @@
+{
+	"$schema": "https://unpkg.com/knip@5/schema.json",
+	"entry": [
+		"e2e/cli.ts",
+		"tests/fixtures/generate.ts",
+		"tests/integration/setup.ts",
+		"open-next.config.ts",
+		"vitest.integration.config.mts"
+	],
+	"ignoreDependencies": ["prettier", "tsx", "postcss-load-config"],
+	"ignore": ["src/components/ui/**", "tests/fixtures/types.ts"]
+}

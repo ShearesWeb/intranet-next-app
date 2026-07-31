@@ -9,5 +9,5 @@ export default function Error({
 	error: Error & { digest?: string };
 	reset: () => void;
 }) {
-	return <DashboardError error={error} reset={reset} segmentLabel="CCA Admin" />;
+	return <DashboardError error={error} reset={reset} segmentLabel="CCA Ranking" />;
 }

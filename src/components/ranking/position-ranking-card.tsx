@@ -1,7 +1,7 @@
 "use client";
 
 import { PositionTypeBadge } from "@/components/badges";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Users } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import {
 	Table,
@@ -13,11 +13,8 @@ import {
 } from "@/components/ui/table";
 import type { CCAMember, PositionGroup, ScoreField } from "@/types/ranking";
 import { RESIDENT_METRICS, SCORE_OPTIONS } from "@/lib/ranking/constants";
-import {
-	formatCommitmentPeriod,
-	formatCutStatus,
-	isResidentPositionType,
-} from "@/lib/ranking/ranking-editor";
+import { formatCommitmentPeriod, isResidentPositionType } from "@/lib/ranking/ranking-editor";
+import { formatCutStatus } from "@/lib/cca/cut-status";
 
 type PositionRankingCardProps = {
 	group: PositionGroup;
@@ -44,104 +41,98 @@ export function PositionRankingCard({ group, ccaType, onFieldChange }: PositionR
 	);
 
 	return (
-		<Card>
-			<CardHeader className="pb-2">
-				<CardTitle className="text-base">
-					<div className="flex items-center gap-2">
-						<span className="text-xl">{group.position}</span>
-						<span className="flex items-center gap-1 text-sm font-normal text-muted-foreground">
-							<PositionTypeBadge
-								value={(group.position_type || "unknown").replace(/_/g, " ").toLowerCase()}
-								positionType={group.position_type}
-								className="h-5 px-2 py-0 text-[11px] lowercase"
-							/>
-						</span>
-					</div>
-				</CardTitle>
-				<CardDescription>
+		<section className="flex flex-col gap-4">
+			<div className="flex flex-wrap items-center justify-between gap-3">
+				<div className="flex flex-wrap items-center gap-2.5">
+					<h2 className="text-lg font-semibold text-foreground">{group.position}</h2>
+					<PositionTypeBadge
+						value={(group.position_type || "unknown").replace(/_/g, " ").toLowerCase()}
+						positionType={group.position_type}
+						className="h-5 px-2 py-0 text-[11px] lowercase"
+					/>
+				</div>
+				<span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs font-medium tabular-nums text-muted-foreground">
+					<Users className="h-3.5 w-3.5" />
 					{group.members.length} member{group.members.length !== 1 ? "s" : ""}
-				</CardDescription>
-			</CardHeader>
-			<CardContent className="space-y-3">
-				<div className="rounded-md border">
-					<Table>
-						<TableHeader>
-							<TableRow>
-								<TableHead className="w-[88px]">Rank</TableHead>
-								<TableHead>Name</TableHead>
+				</span>
+			</div>
+
+			<div className="rounded-lg border overflow-x-auto shadow-sm">
+				<Table>
+					<TableHeader>
+						<TableRow>
+							<TableHead className="w-[88px]">Rank</TableHead>
+							<TableHead>Name</TableHead>
+							{!isResidentGroup &&
+								(ccaType === "sports" ? (
+									<TableHead>Status</TableHead>
+								) : (
+									<TableHead>Commitment</TableHead>
+								))}
+							{isResidentGroup ? (
+								RESIDENT_METRICS.map((metric) => (
+									<TableHead key={metric.field}>{metric.label} (1-10)</TableHead>
+								))
+							) : (
+								<TableHead>
+									{ccaType === "sports"
+										? "Captain's Appraisal (1-10)"
+										: "Attendance and Attitude (1-10)"}
+								</TableHead>
+							)}
+							{!isResidentGroup && ccaType !== "sports" && (
+								<TableHead>Performance (1-10)</TableHead>
+							)}
+							<TableHead>Remarks</TableHead>
+						</TableRow>
+					</TableHeader>
+					<TableBody>
+						{group.members.map((member) => (
+							<TableRow key={member.row_key}>
+								<TableCell>
+									<div
+										key={member.ranking}
+										className="ml-2 flex items-center justify-center size-9 rounded-full bg-gradient-to-br from-primary to-orange-600 text-primary-foreground font-bold text-sm shadow-sm animate-[fade-in-scale_200ms_ease-out]"
+									>
+										{member.ranking}
+									</div>
+								</TableCell>
+								<TableCell className="font-medium">{member.name}</TableCell>
 								{!isResidentGroup &&
 									(ccaType === "sports" ? (
-										<TableHead>Status</TableHead>
+										<TableCell className="text-sm">{formatCutStatus(member.cut_status)}</TableCell>
 									) : (
-										<TableHead>Commitment</TableHead>
+										<TableCell className="text-sm">
+											{formatCommitmentPeriod(member.commitment_period)}
+										</TableCell>
 									))}
 								{isResidentGroup ? (
 									RESIDENT_METRICS.map((metric) => (
-										<TableHead key={metric.field}>{metric.label} (1-10)</TableHead>
+										<TableCell key={metric.field}>
+											{renderScoreSelect(member, metric.field)}
+										</TableCell>
 									))
 								) : (
-									<TableHead>
-										{ccaType === "sports"
-											? "Captain's Appraisal (1-10)"
-											: "Attendance and Attitude (1-10)"}
-									</TableHead>
+									<TableCell>{renderScoreSelect(member, "attendance")}</TableCell>
 								)}
 								{!isResidentGroup && ccaType !== "sports" && (
-									<TableHead>Performance (1-10)</TableHead>
+									<TableCell>{renderScoreSelect(member, "performance")}</TableCell>
 								)}
-								<TableHead>Remarks</TableHead>
+								<TableCell className="min-w-[220px]">
+									<Textarea
+										value={member.remarks || ""}
+										onChange={(event) =>
+											onFieldChange(member.row_key, "remarks", event.target.value)
+										}
+										placeholder="Enter remarks"
+										className="min-h-[60px] text-sm"
+									/>
+								</TableCell>
 							</TableRow>
-						</TableHeader>
-						<TableBody>
-							{group.members.map((member) => (
-								<TableRow key={member.row_key}>
-									<TableCell>
-										<div
-											key={member.ranking}
-											className="ml-2 flex items-center justify-center size-10 rounded-full bg-primary text-primary-foreground font-bold text-lg animate-[fade-in-scale_200ms_ease-out]"
-										>
-											{member.ranking}
-										</div>
-									</TableCell>
-									<TableCell className="font-medium">{member.name}</TableCell>
-									{!isResidentGroup &&
-										(ccaType === "sports" ? (
-											<TableCell className="text-sm">
-												{formatCutStatus(member.cut_status)}
-											</TableCell>
-										) : (
-											<TableCell className="text-sm">
-												{formatCommitmentPeriod(member.commitment_period)}
-											</TableCell>
-										))}
-									{isResidentGroup ? (
-										RESIDENT_METRICS.map((metric) => (
-											<TableCell key={metric.field}>
-												{renderScoreSelect(member, metric.field)}
-											</TableCell>
-										))
-									) : (
-										<TableCell>{renderScoreSelect(member, "attendance")}</TableCell>
-									)}
-									{!isResidentGroup && ccaType !== "sports" && (
-										<TableCell>{renderScoreSelect(member, "performance")}</TableCell>
-									)}
-									<TableCell className="min-w-[220px]">
-										<Textarea
-											value={member.remarks || ""}
-											onChange={(event) =>
-												onFieldChange(member.row_key, "remarks", event.target.value)
-											}
-											placeholder="Enter remarks"
-											className="min-h-[60px] text-sm"
-										/>
-									</TableCell>
-								</TableRow>
-							))}
-						</TableBody>
-					</Table>
-				</div>
-			</CardContent>
-		</Card>
+						))}
+					</TableBody>
+				</Table>
+			</div>
+		</section>
 	);
 }

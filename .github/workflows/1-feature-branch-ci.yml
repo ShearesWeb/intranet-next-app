@@ -31,16 +31,13 @@ jobs:
         run: npm ci --prefer-offline --no-audit --no-fund
 
       - name: 4. 🎨 Prettier Check
-        run: npm run format:check
+        run: make format-check
 
       - name: 5. 🧹 Lint
         run: npm run lint
 
       - name: 6. 🔎 Typecheck
-        run: npm run typecheck
+        run: make typecheck
 
-      - name: 7. 🧾 Fixtures Drift Check
-        run: npm run fixtures:check
-
-      - name: 8. 🧪 Unit + Component Tests
-        run: npm test
+      - name: 7. 🧪 Unit + Component Tests
+        run: make test

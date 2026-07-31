@@ -14,7 +14,7 @@ import type {
 	PendingChange,
 	UserSearchResult,
 } from "@/types/members";
-import { getGroupFromStatus, getStatusLabel } from "@/lib/cca/member-status-helpers";
+import { getGroupFromStatus, getStatusLabel } from "@/lib/cca/cut-status";
 import { useMemberSearch } from "@/hooks/use-member-search";
 import { useMemberSave } from "@/hooks/use-member-save";
 
@@ -78,6 +78,7 @@ export function useCcaMembers(ccaId: string | null): UseCcaMembersReturn {
 	const isCulture = permissions.ccaType === "culture";
 
 	const search = useMemberSearch(ccaId);
+	const { clearSearch } = search;
 
 	const resetState = useCallback(() => {
 		setOriginalGroupedMembers({});
@@ -88,8 +89,8 @@ export function useCcaMembers(ccaId: string | null): UseCcaMembersReturn {
 		setAllPositions([]);
 		setError(null);
 		setPendingChanges([]);
-		search.clearSearch();
-	}, [search.clearSearch]);
+		clearSearch();
+	}, [clearSearch]);
 
 	const refetch = useCallback(async () => {
 		try {

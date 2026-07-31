@@ -136,6 +136,44 @@ describe("AuthContext", () => {
 		expect(mocks.push).toHaveBeenCalledWith("/auth/login?reason=user_not_found");
 	});
 
+	it("destroys the stale session when backend returns no user (prevents middleware redirect loop)", async () => {
+		const session = {
+			user: { email: "a@test.com" },
+		} as Session;
+		const { signOut } = mockClient(session);
+
+		const fetchMock = vi.fn((input: RequestInfo | URL) => {
+			const url = typeof input === "string" ? input : input.toString();
+			if (url.includes("/api/auth/signout")) {
+				return Promise.resolve({ ok: true, json: async () => ({ ok: true }) });
+			}
+			// /api/user — no profile row for this auth session
+			return Promise.resolve({ ok: false, text: async () => "not found" });
+		});
+		vi.stubGlobal("fetch", fetchMock);
+
+		const { AuthProvider } = await import("../auth-context");
+
+		await act(async () => {
+			root.render(
+				<AuthProvider>
+					<div />
+				</AuthProvider>,
+			);
+		});
+		await flushEffects();
+
+		// Must clear the httpOnly Supabase cookies server-side, otherwise the
+		// middleware keeps seeing an authenticated session on /auth/* and bounces
+		// back to /dashboard → here → forever.
+		expect(fetchMock).toHaveBeenCalledWith(
+			"/api/auth/signout",
+			expect.objectContaining({ method: "POST" }),
+		);
+		expect(signOut).toHaveBeenCalled();
+		expect(mocks.push).toHaveBeenCalledWith("/auth/login?reason=user_not_found");
+	});
+
 	it("sets user and session on successful auth", async () => {
 		const session = {
 			user: { email: "a@test.com" },

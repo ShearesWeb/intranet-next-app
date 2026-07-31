@@ -2,19 +2,12 @@ import { createClient } from "@/lib/supabase/server";
 import { fetchUserInfo } from "@/lib/auth/fetch-user-info";
 import { checkCcaAuthorization } from "@/lib/cca/cca-chair-access";
 import { ApiError } from "@/lib/api/errors";
-import type { PositionType, UserAppointment } from "@/types/user";
+import type { PositionType } from "@/types/user";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const NON_RANKABLE_POSITION_TYPES_FILTER = "(lead,vice,resident)";
 const NON_APPLICANT_POSITION_TYPES = new Set(["lead", "vice", "resident"]);
 export const STAGED_RANK_OFFSET = 1000;
-
-export type RankingAccessPosition = {
-	id: UserAppointment["position_id"];
-	cca_id: UserAppointment["cca_id"];
-	name: UserAppointment["position_name"];
-	position_type: PositionType;
-};
 
 type PositionAvailabilityRow = {
 	position_id: number;

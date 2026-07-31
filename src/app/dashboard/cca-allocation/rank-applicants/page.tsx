@@ -8,7 +8,9 @@ import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/layout/empty-state";
+import { StatusPill } from "@/components/shared/status-pill";
 import { useApplicantRankings } from "@/hooks/use-applicant-rankings";
+import { CoverageLegend, CoverageMeterMini } from "@/components/allocation/coverage-indicator";
 import { DataTable, type DataTableColumnDef } from "@/components/table/data-table";
 import {
 	deriveCcaRankingStatus,
@@ -22,6 +24,7 @@ interface CcaRow {
 	cca_name: string;
 	positionCount: number;
 	applicantCount: number;
+	openSlots: number;
 	status: CcaRankingStatus;
 }
 
@@ -30,16 +33,6 @@ const STATUS_STYLES: Record<CcaRankingStatus, string> = {
 	"needs-ranking": "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200",
 	"no-applicants": "bg-muted text-muted-foreground",
 };
-
-function StatusPill({ status }: { status: CcaRankingStatus }) {
-	return (
-		<span
-			className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[status]}`}
-		>
-			{CCA_RANKING_STATUS_LABELS[status]}
-		</span>
-	);
-}
 
 export default function RankApplicants() {
 	const { user } = useAuth();
@@ -52,6 +45,7 @@ export default function RankApplicants() {
 				cca_name: group.cca_name,
 				positionCount: group.positions.length,
 				applicantCount: group.positions.reduce((sum, p) => sum + p.applicants.length, 0),
+				openSlots: group.positions.reduce((sum, p) => sum + p.available_capacity, 0),
 				status: deriveCcaRankingStatus(group),
 			})),
 		[ccaGroups],
@@ -71,7 +65,7 @@ export default function RankApplicants() {
 			},
 			{
 				accessorKey: "applicantCount",
-				header: "To rank",
+				header: "Candidates",
 				enableSorting: true,
 				cell: ({ row }) => (
 					<span className="flex items-center gap-1 tabular-nums text-muted-foreground">
@@ -81,9 +75,25 @@ export default function RankApplicants() {
 				),
 			},
 			{
+				accessorKey: "openSlots",
+				header: "Coverage",
+				enableSorting: false,
+				cell: ({ row }) => (
+					<CoverageMeterMini
+						candidateCount={row.original.applicantCount}
+						openSlots={row.original.openSlots}
+					/>
+				),
+			},
+			{
 				accessorKey: "status",
 				header: "Status",
-				cell: ({ row }) => <StatusPill status={row.original.status} />,
+				cell: ({ row }) => (
+					<StatusPill
+						label={CCA_RANKING_STATUS_LABELS[row.original.status]}
+						className={STATUS_STYLES[row.original.status]}
+					/>
+				),
 			},
 			{
 				id: "actions",
@@ -115,7 +125,7 @@ export default function RankApplicants() {
 		<div className="flex flex-col space-y-6 p-4 md:p-6">
 			<PageHeader
 				title="Chair preferences"
-				description="Pick a CCA to rank its applicants. Open one to drag, search and reorder."
+				description="Pick a CCA and rank the candidates you want for its open positions."
 			/>
 
 			{rows.length === 0 ? (
@@ -125,10 +135,13 @@ export default function RankApplicants() {
 				/>
 			) : (
 				<>
-					<div className="text-sm text-muted-foreground">
-						{rows.length} CCA{rows.length > 1 ? "s" : ""} · {positions.length} position
-						{positions.length > 1 ? "s" : ""} · {totalApplicants} applicant
-						{totalApplicants !== 1 ? "s" : ""}
+					<div className="flex flex-col gap-1.5">
+						<div className="text-sm text-muted-foreground">
+							{rows.length} CCA{rows.length > 1 ? "s" : ""} · {positions.length} position
+							{positions.length > 1 ? "s" : ""} · {totalApplicants} candidate
+							{totalApplicants !== 1 ? "s" : ""} ranked
+						</div>
+						<CoverageLegend />
 					</div>
 
 					<DataTable<CcaRow>

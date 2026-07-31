@@ -5,6 +5,7 @@ import { type ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/table/data-table";
 import { PositionTypeBadge } from "@/components/badges";
+import { StatusPill } from "@/components/shared/status-pill";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { Check, X, Info, AlertCircle } from "lucide-react";
@@ -23,20 +24,12 @@ export interface WeeklyApprovalsTableProps {
 	onStageReject: () => void;
 }
 
-function StatusPill({ status }: { status: string }) {
-	const colorClass =
-		status === "approved"
-			? "bg-emerald-100 text-emerald-800"
-			: status === "rejected"
-				? "bg-red-100 text-red-800"
-				: "bg-amber-100 text-amber-800";
-	return (
-		<span
-			className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium capitalize ${colorClass}`}
-		>
-			{status}
-		</span>
-	);
+function statusClass(status: string): string {
+	return status === "approved"
+		? "bg-emerald-100 text-emerald-800"
+		: status === "rejected"
+			? "bg-red-100 text-red-800"
+			: "bg-amber-100 text-amber-800";
 }
 
 export function WeeklyApprovalsTable({
@@ -137,11 +130,15 @@ export function WeeklyApprovalsTable({
 					const staged = pendingStatus.get(row.original.id);
 					return (
 						<div className="flex flex-col gap-1 min-w-[110px]">
-							<StatusPill status={String(row.getValue("status"))} />
+							<StatusPill
+								label={String(row.getValue("status"))}
+								className={statusClass(String(row.getValue("status")))}
+								capitalize
+							/>
 							{staged && (
 								<div className="flex items-center gap-1 text-[11px] font-medium text-amber-700">
 									<span>{"→"}</span>
-									<StatusPill status={staged} />
+									<StatusPill label={staged} className={statusClass(staged)} capitalize />
 								</div>
 							)}
 						</div>

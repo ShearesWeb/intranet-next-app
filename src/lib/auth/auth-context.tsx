@@ -81,6 +81,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 			const fetchedUser = await fetchUserFromBackend();
 
 			if (!sessionEmail || !fetchedUser || fetchedUser.email !== sessionEmail) {
+				// The auth session is valid but has no intranet profile. Clearing
+				// only in-memory state leaves the httpOnly Supabase cookies alive,
+				// so middleware keeps treating the caller as authenticated and
+				// bounces /auth/* → /dashboard → back here forever. Destroy the
+				// session server-side (and locally) before redirecting.
+				await fetch("/api/auth/signout", { method: "POST" }).catch(() => undefined);
+				await supabase.auth.signOut({ scope: "local" }).catch(() => undefined);
 				if (isMounted) {
 					setUser(null);
 					setSession(null);

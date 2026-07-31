@@ -7,7 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/table/data-table";
 import { PositionTypeBadge } from "@/components/badges";
-import { Spinner } from "@/components/ui/spinner";
+import { StatusPill } from "@/components/shared/status-pill";
+import { CenteredSpinner, DashedEmpty } from "@/components/shared/inline-states";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Save, Info } from "lucide-react";
@@ -213,17 +214,7 @@ export function SubsidyMemberTable({ ccaId, ccaName, day, onSaved }: SubsidyMemb
 					if (!st) return <span className="text-xs text-muted-foreground">Not submitted</span>;
 					const cfg = SUBSIDY_STATUS_CONFIG[st as SubsidyStatus];
 					if (!cfg) return <span className="text-xs text-muted-foreground">{st}</span>;
-					return (
-						<span
-							className="inline-block rounded-full px-2 py-0.5 text-xs font-medium capitalize"
-							style={{
-								backgroundColor: `${cfg.color}20`,
-								color: cfg.color,
-							}}
-						>
-							{cfg.label}
-						</span>
-					);
+					return <StatusPill label={cfg.label} color={cfg.color} capitalize />;
 				},
 			},
 		],
@@ -231,19 +222,11 @@ export function SubsidyMemberTable({ ccaId, ccaName, day, onSaved }: SubsidyMemb
 	);
 
 	if (loading) {
-		return (
-			<div className="flex justify-center py-8">
-				<Spinner className="h-6 w-6" />
-			</div>
-		);
+		return <CenteredSpinner />;
 	}
 
 	if (members.length === 0) {
-		return (
-			<div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-				No members found for approved positions on this day.
-			</div>
-		);
+		return <DashedEmpty>No members found for approved positions on this day.</DashedEmpty>;
 	}
 
 	return (

@@ -76,8 +76,3 @@ export const POSITIONS: readonly PositionDef[] = [
 	{ ccaKey: "jcrc", positionType: "blockcomm", name: "Blockcomm", reportsTo: "Maincomm", capacity: 10 },
 ] as const;
 
-export function findPosition(ccaKey: string, positionName: string): PositionDef {
-	const pos = POSITIONS.find((p) => p.ccaKey === ccaKey && p.name === positionName);
-	if (!pos) throw new Error(`Unknown position: ${ccaKey}/${positionName}`);
-	return pos;
-}

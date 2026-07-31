@@ -3,17 +3,20 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import {
 	Dialog,
-	DialogClose,
 	DialogContent,
 	DialogDescription,
-	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+	SubsidyDeclarationFields,
+	SubsidyDeclarationFormFooter,
+	SubsidyFormField,
+	SubsidyFormSelect,
+	validateDeclarationForm,
+} from "@/components/holiday-subsidy/subsidy-declaration-form";
+import { formatDisplayDate } from "@/lib/date";
 
 import type { CalendarDeclaration, PositionOption } from "@/types/declarations";
 
@@ -27,16 +30,6 @@ export interface SubsidyDeclareDialogProps {
 	editing: CalendarDeclaration | null;
 	onOpenChange: (open: boolean) => void;
 	onSuccess: () => void;
-}
-
-function formatDisplayDate(dateStr: string): string {
-	const d = new Date(dateStr + "T00:00:00");
-	return d.toLocaleDateString("en-US", {
-		weekday: "long",
-		month: "long",
-		day: "numeric",
-		year: "numeric",
-	});
 }
 
 export function SubsidyDeclareDialog({
@@ -102,13 +95,9 @@ export function SubsidyDeclareDialog({
 			setFormError(null);
 			setSubmitting(true);
 
-			if (
-				!formState.positionId ||
-				formState.hours === "" ||
-				Number(formState.hours) <= 0 ||
-				!formState.justification.trim()
-			) {
-				setFormError("All fields are required and hours must be greater than 0.");
+			const validationError = validateDeclarationForm(formState);
+			if (validationError) {
+				setFormError(validationError);
 				setSubmitting(false);
 				return;
 			}
@@ -149,14 +138,12 @@ export function SubsidyDeclareDialog({
 			<DialogContent>
 				<DialogHeader>
 					<DialogTitle>{editing ? "Edit Subsidy Declaration" : "Declare Subsidy"}</DialogTitle>
-					<DialogDescription>{formatDisplayDate(date)}</DialogDescription>
+					<DialogDescription>{formatDisplayDate(date, { year: "numeric" })}</DialogDescription>
 				</DialogHeader>
 				<form onSubmit={handleSubmit} className="space-y-4 pt-2">
-					{chairCcas.length > 1 && !editing ? (
-						<div className="space-y-1">
-							<label className="text-sm font-medium text-foreground">CCA</label>
-							<select
-								className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+					<SubsidyFormField label="CCA">
+						{chairCcas.length > 1 && !editing ? (
+							<SubsidyFormSelect
 								value={selectedCcaId}
 								onChange={(e) => setSelectedCcaId(Number(e.target.value))}
 							>
@@ -165,75 +152,24 @@ export function SubsidyDeclareDialog({
 										{cca.name}
 									</option>
 								))}
-							</select>
-						</div>
-					) : (
-						<div className="space-y-1">
-							<label className="text-sm font-medium text-foreground">CCA</label>
+							</SubsidyFormSelect>
+						) : (
 							<Input value={selectedCcaName} disabled />
-						</div>
-					)}
-					<div className="space-y-1">
-						<label className="text-sm font-medium text-foreground">Position</label>
-						<select
-							className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-							value={formState.positionId}
-							onChange={(e) =>
-								setFormState((prev) => ({ ...prev, positionId: Number(e.target.value) }))
-							}
-							disabled={positions.length === 0}
-						>
-							{positions.map((p) => (
-								<option key={p.id} value={p.id}>
-									{p.name} ({p.position_type})
-								</option>
-							))}
-						</select>
-					</div>
-					<div className="space-y-1">
-						<label className="text-sm font-medium text-foreground">Hours</label>
-						<Input
-							type="number"
-							min={0}
-							step={0.5}
-							placeholder="e.g., 4"
-							value={formState.hours}
-							onChange={(e) => setFormState((prev) => ({ ...prev, hours: e.target.value }))}
-							required
-						/>
-					</div>
-					<div className="space-y-1">
-						<label className="text-sm font-medium text-foreground">Justification</label>
-						<Textarea
-							placeholder="Briefly describe the activities and time spent."
-							value={formState.justification}
-							onChange={(e) => setFormState((prev) => ({ ...prev, justification: e.target.value }))}
-							required
-						/>
-					</div>
+						)}
+					</SubsidyFormField>
+					<SubsidyDeclarationFields
+						positions={positions}
+						values={formState}
+						onChange={(patch) => setFormState((prev) => ({ ...prev, ...patch }))}
+					/>
 
-					{formError && (
-						<Alert variant="destructive">
-							<AlertDescription>{formError}</AlertDescription>
-						</Alert>
-					)}
-
-					<DialogFooter>
-						<DialogClose asChild>
-							<Button type="button" variant="secondary" disabled={submitting}>
-								Cancel
-							</Button>
-						</DialogClose>
-						<Button type="submit" disabled={submitting || positions.length === 0}>
-							{submitting
-								? editing
-									? "Updating..."
-									: "Submitting..."
-								: editing
-									? "Update"
-									: "Submit Declaration"}
-						</Button>
-					</DialogFooter>
+					<SubsidyDeclarationFormFooter
+						formError={formError}
+						submitting={submitting}
+						isEdit={Boolean(editing)}
+						submitDisabled={positions.length === 0}
+						editLabel="Update"
+					/>
 				</form>
 			</DialogContent>
 		</Dialog>

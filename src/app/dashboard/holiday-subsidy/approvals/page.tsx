@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth/auth-context";
 import { PageHeader } from "@/components/layout/page-header";
 import { SubsidyMonthGrid } from "@/components/holiday-subsidy/subsidy-month-grid";
@@ -8,48 +8,44 @@ import { SubsidyDayPanel } from "@/components/holiday-subsidy/subsidy-day-panel"
 import { SubsidyMemberApprovalTable } from "@/components/holiday-subsidy/subsidy-member-approval-table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useApiQuery } from "@/hooks/use-api-query";
+import { useCalendarMonth } from "@/hooks/use-calendar-month";
 import { toast } from "sonner";
 import { Clock, CheckCircle2, XCircle, Users } from "lucide-react";
 import type { CalendarDeclaration } from "@/types/declarations";
 
-function getMonthRange(year: number, month: number) {
-	const start = `${year}-${String(month + 1).padStart(2, "0")}-01`;
-	const lastDay = new Date(year, month + 1, 0).getDate();
-	const end = `${year}-${String(month + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
-	return { start, end };
-}
-
 export default function HolidaySubsidyApprovalsPage() {
 	const { user } = useAuth();
-	const today = new Date();
-	const [year, setYear] = useState(today.getFullYear());
-	const [month, setMonth] = useState(today.getMonth());
-	const [selectedDate, setSelectedDate] = useState<string>(today.toISOString().split("T")[0]);
-	const [declarations, setDeclarations] = useState<CalendarDeclaration[]>([]);
-	const [loading, setLoading] = useState(true);
+	const { year, month, selectedDate, setSelectedDate, changeMonth, monthRange } =
+		useCalendarMonth();
 	const [memberTarget, setMemberTarget] = useState<CalendarDeclaration | null>(null);
+	const [optimisticStatuses, setOptimisticStatuses] = useState<
+		Map<number, CalendarDeclaration["status"]>
+	>(new Map());
 
 	const isAuthorized = Boolean(user?.is_jcrc || user?.is_admin);
 
-	const fetchDeclarations = useCallback(async () => {
-		const { start, end } = getMonthRange(year, month);
-		setLoading(true);
-		try {
-			const res = await fetch(`/api/holiday-subsidy/calendar?start=${start}&end=${end}`);
-			const json = await res.json();
-			if (res.ok) {
-				setDeclarations(json.data?.declarations ?? []);
-			}
-		} catch {
-			// fetch failed
-		} finally {
-			setLoading(false);
-		}
-	}, [year, month]);
+	const {
+		data,
+		loading,
+		refetch: fetchDeclarations,
+	} = useApiQuery<CalendarDeclaration[]>(
+		`/api/holiday-subsidy/calendar?start=${monthRange.start}&end=${monthRange.end}`,
+		{
+			select: (json) =>
+				(json as { data?: { declarations?: CalendarDeclaration[] } }).data?.declarations ?? [],
+			enabled: isAuthorized,
+		},
+	);
 
-	useEffect(() => {
-		fetchDeclarations();
-	}, [fetchDeclarations]);
+	const declarations = useMemo(() => {
+		const base = data ?? [];
+		if (optimisticStatuses.size === 0) return base;
+		return base.map((d) => {
+			const status = optimisticStatuses.get(d.id);
+			return status ? { ...d, status } : d;
+		});
+	}, [data, optimisticStatuses]);
 
 	const dayDeclarations = useMemo(() => {
 		if (!selectedDate) return [];
@@ -64,8 +60,7 @@ export default function HolidaySubsidyApprovalsPage() {
 	).length;
 
 	function handleChangeMonth(y: number, m: number) {
-		setYear(y);
-		setMonth(m);
+		changeMonth(y, m);
 		setMemberTarget(null);
 	}
 
@@ -75,60 +70,41 @@ export default function HolidaySubsidyApprovalsPage() {
 	}
 
 	// Optimistically flip the declaration's local status, then reconcile with the
-	// server. On failure we restore the previous status and surface the error.
-	function applyOptimisticStatus(id: number, status: CalendarDeclaration["status"]) {
-		setDeclarations((prev) => prev.map((d) => (d.id === id ? { ...d, status } : d)));
+	// server. On failure we drop the override and surface the error.
+	function applyOptimisticStatus(id: number, status: CalendarDeclaration["status"] | null) {
+		setOptimisticStatuses((prev) => {
+			const next = new Map(prev);
+			if (status === null) next.delete(id);
+			else next.set(id, status);
+			return next;
+		});
 	}
 
-	async function handleApprove(decl: CalendarDeclaration) {
-		const previousStatus = decl.status;
-		applyOptimisticStatus(decl.id, "approved");
+	async function setDeclarationStatus(decl: CalendarDeclaration, status: "approved" | "rejected") {
+		const label = status === "approved" ? "Approved" : "Rejected";
+		applyOptimisticStatus(decl.id, status);
 		try {
 			const res = await fetch(`/api/holiday-subsidy/approvals/${decl.cca_id}`, {
 				method: "PATCH",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
-					updates: [{ subsidyId: decl.id, status: "approved" }],
+					updates: [{ subsidyId: decl.id, status }],
 				}),
 			});
 			if (!res.ok) {
 				const json = await res.json();
-				applyOptimisticStatus(decl.id, previousStatus);
-				toast.error(json.error ?? "Failed to approve");
+				applyOptimisticStatus(decl.id, null);
+				toast.error(json.error ?? `Failed to ${status === "approved" ? "approve" : "reject"}`);
 				return;
 			}
-			toast.success(`Approved — ${decl.cca_name}`);
-			fetchDeclarations();
-		} catch {
-			applyOptimisticStatus(decl.id, previousStatus);
-			toast.error("Network error");
-		}
-	}
-
-	async function handleReject(decl: CalendarDeclaration) {
-		const previousStatus = decl.status;
-		applyOptimisticStatus(decl.id, "rejected");
-		try {
-			const res = await fetch(`/api/holiday-subsidy/approvals/${decl.cca_id}`, {
-				method: "PATCH",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					updates: [{ subsidyId: decl.id, status: "rejected" }],
-				}),
-			});
-			if (!res.ok) {
-				const json = await res.json();
-				applyOptimisticStatus(decl.id, previousStatus);
-				toast.error(json.error ?? "Failed to reject");
-				return;
-			}
-			toast.success(`Rejected — ${decl.cca_name}`);
-			if (memberTarget?.id === decl.id) {
+			toast.success(`${label} — ${decl.cca_name}`);
+			if (status === "rejected" && memberTarget?.id === decl.id) {
 				setMemberTarget(null);
 			}
-			fetchDeclarations();
+			await fetchDeclarations();
+			applyOptimisticStatus(decl.id, null);
 		} catch {
-			applyOptimisticStatus(decl.id, previousStatus);
+			applyOptimisticStatus(decl.id, null);
 			toast.error("Network error");
 		}
 	}
@@ -245,8 +221,8 @@ export default function HolidaySubsidyApprovalsPage() {
 							declarations={dayDeclarations}
 							isChair={false}
 							isJcrc={true}
-							onApprove={handleApprove}
-							onReject={handleReject}
+							onApprove={(decl) => setDeclarationStatus(decl, "approved")}
+							onReject={(decl) => setDeclarationStatus(decl, "rejected")}
 							onAssignMembers={handleReviewMembers}
 						/>
 					) : (

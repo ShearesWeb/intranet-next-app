@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { AlertCircleIcon, Users } from "lucide-react";
@@ -115,8 +114,12 @@ export default function ManageMembersPage() {
 	if (error)
 		return (
 			<div className="flex flex-col space-y-6 p-4 md:p-6">
-				<PageHeader title="CCA Members" />
-				<ErrorCard error={error} backHref="/dashboard/my-cca/admin" backLabel="Back to My CCAs" />
+				<PageHeader title="Manage Members" />
+				<ErrorCard
+					error={error}
+					backHref="/dashboard/my-cca/admin"
+					backLabel="Back to CCA Ranking"
+				/>
 			</div>
 		);
 
@@ -130,10 +133,11 @@ export default function ManageMembersPage() {
 	return (
 		<div className="flex flex-col space-y-6 p-4 md:p-6">
 			<PageHeader
-				title={`CCA Members - ${cca?.name ?? ""}`}
+				title={cca?.name ? `Manage Members · ${cca.name}` : "Manage Members"}
+				description="Add, remove and update members for this CCA."
 				actions={saveButton}
 				backHref="/dashboard/my-cca/admin"
-				backLabel="Back to my CCAs"
+				backLabel="Back to CCA Ranking"
 			/>
 
 			{pendingChanges.length > 0 && (
@@ -149,21 +153,17 @@ export default function ManageMembersPage() {
 			)}
 
 			{isSportsCulture && (
-				<Card className="bg-muted/40">
-					<CardContent className="text-sm text-muted-foreground py-3 pl-4">
-						{permissions.canManageMembers
-							? "You may add and remove members for your sports/culture CCA."
-							: "Member management is currently not available."}
-					</CardContent>
-				</Card>
+				<div className="rounded-lg border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+					{permissions.canManageMembers
+						? "You may add and remove members for your sports/culture CCA."
+						: "Member management is currently not available."}
+				</div>
 			)}
 
 			{!isSportsCulture && !permissions.canManageMembers && (
-				<Card className="bg-muted/40">
-					<CardContent className="text-sm text-muted-foreground py-3 pl-4">
-						{permissions.managementMessage || "Member management is currently not available."}
-					</CardContent>
-				</Card>
+				<div className="rounded-lg border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+					{permissions.managementMessage || "Member management is currently not available."}
+				</div>
 			)}
 			{totalFilteredMembers === 0 && !isSportsCulture ? (
 				<EmptyState

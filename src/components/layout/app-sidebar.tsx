@@ -44,7 +44,7 @@ type NavItem = {
 	}[];
 };
 
-export const navOptions: NavItem[] = [
+const navOptions: NavItem[] = [
 	{
 		title: "Dashboard",
 		url: "/dashboard",
@@ -64,20 +64,8 @@ export const navOptions: NavItem[] = [
 				featureFlag: "facilities",
 			},
 			{
-				title: "My CCA Bookings",
-				url: "/dashboard/facilities/my-bookings",
-				chairOnly: true,
-				featureFlag: "facilities",
-			},
-			{
-				title: "Conflicts",
-				url: "/dashboard/facilities/conflicts",
-				chairOnly: true,
-				featureFlag: "facilities",
-			},
-			{
 				title: "Manage Facilities",
-				url: "/dashboard/facilities/manage",
+				url: "/dashboard/facilities/admin",
 				jcrcOnly: true,
 				featureFlag: "facilities",
 			},
@@ -90,7 +78,7 @@ export const navOptions: NavItem[] = [
 		icon: Volleyball,
 		items: [
 			{
-				title: "CCA Admin",
+				title: "CCA Ranking",
 				url: "/dashboard/my-cca/admin",
 				chairOnly: true,
 				featureFlag: "memberRanking",

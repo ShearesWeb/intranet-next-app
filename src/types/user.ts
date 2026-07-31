@@ -23,7 +23,7 @@ export type CommitmentPeriod = "full-year" | "semester-1" | "semester-2";
  * (see `intranet/db/changelogs/enum/`). `null` means the appointment
  * predates the cut-status workflow or is otherwise unset.
  */
-export type CutStatus = "cut" | "active" | string;
+type CutStatus = "cut" | "active" | string;
 
 export interface UserAppointment {
 	cca_id: number;

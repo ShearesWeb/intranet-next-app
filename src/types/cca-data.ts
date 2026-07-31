@@ -21,4 +21,5 @@ export interface CCAData {
 	positions?: ManagedCcaPosition[];
 	can_manage_members?: boolean;
 	can_rank_members?: boolean;
+	ranking_progress?: { ranked: number; total: number };
 }

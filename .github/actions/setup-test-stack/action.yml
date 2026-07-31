@@ -1,23 +1,8 @@
-# .github/actions/setup-test-stack/action.yml
-#
-# Reusable composite action that provisions everything the integration and
-# end-to-end suites need on an `ubuntu-latest` runner:
-#
-#   - Node 22.22 (with npm cache) + `npm ci`
-#   - Supabase CLI (boots the local Docker stack)
-#   - JDK + Liquibase (pinned tarball, on PATH) + the postgresql client (psql)
-#   - The full schema + seed provisioning via `npm run db:test:setup`
-#     (the SAME recipe developers run locally — scripts/setup-test-db.sh)
-#   - Exports the Supabase connection env to `$GITHUB_ENV` so downstream steps
-#     (vitest integration runner, Playwright webServer) pick it up automatically.
-#
-# This action deliberately does NOT run `actions/checkout`. The calling job is
-# responsible for checking out the repo WITH the private `vendor/intranet`
-# submodule (it owns the SSH deploy key), because the Liquibase changelog lives
-# in that submodule. See scripts/setup-test-db.sh.
+# Installs Node + JDK/Liquibase + psql, then `make db-up`. The calling job must
+# have already checked out the repo with the private vendor/intranet submodule.
 
 name: Setup Test Stack
-description: Boot local Supabase, apply schema via Liquibase, seed fixtures, and export connection env.
+description: Boot Postgres + PostgREST, apply schema via Liquibase, seed persona fixtures.
 
 inputs:
   node-version:
@@ -58,7 +43,6 @@ runs:
           curl --fail --location --retry 3 --retry-delay 5 -o /tmp/liquibase.tar.gz "$url"
           tar -xzf /tmp/liquibase.tar.gz -C "$install_dir"
         fi
-        # Put liquibase on PATH for this and all downstream steps.
         echo "$install_dir" >> "$GITHUB_PATH"
         "$install_dir/liquibase" --version
 
@@ -69,59 +53,11 @@ runs:
         if command -v psql >/dev/null 2>&1; then
           echo "psql already present: $(psql --version)"
         else
-          echo "Installing postgresql-client"
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends postgresql-client
           psql --version
         fi
 
-    - name: 6. 🟢 Install Supabase CLI
-      uses: supabase/setup-cli@v1
-      with:
-        # Must be recent enough to parse supabase/config.toml. The config uses
-        # keys (auth.oauth_server, storage.analytics, storage.vector,
-        # storage.s3_protocol, db.health_timeout, auth.external.apple.email_optional)
-        # that older CLIs reject with "config has invalid keys". Keep this at or
-        # above the CLI version used to generate config.toml locally.
-        version: 2.102.0
-
-    - name: 7. 🌱 Provision Schema + Seed (supabase start → liquibase → seed.sql)
+    - name: 6. 🌱 Bring up the DB (Postgres + schema + seed + PostgREST)
       shell: bash
-      # Reuses the exact local-dev recipe so CI and local stay in lockstep (DRY).
-      # scripts/setup-test-db.sh: supabase start, drop storage stubs, liquibase
-      # update against vendor/intranet changelog, then psql -f seed.sql.
-      run: npm run db:test:setup
-
-    - name: 8. 🔑 Export Supabase Connection Env to $GITHUB_ENV
-      shell: bash
-      run: |
-        set -euo pipefail
-        # `supabase status -o env` prints KEY="value" lines:
-        #   API_URL, ANON_KEY, SERVICE_ROLE_KEY, DB_URL, GRAPHQL_URL, ...
-        # Capture into a temp file and source it so we can remap the names the
-        # integration runner (tests/integration/setup.ts) and the e2e webServer
-        # (e2e/playwright.config.ts) expect.
-        supabase status -o env > /tmp/supabase.env
-        # shellcheck disable=SC1091
-        set -a
-        . /tmp/supabase.env
-        set +a
-
-        {
-          # Integration runner (tests/integration/setup.ts) + e2e auth-harness.
-          echo "SUPABASE_URL=${API_URL}"
-          echo "SUPABASE_ANON_KEY=${ANON_KEY}"
-          echo "SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}"
-          # Seeding + the integration pg pool connect as the supabase_admin
-          # superuser (owns the Liquibase-created objects), NOT the `postgres`
-          # role that `supabase status` reports in DB_URL. Hardcode to match
-          # scripts/setup-test-db.sh.
-          echo "SUPABASE_DB_URL=postgresql://supabase_admin:postgres@127.0.0.1:54322/postgres"
-          # NEXT_PUBLIC_* values are embedded into the client bundle / read by the
-          # Playwright webServer (next dev -p 3001).
-          echo "NEXT_PUBLIC_SUPABASE_URL=${API_URL}"
-          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=${ANON_KEY}"
-          echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY=${ANON_KEY}"
-        } >> "$GITHUB_ENV"
-
-        echo "Exported Supabase connection env for downstream steps."
+      run: make db-up

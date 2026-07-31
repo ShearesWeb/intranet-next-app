@@ -60,8 +60,3 @@ export const CCAS: readonly Cca[] = [
 	},
 ] as const;
 
-export function ccaByKey(key: string): Cca {
-	const cca = CCAS.find((c) => c.key === key);
-	if (!cca) throw new Error(`Unknown CCA key: ${key}`);
-	return cca;
-}

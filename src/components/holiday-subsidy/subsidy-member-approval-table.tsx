@@ -5,12 +5,13 @@ import { type ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/table/data-table";
 import { PositionTypeBadge } from "@/components/badges";
-import { Spinner } from "@/components/ui/spinner";
+import { StatusPill } from "@/components/shared/status-pill";
+import { CenteredSpinner, DashedEmpty } from "@/components/shared/inline-states";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Check, X, Info, Save } from "lucide-react";
 import type { MemberApprovalRow } from "@/lib/holiday-subsidy/member-approval-service";
-import { SUBSIDY_STATUS_CONFIG, type SubsidyStatus } from "@/types/declarations";
+import { SUBSIDY_STATUS_CONFIG } from "@/types/declarations";
 
 interface SubsidyMemberApprovalTableProps {
 	ccaId: number;
@@ -196,19 +197,15 @@ export function SubsidyMemberApprovalTable({
 					const cfg = SUBSIDY_STATUS_CONFIG[st];
 					return (
 						<div className="flex flex-col gap-1 min-w-[110px]">
-							<span
-								className="inline-block rounded-full px-2 py-0.5 text-xs font-medium capitalize w-fit"
-								style={{
-									backgroundColor: `${cfg.color}20`,
-									color: cfg.color,
-								}}
-							>
-								{cfg.label}
-							</span>
+							<StatusPill label={cfg.label} color={cfg.color} capitalize className="w-fit" />
 							{staged && (
 								<div className="flex items-center gap-1 text-[11px] font-medium text-amber-700">
 									<span>{"→"}</span>
-									<StatusBadge status={staged} />
+									<StatusPill
+										label={SUBSIDY_STATUS_CONFIG[staged].label}
+										color={SUBSIDY_STATUS_CONFIG[staged].color}
+										capitalize
+									/>
 								</div>
 							)}
 						</div>
@@ -220,19 +217,11 @@ export function SubsidyMemberApprovalTable({
 	);
 
 	if (loading) {
-		return (
-			<div className="flex justify-center py-8">
-				<Spinner className="h-6 w-6" />
-			</div>
-		);
+		return <CenteredSpinner />;
 	}
 
 	if (members.length === 0) {
-		return (
-			<div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-				No member submissions for this declaration yet.
-			</div>
-		);
+		return <DashedEmpty>No member submissions for this declaration yet.</DashedEmpty>;
 	}
 
 	return (
@@ -306,20 +295,5 @@ export function SubsidyMemberApprovalTable({
 				emptyMessage="No member submissions found."
 			/>
 		</section>
-	);
-}
-
-function StatusBadge({ status }: { status: SubsidyStatus }) {
-	const cfg = SUBSIDY_STATUS_CONFIG[status];
-	return (
-		<span
-			className="inline-block rounded-full px-2 py-0.5 text-xs font-medium capitalize"
-			style={{
-				backgroundColor: `${cfg.color}20`,
-				color: cfg.color,
-			}}
-		>
-			{cfg.label}
-		</span>
 	);
 }
