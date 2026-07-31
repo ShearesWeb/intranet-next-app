@@ -1,4 +1,4 @@
-export const CORE_SERVICE_FLAGS = {
+const CORE_SERVICE_FLAGS = {
 	memberRanking: true,
 	ccaApplications: true,
 	holidaySubsidy: true,

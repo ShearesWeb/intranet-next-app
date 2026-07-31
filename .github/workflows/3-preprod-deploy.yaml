@@ -154,4 +154,4 @@ jobs:
           terraform apply -var-file=config/preprod.tfvars -auto-approve
 
       - name: 7. 🚧 Build + Deploy with OpenNext (Cloudflare)
-        run: npm run deploy:preprod
+        run: make deploy ENV=preprod

@@ -2,7 +2,7 @@
 
 # Test personas
 
-These personas are the single source of truth for test data. The TS source is `tests/fixtures/personas.ts`. After editing, run `npm run fixtures:generate` and commit the updated `seed.sql` and `PERSONAS.md`. CI enforces no drift via `npm run fixtures:check`.
+These personas are the single source of truth for test data. The TS source is `tests/fixtures/personas.ts`. After editing, run `npx tsx tests/fixtures/generate.ts` and commit the updated `seed.sql` and `PERSONAS.md`.
 
 ## CCAs
 

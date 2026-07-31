@@ -22,7 +22,7 @@
 
   // --- Production (top-level): worker "intranet", domain intranet.shweb.org ---
   // Custom domains are attached by Terraform (cloudflare_workers_custom_domain),
-  // so no `routes` block here. Deploy with:  npm run deploy
+  // so no `routes` block here. Deploy with:  make deploy
   "r2_buckets": [
     {
       "binding": "NEXT_INC_CACHE_R2_BUCKET",
@@ -38,7 +38,7 @@
 
   "env": {
     // --- Preprod: worker "intranet-preprod", domain intranet-beta.shweb.org ---
-    // Deploy with:  npm run deploy:preprod
+    // Deploy with:  make deploy ENV=preprod
     "preprod": {
       "workers_dev": false,
       // `images` is a non-inheritable binding, so it must be repeated per env.

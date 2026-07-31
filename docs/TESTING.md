@@ -7,75 +7,103 @@ Three automated test layers plus a manual QA harness for role-based testing.
 | Layer | Tool | Location | Runs in CI |
 |---|---|---|---|
 | **Unit** | Vitest | `src/**/*.test.ts` | every push + PR |
-| **Component** | Vitest + Testing Library | `src/**/*.test.tsx` | every push + PR |
+| **Component** | Vitest + react-dom `act` | `src/**/*.test.tsx` | every push + PR |
 | **Integration** | Vitest | `tests/integration/**/*.test.ts` | PR only |
 
 ### Unit (`src/**/*.test.ts`)
 
 Pure logic: scoring rules, serialization, access-check functions, route helpers.
-No DB, no browser, no network.
+No DB, no browser, no network. Route handlers can also be unit-tested here with
+the supabase client mocked (see `src/app/api/**/route.test.ts`).
 Config: `vitest.config.mts` (project `unit`, `environment: "node"`).
 
 ### Component (`src/**/*.test.tsx`)
 
-React components and hooks rendered into a DOM via `@testing-library/react` on
+React components and hooks rendered into a DOM with `react-dom/client` + `act` on
 `happy-dom`. Config: `vitest.config.mts` (project `component`, `environment: "happy-dom"`).
-Test render helpers live in `src/test-utils/`.
 
-Both unit and component tests run together via **`npm test`** (`vitest run` across both projects). Watch mode: `npm run test:watch`.
+Both unit and component tests run together via **`make test`** (`vitest run` across both projects).
 
 ### Integration (`tests/integration/**/*.test.ts`)
 
-Tests that exercise the **real database** — Row-Level Security policies, column
-grants, SQL views, and the derived role flags computed by Postgres. These run
-against a local Supabase stack with the canonical schema applied from the
-`vendor/intranet` submodule (Liquibase) and the shared fixtures seeded in.
+These run the **real Next.js API route handlers** against a **plain Postgres + a
+lightweight PostgREST sidecar** — no Supabase stack. One file per route group
+under `tests/integration/routes/`.
 
-Two impersonation styles:
+How it works:
 
-- **`pgClientAsPersona(key)`** (`src/test-utils/pg-client.ts`) — opens a `pg`
-  connection, sets `request.jwt.claims` + `SET ROLE authenticated` (or `anon`),
-  so RLS/grants are enforced exactly as for a real signed-in user.
-- **`getPersonaSession(key)`** (`tests/integration/setup.ts`) — mints a real
-  Supabase auth session (access/refresh token) via the admin client, for tests
-  that go through a Supabase client rather than raw SQL.
+- The handler's data client (`@/lib/supabase/server`'s `createClient`) is replaced
+  in `tests/integration/setup.ts` with a Postgres-backed stand-in
+  (`src/test-utils/integration/persona-supabase.ts`). Its `.from()` / `.rpc()` are
+  the genuine `@supabase/postgrest-js` client pointed at the PostgREST sidecar, so
+  embedded joins and RPCs run for real — nothing is hand-rolled.
+- A test "becomes" a persona with `asPersona(key)` (`tests/integration/helpers.ts`).
+  That binds a self-signed HS256 JWT carrying `{ email, role }`. PostgREST verifies
+  it, switches to the `authenticated` role, and exposes the claims as
+  `request.jwt.claims` — which the schema's `auth.email()` reads for RLS. The
+  `anonymous` persona sends no token (PostgREST falls back to the `anon` role).
+- The DB is kept pristine: `setup.ts` reseeds `tests/fixtures/seed.sql` before
+  every test (it deletes its own fixture rows first, cascading away anything a
+  test created).
 
-Config: `vitest.integration.config.mts`. Run with **`npm run test:integration`**
-(watch: `npm run test:integration:watch`).
+A test looks like:
+
+```ts
+import { asPersona, readJson } from "../helpers";
+
+it("returns the authenticated user", async () => {
+  asPersona("declan");
+  const { GET } = await import("@/app/api/user/route");
+  const { status, data } = await readJson(await GET());
+  expect(status).toBe(200);
+  expect(data.email).toBe("declanho.sg@gmail.com");
+});
+```
+
+Config: `vitest.integration.config.mts` (serial — one shared DB). Run with
+**`make test-integration`** — the DB must be up first
+(see [below](#running-integration-tests-locally)).
 
 ## Test placement convention
 
 - **Unit / component** colocate with the code they cover as `src/**/*.test.ts` / `src/**/*.test.tsx`.
 - Reserve a **`__tests__/`** directory only where a single directory accumulates many tests. Don't create `__tests__/` for a lone test — colocate it instead.
-- **Integration** tests live in `tests/integration/**`, grouped by concern (`rls/`, `views/`, `smoke/`).
+- **Integration** tests live in `tests/integration/routes/`, one file per route group.
 
 ## Where does a test belong?
 
-API route handlers depend on `next/headers` cookies for auth — there is no authenticated session in a Vitest process. Anything that reads cookies or renders a page must be verified manually via the persona login tool. SQL-level guarantees (RLS, views, derived flags) go in integration. Pure logic goes in unit.
+Pure logic and handler branching (with the client mocked) → unit. A route's real
+end-to-end behavior against the DB (auth gating, RLS, RPC results, response
+envelope) → integration. Anything that needs a real browser session or rendered
+page → manual QA via the persona login tool.
 
 ---
 
 ## Manual QA — persona login system
 
-**The persona system is the canonical way to test any role.** It opens a real browser window already logged in as a specific user, so you can click through the app as that role.
+**The persona system is the canonical way to test any role.** `make e2e-login` mints
+a one-time Supabase magic-link you open in your own browser to "assume" that role.
+No Playwright, no browser automation.
 
-Personas are defined in `tests/fixtures/personas.ts`, documented in `tests/fixtures/PERSONAS.md`, and seeded into the test DB via `seed.sql`. The `expected` role flags on each persona are computed by Postgres from the position graph — a smoke test (`tests/integration/smoke/derived-flags.test.ts`) fails if they ever drift.
-
-### Prerequisites
-
-The local Supabase stack must be running (see [Running integration tests locally](#running-integration-tests-locally) below).
+Personas are defined in `tests/fixtures/personas.ts`, documented in
+`tests/fixtures/PERSONAS.md`, and seeded into the test DB via `seed.sql`. The
+`expected` role flags on each persona are computed by Postgres from the position
+graph; the integration suite asserts them via `authenticated_user_info`.
 
 ### Commands
 
 ```bash
 # List every persona with its role flags ([admin] [JCRC] [CSA]) and appointments.
-npm run e2e:personas
+make e2e-personas
 
-# Open a real Chromium window already logged in as <persona> on /dashboard.
-# Boots a dev server on :3001 if one isn't already running.
-# Close the browser or press Ctrl+C to exit.
-npm run e2e:login <persona>     # e.g. npm run e2e:login declan
+# Print a one-time magic-link to log in as <persona>. Open it in your browser
+# (with the dev app running) to browse as that role.
+make e2e-login PERSONA=<persona>     # e.g. make e2e-login PERSONA=declan
 ```
+
+`make e2e-login` needs a real Supabase Auth (GoTrue): set `SUPABASE_URL` and
+`SUPABASE_SERVICE_ROLE_KEY` in `.env.test` or `.env.local` (your dev Supabase
+project, or a local `supabase start`).
 
 ### Persona → role table
 
@@ -107,42 +135,41 @@ Quick picks: a **plain resident** → `aria`; a **chair with no JCRC** → `decl
 
 Prerequisites:
 
-- **Docker** (Supabase runs its services in containers)
-- the **Supabase CLI** — `brew install supabase/tap/supabase`
+- **Docker** (runs the Postgres + PostgREST containers)
 - **Liquibase** — `brew install liquibase`
 - **`psql`** (postgresql client)
-- the **`vendor/intranet`** submodule (holds the Liquibase changelog)
+- the **`vendor/intranet`** submodule (holds the Makefile + Liquibase changelog)
 
 ```bash
 # One-time: fetch the private schema submodule.
 git submodule update --init --recursive
 
-# Boot Supabase, apply the schema (Liquibase), and seed the fixtures.
-npm run db:test:setup
+# Bring up Postgres + schema + seed + PostgREST, then run the suite.
+make db-up
+make test-integration
 
-# Run the integration suite.
-npm run test:integration
+# Stop it when done.
+make db-down
 ```
 
-`npm run db:test:setup` (→ `scripts/setup-test-db.sh`) does: `supabase start` →
-drop Supabase-shipped storage stubs → `liquibase update` against the
-`vendor/intranet` changelog → check/regenerate fixtures → load `tests/fixtures/seed.sql`.
-To wipe and re-seed without re-running Liquibase: `npm run db:test:reset`.
+`make db-up` does: start the vendor Postgres → `liquibase update --contexts=local`
+→ harness SQL (`tests/integration/harness.sql`: point `auth.email()` at the JWT
+claims; create the `authenticator` login role PostgREST connects as) → seed
+`tests/fixtures/seed.sql` → start the PostgREST sidecar.
 
-The integration runner reads connection details from `.env.test`:
-`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_DB_URL`.
-Populate these from `supabase status` after the stack is up.
-
-The persona login tool (`npm run e2e:login`) also requires the local Supabase stack to be running — it mints a real session for the chosen persona against the local instance.
+Connection details live in `.env.test`: `DATABASE_URL`, `POSTGREST_URL`,
+`SUPABASE_JWT_SECRET`. The schema repo path defaults to `vendor/intranet`; override
+with `INTRANET` (e.g. a local checkout at `../intranet`).
 
 ## CI
 
 | Trigger | Workflow | What runs |
 |---|---|---|
-| **Push** to any non-`main` branch | `1-feature-branch-ci.yml` | prettier, lint, typecheck, fixtures drift check, unit + component tests |
-| **PR** into `main` | `2-merge-request-ci.yml` | all of the above + `next build` + integration tests (live Supabase) |
+| **Push** to any non-`main` branch | `1-feature-branch-ci.yml` | prettier, lint, typecheck, unit + component tests |
+| **PR** into `main` | `2-merge-request-ci.yml` | all of the above + `next build` + integration tests (Postgres + PostgREST) |
 
-Every integration job provisions the live stack via `.github/actions/setup-test-stack`.
+The integration job provisions the stack via `.github/actions/setup-test-stack`
+(which runs `make db-up`).
 
 > **Required secret — `SUBMODULE_SSH_KEY`** (a repo-scoped, read-only deploy key for `ShearesWeb/intranet`). One-time setup:
 >
@@ -155,8 +182,8 @@ Every integration job provisions the live stack via `.github/actions/setup-test-
 
 ## Troubleshooting
 
-- **`supabase` not running / connection refused.** Run `npm run db:test:setup` (or `supabase start`). Check `supabase status`. Start Docker first if it isn't running.
-- **`Integration tests require <VAR> in env`.** Create/populate `.env.test` from `supabase status`.
-- **Fixtures drift (`fixtures:check` fails).** Run **`npm run fixtures:generate`** and commit the updated `tests/fixtures/seed.sql` and `tests/fixtures/PERSONAS.md`.
-- **`Liquibase changelog not found`.** Run `git submodule update --init --recursive`.
-- **`Unknown persona`.** Run `npm run e2e:personas` to see valid keys.
+- **Integration DB not reachable.** Run `make db-up` (start Docker first if it isn't running).
+- **schema repo not found.** Run `git submodule update --init`, or set `INTRANET` to a schema-repo checkout (e.g. `../intranet`).
+- **Edited `personas.ts`?** Regenerate the committed fixtures: `npx tsx tests/fixtures/generate.ts` (writes `tests/fixtures/seed.sql` + `PERSONAS.md`).
+- **`make e2e-login` fails.** Set `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` (a real Supabase Auth is required to mint the magic-link).
+- **`Unknown persona`.** Run `make e2e-personas` to see valid keys.

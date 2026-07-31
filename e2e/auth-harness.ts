@@ -1,149 +1,68 @@
-import * as fs from "node:fs";
+// Mints a Supabase magic-link for a persona (manual QA). Needs SUPABASE_URL +
+// SUPABASE_SERVICE_ROLE_KEY in .env.test or .env.local.
+
 import * as path from "node:path";
 import { config as loadDotenv } from "dotenv";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { createServerClient } from "@supabase/ssr";
-import { v5 as uuidv5 } from "uuid";
 import { personaByKey } from "../tests/fixtures/personas";
 import type { Persona } from "../tests/fixtures/types";
 
-const E2E_NAMESPACE = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
 const E2E_TEST_PASSWORD = "e2e-test-P@ssw0rd!";
-export const E2E_PORT = 3001;
 
-function readSupabaseKeys(): { url: string; anonKey: string; serviceRoleKey: string } {
-	if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY && process.env.SUPABASE_ANON_KEY) {
-		return {
-			url: process.env.SUPABASE_URL,
-			anonKey: process.env.SUPABASE_ANON_KEY,
-			serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-		};
-	}
-	const envTestPath = path.resolve(__dirname, "../.env.test");
-	const parsed = loadDotenv({ path: envTestPath, override: false }).parsed ?? {};
-	const url = parsed.SUPABASE_URL ?? process.env.SUPABASE_URL;
-	const anonKey = parsed.SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY;
-	const serviceRoleKey = parsed.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY;
-	if (!url || !anonKey || !serviceRoleKey) {
+export const APP_URL = process.env.APP_URL ?? "http://localhost:3000";
+
+function readSupabaseAdmin(): { url: string; serviceRoleKey: string } {
+	loadDotenv({ path: path.resolve(__dirname, "../.env.test"), override: false });
+	loadDotenv({ path: path.resolve(__dirname, "../.env.local"), override: false });
+	const url = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
+	const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+	if (!url || !serviceRoleKey) {
 		throw new Error(
-			"Missing Supabase keys. Set SUPABASE_URL, SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY " +
-				"in environment or in .env.test.",
+			"Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (in .env.test or .env.local) to mint persona login links.",
 		);
 	}
-	return { url, anonKey, serviceRoleKey };
+	return { url, serviceRoleKey };
 }
 
-const keys = readSupabaseKeys();
-export const SUPABASE_URL = keys.url;
-export const ANON_KEY = keys.anonKey;
-export const APP_URL = process.env.APP_URL ?? `http://localhost:${E2E_PORT}`;
-
-let _adminClient: SupabaseClient | null = null;
-function adminClient(): SupabaseClient {
-	if (!_adminClient) {
-		_adminClient = createClient(SUPABASE_URL, keys.serviceRoleKey, {
+let _admin: SupabaseClient | null = null;
+function admin(): SupabaseClient {
+	if (!_admin) {
+		const { url, serviceRoleKey } = readSupabaseAdmin();
+		_admin = createClient(url, serviceRoleKey, {
 			auth: { autoRefreshToken: false, persistSession: false },
 		});
 	}
-	return _adminClient;
+	return _admin;
 }
 
-export function personaUUID(key: string): string {
-	return uuidv5(key, E2E_NAMESPACE);
-}
-
-export async function ensureAuthUser(persona: Persona): Promise<string> {
-	if (!persona.email) throw new Error(`Cannot create auth user for anonymous persona`);
-	const id = personaUUID(persona.key);
-	const { error } = await adminClient().auth.admin.createUser({
-		id,
+async function ensureAuthUser(persona: Persona): Promise<void> {
+	if (!persona.email) throw new Error("anonymous persona has no auth user");
+	const { error } = await admin().auth.admin.createUser({
 		email: persona.email,
 		password: E2E_TEST_PASSWORD,
 		email_confirm: true,
 	});
-	if (error) {
-		const msg = error.message.toLowerCase();
-		if (msg.includes("already") || msg.includes("database error")) {
-			// Ensure password is set for users created by the old magic-link flow
-			await adminClient().auth.admin.updateUserById(id, {
-				password: E2E_TEST_PASSWORD,
-			});
-			return id;
-		}
-		throw new Error(`Failed to create auth user for ${persona.key}: ${error.message}`);
+	if (error && !/already|exists|registered/i.test(error.message)) {
+		throw new Error(`createUser(${persona.email}) failed: ${error.message}`);
 	}
-	return id;
 }
 
-type CookieResult = Array<{ name: string; value: string; url: string }>;
-
-interface SessionCache {
-	generatedAt: number;
-	sessions: Record<string, CookieResult>;
-}
-
-const CACHE_FILE = path.join(__dirname, ".session-cache.json");
-const CACHE_TTL_MS = 45 * 60 * 1000; // 45 min (sessions last 1hr; refresh early)
-
-function readCache(): SessionCache | null {
-	if (!fs.existsSync(CACHE_FILE)) return null;
-	try {
-		const raw = JSON.parse(fs.readFileSync(CACHE_FILE, "utf-8"));
-		if (typeof raw.generatedAt === "number" && raw.sessions) return raw as SessionCache;
-	} catch {
-		/* corrupted or old-format cache — ignore */
-	}
-	return null;
-}
-
-export async function getSessionCookies(personaKey: string): Promise<CookieResult> {
-	const cache = readCache();
-	if (cache && Date.now() - cache.generatedAt < CACHE_TTL_MS && cache.sessions[personaKey]) {
-		return cache.sessions[personaKey];
-	}
-	return generateFreshSessionCookies(personaKey);
-}
-
-export async function warmSessionCache(personaKeys: string[]): Promise<void> {
-	const sessions: Record<string, CookieResult> = {};
-	for (const key of personaKeys) {
-		sessions[key] = await generateFreshSessionCookies(key);
-	}
-	const cache: SessionCache = { generatedAt: Date.now(), sessions };
-	fs.writeFileSync(CACHE_FILE, JSON.stringify(cache), "utf-8");
-}
-
-export async function generateFreshSessionCookies(personaKey: string): Promise<CookieResult> {
+/** Generate a one-time magic-link URL the developer opens to log in as the persona. */
+export async function magicLinkFor(personaKey: string): Promise<string> {
 	const persona = personaByKey(personaKey);
-	if (!persona.email) throw new Error(`Cannot create session for anonymous persona "${personaKey}"`);
+	if (!persona.email) throw new Error(`Cannot log in as anonymous persona "${personaKey}"`);
 
 	await ensureAuthUser(persona);
 
-	const captured: Array<{ name: string; value: string; options: Record<string, unknown> }> = [];
-	const ssrClient = createServerClient(SUPABASE_URL, ANON_KEY, {
-		cookies: {
-			getAll: () => [],
-			setAll: (cookies) => {
-				captured.push(...cookies);
-			},
-		},
-	});
-
-	const { error } = await ssrClient.auth.signInWithPassword({
+	const { data, error } = await admin().auth.admin.generateLink({
+		type: "magiclink",
 		email: persona.email,
-		password: E2E_TEST_PASSWORD,
+		options: { redirectTo: `${APP_URL}/dashboard` },
 	});
-	if (error) {
-		throw new Error(`Failed to sign in as ${personaKey}: ${error.message}`);
+	if (error || !data) {
+		throw new Error(`generateLink(${persona.email}) failed: ${error?.message ?? "no data returned"}`);
 	}
-
-	if (captured.length === 0) {
-		throw new Error(`No cookies captured for ${personaKey} — SSR client did not call setAll`);
-	}
-
-	return captured.map((c) => ({
-		name: c.name,
-		value: c.value,
-		url: APP_URL,
-	}));
+	const link = data.properties?.action_link ?? "";
+	if (!link) throw new Error(`generateLink(${persona.email}) returned no action_link`);
+	return link;
 }

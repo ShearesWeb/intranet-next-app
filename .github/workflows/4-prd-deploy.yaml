@@ -89,4 +89,4 @@ jobs:
           terraform apply -var-file=config/prd.tfvars -auto-approve
 
       - name: 7. 🚧 Build + Deploy with OpenNext (Cloudflare)
-        run: npm run deploy:prd
+        run: make deploy ENV=prd

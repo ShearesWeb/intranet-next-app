@@ -7,14 +7,16 @@ name: Merge Request CI
 # Jobs:
 #   - build-static-assets : fast verification gate (prettier/lint/typecheck/
 #                           fixtures/unit/build). No DB, no submodule.
-#   - integration-tests   : live local Supabase + vitest integration suite.
+#   - integration-tests   : plain Postgres + PostgREST sidecar + vitest route
+#                           integration suite (no Supabase stack).
 #
 # REQUIRED SECRET — `SUBMODULE_SSH_KEY` (repo-scoped read-only deploy key)
 #   The integration job fetches the PRIVATE `vendor/intranet` submodule (a
-#   separate repo). The built-in GITHUB_TOKEN can't read a sibling private repo,
-#   so the job loads a read-only deploy key for ShearesWeb/intranet via
-#   ssh-agent (checkout uses GITHUB_TOKEN for this repo). One-time setup:
-#   docs/TESTING.md. The `build-static-assets` job does NOT need it.
+#   separate repo) — it holds the Makefile + Liquibase changelog. The built-in
+#   GITHUB_TOKEN can't read a sibling private repo, so the job loads a read-only
+#   deploy key for ShearesWeb/intranet via ssh-agent (checkout uses GITHUB_TOKEN
+#   for this repo). One-time setup: docs/TESTING.md. The `build-static-assets`
+#   job does NOT need it.
 on:
   pull_request:
     branches:
@@ -78,25 +80,22 @@ jobs:
           fi
 
       - name: 6. 🎨 Prettier Check
-        run: ${{ steps.detect-pm.outputs.manager }} run format:check
+        run: make format-check
 
       - name: 7. 🧹 Lint
         run: ${{ steps.detect-pm.outputs.manager }} run lint
 
       - name: 8. 🔎 Typecheck
-        run: ${{ steps.detect-pm.outputs.manager }} run typecheck
+        run: make typecheck
 
-      - name: 9. 🧾 Fixtures Drift Check
-        run: ${{ steps.detect-pm.outputs.manager }} run fixtures:check
+      - name: 9. 🧪 Unit + Component Tests
+        run: make test
 
-      - name: 10. 🧪 Unit + Component Tests
-        run: ${{ steps.detect-pm.outputs.manager }} test
-
-      - name: 11. 🚧 Build with Next.js
+      - name: 10. 🚧 Build with Next.js
         run: ${{ steps.detect-pm.outputs.manager }} run build
 
   integration-tests:
-    name: 🧬 Integration Tests (live Supabase)
+    name: 🧬 Integration Tests (Postgres + PostgREST)
     runs-on: ubuntu-latest
 
     steps:
@@ -126,4 +125,4 @@ jobs:
         uses: ./.github/actions/setup-test-stack
 
       - name: 5. 🧬 Run Integration Tests
-        run: npm run test:integration
+        run: make test-integration

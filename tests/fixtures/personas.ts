@@ -192,6 +192,3 @@ export function personaByKey(key: string): Persona {
 	return p;
 }
 
-export function authenticatedPersonas(): readonly Persona[] {
-	return PERSONAS.filter((p) => p.email !== null);
-}

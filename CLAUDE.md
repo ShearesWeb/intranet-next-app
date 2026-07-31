@@ -10,36 +10,36 @@ A Next.js 15 intranet app for Sheares Hall residents to manage CCAs (Co-Curricul
 
 ## Commands
 
+**`package.json` scripts are strictly the Next.js CLI commands.** Everything else
+lives in the **Makefile** — `make help` lists targets.
+
 ```bash
-# Development
+# Next.js (package.json)
 npm run dev                    # Next.js dev server
 npm run build                  # Next.js build
-npm run lint                   # ESLint
-npm run typecheck              # tsc --noEmit (app + test scopes)
-npm run format                 # Prettier write
-npm run format:check           # Prettier check (runs in CI)
+npm run start                  # Next.js production server
+npm run lint                   # next lint
 
-# Tests
-npm test                       # Unit + component (Vitest, ~2.7s)
-npm run test:watch             # Watch mode
-npm run test:integration       # Integration tests (needs local Supabase, see below)
-npm run test:integration:watch # Watch mode
+# Quality + tests (Makefile)
+make check                     # format-check + typecheck + test
+make format                    # Prettier write  (format-check to verify)
+make typecheck                 # tsc --noEmit (app + test scopes)
+make test                      # Unit + component (Vitest)
 
-# Manual QA (persona login)
-npm run e2e:personas           # List all personas with role flags
-npm run e2e:login <persona>    # Open browser logged in as persona
+# Integration DB + suite (Makefile)
+make db-up                     # Start Postgres + schema + seed + PostgREST
+make test-integration          # Route-handler suite (needs db-up)
+make db-down                   # Stop it
 
-# Database / fixtures
-npm run db:test:setup          # Boot local Supabase, apply schema, seed fixtures
-npm run db:test:reset          # Re-seed only (no Liquibase)
-npm run fixtures:generate      # Regenerate seed.sql + PERSONAS.md from personas.ts
-npm run fixtures:check         # CI check for drift (fails if generated files are stale)
+# Manual QA (Makefile)
+make e2e-personas              # List personas with role flags
+make e2e-login PERSONA=declan  # Print a magic-link to log in as persona (no browser)
 
-# Deployment (Cloudflare Workers)
-npm run preview                # Build + run locally via wrangler dev
-npm run deploy                 # Build + deploy to production Worker "intranet"
-npm run deploy:preprod         # Build + deploy to "intranet-preprod"
-npm run cf-typegen             # Generate cloudflare-env.d.ts from wrangler bindings
+# Cloudflare (Makefile)
+make preview                   # Build + run locally via wrangler dev
+make deploy                    # Build + deploy to production ("intranet")
+make deploy ENV=preprod        # Build + deploy to "intranet-preprod"
+make cf-typegen                # Generate cloudflare-env.d.ts from wrangler bindings
 ```
 
 **Running a single test**: `npx vitest run src/lib/ranking/cca-ranking-metrics.test.ts`
@@ -51,16 +51,16 @@ Three automated layers + manual QA via persona login — see `docs/TESTING.md` f
 | Layer | Tool | Location | Runs in CI |
 |---|---|---|---|
 | Unit | Vitest | `src/**/*.test.ts` | every push |
-| Component | Vitest + Testing Library | `src/**/*.test.tsx` | every push |
+| Component | Vitest + react-dom `act` | `src/**/*.test.tsx` | every push |
 | Integration | Vitest | `tests/integration/**/*.test.ts` | PR only |
 
-**Test placement rule**: unit/component tests colocate with source (`src/**/*.test.*`). Use `__tests__/` subdirectory only when a directory accumulates many tests. Integration = `tests/integration/`.
+**Test placement rule**: unit/component tests colocate with source (`src/**/*.test.*`). Use `__tests__/` subdirectory only when a directory accumulates many tests. Integration = `tests/integration/routes/` (one file per route group).
 
-**What can't be automated**: API route handlers depend on `next/headers` cookies for auth — there is no session in a Vitest process. Cookie-backed flows, role-gated UI, and redirects are verified manually via `npm run e2e:login`.
+**Integration = real route handlers vs Postgres.** The suite runs the actual API route handlers against a plain Postgres + a lightweight PostgREST sidecar (no Supabase stack). `@/lib/supabase/server`'s `createClient` is mocked to a PostgREST-backed client carrying a self-signed persona JWT; RLS/RPC/embedded-joins run for real. The DB is reseeded before every test to stay pristine. Use `asPersona(key)` then invoke the handler (`tests/integration/helpers.ts`). Pure handler branching with the client mocked can also live in colocated unit tests (`src/app/api/**/route.test.ts`).
 
-**Persona system**: The canonical way to QA as any role. Defined in `tests/fixtures/personas.ts`, seeded via `seed.sql`. `npm run e2e:login <persona>` opens a real browser logged in as that persona. Quick picks: `aria` = plain resident; `declan` = sports CCA chair; `sage` = all three flags (admin + JCRC + CSA).
+**Persona system**: The canonical way to QA as any role. Defined in `tests/fixtures/personas.ts`, seeded via `seed.sql`. `make e2e-login PERSONA=<persona>` prints a one-time Supabase magic-link you open in your own browser (no browser automation). Quick picks: `aria` = plain resident; `declan` = sports CCA chair; `sage` = all three flags (admin + JCRC + CSA).
 
-**Local integration/E2E setup**: Requires Docker + Supabase CLI + Liquibase + `vendor/intranet` submodule (private). Run `git submodule update --init --recursive` then `npm run db:test:setup`. See `docs/TESTING.md` for `.env.test` setup and troubleshooting.
+**Local integration setup**: Requires Docker + Liquibase + `psql` + `vendor/intranet` submodule (private; holds the Makefile + changelog). Run `git submodule update --init --recursive`, then `make db-up` → `make test-integration` → `make db-down`. Override the schema-repo path with `INTRANET` (e.g. `../intranet`). `tests/fixtures/seed.sql` is committed and applied as-is; if you edit `personas.ts`, regenerate it with `npx tsx tests/fixtures/generate.ts`. See `docs/TESTING.md`.
 
 ## CI
 
@@ -68,8 +68,8 @@ Two workflows in `.github/workflows/`:
 
 | Trigger | Workflow | What runs |
 |---|---|---|
-| Push to any non-`main` branch | `1-feature-branch-ci.yml` | prettier, lint, typecheck, fixtures drift, unit + component tests |
-| PR into `main` | `2-merge-request-ci.yml` | all of the above + `next build` + integration tests (live Supabase) |
+| Push to any non-`main` branch | `1-feature-branch-ci.yml` | prettier, lint, typecheck, unit + component tests |
+| PR into `main` | `2-merge-request-ci.yml` | all of the above + `next build` + integration tests (Postgres + PostgREST) |
 
 **Required secret**: `SUBMODULE_SSH_KEY` — a read-only deploy key for `ShearesWeb/intranet` (the private schema submodule). The built-in `GITHUB_TOKEN` can't access a sibling private repo. See `docs/TESTING.md` for one-time setup.
 
@@ -100,7 +100,7 @@ src/hooks/            → Client-side hooks
 
 ### Key abstractions
 
-**`AuthenticatedUser`** (`src/types/User.ts`): Fully-resolved user with profile, `is_admin` / `is_jcrc` / `is_culture_sports_admin` flags, and CCA appointments. Built by `fetchUserInfo()` in `src/lib/auth/fetch-user-info.ts` from JWT claims + the `authenticated_user_info` Supabase view.
+**`AuthenticatedUser`** (`src/types/user.ts`): Fully-resolved user with profile, `is_admin` / `is_jcrc` / `is_culture_sports_admin` flags, and CCA appointments. Built by `fetchUserInfo()` in `src/lib/auth/fetch-user-info.ts` from JWT claims + the `authenticated_user_info` Supabase view.
 
 **`AccessResult<T>`** (`src/lib/cca/cca-chair-access.ts`): `{ ok: true; data: T } | { ok: false; status: number; error: string }`. Used by all CCA-related API routes to verify chair/management access.
 
@@ -183,15 +183,14 @@ There are two different "ranking" concepts in the codebase that share the same r
 - `cn()` combines `clsx` + `tailwind-merge`
 
 <!-- GSD:skills-start source:skills/ -->
+
 ## Project Skills
 
 No project skills found. Add skills to any of: `.claude/skills/`, `.agents/skills/`, `.cursor/skills/`, or `.github/skills/` with a `SKILL.md` index file.
 <!-- GSD:skills-end -->
 
-
-
-
 <!-- GSD:profile-start -->
+
 ## Developer Profile
 
 > Profile not yet configured. Run `/gsd-profile-user` to generate your developer profile.
