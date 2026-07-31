@@ -1,220 +1,224 @@
 "use client";
 
-import { useState } from "react";
-import { FacilitySlotWithClaims, BOOKING_TYPE_CONFIG, SlotDisplayStatus } from "@/types/facilities";
+import { useMemo, useState } from "react";
+import {
+	BookingWithClaims,
+	FACILITY_TYPE_CONFIG,
+	BOOKING_STATUS_CONFIG,
+	MIN_BOOKING_LEAD_DAYS,
+	formatHourRange,
+	isBookingLocked,
+} from "@/types/facilities";
+import { Lock } from "lucide-react";
+import { DataTable, type DataTableColumnDef } from "@/components/table/data-table";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { StatusPill } from "@/components/shared/status-pill";
 import { cn } from "@/lib/utils";
+import { formatDisplayDate } from "@/lib/date";
+import { Repeat } from "lucide-react";
 
 interface DayDetailPanelProps {
 	date: string;
-	slots: FacilitySlotWithClaims[];
+	bookings: BookingWithClaims[];
 	isChair: boolean;
 	loading?: boolean;
-	onClaim: (slot: FacilitySlotWithClaims) => void;
-	onRelease?: (claimId: number) => Promise<void> | void;
+	onClaim: (booking: BookingWithClaims) => void;
+	onWithdraw?: (claimId: number) => Promise<void> | void;
 }
-
-function formatDisplayDate(dateStr: string): string {
-	const d = new Date(dateStr + "T00:00:00");
-	return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
-}
-
-function formatTime(time: string): string {
-	const [h, m] = time.split(":");
-	const hour = parseInt(h, 10);
-	const ampm = hour >= 12 ? "PM" : "AM";
-	const displayHour = hour % 12 || 12;
-	return `${displayHour}:${m} ${ampm}`;
-}
-
-function getSlotStatus(slot: FacilitySlotWithClaims): SlotDisplayStatus {
-	if (slot.user_cca_claim) {
-		if (slot.user_cca_claim.status === "conflicted") return "conflict";
-		if (slot.user_cca_claim.status === "pending") return "pending";
-		return "your-cca";
-	}
-	const activeClaims = slot.claims.filter(
-		(c) => c.status === "approved" || c.status === "conflicted" || c.status === "pending",
-	);
-	if (activeClaims.length === 0) return "available";
-	if (activeClaims.some((c) => c.status === "conflicted")) return "conflict";
-	return "taken";
-}
-
-const STATUS_BADGE: Record<SlotDisplayStatus, { text: string; className: string }> = {
-	available: { text: "Available", className: "text-muted-foreground" },
-	"your-cca": { text: "Approved", className: "bg-[#10b981]/15 text-[#10b981]" },
-	taken: { text: "Approved", className: "bg-[#10b981]/15 text-[#10b981]" },
-	conflict: { text: "Conflict", className: "bg-[#f87171]/15 text-[#f87171]" },
-	pending: { text: "Pending", className: "bg-[#fbbf24]/15 text-[#fbbf24]" },
-};
 
 export function DayDetailPanel({
 	date,
-	slots,
+	bookings,
 	isChair,
 	loading,
 	onClaim,
-	onRelease,
+	onWithdraw,
 }: DayDetailPanelProps) {
-	const sorted = [...slots].sort((a, b) => {
-		const vCmp = a.sub_venue.localeCompare(b.sub_venue);
-		if (vCmp !== 0) return vCmp;
-		return a.time_from.localeCompare(b.time_from);
-	});
+	const sorted = useMemo(
+		() =>
+			[...bookings].sort((a, b) => {
+				const vCmp = a.sub_venue.localeCompare(b.sub_venue);
+				if (vCmp !== 0) return vCmp;
+				return a.hour - b.hour;
+			}),
+		[bookings],
+	);
+
+	const columns = useMemo<DataTableColumnDef<BookingWithClaims>[]>(() => {
+		const cols: DataTableColumnDef<BookingWithClaims>[] = [
+			{
+				id: "venue",
+				header: "Venue",
+				accessorFn: (b) => `${b.sub_venue} ${b.venue}`,
+				cell: ({ row }) => {
+					const b = row.original;
+					return (
+						<div>
+							<div className="flex items-center gap-1.5 font-medium">
+								{b.sub_venue}
+								{b.recurring && <Repeat className="h-3 w-3 text-muted-foreground" />}
+							</div>
+							{b.venue !== b.sub_venue && (
+								<div className="text-xs text-muted-foreground">{b.venue}</div>
+							)}
+						</div>
+					);
+				},
+			},
+			{
+				id: "time",
+				header: "Time",
+				accessorKey: "hour",
+				cell: ({ row }) => (
+					<span className="whitespace-nowrap tabular-nums">
+						{formatHourRange(row.original.hour)}
+					</span>
+				),
+			},
+			{
+				id: "type",
+				header: "Type",
+				accessorFn: (b) => FACILITY_TYPE_CONFIG[b.type].label,
+				cell: ({ row }) => {
+					const typeConfig = FACILITY_TYPE_CONFIG[row.original.type];
+					return (
+						<span className="inline-flex items-center gap-1.5">
+							<span
+								className="h-2 w-2 rounded-full shrink-0"
+								style={{ backgroundColor: typeConfig.color }}
+							/>
+							<span className="text-muted-foreground">{typeConfig.label}</span>
+						</span>
+					);
+				},
+			},
+			{
+				id: "status",
+				header: "Status",
+				accessorFn: (b) => BOOKING_STATUS_CONFIG[b.status].label,
+				cell: ({ row }) => {
+					const b = row.original;
+					const statusConfig = BOOKING_STATUS_CONFIG[b.status];
+					const myClaim = b.user_cca_claim;
+					const myClaimActive =
+						myClaim && (myClaim.status === "pending" || myClaim.status === "approved");
+					return (
+						<div>
+							<StatusPill label={statusConfig.label} color={statusConfig.color} />
+							{myClaimActive && (
+								<div className="mt-0.5 text-xs text-muted-foreground">
+									Your CCA: {myClaim.cca_name}
+								</div>
+							)}
+						</div>
+					);
+				},
+			},
+		];
+
+		if (isChair) {
+			cols.push({
+				id: "actions",
+				header: "",
+				enableHiding: false,
+				cell: ({ row }) => (
+					<BookingActions
+						booking={row.original}
+						locked={isBookingLocked(date)}
+						onClaim={onClaim}
+						onWithdraw={onWithdraw}
+					/>
+				),
+			});
+		}
+
+		return cols;
+	}, [isChair, date, onClaim, onWithdraw]);
+
+	const locked = isBookingLocked(date);
 
 	return (
 		<div className="flex-1 min-w-0">
 			<h3 className="mb-3 text-lg font-semibold">{formatDisplayDate(date)}</h3>
-
-			{loading ? (
-				<div className="overflow-hidden rounded-lg border">
-					<div className="border-b bg-muted/50 px-3 py-2">
-						<Skeleton className="h-4 w-24" />
-					</div>
-					{Array.from({ length: 4 }).map((_, i) => (
-						<div key={i} className="flex items-center gap-4 border-b px-3 py-3 last:border-0">
-							<Skeleton className="h-4 w-32" />
-							<Skeleton className="h-4 w-24" />
-							<Skeleton className="ml-auto h-4 w-16" />
-						</div>
-					))}
-				</div>
-			) : sorted.length === 0 ? (
-				<p className="text-sm text-muted-foreground">No available slots on this day.</p>
-			) : (
-				<div className="overflow-hidden rounded-lg border">
-					<table className="w-full text-sm">
-						<thead>
-							<tr className="border-b bg-muted/50 text-left text-xs font-medium text-muted-foreground">
-								<th className="px-3 py-2">Venue</th>
-								<th className="px-3 py-2">Time</th>
-								<th className="px-3 py-2">Type</th>
-								<th className="px-3 py-2">Status</th>
-								{isChair && <th className="px-3 py-2 w-[1%]" />}
-							</tr>
-						</thead>
-						<tbody>
-							{sorted.map((slot) => (
-								<SlotRow
-									key={slot.id}
-									slot={slot}
-									isChair={isChair}
-									onClaim={onClaim}
-									onRelease={onRelease}
-								/>
-							))}
-						</tbody>
-					</table>
-				</div>
+			{locked && (
+				<p className="mb-3 inline-flex items-center gap-1.5 rounded-md bg-muted px-2.5 py-1.5 text-xs text-muted-foreground">
+					<Lock className="h-3.5 w-3.5" />
+					Bookings lock {MIN_BOOKING_LEAD_DAYS} days before the date — new claims are closed for
+					this day.
+				</p>
 			)}
+			<DataTable
+				data={sorted}
+				columns={columns}
+				searchColumn="venue"
+				searchPlaceholder="Search venues..."
+				pageSize={10}
+				emptyMessage="No bookings on this day."
+				isLoading={loading}
+				tablePadding="[&_th]:px-3 [&_td]:px-3 py-2.5"
+			/>
 		</div>
 	);
 }
 
-function SlotRow({
-	slot,
-	isChair,
+function BookingActions({
+	booking,
+	locked,
 	onClaim,
-	onRelease,
+	onWithdraw,
 }: {
-	slot: FacilitySlotWithClaims;
-	isChair: boolean;
-	onClaim: (slot: FacilitySlotWithClaims) => void;
-	onRelease?: (claimId: number) => Promise<void> | void;
+	booking: BookingWithClaims;
+	locked: boolean;
+	onClaim: (booking: BookingWithClaims) => void;
+	onWithdraw?: (claimId: number) => Promise<void> | void;
 }) {
-	const [releasing, setReleasing] = useState(false);
-	const status = getSlotStatus(slot);
-	const badge = STATUS_BADGE[status];
-	const typeConfig = BOOKING_TYPE_CONFIG[slot.type];
-	const canClaim = status === "available" && isChair;
+	const [busy, setBusy] = useState(false);
 
-	async function handleRelease(claimId: number) {
-		if (!onRelease) return;
-		setReleasing(true);
+	const myClaim = booking.user_cca_claim;
+	const myClaimActive = myClaim && (myClaim.status === "pending" || myClaim.status === "approved");
+	// New claims respect the lead-time lock; withdrawing an existing claim never does.
+	const canClaim = !myClaimActive && booking.status !== "confirmed" && !locked;
+
+	async function handleWithdraw(claimId: number) {
+		if (!onWithdraw) return;
+		setBusy(true);
 		try {
-			await onRelease(claimId);
+			await onWithdraw(claimId);
 		} finally {
-			setReleasing(false);
+			setBusy(false);
 		}
 	}
 
+	if (myClaimActive && onWithdraw) {
+		return (
+			<Button
+				size="sm"
+				variant="destructive"
+				className="h-7 text-xs"
+				isLoading={busy}
+				loadingText="Withdrawing…"
+				onClick={() => handleWithdraw(myClaim!.id)}
+			>
+				Withdraw
+			</Button>
+		);
+	}
+
+	if (!canClaim) return null;
+
 	return (
-		<tr className="group border-b last:border-0 hover:bg-accent/50 transition-colors">
-			<td className="px-3 py-2.5">
-				<div className="font-medium">{slot.sub_venue}</div>
-				{slot.venue !== slot.sub_venue && (
-					<div className="text-xs text-muted-foreground">{slot.venue}</div>
-				)}
-			</td>
-			<td className="px-3 py-2.5 whitespace-nowrap tabular-nums">
-				{formatTime(slot.time_from)} – {formatTime(slot.time_to)}
-			</td>
-			<td className="px-3 py-2.5">
-				<span className="inline-flex items-center gap-1.5">
-					<span
-						className="h-2 w-2 rounded-full shrink-0"
-						style={{ backgroundColor: typeConfig.color }}
-					/>
-					<span className="text-muted-foreground">{typeConfig.label}</span>
-				</span>
-			</td>
-			<td className="px-3 py-2.5">
-				<span
-					className={cn(
-						"inline-block rounded-full px-2 py-0.5 text-xs font-medium",
-						badge.className,
-					)}
-				>
-					{badge.text}
-				</span>
-				{slot.claims.length > 0 && status !== "available" && (
-					<div className="mt-0.5 text-xs text-muted-foreground">
-						{slot.claims[0].cca_name}
-						{slot.claims[0].activity && ` — ${slot.claims[0].activity}`}
-					</div>
-				)}
-				{status === "conflict" && slot.claims.length > 1 && (
-					<div className="text-xs text-[#f87171]">{slot.claims.length} CCAs competing</div>
-				)}
-			</td>
-			{isChair && (
-				<td className="px-3 py-2.5 whitespace-nowrap">
-					{canClaim && (
-						<Button
-							size="sm"
-							variant="outline"
-							className="h-7 text-xs transition-colors group-hover:border-primary/50 group-hover:bg-primary/5 group-hover:text-primary"
-							onClick={() => onClaim(slot)}
-						>
-							Claim
-						</Button>
-					)}
-					{status === "your-cca" && slot.user_cca_claim && onRelease && (
-						<Button
-							size="sm"
-							variant="outline"
-							className="h-7 text-xs"
-							isLoading={releasing}
-							loadingText="Releasing…"
-							onClick={() => handleRelease(slot.user_cca_claim!.id)}
-						>
-							Release
-						</Button>
-					)}
-					{status === "taken" && (
-						<Button
-							size="sm"
-							variant="outline"
-							className="h-7 text-xs text-[#f87171] border-[#f87171]/30 hover:bg-[#f87171]/10 group-hover:border-[#f87171]/50"
-							onClick={() => onClaim(slot)}
-						>
-							Dispute
-						</Button>
-					)}
-				</td>
+		<Button
+			size="sm"
+			variant="outline"
+			className={cn(
+				"h-7 text-xs transition-colors",
+				booking.status === "available"
+					? "hover:border-primary/50 hover:bg-primary/5 hover:text-primary"
+					: "text-[#ef4444] border-[#ef4444]/30 hover:bg-[#ef4444]/10",
 			)}
-		</tr>
+			onClick={() => onClaim(booking)}
+		>
+			{booking.status === "available" ? "Claim" : "Dispute"}
+		</Button>
 	);
 }

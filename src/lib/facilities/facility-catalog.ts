@@ -23,19 +23,6 @@ export async function listFacilities(opts?: {
 	return data ?? [];
 }
 
-export async function getFacility(id: number): Promise<Facility | null> {
-	const supabase = await createClient();
-	const { data, error } = await supabase.from("facilities").select("*").eq("id", id).single();
-
-	if (error) {
-		if (error.code === "PGRST116") return null;
-		console.error("Error fetching facility:", error);
-		throw new ApiError(500, "Failed to load facility");
-	}
-
-	return data;
-}
-
 /**
  * Create a facility. REBOKS venues have a fixed identity owned by the bot's catalog
  * scrape, so the app refuses to create them — only sheares/nus/external are app-managed.
@@ -46,7 +33,7 @@ export async function createFacility(input: {
 	sub_venue: string;
 }): Promise<Facility> {
 	if (input.type === "reboks") {
-		throw new ApiError(400, "REBOKS facilities cannot be added in-app");
+		throw new ApiError(400, "Reboks facilities cannot be added in-app");
 	}
 
 	const supabase = await createClient();

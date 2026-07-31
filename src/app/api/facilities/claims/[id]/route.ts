@@ -1,48 +1,37 @@
 import { requireAuth } from "@/lib/api/auth";
 import { apiOk, apiError, handleApiError } from "@/lib/api/response";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
-import { updateClaimStatus, deleteClaim } from "@/lib/facilities/facility-claims";
+import { deleteClaim, getClaim } from "@/lib/facilities/facility-claims";
 import { isChairOfCca, canManageFacilities } from "@/lib/facilities/facility-access";
-import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+// The lead-time gate applies only to CREATING claims — chairs can withdraw any time.
+async function authorizeClaim(claimId: number) {
+	const user = await requireAuth();
+	const claim = await getClaim(claimId);
+	if (!claim) throw { handled: apiError("Claim not found", 404) };
+	if (!isChairOfCca(user, claim.cca_id) && !canManageFacilities(user)) {
+		throw { handled: apiError("Not authorized to modify this claim", 403) };
+	}
+	return user;
+}
+
+/** Withdraw a claim — delete the row; the booking reopens via trigger. */
+async function withdraw(claimId: number) {
+	await authorizeClaim(claimId);
+	await deleteClaim(claimId);
+	return apiOk({ success: true });
+}
+
+export async function PATCH(_req: Request, { params }: { params: Promise<{ id: string }> }) {
 	const disabledResponse = getCoreServiceDisabledApiResponse("facilities");
 	if (disabledResponse) return disabledResponse;
-
 	try {
-		const user = await requireAuth();
 		const { id } = await params;
-		const claimId = Number(id);
-		const body = await req.json();
-		const { status } = body;
-
-		if (!status || !["yielded", "cancelled"].includes(status)) {
-			return apiError("Status must be 'yielded' or 'cancelled'", 400);
-		}
-
-		const supabase = await createClient();
-		const { data: claim } = await supabase
-			.from("facility_claims")
-			.select("cca_id")
-			.eq("id", claimId)
-			.single();
-
-		if (!claim) return apiError("Claim not found", 404);
-
-		if (!isChairOfCca(user, claim.cca_id) && !canManageFacilities(user)) {
-			return apiError("Not authorized to modify this claim", 403);
-		}
-
-		const {
-			data: { user: authUser },
-		} = await supabase.auth.getUser();
-		if (!authUser) return apiError("Auth session not found", 401);
-
-		await updateClaimStatus(claimId, status, authUser.id);
-		return apiOk({ success: true });
+		return await withdraw(Number(id));
 	} catch (e) {
+		if (e && typeof e === "object" && "handled" in e) return (e as { handled: Response }).handled;
 		return handleApiError(e);
 	}
 }
@@ -50,28 +39,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
 	const disabledResponse = getCoreServiceDisabledApiResponse("facilities");
 	if (disabledResponse) return disabledResponse;
-
 	try {
-		const user = await requireAuth();
 		const { id } = await params;
-		const claimId = Number(id);
-
-		const supabase = await createClient();
-		const { data: claim } = await supabase
-			.from("facility_claims")
-			.select("cca_id")
-			.eq("id", claimId)
-			.single();
-
-		if (!claim) return apiError("Claim not found", 404);
-
-		if (!isChairOfCca(user, claim.cca_id) && !canManageFacilities(user)) {
-			return apiError("Not authorized to release this booking", 403);
-		}
-
-		await deleteClaim(claimId);
-		return apiOk({ success: true });
+		return await withdraw(Number(id));
 	} catch (e) {
+		if (e && typeof e === "object" && "handled" in e) return (e as { handled: Response }).handled;
 		return handleApiError(e);
 	}
 }

@@ -32,7 +32,8 @@ export async function POST(req: NextRequest) {
 
 	try {
 		await requireJcrcAccess();
-		const { facility_id, day_of_week, hour, priority, reboks_activity } = await req.json();
+		const { facility_id, day_of_week, hour, priority, reboks_activity, start_date, end_date } =
+			await req.json();
 
 		if (facility_id == null || day_of_week == null || hour == null) {
 			return apiError("facility_id, day_of_week and hour are required", 400);
@@ -41,12 +42,25 @@ export async function POST(req: NextRequest) {
 		if (hour < 0 || hour > 23) return apiError("hour must be 0–23", 400);
 		if (priority != null && priority < 0) return apiError("priority must be >= 0", 400);
 
+		const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+		if (start_date != null && !DATE_RE.test(start_date)) {
+			return apiError("start_date must be YYYY-MM-DD", 400);
+		}
+		if (end_date != null && !DATE_RE.test(end_date)) {
+			return apiError("end_date must be YYYY-MM-DD", 400);
+		}
+		if (start_date && end_date && start_date > end_date) {
+			return apiError("start_date must be on or before end_date", 400);
+		}
+
 		const schedule = await createSchedule({
 			facilityId: facility_id,
 			dayOfWeek: day_of_week,
 			hour,
 			priority: priority ?? undefined,
 			reboksActivity: reboks_activity ?? null,
+			startDate: start_date ?? null,
+			endDate: end_date ?? null,
 		});
 		return apiOk(schedule, 201);
 	} catch (e) {

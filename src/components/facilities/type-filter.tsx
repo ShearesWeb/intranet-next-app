@@ -1,19 +1,19 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { BookingType, BOOKING_TYPE_CONFIG } from "@/types/facilities";
+import { FacilityType, FACILITY_TYPE_CONFIG } from "@/types/facilities";
 
 interface TypeFilterProps {
-	selected: BookingType[];
-	onChange: (selected: BookingType[]) => void;
+	selected: FacilityType[];
+	onChange: (selected: FacilityType[]) => void;
 }
 
-const TYPES = Object.keys(BOOKING_TYPE_CONFIG) as BookingType[];
+const TYPES = Object.keys(FACILITY_TYPE_CONFIG) as FacilityType[];
 
 export function TypeFilter({ selected, onChange }: TypeFilterProps) {
 	const allSelected = selected.length === 0;
 
-	function toggle(type: BookingType) {
+	function toggle(type: FacilityType) {
 		if (selected.includes(type)) {
 			onChange(selected.filter((t) => t !== type));
 		} else {
@@ -35,7 +35,7 @@ export function TypeFilter({ selected, onChange }: TypeFilterProps) {
 				All Types
 			</button>
 			{TYPES.map((type) => {
-				const config = BOOKING_TYPE_CONFIG[type];
+				const config = FACILITY_TYPE_CONFIG[type];
 				const isActive = selected.includes(type);
 				return (
 					<button

@@ -17,21 +17,17 @@ import {
 	ScheduleSlotDialog,
 	type SlotEditTarget,
 } from "@/components/facilities/schedule-slot-dialog";
-import { ManageConflicts } from "@/components/facilities/manage-conflicts";
-import { buildWeek, type Cluster, type ScheduleSlot } from "@/lib/facilities/schedule-grid";
-import {
-	BookingSchedule,
-	Facility,
-	FacilityType,
-	FACILITY_TYPE_CONFIG,
-} from "@/types/facilities";
+import { ManageApprovals } from "@/components/facilities/manage-approvals";
+import { type Cluster, type ScheduleSlot } from "@/lib/facilities/schedule-grid";
+import { BookingSchedule, Facility, FacilityType, FACILITY_TYPE_CONFIG } from "@/types/facilities";
 import { Shield, Plus, Building2 } from "lucide-react";
 
-const TYPE_ORDER: FacilityType[] = ["sheares", "reboks", "nus", "external"];
+// REBOKS venues are bot-owned — hidden from the facilities list and schedule editor.
+const MANAGED_TYPES: FacilityType[] = ["sheares", "nus", "external"];
 
 export default function AdminFacilitiesPage() {
 	const { user } = useAuth();
-	const [type, setType] = useState<FacilityType>("reboks");
+	const [type, setType] = useState<FacilityType>("sheares");
 	const [facilities, setFacilities] = useState<Facility[]>([]);
 	const [schedules, setSchedules] = useState<BookingSchedule[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -59,12 +55,10 @@ export default function AdminFacilitiesPage() {
 		fetchAll();
 	}, [fetchAll]);
 
-	// Materialise non-reboks bookable slots when viewing a non-reboks schedule (JCRC session).
+	// Materialise non-reboks bookable slots on every admin visit (JCRC session).
 	useEffect(() => {
-		if (type !== "reboks") {
-			fetch("/api/facilities/bookings/materialize", { method: "POST" }).catch(() => undefined);
-		}
-	}, [type]);
+		fetch("/api/facilities/bookings/materialize", { method: "POST" }).catch(() => undefined);
+	}, []);
 
 	const facilitiesById = useMemo(() => {
 		const m = new Map<number, Facility>();
@@ -86,21 +80,25 @@ export default function AdminFacilitiesPage() {
 				type: f.type,
 				day_of_week: s.day_of_week,
 				hour: s.hour,
-				priority: s.priority,
-				reboks_activity: s.reboks_activity,
+				start_date: s.start_date,
+				end_date: s.end_date,
 			});
 		}
 		return out;
 	}, [schedules, facilitiesById, type]);
 
 	const activeFacilities = useMemo(() => facilities.filter((f) => f.active), [facilities]);
-	const weekWaves = useMemo(() => buildWeek(slots).waves, [slots]);
+
+	const managedFacilities = useMemo(
+		() => facilities.filter((f) => f.type !== "reboks"),
+		[facilities],
+	);
 
 	const filteredFacilities = useMemo(() => {
 		const q = facilityQuery.trim().toLowerCase();
-		if (!q) return facilities;
-		return facilities.filter((f) => `${f.venue} ${f.sub_venue}`.toLowerCase().includes(q));
-	}, [facilities, facilityQuery]);
+		if (!q) return managedFacilities;
+		return managedFacilities.filter((f) => `${f.venue} ${f.sub_venue}`.toLowerCase().includes(q));
+	}, [managedFacilities, facilityQuery]);
 
 	if (user && !user.is_jcrc) {
 		return (
@@ -119,14 +117,14 @@ export default function AdminFacilitiesPage() {
 		<div className="flex flex-col space-y-6 p-4 md:p-6">
 			<PageHeader
 				title="Manage Facilities"
-				description="Add facilities, define booking schedules, and resolve conflicts"
+				description="Add facilities, define booking schedules, and approve bookings"
 			/>
 
 			<Tabs defaultValue="schedules">
 				<TabsList>
 					<TabsTrigger value="facilities">Facilities</TabsTrigger>
 					<TabsTrigger value="schedules">Schedules</TabsTrigger>
-					<TabsTrigger value="conflicts">Conflicts</TabsTrigger>
+					<TabsTrigger value="approvals">Approvals</TabsTrigger>
 				</TabsList>
 
 				{/* Facilities */}
@@ -145,8 +143,12 @@ export default function AdminFacilitiesPage() {
 					</div>
 					{loading ? (
 						<Skeleton className="h-40 w-full" />
-					) : facilities.length === 0 ? (
-						<EmptyState icon={Building2} title="No facilities" description="Add one to get started." />
+					) : managedFacilities.length === 0 ? (
+						<EmptyState
+							icon={Building2}
+							title="No facilities"
+							description="Add one to get started."
+						/>
 					) : filteredFacilities.length === 0 ? (
 						<EmptyState
 							icon={Building2}
@@ -155,42 +157,46 @@ export default function AdminFacilitiesPage() {
 						/>
 					) : (
 						<div className="space-y-6">
-							{TYPE_ORDER.filter((t) => filteredFacilities.some((f) => f.type === t)).map((t) => {
-								const cfg = FACILITY_TYPE_CONFIG[t];
-								const list = filteredFacilities.filter((f) => f.type === t);
-								return (
-									<div key={t}>
-										<div className="mb-2 flex items-center gap-2">
-											<span
-												className="h-2.5 w-2.5 rounded-full"
-												style={{ backgroundColor: cfg.color }}
-											/>
-											<h4 className="text-sm font-semibold">{cfg.label}</h4>
-											<span className="text-xs text-muted-foreground">({list.length})</span>
-										</div>
-										<div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-											{list.map((f) => (
-												<div
-													key={f.id}
-													className="flex items-center justify-between gap-2 rounded-lg border px-3 py-2.5"
-												>
-													<div className="min-w-0">
-														<div className="truncate font-medium">{f.sub_venue}</div>
-														{f.venue !== f.sub_venue && (
-															<div className="truncate text-xs text-muted-foreground">{f.venue}</div>
+							{MANAGED_TYPES.filter((t) => filteredFacilities.some((f) => f.type === t)).map(
+								(t) => {
+									const cfg = FACILITY_TYPE_CONFIG[t];
+									const list = filteredFacilities.filter((f) => f.type === t);
+									return (
+										<div key={t}>
+											<div className="mb-2 flex items-center gap-2">
+												<span
+													className="h-2.5 w-2.5 rounded-full"
+													style={{ backgroundColor: cfg.color }}
+												/>
+												<h4 className="text-sm font-semibold">{cfg.label}</h4>
+												<span className="text-xs text-muted-foreground">({list.length})</span>
+											</div>
+											<div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+												{list.map((f) => (
+													<div
+														key={f.id}
+														className="flex items-center justify-between gap-2 rounded-lg border px-3 py-2.5"
+													>
+														<div className="min-w-0">
+															<div className="truncate font-medium">{f.sub_venue}</div>
+															{f.venue !== f.sub_venue && (
+																<div className="truncate text-xs text-muted-foreground">
+																	{f.venue}
+																</div>
+															)}
+														</div>
+														{!f.active && (
+															<Badge variant="secondary" className="shrink-0 text-[10px]">
+																Inactive
+															</Badge>
 														)}
 													</div>
-													{!f.active && (
-														<Badge variant="secondary" className="shrink-0 text-[10px]">
-															Inactive
-														</Badge>
-													)}
-												</div>
-											))}
+												))}
+											</div>
 										</div>
-									</div>
-								);
-							})}
+									);
+								},
+							)}
 						</div>
 					)}
 				</TabsContent>
@@ -198,7 +204,7 @@ export default function AdminFacilitiesPage() {
 				{/* Schedules */}
 				<TabsContent value="schedules">
 					<div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-						<FacilityTypeBadges value={type} onChange={setType} />
+						<FacilityTypeBadges value={type} onChange={setType} types={MANAGED_TYPES} />
 						<Button
 							size="sm"
 							className="gap-1.5"
@@ -226,7 +232,6 @@ export default function AdminFacilitiesPage() {
 									day={selected.day}
 									cluster={selected.cluster}
 									schedules={slots}
-									waves={weekWaves}
 									onChanged={fetchAll}
 									onAddSlot={() => {
 										setEditing(null);
@@ -238,8 +243,8 @@ export default function AdminFacilitiesPage() {
 											facilityId: w.facility_id,
 											day,
 											hours: w.hours,
-											priority: w.priority,
-											reboks_activity: w.reboks_activity,
+											start_date: w.start_date,
+											end_date: w.end_date,
 										});
 										setSlotOpen(true);
 									}}
@@ -249,9 +254,9 @@ export default function AdminFacilitiesPage() {
 					)}
 				</TabsContent>
 
-				{/* Conflicts */}
-				<TabsContent value="conflicts">
-					<ManageConflicts />
+				{/* Approvals */}
+				<TabsContent value="approvals">
+					<ManageApprovals />
 				</TabsContent>
 			</Tabs>
 

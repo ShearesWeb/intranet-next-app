@@ -25,8 +25,8 @@ export interface SlotEditTarget {
 	facilityId: number;
 	day: number;
 	hours: number[];
-	priority: number;
-	reboks_activity: string | null;
+	start_date: string | null;
+	end_date: string | null;
 }
 
 interface ScheduleSlotDialogProps {
@@ -54,40 +54,42 @@ export function ScheduleSlotDialog({
 	const [facilityId, setFacilityId] = useState<number | null>(null);
 	const [days, setDays] = useState<number[]>([]);
 	const [hours, setHours] = useState<number[]>([]);
-	const [priority, setPriority] = useState<number>(1);
-	const [activity, setActivity] = useState<string>("");
+	const [startDate, setStartDate] = useState<string>("");
+	const [endDate, setEndDate] = useState<string>("");
 	const [submitting, setSubmitting] = useState(false);
+
+	// REBOKS recipes are owned by the bot — not editable here.
+	const selectableFacilities = useMemo(
+		() => facilities.filter((f) => f.type !== "reboks"),
+		[facilities],
+	);
 
 	// Prefill from the edit target, else reset to sensible defaults, each time it opens.
 	useEffect(() => {
 		if (!open) return;
 		if (editing) {
-			setActivity(editing.reboks_activity ?? "");
-			setPriority(editing.priority || 1);
 			setDays([editing.day]);
 			setHours([...editing.hours]);
 			setFacilityId(editing.facilityId);
+			setStartDate(editing.start_date ?? "");
+			setEndDate(editing.end_date ?? "");
 			return;
 		}
-		setActivity("");
-		setPriority(1);
 		setDays(defaultDay != null ? [defaultDay] : []);
 		setHours(defaultHour != null ? [defaultHour] : []);
+		setStartDate("");
+		setEndDate("");
 		const def =
-			(defaultType && facilities.find((f) => f.active && f.type === defaultType)) ??
-			facilities.find((f) => f.active);
+			(defaultType && selectableFacilities.find((f) => f.active && f.type === defaultType)) ??
+			selectableFacilities.find((f) => f.active);
 		setFacilityId(def?.id ?? null);
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [open]);
 
-	const selectedFacility = useMemo(
-		() => facilities.find((f) => f.id === facilityId) ?? null,
-		[facilities, facilityId],
-	);
-	const isReboks = selectedFacility?.type === "reboks";
-
 	function toggleIn(list: number[], value: number): number[] {
-		return list.includes(value) ? list.filter((x) => x !== value) : [...list, value].sort((a, b) => a - b);
+		return list.includes(value)
+			? list.filter((x) => x !== value)
+			: [...list, value].sort((a, b) => a - b);
 	}
 
 	async function submit() {
@@ -103,8 +105,8 @@ export function ScheduleSlotDialog({
 			toast.error("Pick at least one hour");
 			return;
 		}
-		if (isReboks && !activity.trim()) {
-			toast.error("REBOKS slots need an activity name");
+		if (startDate && endDate && startDate > endDate) {
+			toast.error("Start date must be on or before end date");
 			return;
 		}
 
@@ -115,7 +117,9 @@ export function ScheduleSlotDialog({
 			if (editing) {
 				await Promise.all(
 					editing.ids.map((id) =>
-						fetch(`/api/facilities/schedules?id=${id}`, { method: "DELETE" }).catch(() => undefined),
+						fetch(`/api/facilities/schedules?id=${id}`, { method: "DELETE" }).catch(
+							() => undefined,
+						),
 					),
 				);
 			}
@@ -128,8 +132,8 @@ export function ScheduleSlotDialog({
 							facility_id: facilityId,
 							day_of_week: day,
 							hour,
-							priority: isReboks ? priority : 100,
-							reboks_activity: isReboks ? activity.trim() : null,
+							start_date: startDate || null,
+							end_date: endDate || null,
 						}),
 					}).then((r) => r.ok || r.status === 409),
 				),
@@ -156,7 +160,11 @@ export function ScheduleSlotDialog({
 					{/* Facility — standard dropdown with search, grouped by type */}
 					<div className="space-y-1.5">
 						<Label>Facility</Label>
-						<FacilitySelect facilities={facilities} value={facilityId} onChange={setFacilityId} />
+						<FacilitySelect
+							facilities={selectableFacilities}
+							value={facilityId}
+							onChange={setFacilityId}
+						/>
 					</div>
 
 					{/* Days — multi-select */}
@@ -199,30 +207,30 @@ export function ScheduleSlotDialog({
 						</div>
 					</div>
 
-					{isReboks && (
-						<div className="grid grid-cols-2 gap-3" data-testid="reboks-fields">
-							<div className="space-y-1.5">
-								<Label htmlFor="priority">Wave (priority)</Label>
-								<Input
-									id="priority"
-									type="number"
-									min={1}
-									value={priority}
-									onChange={(e) => setPriority(Number(e.target.value))}
-								/>
-								<p className="text-[10px] text-muted-foreground">lower fires first</p>
-							</div>
-							<div className="space-y-1.5">
-								<Label htmlFor="activity">Activity</Label>
-								<Input
-									id="activity"
-									value={activity}
-									onChange={(e) => setActivity(e.target.value)}
-									placeholder="e.g. Tennis Court 1 to 13 (Halls/RCs)"
-								/>
-							</div>
+					{/* Active period — blank = repeats indefinitely */}
+					<div className="grid grid-cols-2 gap-3">
+						<div className="space-y-1.5">
+							<Label htmlFor="start-date">Start date</Label>
+							<Input
+								id="start-date"
+								type="date"
+								value={startDate}
+								onChange={(e) => setStartDate(e.target.value)}
+							/>
 						</div>
-					)}
+						<div className="space-y-1.5">
+							<Label htmlFor="end-date">End date</Label>
+							<Input
+								id="end-date"
+								type="date"
+								value={endDate}
+								onChange={(e) => setEndDate(e.target.value)}
+							/>
+						</div>
+						<p className="col-span-2 -mt-2 text-[10px] text-muted-foreground">
+							Leave blank to repeat every week without an end.
+						</p>
+					</div>
 				</div>
 				<DialogFooter>
 					<Button variant="outline" onClick={onClose}>

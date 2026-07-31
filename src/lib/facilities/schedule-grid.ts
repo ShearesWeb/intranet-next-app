@@ -9,66 +9,40 @@ export interface ScheduleSlot {
 	type: FacilityType;
 	day_of_week: number; // 0=Sun … 6=Sat
 	hour: number; // 0–23
-	priority: number;
-	reboks_activity: string | null;
+	start_date: string | null; // YYYY-MM-DD; null = unbounded
+	end_date: string | null; // YYYY-MM-DD; null = unbounded
 }
 
-/** A run of adjacent hours for one (facility, activity, priority) on a given day. */
-export interface MergedBlock {
+/** Grouping key fragment for a slot's date bounds, so differing ranges never merge. */
+function boundsKey(s: ScheduleSlot): string {
+	return `${s.start_date ?? ""}|${s.end_date ?? ""}`;
+}
+
+/** A run of adjacent hours for one facility on a given day. */
+interface MergedBlock {
 	day: number;
 	startHour: number;
 	endHour: number; // exclusive
-	priority: number;
 	facility_id: number;
 	venue: string;
 	sub_venue: string;
-	reboks_activity: string | null;
 }
 
-/** Slots of one priority sharing a cluster's time-span. */
-export interface WaveBucket {
-	priority: number;
-	count: number;
-	blocks: MergedBlock[];
-}
-
-/** All blocks sharing one (day, startHour, endHour), grouped by wave. */
+/** All blocks sharing one (day, startHour, endHour). */
 export interface Cluster {
 	startHour: number;
 	endHour: number;
 	total: number;
-	waves: WaveBucket[];
+	blocks: MergedBlock[];
 }
 
-export interface DayColumn {
+interface DayColumn {
 	day: number;
 	clusters: Cluster[];
 }
 
-export interface WaveInfo {
-	priority: number;
-	wave: number; // 1-based rank (lower priority → lower wave number → fires first)
-	color: string;
-}
-
 export interface WeekModel {
 	days: DayColumn[]; // always length 7, day 0..6
-	waves: WaveInfo[]; // distinct priorities, ascending
-}
-
-/** Sequential ramp: hottest (fires first) → coolest. Wraps deterministically. */
-export const WAVE_PALETTE = [
-	"#ef4444",
-	"#f97316",
-	"#eab308",
-	"#22c55e",
-	"#06b6d4",
-	"#8b5cf6",
-] as const;
-
-export function waveColor(rank: number): string {
-	const n = WAVE_PALETTE.length;
-	return WAVE_PALETTE[((rank % n) + n) % n];
 }
 
 function pushTo<K, V>(map: Map<K, V[]>, key: K, value: V): void {
@@ -77,11 +51,11 @@ function pushTo<K, V>(map: Map<K, V[]>, key: K, value: V): void {
 	else map.set(key, [value]);
 }
 
-/** Merge each (day, facility, activity, priority) group's hours into contiguous runs. */
+/** Merge each (day, facility, bounds) group's hours into contiguous runs. */
 function mergeBlocks(slots: ScheduleSlot[]): MergedBlock[] {
 	const groups = new Map<string, ScheduleSlot[]>();
 	for (const s of slots) {
-		pushTo(groups, `${s.day_of_week}|${s.facility_id}|${s.reboks_activity ?? ""}|${s.priority}`, s);
+		pushTo(groups, `${s.day_of_week}|${s.facility_id}|${boundsKey(s)}`, s);
 	}
 
 	const out: MergedBlock[] = [];
@@ -99,11 +73,9 @@ function mergeBlocks(slots: ScheduleSlot[]): MergedBlock[] {
 				day: sample.day_of_week,
 				startHour: start,
 				endHour: prev + 1,
-				priority: sample.priority,
 				facility_id: sample.facility_id,
 				venue: sample.venue,
 				sub_venue: sample.sub_venue,
-				reboks_activity: sample.reboks_activity,
 			});
 			if (i < hours.length) {
 				start = hours[i];
@@ -114,13 +86,13 @@ function mergeBlocks(slots: ScheduleSlot[]): MergedBlock[] {
 	return out;
 }
 
-/** A contiguous run of hours for one (facility, activity, wave), with its row ids. */
+/** A contiguous run of hours for one (facility, date range), with its row ids. */
 export interface ScheduleWindow {
 	facility_id: number;
 	venue: string;
 	sub_venue: string;
-	priority: number;
-	reboks_activity: string | null;
+	start_date: string | null;
+	end_date: string | null;
 	startHour: number;
 	endHour: number; // exclusive
 	hours: number[];
@@ -129,13 +101,13 @@ export interface ScheduleWindow {
 
 /**
  * Collapse schedule rows into contiguous-hour windows, grouped by
- * (facility, activity, priority). Each window keeps the underlying row ids so
+ * (facility, date range). Each window keeps the underlying row ids so
  * callers can edit/delete the whole run. Sorted by start hour.
  */
 export function mergeContiguous(slots: ScheduleSlot[]): ScheduleWindow[] {
 	const groups = new Map<string, ScheduleSlot[]>();
 	for (const s of slots) {
-		pushTo(groups, `${s.facility_id}|${s.reboks_activity ?? ""}|${s.priority}`, s);
+		pushTo(groups, `${s.facility_id}|${boundsKey(s)}`, s);
 	}
 
 	const out: ScheduleWindow[] = [];
@@ -155,8 +127,8 @@ export function mergeContiguous(slots: ScheduleSlot[]): ScheduleWindow[] {
 				facility_id: sample.facility_id,
 				venue: sample.venue,
 				sub_venue: sample.sub_venue,
-				priority: sample.priority,
-				reboks_activity: sample.reboks_activity,
+				start_date: sample.start_date,
+				end_date: sample.end_date,
 				startHour: runStart,
 				endHour: endHourExclusive,
 				hours: runHours,
@@ -182,13 +154,6 @@ export function mergeContiguous(slots: ScheduleSlot[]): ScheduleWindow[] {
 }
 
 export function buildWeek(slots: ScheduleSlot[]): WeekModel {
-	const priorities = [...new Set(slots.map((s) => s.priority))].sort((a, b) => a - b);
-	const waves: WaveInfo[] = priorities.map((priority, i) => ({
-		priority,
-		wave: i + 1,
-		color: waveColor(i),
-	}));
-
 	const blocks = mergeBlocks(slots);
 
 	const days: DayColumn[] = [];
@@ -200,23 +165,16 @@ export function buildWeek(slots: ScheduleSlot[]): WeekModel {
 		}
 
 		const clusters: Cluster[] = [...byRange.values()]
-			.map((group) => {
-				const byPriority = new Map<number, MergedBlock[]>();
-				for (const b of group) pushTo(byPriority, b.priority, b);
-				const waveBuckets: WaveBucket[] = [...byPriority.entries()]
-					.sort((a, b) => a[0] - b[0])
-					.map(([priority, bs]) => ({ priority, count: bs.length, blocks: bs }));
-				return {
-					startHour: group[0].startHour,
-					endHour: group[0].endHour,
-					total: group.length,
-					waves: waveBuckets,
-				};
-			})
+			.map((group) => ({
+				startHour: group[0].startHour,
+				endHour: group[0].endHour,
+				total: group.length,
+				blocks: group,
+			}))
 			.sort((a, b) => a.startHour - b.startHour);
 
 		days.push({ day, clusters });
 	}
 
-	return { days, waves };
+	return { days };
 }

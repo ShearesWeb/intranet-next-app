@@ -13,8 +13,8 @@ function slot(p: Partial<ScheduleSlot>): ScheduleSlot {
 		type: p.type ?? "reboks",
 		day_of_week: p.day_of_week ?? 1,
 		hour: p.hour ?? 19,
-		priority: p.priority ?? 0,
-		reboks_activity: p.reboks_activity ?? null,
+		start_date: p.start_date ?? null,
+		end_date: p.end_date ?? null,
 	};
 }
 
@@ -39,23 +39,23 @@ describe("ScheduleWeek", () => {
 		expect(container.querySelectorAll('[data-testid="day-col"]')).toHaveLength(7);
 	});
 
-	it("renders a wave chip with the slot count in the right day column", () => {
+	it("renders a count chip in the right day column", () => {
 		const slots = [
-			slot({ facility_id: 1, day_of_week: 1, hour: 19, priority: 0 }),
-			slot({ facility_id: 2, day_of_week: 1, hour: 19, priority: 0 }),
+			slot({ facility_id: 1, day_of_week: 1, hour: 19 }),
+			slot({ facility_id: 2, day_of_week: 1, hour: 19 }),
 		];
 		act(() => root.render(<ScheduleWeek schedules={slots} />));
 
 		const mon = container.querySelector('[data-day="1"]') as HTMLElement;
 		expect(mon).toBeTruthy();
-		const chip = mon.querySelector('[data-testid="wave-chip"]') as HTMLElement;
+		const chip = mon.querySelector('[data-testid="count-chip"]') as HTMLElement;
 		expect(chip).toBeTruthy();
 		expect(chip.textContent).toContain("2"); // count
 	});
 
 	it("calls onSelectCluster when a cluster is clicked", () => {
 		let picked: { day: number; startHour: number } | null = null;
-		const slots = [slot({ day_of_week: 1, hour: 19, priority: 0 })];
+		const slots = [slot({ day_of_week: 1, hour: 19 })];
 		act(() =>
 			root.render(
 				<ScheduleWeek

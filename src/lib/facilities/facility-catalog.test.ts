@@ -55,9 +55,9 @@ describe("facility-catalog writes", () => {
 		mocks.createClient.mockResolvedValue(stub);
 		const { createFacility } = await import("./facility-catalog");
 
-		await expect(
-			createFacility({ type: "nus", venue: "A", sub_venue: "B" }),
-		).rejects.toMatchObject({ statusCode: 409 });
+		await expect(createFacility({ type: "nus", venue: "A", sub_venue: "B" })).rejects.toMatchObject(
+			{ statusCode: 409 },
+		);
 	});
 
 	it("updateFacility patches the given fields by id and returns the row", async () => {

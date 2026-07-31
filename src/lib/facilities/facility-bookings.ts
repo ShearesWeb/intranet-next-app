@@ -101,25 +101,46 @@ export async function listBookings(opts: {
 		claimsByBooking.set(row.booking_id, list);
 	}
 
-	// Recurrence: which (facility, weekday, hour) tuples have a schedule recipe.
+	// Recurrence: which (facility, weekday, hour) tuples have a schedule recipe
+	// whose date bounds (if any) cover the booked date.
 	const facilityIds = [...new Set(bookings.map((b) => b.facility_id))];
 	const { data: schedules } = await supabase
 		.from("booking_schedules")
-		.select("facility_id, day_of_week, hour")
+		.select("facility_id, day_of_week, hour, start_date, end_date")
 		.in("facility_id", facilityIds);
 
-	const scheduleKeys = new Set(
-		(schedules ?? []).map((s) => `${s.facility_id}|${s.day_of_week}|${s.hour}`),
-	);
+	const scheduleBounds = new Map<string, { start: string | null; end: string | null }[]>();
+	for (const s of schedules ?? []) {
+		const key = `${s.facility_id}|${s.day_of_week}|${s.hour}`;
+		const list = scheduleBounds.get(key) ?? [];
+		list.push({ start: s.start_date ?? null, end: s.end_date ?? null });
+		scheduleBounds.set(key, list);
+	}
 
 	const userCcaIds = opts.userCcaIds ?? [];
 
 	return bookings.map((b) => {
 		const claims = claimsByBooking.get(b.id) ?? [];
 		const userClaim = claims.find((c) => userCcaIds.includes(c.cca_id)) ?? null;
-		const recurring = scheduleKeys.has(`${b.facility_id}|${weekdayOf(b.booked_date)}|${b.hour}`);
+		const bounds = scheduleBounds.get(`${b.facility_id}|${weekdayOf(b.booked_date)}|${b.hour}`);
+		const recurring = (bounds ?? []).some(
+			(r) => (!r.start || r.start <= b.booked_date) && (!r.end || b.booked_date <= r.end),
+		);
 		return { ...b, claims, user_cca_claim: userClaim, recurring };
 	});
+}
+
+/** Minimal booking lookup for policy checks (lead-time gate). */
+export async function getBooking(
+	id: number,
+): Promise<{ id: number; booked_date: string; status: BookingStatus } | null> {
+	const supabase = await createClient();
+	const { data } = await supabase
+		.from("facility_bookings")
+		.select("id, booked_date, status")
+		.eq("id", id)
+		.single();
+	return data ?? null;
 }
 
 export async function createBooking(
@@ -179,7 +200,7 @@ export async function ensureBookingsForWindow(
 
 	const { data: schedules, error } = await supabase
 		.from("booking_schedules")
-		.select("facility_id, day_of_week, hour, facilities!inner(type)")
+		.select("facility_id, day_of_week, hour, start_date, end_date, facilities!inner(type)")
 		.neq("facilities.type", "reboks");
 
 	if (error) {
@@ -189,8 +210,18 @@ export async function ensureBookingsForWindow(
 	if (!schedules || schedules.length === 0) return { created: 0 };
 
 	const rows: { facility_id: number; booked_date: string; hour: number }[] = [];
-	for (const s of schedules as { facility_id: number; day_of_week: number; hour: number }[]) {
-		for (const booked_date of expandWeekly(start, end, s.day_of_week)) {
+	for (const s of schedules as {
+		facility_id: number;
+		day_of_week: number;
+		hour: number;
+		start_date: string | null;
+		end_date: string | null;
+	}[]) {
+		// Clamp the materialisation window to the schedule's date bounds.
+		const effStart = s.start_date && s.start_date > start ? s.start_date : start;
+		const effEnd = s.end_date && s.end_date < end ? s.end_date : end;
+		if (effStart > effEnd) continue;
+		for (const booked_date of expandWeekly(effStart, effEnd, s.day_of_week)) {
 			rows.push({ facility_id: s.facility_id, booked_date, hour: s.hour });
 		}
 	}
@@ -231,13 +262,17 @@ export async function createRecurringBookings(input: {
 		throw new ApiError(400, "Too many occurrences (max 100). Shorten the date range.");
 	}
 
-	// Recipe first (idempotent on conflict).
-	const { error: schedError } = await supabase
-		.from("booking_schedules")
-		.upsert(
-			{ facility_id: input.facilityId, day_of_week: input.dayOfWeek, hour: input.hour },
-			{ onConflict: "facility_id,day_of_week,hour", ignoreDuplicates: true },
-		);
+	// Recipe first (idempotent on conflict), carrying the occurrence range as its bounds.
+	const { error: schedError } = await supabase.from("booking_schedules").upsert(
+		{
+			facility_id: input.facilityId,
+			day_of_week: input.dayOfWeek,
+			hour: input.hour,
+			start_date: input.startDate,
+			end_date: input.endDate,
+		},
+		{ onConflict: "facility_id,day_of_week,hour", ignoreDuplicates: true },
+	);
 
 	if (schedError) {
 		console.error("Error creating recurring schedule:", schedError);

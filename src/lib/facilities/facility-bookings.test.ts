@@ -20,13 +20,17 @@ describe("ensureBookingsForWindow", () => {
 	beforeEach(() => vi.clearAllMocks());
 
 	function stub(schedules: unknown[], createdIds: { id: number }[]) {
-		const upsert = vi.fn(() => ({ select: vi.fn().mockResolvedValue({ data: createdIds, error: null }) }));
+		const upsert = vi.fn((rows: unknown, opts?: unknown) => {
+			void rows;
+			void opts;
+			return {
+				select: vi.fn().mockResolvedValue({ data: createdIds, error: null }),
+			};
+		});
 		const neq = vi.fn().mockResolvedValue({ data: schedules, error: null });
 		const select = vi.fn(() => ({ neq }));
 		const client = {
-			from: vi.fn((table: string) =>
-				table === "booking_schedules" ? { select } : { upsert },
-			),
+			from: vi.fn((table: string) => (table === "booking_schedules" ? { select } : { upsert })),
 			_upsert: upsert,
 			_neq: neq,
 		};
@@ -58,8 +62,56 @@ describe("ensureBookingsForWindow", () => {
 		expect(rows).toEqual(
 			expectedDates.map((booked_date) => ({ facility_id: 7, booked_date, hour: 19 })),
 		);
-		expect(opts).toMatchObject({ onConflict: "facility_id,booked_date,hour", ignoreDuplicates: true });
+		expect(opts).toMatchObject({
+			onConflict: "facility_id,booked_date,hour",
+			ignoreDuplicates: true,
+		});
 		expect(result.created).toBe(3);
+	});
+
+	it("clamps materialisation to the schedule's date bounds", async () => {
+		const client = stub(
+			[
+				{
+					facility_id: 7,
+					day_of_week: 1,
+					hour: 19,
+					start_date: "2026-06-08",
+					end_date: "2026-06-14",
+				},
+			],
+			[{ id: 1 }],
+		);
+		mocks.createClient.mockResolvedValue(client);
+		const { ensureBookingsForWindow } = await import("./facility-bookings");
+
+		await ensureBookingsForWindow("2026-06-01", "2026-06-21");
+
+		// Only the Monday inside [08, 14] survives the clamp.
+		const [rows] = client._upsert.mock.calls[0];
+		expect(rows).toEqual([{ facility_id: 7, booked_date: "2026-06-08", hour: 19 }]);
+	});
+
+	it("skips schedules whose bounds fall outside the window", async () => {
+		const client = stub(
+			[
+				{
+					facility_id: 7,
+					day_of_week: 1,
+					hour: 19,
+					start_date: "2026-07-01",
+					end_date: "2026-07-31",
+				},
+			],
+			[],
+		);
+		mocks.createClient.mockResolvedValue(client);
+		const { ensureBookingsForWindow } = await import("./facility-bookings");
+
+		const result = await ensureBookingsForWindow("2026-06-01", "2026-06-21");
+
+		expect(client._upsert).not.toHaveBeenCalled();
+		expect(result.created).toBe(0);
 	});
 
 	it("does not upsert when there are no non-REBOKS schedules", async () => {

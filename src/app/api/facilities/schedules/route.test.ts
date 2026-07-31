@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { NextRequest } from "next/server";
 import { ApiError } from "@/lib/api/errors";
 
 const mocks = vi.hoisted(() => ({
@@ -26,7 +27,7 @@ vi.mock("@/lib/feature-flags", () => ({
 }));
 
 function req(method: string, body: unknown) {
-	return new Request("http://localhost/api/facilities/schedules", {
+	return new NextRequest("http://localhost/api/facilities/schedules", {
 		method,
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify(body),
@@ -83,7 +84,54 @@ describe("schedules route writes", () => {
 			hour: 19,
 			priority: 1,
 			reboksActivity: "Tennis",
+			startDate: null,
+			endDate: null,
 		});
+	});
+
+	it("POST rejects a malformed start_date", async () => {
+		mocks.requireJcrcAccess.mockResolvedValue({ is_jcrc: true });
+		const { POST } = await import("./route");
+		const res = await POST(
+			req("POST", { facility_id: 2, day_of_week: 1, hour: 19, start_date: "01/06/2026" }),
+		);
+		expect(res.status).toBe(400);
+		expect(mocks.createSchedule).not.toHaveBeenCalled();
+	});
+
+	it("POST rejects start_date after end_date", async () => {
+		mocks.requireJcrcAccess.mockResolvedValue({ is_jcrc: true });
+		const { POST } = await import("./route");
+		const res = await POST(
+			req("POST", {
+				facility_id: 2,
+				day_of_week: 1,
+				hour: 19,
+				start_date: "2026-09-01",
+				end_date: "2026-08-01",
+			}),
+		);
+		expect(res.status).toBe(400);
+		expect(mocks.createSchedule).not.toHaveBeenCalled();
+	});
+
+	it("POST forwards date bounds to createSchedule", async () => {
+		mocks.requireJcrcAccess.mockResolvedValue({ is_jcrc: true });
+		mocks.createSchedule.mockResolvedValue({ id: 1 });
+		const { POST } = await import("./route");
+		const res = await POST(
+			req("POST", {
+				facility_id: 2,
+				day_of_week: 1,
+				hour: 19,
+				start_date: "2026-08-01",
+				end_date: "2026-09-30",
+			}),
+		);
+		expect(res.status).toBe(201);
+		expect(mocks.createSchedule).toHaveBeenCalledWith(
+			expect.objectContaining({ startDate: "2026-08-01", endDate: "2026-09-30" }),
+		);
 	});
 
 	it("PATCH returns 400 without an id", async () => {
@@ -108,6 +156,9 @@ describe("schedules route writes", () => {
 		const { PATCH } = await import("./route");
 		const res = await PATCH(req("PATCH", { id: 7, priority: 2, reboks_activity: "Squash" }));
 		expect(res.status).toBe(200);
-		expect(mocks.updateSchedule).toHaveBeenCalledWith(7, { priority: 2, reboks_activity: "Squash" });
+		expect(mocks.updateSchedule).toHaveBeenCalledWith(7, {
+			priority: 2,
+			reboks_activity: "Squash",
+		});
 	});
 });

@@ -1,244 +1,148 @@
 import { createClient } from "@/lib/supabase/server";
 import { ApiError } from "@/lib/api/errors";
-import { FacilityClaim, FacilitySlotWithClaims, ClaimStatus } from "@/types/facilities";
+import {
+	FacilityClaim,
+	ClaimStatus,
+	FacilityBooking,
+	FacilityType,
+	BookingStatus,
+} from "@/types/facilities";
 
-export async function getSlotsWithClaims(
-	startDate: string,
-	endDate: string,
-	userCcaIds: number[],
-): Promise<FacilitySlotWithClaims[]> {
-	const supabase = await createClient();
-
-	const { data: slots, error: slotsError } = await supabase
-		.from("facilities")
-		.select("*")
-		.gte("booked_date", startDate)
-		.lte("booked_date", endDate)
-		.order("booked_date")
-		.order("time_from");
-
-	if (slotsError) {
-		console.error("Error fetching facility slots:", slotsError);
-		throw new ApiError(500, "Failed to load facility slots");
-	}
-
-	if (!slots || slots.length === 0) return [];
-
-	const slotIds = slots.map((s) => s.id);
-
-	const { data: claims, error: claimsError } = await supabase
-		.from("facility_claims")
-		.select("*, ccas(name)")
-		.in("facility_id", slotIds)
-		.not("status", "in", "('cancelled','yielded')");
-
-	if (claimsError) {
-		console.error("Error fetching facility claims (non-fatal):", claimsError);
-	}
-
-	const claimsByFacility = new Map<number, FacilityClaim[]>();
-	for (const row of (claimsError ? [] : claims) ?? []) {
-		const claim: FacilityClaim = {
-			id: row.id,
-			facility_id: row.facility_id,
-			cca_id: row.cca_id,
-			cca_name: (row.ccas as { name: string })?.name ?? "Unknown CCA",
-			activity: row.activity,
-			status: row.status as ClaimStatus,
-			recurrence_group: row.recurrence_group,
-			claimed_by: row.claimed_by,
-			claimed_at: row.claimed_at,
-			resolved_at: row.resolved_at,
-			resolved_by: row.resolved_by,
-		};
-		const list = claimsByFacility.get(row.facility_id) ?? [];
-		list.push(claim);
-		claimsByFacility.set(row.facility_id, list);
-	}
-
-	return slots.map((slot) => {
-		const slotClaims = claimsByFacility.get(slot.id) ?? [];
-		const userClaim = slotClaims.find((c) => userCcaIds.includes(c.cca_id)) ?? null;
-		return {
-			...slot,
-			claims: slotClaims,
-			user_cca_claim: userClaim,
-		};
-	});
+export interface ClaimWithBooking extends FacilityClaim {
+	booking: FacilityBooking | null;
 }
 
-export async function getClaimsForCca(ccaId: number): Promise<FacilityClaim[]> {
+/** All claims a CCA has made, newest first, with the booking + facility joined in. */
+export async function getClaimsForCca(ccaId: number): Promise<ClaimWithBooking[]> {
 	const supabase = await createClient();
 
 	const { data, error } = await supabase
 		.from("facility_claims")
-		.select("*, ccas(name), facilities(booked_date, venue, sub_venue, time_from, time_to, type)")
+		.select(
+			"*, ccas(name), facility_bookings(id, facility_id, booked_date, hour, status, facilities(venue, sub_venue, type))",
+		)
 		.eq("cca_id", ccaId)
 		.order("claimed_at", { ascending: false });
 
 	if (error) {
 		console.error("Error fetching CCA claims:", error);
-		throw new ApiError(500, "Failed to load your CCA's claims");
+		throw new ApiError(500, "Failed to load your CCA's bookings");
 	}
 
-	return (data ?? []).map((row) => ({
-		id: row.id,
-		facility_id: row.facility_id,
-		cca_id: row.cca_id,
-		cca_name: (row.ccas as { name: string })?.name ?? "Unknown CCA",
-		activity: row.activity,
-		status: row.status as ClaimStatus,
-		recurrence_group: row.recurrence_group,
-		claimed_by: row.claimed_by,
-		claimed_at: row.claimed_at,
-		resolved_at: row.resolved_at,
-		resolved_by: row.resolved_by,
-		facility: row.facilities,
-	}));
+	return (data ?? []).map((row) => {
+		const b = row.facility_bookings as {
+			id: number;
+			facility_id: number;
+			booked_date: string;
+			hour: number;
+			status: BookingStatus;
+			facilities: { venue: string; sub_venue: string; type: FacilityType } | null;
+		} | null;
+		const booking: FacilityBooking | null = b
+			? {
+					id: b.id,
+					facility_id: b.facility_id,
+					venue: b.facilities?.venue ?? "",
+					sub_venue: b.facilities?.sub_venue ?? "",
+					type: b.facilities?.type ?? "external",
+					booked_date: b.booked_date,
+					hour: b.hour,
+					status: b.status,
+				}
+			: null;
+
+		return {
+			id: row.id,
+			booking_id: row.booking_id,
+			cca_id: row.cca_id,
+			cca_name: (row.ccas as { name: string } | null)?.name ?? "Unknown CCA",
+			status: row.status as ClaimStatus,
+			claimed_by: row.claimed_by,
+			claimed_at: row.claimed_at,
+			resolved_at: row.resolved_at,
+			resolved_by: row.resolved_by,
+			booking,
+		};
+	});
 }
 
+/**
+ * Place a bid on a booking. The booking's status is recomputed by a DB trigger — the app
+ * never writes facility_bookings.status directly.
+ */
 export async function createClaim(
-	facilityId: number,
+	bookingId: number,
 	ccaId: number,
-	activity: string,
-	userId: string,
-	recurrenceGroup: string | null,
+	userId: number,
 ): Promise<FacilityClaim> {
 	const supabase = await createClient();
 
-	const { data: existingClaims, error: existError } = await supabase
+	const { data, error } = await supabase
 		.from("facility_claims")
-		.select("id, status")
-		.eq("facility_id", facilityId)
-		.not("status", "in", "('cancelled','yielded')");
-
-	if (existError) {
-		console.error("Error checking existing claims:", existError);
-		throw new ApiError(500, "Failed to check existing claims");
-	}
-
-	const hasConflict = (existingClaims ?? []).length > 0;
-	const newStatus: ClaimStatus = hasConflict ? "conflicted" : "approved";
-
-	if (hasConflict) {
-		const activeClaimIds = (existingClaims ?? [])
-			.filter((c) => c.status !== "conflicted")
-			.map((c) => c.id);
-
-		if (activeClaimIds.length > 0) {
-			const { error: updateError } = await supabase
-				.from("facility_claims")
-				.update({ status: "conflicted" })
-				.in("id", activeClaimIds);
-
-			if (updateError) {
-				console.error("Error updating existing claims to conflicted:", updateError);
-				throw new ApiError(500, "Failed to update existing claims");
-			}
-		}
-	}
-
-	const { data: newClaim, error: insertError } = await supabase
-		.from("facility_claims")
-		.insert({
-			facility_id: facilityId,
-			cca_id: ccaId,
-			activity,
-			status: newStatus,
-			recurrence_group: recurrenceGroup,
-			claimed_by: userId,
-			claimed_at: new Date().toISOString(),
-		})
+		.insert({ booking_id: bookingId, cca_id: ccaId, claimed_by: userId })
 		.select("*, ccas(name)")
 		.single();
 
-	if (insertError) {
-		if (insertError.code === "23505") {
+	if (error) {
+		if (error.code === "23505") {
 			throw new ApiError(409, "Your CCA has already claimed this slot");
 		}
-		console.error("Error creating claim:", insertError);
-		throw new ApiError(500, "Failed to create claim");
+		console.error("Error creating claim:", error);
+		throw new ApiError(500, "Failed to claim slot — check RLS policies on facility_claims");
 	}
 
 	return {
-		id: newClaim.id,
-		facility_id: newClaim.facility_id,
-		cca_id: newClaim.cca_id,
-		cca_name: (newClaim.ccas as { name: string })?.name ?? "Unknown CCA",
-		activity: newClaim.activity,
-		status: newClaim.status as ClaimStatus,
-		recurrence_group: newClaim.recurrence_group,
-		claimed_by: newClaim.claimed_by,
-		claimed_at: newClaim.claimed_at,
-		resolved_at: newClaim.resolved_at,
-		resolved_by: newClaim.resolved_by,
+		id: data.id,
+		booking_id: data.booking_id,
+		cca_id: data.cca_id,
+		cca_name: (data.ccas as { name: string } | null)?.name ?? "Unknown CCA",
+		status: data.status as ClaimStatus,
+		claimed_by: data.claimed_by,
+		claimed_at: data.claimed_at,
+		resolved_at: data.resolved_at,
+		resolved_by: data.resolved_by,
 	};
 }
 
+/**
+ * Withdraw = delete the claim row. The status trigger reopens the booking, and the
+ * (booking, cca) unique slot frees up so the CCA can claim the same slot again later.
+ */
 export async function deleteClaim(claimId: number): Promise<void> {
 	const supabase = await createClient();
 
-	const { error } = await supabase.from("facility_claims").delete().eq("id", claimId);
-
-	if (error) {
-		console.error("Error deleting claim:", error);
-		throw new ApiError(500, "Failed to release booking — check RLS policies on facility_claims");
-	}
-}
-
-export async function updateClaimStatus(
-	claimId: number,
-	newStatus: "yielded" | "cancelled",
-	userId: string,
-): Promise<void> {
-	const supabase = await createClient();
-
-	const { data: claim, error: fetchError } = await supabase
+	const { data, error } = await supabase
 		.from("facility_claims")
-		.select("id, facility_id, status")
-		.eq("id", claimId)
-		.single();
-
-	if (fetchError || !claim) {
-		throw new ApiError(404, "Claim not found");
-	}
-
-	if (claim.status === "yielded" || claim.status === "cancelled") {
-		throw new ApiError(400, "Claim is already resolved");
-	}
-
-	const { data: updated, error: updateError } = await supabase
-		.from("facility_claims")
-		.update({
-			status: newStatus,
-			resolved_at: new Date().toISOString(),
-			resolved_by: userId,
-		})
+		.delete()
 		.eq("id", claimId)
 		.select("id")
 		.single();
 
-	if (updateError || !updated) {
-		console.error("Error updating claim status:", updateError);
-		throw new ApiError(500, "Failed to update claim — check RLS policies on facility_claims");
+	if (error || !data) {
+		console.error("Error withdrawing claim:", error);
+		throw new ApiError(500, "Failed to withdraw claim — check RLS policies on facility_claims");
 	}
+}
 
-	// Auto-approve: if only one conflicted claim remains, approve it
-	if (newStatus === "yielded") {
-		const { data: remaining, error: remainError } = await supabase
-			.from("facility_claims")
-			.select("id")
-			.eq("facility_id", claim.facility_id)
-			.eq("status", "conflicted");
-
-		if (!remainError && remaining && remaining.length === 1) {
-			await supabase
-				.from("facility_claims")
-				.update({
-					status: "approved",
-					resolved_at: new Date().toISOString(),
-				})
-				.eq("id", remaining[0].id);
-		}
-	}
+export async function getClaim(claimId: number): Promise<{
+	id: number;
+	cca_id: number;
+	booking_id: number;
+	booked_date: string | null;
+} | null> {
+	const supabase = await createClient();
+	const { data } = await supabase
+		.from("facility_claims")
+		.select("id, cca_id, booking_id, facility_bookings(booked_date)")
+		.eq("id", claimId)
+		.single();
+	if (!data) return null;
+	const booking = data.facility_bookings as
+		| { booked_date: string }
+		| { booked_date: string }[]
+		| null;
+	const booked_date = Array.isArray(booking)
+		? (booking[0]?.booked_date ?? null)
+		: (booking?.booked_date ?? null);
+	return { id: data.id, cca_id: data.cca_id, booking_id: data.booking_id, booked_date };
 }

@@ -25,6 +25,8 @@ export async function createSchedule(input: {
 	hour: number;
 	priority?: number;
 	reboksActivity?: string | null;
+	startDate?: string | null;
+	endDate?: string | null;
 }): Promise<BookingSchedule> {
 	const supabase = await createClient();
 
@@ -36,6 +38,8 @@ export async function createSchedule(input: {
 			hour: input.hour,
 			priority: input.priority ?? 100,
 			reboks_activity: input.reboksActivity ?? null,
+			start_date: input.startDate ?? null,
+			end_date: input.endDate ?? null,
 		})
 		.select("*")
 		.single();
@@ -80,25 +84,5 @@ export async function deleteSchedule(id: number): Promise<void> {
 	if (error) {
 		console.error("Error deleting booking schedule:", error);
 		throw new ApiError(500, "Failed to delete schedule");
-	}
-}
-
-/** Delete the recipe matching (facility, weekday, hour), if any. Used by cancel-all-recurring. */
-export async function deleteScheduleMatching(
-	facilityId: number,
-	dayOfWeek: number,
-	hour: number,
-): Promise<void> {
-	const supabase = await createClient();
-	const { error } = await supabase
-		.from("booking_schedules")
-		.delete()
-		.eq("facility_id", facilityId)
-		.eq("day_of_week", dayOfWeek)
-		.eq("hour", hour);
-
-	if (error) {
-		console.error("Error deleting matching booking schedule:", error);
-		throw new ApiError(500, "Failed to delete recurring schedule");
 	}
 }

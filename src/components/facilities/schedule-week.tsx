@@ -35,11 +35,6 @@ interface ScheduleWeekProps {
 
 export function ScheduleWeek({ schedules, onSelectCluster }: ScheduleWeekProps) {
 	const week = useMemo(() => buildWeek(schedules), [schedules]);
-	const colorByPriority = useMemo(() => {
-		const m = new Map<number, { color: string; wave: number }>();
-		for (const w of week.waves) m.set(w.priority, { color: w.color, wave: w.wave });
-		return m;
-	}, [week.waves]);
 
 	const dayMap = useMemo(() => {
 		const m = new Map<number, Cluster[]>();
@@ -49,23 +44,6 @@ export function ScheduleWeek({ schedules, onSelectCluster }: ScheduleWeekProps) 
 
 	return (
 		<div className="space-y-3">
-			{week.waves.length > 0 && (
-				<div className="flex flex-wrap items-center gap-3 text-xs">
-					<span className="font-medium">Wave</span>
-					{week.waves.map((w) => (
-						<span key={w.priority} className="inline-flex items-center gap-1.5">
-							<span
-								className="inline-flex h-4 w-4 items-center justify-center rounded text-[10px] font-bold text-black"
-								style={{ backgroundColor: w.color }}
-							>
-								{w.wave}
-							</span>
-						</span>
-					))}
-					<span className="text-muted-foreground">lower fires first</span>
-				</div>
-			)}
-
 			<div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
 				{DISPLAY_DAYS.map(({ day, label }) => {
 					const clusters = dayMap.get(day) ?? [];
@@ -96,24 +74,14 @@ export function ScheduleWeek({ schedules, onSelectCluster }: ScheduleWeekProps) 
 										>
 											<div className="mb-1 flex items-center justify-between gap-1 text-[10px] tabular-nums text-muted-foreground">
 												<span>{rangeLabel(cluster.startHour, cluster.endHour)}</span>
-												<span className="opacity-50">{cluster.total}</span>
 											</div>
-											<div className="flex flex-wrap items-center gap-1">
-												{cluster.waves.map((bucket) => {
-													const info = colorByPriority.get(bucket.priority);
-													return (
-														<span
-															key={bucket.priority}
-															data-testid="wave-chip"
-															className="inline-flex h-3.5 min-w-3.5 items-center justify-center rounded px-1 text-[9px] font-bold text-black"
-															style={{ backgroundColor: info?.color ?? "#94a3b8" }}
-															title={`Wave ${info?.wave ?? "?"} · ${bucket.count} slot(s)`}
-														>
-															{bucket.count}
-														</span>
-													);
-												})}
-											</div>
+											<span
+												data-testid="count-chip"
+												className="inline-flex h-3.5 min-w-3.5 items-center justify-center rounded bg-primary/15 px-1 text-[9px] font-bold text-primary"
+												title={`${cluster.total} slot(s)`}
+											>
+												{cluster.total}
+											</span>
 										</button>
 									))}
 								</div>

@@ -9,9 +9,8 @@ import {
 	DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FacilitySlotWithClaims, BOOKING_TYPE_CONFIG } from "@/types/facilities";
+import { BookingWithClaims, FACILITY_TYPE_CONFIG, formatHourRange } from "@/types/facilities";
 import { toast } from "sonner";
 
 interface ChairCca {
@@ -20,38 +19,21 @@ interface ChairCca {
 }
 
 interface ClaimDialogProps {
-	slot: FacilitySlotWithClaims | null;
+	booking: BookingWithClaims | null;
 	chairCcas: ChairCca[];
 	onClose: () => void;
 	onSuccess: () => void;
-	/** Optimistically mark a slot as claimed in the parent list. Return a revert fn. */
-	onOptimisticClaim?: (slotId: number, ccaId: number, activity: string) => () => void;
 }
 
-function formatTime(time: string): string {
-	const [h, m] = time.split(":");
-	const hour = parseInt(h, 10);
-	const ampm = hour >= 12 ? "PM" : "AM";
-	const displayHour = hour % 12 || 12;
-	return `${displayHour}:${m} ${ampm}`;
-}
-
-export function ClaimDialog({
-	slot,
-	chairCcas,
-	onClose,
-	onSuccess,
-	onOptimisticClaim,
-}: ClaimDialogProps) {
-	const [activity, setActivity] = useState("");
+export function ClaimDialog({ booking, chairCcas, onClose, onSuccess }: ClaimDialogProps) {
 	const [selectedCcaId, setSelectedCcaId] = useState<number | null>(
 		chairCcas.length === 1 ? chairCcas[0].id : null,
 	);
 	const [submitting, setSubmitting] = useState(false);
 
-	if (!slot || chairCcas.length === 0) return null;
+	if (!booking || chairCcas.length === 0) return null;
 
-	const typeConfig = BOOKING_TYPE_CONFIG[slot.type];
+	const typeConfig = FACILITY_TYPE_CONFIG[booking.type];
 	const selectedCca = chairCcas.find((c) => c.id === selectedCcaId);
 
 	async function handleSubmit() {
@@ -59,43 +41,30 @@ export function ClaimDialog({
 			toast.error("Please select a CCA");
 			return;
 		}
-		if (!activity.trim()) {
-			toast.error("Please enter an activity name");
-			return;
-		}
 
 		setSubmitting(true);
-		// Optimistically grey out / mark the slot as claimed to smooth the post-claim flicker.
-		const revert = onOptimisticClaim?.(slot!.id, selectedCcaId, activity.trim());
 		try {
 			const res = await fetch("/api/facilities/claims", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					facility_id: slot!.id,
-					cca_id: selectedCcaId,
-					activity: activity.trim(),
-				}),
+				body: JSON.stringify({ booking_id: booking!.id, cca_id: selectedCcaId }),
 			});
 
 			const json = await res.json();
 			if (!res.ok) {
-				revert?.();
 				toast.error(json.error ?? "Failed to submit claim");
 				return;
 			}
 
-			if (json.data.status === "conflicted") {
-				toast.warning("Slot claimed — but there's a conflict that needs resolution");
+			if (booking!.status !== "available") {
+				toast.warning("Claim submitted — this slot is contested; JCRC will pick the winner");
 			} else {
-				toast.success("Slot claimed successfully");
+				toast.success("Claim submitted — pending JCRC approval");
 			}
 
-			setActivity("");
 			onSuccess();
 			onClose();
 		} catch {
-			revert?.();
 			toast.error("Network error — please try again");
 		} finally {
 			setSubmitting(false);
@@ -104,14 +73,13 @@ export function ClaimDialog({
 
 	function handleOpenChange(isOpen: boolean) {
 		if (!isOpen) {
-			setActivity("");
 			if (chairCcas.length > 1) setSelectedCcaId(null);
 			onClose();
 		}
 	}
 
 	return (
-		<Dialog open={!!slot} onOpenChange={handleOpenChange}>
+		<Dialog open={!!booking} onOpenChange={handleOpenChange}>
 			<DialogContent className="sm:max-w-md">
 				<DialogHeader>
 					<DialogTitle>Claim Facility Slot</DialogTitle>
@@ -124,10 +92,10 @@ export function ClaimDialog({
 								className="h-2 w-2 rounded-full"
 								style={{ backgroundColor: typeConfig.color }}
 							/>
-							{slot.venue} — {slot.sub_venue}
+							{booking.venue} — {booking.sub_venue}
 						</div>
 						<div className="mt-1 text-muted-foreground">
-							{slot.booked_date} · {formatTime(slot.time_from)} – {formatTime(slot.time_to)}
+							{booking.booked_date} · {formatHourRange(booking.hour)}
 						</div>
 					</div>
 
@@ -155,16 +123,6 @@ export function ClaimDialog({
 								))}
 							</div>
 						)}
-					</div>
-
-					<div className="space-y-2">
-						<Label htmlFor="activity">Activity</Label>
-						<Input
-							id="activity"
-							placeholder="e.g. Band Practice, Training Session"
-							value={activity}
-							onChange={(e) => setActivity(e.target.value)}
-						/>
 					</div>
 				</div>
 

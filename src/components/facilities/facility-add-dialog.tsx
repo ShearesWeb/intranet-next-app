@@ -11,9 +11,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FacilityType, FACILITY_TYPE_CONFIG } from "@/types/facilities";
+import { FacilityTypeBadges } from "@/components/facilities/facility-type-badges";
+import { FacilityType } from "@/types/facilities";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 
 // REBOKS venues have a fixed scraped identity — not creatable in-app.
 const ADDABLE_TYPES: FacilityType[] = ["sheares", "nus", "external"];
@@ -68,28 +68,9 @@ export function FacilityAddDialog({ open, onClose, onSuccess }: FacilityAddDialo
 				<div className="space-y-4">
 					<div className="space-y-1.5">
 						<Label>Type</Label>
-						<div className="flex flex-wrap gap-1.5">
-							{ADDABLE_TYPES.map((t) => {
-								const cfg = FACILITY_TYPE_CONFIG[t];
-								const active = type === t;
-								return (
-									<button
-										key={t}
-										type="button"
-										onClick={() => setType(t)}
-										className={cn(
-											"rounded-full px-3 py-1 text-xs font-medium",
-											active ? "text-white" : "bg-muted text-muted-foreground hover:bg-muted/80",
-										)}
-										style={active ? { backgroundColor: cfg.color } : undefined}
-									>
-										{cfg.label}
-									</button>
-								);
-							})}
-						</div>
+						<FacilityTypeBadges value={type} onChange={setType} types={ADDABLE_TYPES} />
 						<p className="text-xs text-muted-foreground">
-							REBOKS venues are managed by the bot and can&apos;t be added here.
+							Reboks venues are managed by the bot and can&apos;t be added here.
 						</p>
 					</div>
 					<div className="space-y-1.5">

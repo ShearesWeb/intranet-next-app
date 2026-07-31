@@ -1,29 +1,30 @@
 import { requireJcrcAccess } from "@/lib/api/auth";
 import { apiOk, apiError, handleApiError } from "@/lib/api/response";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
-import { deleteFacilitySlotsBatch } from "@/lib/facilities/facility-management";
+import { deleteBookingSeries } from "@/lib/facilities/facility-bookings";
 import { NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";
 
+/** Cancel all recurring — drop the schedule recipe + future occurrences. */
 export async function DELETE(req: NextRequest) {
 	const disabledResponse = getCoreServiceDisabledApiResponse("facilities");
 	if (disabledResponse) return disabledResponse;
 
 	try {
 		await requireJcrcAccess();
-		const body = await req.json();
-		const { ids } = body;
+		const { facility_id, day_of_week, hour, from_date } = await req.json();
 
-		if (!Array.isArray(ids) || ids.length === 0) {
-			return apiError("ids array is required", 400);
+		if (facility_id == null || day_of_week == null || hour == null) {
+			return apiError("facility_id, day_of_week and hour are required", 400);
 		}
 
-		if (ids.length > 100) {
-			return apiError("Max 100 slots per batch delete", 400);
-		}
-
-		const result = await deleteFacilitySlotsBatch(ids);
+		const result = await deleteBookingSeries({
+			facilityId: facility_id,
+			dayOfWeek: day_of_week,
+			hour,
+			fromDate: from_date ?? new Date().toISOString().slice(0, 10),
+		});
 		return apiOk(result);
 	} catch (e) {
 		return handleApiError(e);

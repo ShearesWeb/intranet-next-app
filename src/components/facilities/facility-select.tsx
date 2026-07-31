@@ -92,7 +92,9 @@ export function FacilitySelect({
 										>
 											<span className="truncate">{f.sub_venue}</span>
 											{f.venue !== f.sub_venue && (
-												<span className="truncate text-[10px] text-muted-foreground">{f.venue}</span>
+												<span className="truncate text-[10px] text-muted-foreground">
+													{f.venue}
+												</span>
 											)}
 										</button>
 									))}

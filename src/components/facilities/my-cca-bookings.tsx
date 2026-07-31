@@ -3,10 +3,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth/auth-context";
 import { EmptyState } from "@/components/layout/empty-state";
+import { MonthGrid } from "@/components/facilities/month-grid";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useCalendarMonth } from "@/hooks/use-calendar-month";
 import {
+	BookingWithClaims,
 	ClaimStatus,
 	CLAIM_STATUS_CONFIG,
 	FACILITY_TYPE_CONFIG,
@@ -14,8 +18,9 @@ import {
 	formatHourRange,
 } from "@/types/facilities";
 import { toast } from "sonner";
-import { Calendar, AlertTriangle } from "lucide-react";
+import { Calendar, AlertTriangle, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatDisplayDate } from "@/lib/date";
 
 interface ClaimRow {
 	id: number;
@@ -25,20 +30,14 @@ interface ClaimRow {
 	booking: FacilityBooking | null;
 }
 
-function formatDate(dateStr: string): string {
-	return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", {
-		weekday: "short",
-		month: "short",
-		day: "numeric",
-	});
-}
+// No cancelled tab — a withdrawn claim is the chair's own action, not worth surfacing.
+const STATUS_TABS: ClaimStatus[] = ["approved", "pending", "rejected"];
 
-/**
- * A CCA chair's upcoming bookings + conflict awareness. Conflicts are read-only
- * here — JCRC resolves them on the admin page.
- */
+/** A chair's claims split by status: calendar to navigate, list that always shows everything. */
 export function MyCcaBookings() {
 	const { user } = useAuth();
+	const { year, month, changeMonth } = useCalendarMonth();
+	const [dateFilter, setDateFilter] = useState<string | null>(null);
 	const [claims, setClaims] = useState<ClaimRow[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [ccaFilter, setCcaFilter] = useState<number | null>(null);
@@ -79,14 +78,10 @@ export function MyCcaBookings() {
 		fetchClaims();
 	}, [fetchClaims]);
 
-	const visible = useMemo(() => {
-		const list = ccaFilter === null ? claims : claims.filter((c) => c.cca_id === ccaFilter);
-		return [...list].sort((a, b) => {
-			const da = a.booking?.booked_date ?? "";
-			const db = b.booking?.booked_date ?? "";
-			return db.localeCompare(da);
-		});
-	}, [claims, ccaFilter]);
+	const visible = useMemo(
+		() => (ccaFilter === null ? claims : claims.filter((c) => c.cca_id === ccaFilter)),
+		[claims, ccaFilter],
+	);
 
 	async function handleWithdraw(claimId: number) {
 		setBusyId(claimId);
@@ -108,10 +103,17 @@ export function MyCcaBookings() {
 
 	if (chairCcas.length === 0) return null;
 
-	return (
-		<div className="space-y-3">
-			<h2 className="text-lg font-semibold">My CCA bookings</h2>
+	if (loading) {
+		return (
+			<div className="space-y-3">
+				<Skeleton className="h-16 w-full" />
+				<Skeleton className="h-64 w-full" />
+			</div>
+		);
+	}
 
+	return (
+		<div className="space-y-4">
 			{chairCcas.length > 1 && (
 				<div className="flex flex-wrap gap-1.5">
 					<button
@@ -142,103 +144,207 @@ export function MyCcaBookings() {
 				</div>
 			)}
 
-			{loading ? (
-				<div className="space-y-3">
-					<Skeleton className="h-16 w-full" />
-					<Skeleton className="h-16 w-full" />
-				</div>
-			) : visible.length === 0 ? (
+			<Tabs defaultValue="approved">
+				<TabsList>
+					{STATUS_TABS.map((status) => (
+						<TabsTrigger key={status} value={status}>
+							{CLAIM_STATUS_CONFIG[status].label}
+						</TabsTrigger>
+					))}
+				</TabsList>
+
+				{STATUS_TABS.map((status) => (
+					<StatusCalendar
+						key={status}
+						status={status}
+						claims={visible.filter((c) => c.status === status && c.booking !== null)}
+						year={year}
+						month={month}
+						dateFilter={dateFilter}
+						onSelectDate={(d) => setDateFilter((prev) => (prev === d ? null : d))}
+						onClearDate={() => setDateFilter(null)}
+						onChangeMonth={changeMonth}
+						busyId={busyId}
+						onWithdraw={handleWithdraw}
+					/>
+				))}
+			</Tabs>
+		</div>
+	);
+}
+
+function StatusCalendar({
+	status,
+	claims,
+	year,
+	month,
+	dateFilter,
+	onSelectDate,
+	onClearDate,
+	onChangeMonth,
+	busyId,
+	onWithdraw,
+}: {
+	status: ClaimStatus;
+	claims: ClaimRow[];
+	year: number;
+	month: number;
+	dateFilter: string | null;
+	onSelectDate: (date: string) => void;
+	onClearDate: () => void;
+	onChangeMonth: (year: number, month: number) => void;
+	busyId: number | null;
+	onWithdraw: (claimId: number) => void;
+}) {
+	const statusConfig = CLAIM_STATUS_CONFIG[status];
+
+	// MonthGrid renders BookingWithClaims; wrap each claim's booking in that shape.
+	const calendarBookings = useMemo<BookingWithClaims[]>(
+		() =>
+			claims.map((c) => ({
+				...c.booking!,
+				claims: [],
+				user_cca_claim: null,
+				recurring: false,
+			})),
+		[claims],
+	);
+
+	// The list always shows every claim of this status; a selected day narrows it.
+	const listed = useMemo(() => {
+		const base = dateFilter ? claims.filter((c) => c.booking!.booked_date === dateFilter) : claims;
+		return [...base].sort(
+			(a, b) =>
+				a.booking!.booked_date.localeCompare(b.booking!.booked_date) ||
+				a.booking!.hour - b.booking!.hour,
+		);
+	}, [claims, dateFilter]);
+
+	return (
+		<TabsContent value={status}>
+			{claims.length === 0 ? (
 				<EmptyState
 					icon={Calendar}
-					title="No bookings yet"
-					description="Claim a slot above to see it here."
+					title={`No ${statusConfig.label.toLowerCase()} bookings`}
+					description="Slots you claim show up here by status."
 				/>
 			) : (
-				<div className="overflow-hidden rounded-lg border">
-					<table className="w-full text-sm">
-						<thead>
-							<tr className="border-b bg-muted/50 text-left text-xs font-medium text-muted-foreground">
-								<th className="px-3 py-2">Venue</th>
-								<th className="px-3 py-2">When</th>
-								<th className="px-3 py-2">CCA</th>
-								<th className="px-3 py-2">Status</th>
-								<th className="px-3 py-2 w-[1%]" />
-							</tr>
-						</thead>
-						<tbody>
-							{visible.map((claim) => {
-								const b = claim.booking;
-								const statusConfig = CLAIM_STATUS_CONFIG[claim.status];
-								const typeConfig = b ? FACILITY_TYPE_CONFIG[b.type] : null;
-								const canWithdraw = claim.status === "pending" || claim.status === "approved";
-								const conflicted = b?.status === "conflicted";
-								return (
-									<tr key={claim.id} className="border-b last:border-0 hover:bg-accent/50">
-										<td className="px-3 py-2.5">
-											{b ? (
-												<>
-													<div className="font-medium">{b.sub_venue}</div>
-													{b.venue !== b.sub_venue && (
-														<div className="text-xs text-muted-foreground">{b.venue}</div>
-													)}
-												</>
-											) : (
-												<span className="text-muted-foreground">—</span>
-											)}
-										</td>
-										<td className="px-3 py-2.5 whitespace-nowrap tabular-nums">
-											{b ? (
-												<span className="inline-flex items-center gap-1.5">
-													{typeConfig && (
-														<span
-															className="h-2 w-2 rounded-full shrink-0"
-															style={{ backgroundColor: typeConfig.color }}
-														/>
-													)}
-													{formatDate(b.booked_date)} · {formatHourRange(b.hour)}
-												</span>
-											) : (
-												"—"
-											)}
-										</td>
-										<td className="px-3 py-2.5">{claim.cca_name}</td>
-										<td className="px-3 py-2.5">
-											<div className="flex flex-col gap-1">
-												<Badge
-													variant="outline"
-													style={{ borderColor: statusConfig.color, color: statusConfig.color }}
-												>
-													{statusConfig.label}
-												</Badge>
-												{conflicted && (
-													<span className="inline-flex items-center gap-1 text-[10px] text-amber-600">
-														<AlertTriangle className="h-3 w-3" />
-														JCRC resolving
-													</span>
-												)}
-											</div>
-										</td>
-										<td className="px-3 py-2.5 whitespace-nowrap">
-											{canWithdraw && (
-												<Button
-													size="sm"
-													variant="outline"
-													className="h-7 text-xs"
-													isLoading={busyId === claim.id}
-													loadingText="Withdrawing…"
-													onClick={() => handleWithdraw(claim.id)}
-												>
-													Withdraw
-												</Button>
-											)}
-										</td>
-									</tr>
-								);
-							})}
-						</tbody>
-					</table>
+				<div className="flex flex-col gap-6 lg:flex-row">
+					<div className="w-full lg:w-[320px] shrink-0">
+						<MonthGrid
+							year={year}
+							month={month}
+							selectedDate={dateFilter}
+							bookings={calendarBookings}
+							onSelectDate={onSelectDate}
+							onChangeMonth={onChangeMonth}
+						/>
+					</div>
+
+					<div className="min-w-0 flex-1 space-y-3">
+						<div className="flex items-center justify-between gap-2">
+							<h3 className="text-sm font-semibold">
+								{statusConfig.label} bookings ({listed.length})
+							</h3>
+							{dateFilter && (
+								<button
+									type="button"
+									onClick={onClearDate}
+									className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground hover:bg-muted/80"
+								>
+									{formatDisplayDate(dateFilter)}
+									<X className="h-3 w-3" />
+								</button>
+							)}
+						</div>
+						{listed.length === 0 ? (
+							<p className="text-sm text-muted-foreground">
+								No {statusConfig.label.toLowerCase()} bookings on this day.
+							</p>
+						) : (
+							<div className="space-y-2">
+								{listed.map((claim) => (
+									<ClaimDayRow
+										key={claim.id}
+										claim={claim}
+										busy={busyId === claim.id}
+										onWithdraw={onWithdraw}
+									/>
+								))}
+							</div>
+						)}
+					</div>
 				</div>
 			)}
+		</TabsContent>
+	);
+}
+
+function ClaimDayRow({
+	claim,
+	busy,
+	onWithdraw,
+}: {
+	claim: ClaimRow;
+	busy: boolean;
+	onWithdraw: (claimId: number) => void;
+}) {
+	const b = claim.booking!;
+	const statusConfig = CLAIM_STATUS_CONFIG[claim.status];
+	const typeConfig = FACILITY_TYPE_CONFIG[b.type];
+	const conflicted = b.status === "conflicted";
+	const awaitingApproval = claim.status === "pending" && !conflicted;
+	const canWithdraw = claim.status === "pending" || claim.status === "approved";
+	const solid = claim.status === "approved";
+
+	return (
+		<div className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-sm">
+			<div className="min-w-0">
+				<div className="flex items-center gap-1.5 font-medium">
+					<span
+						className="h-2 w-2 shrink-0 rounded-full"
+						style={{ backgroundColor: typeConfig.color }}
+					/>
+					{b.sub_venue}
+				</div>
+				<div className="text-xs text-muted-foreground">
+					{formatDisplayDate(b.booked_date, { weekday: "short", month: "short", day: "numeric" })} ·{" "}
+					{formatHourRange(b.hour)} · {claim.cca_name}
+				</div>
+				{conflicted && (
+					<span className="inline-flex items-center gap-1 text-[10px] text-amber-600">
+						<AlertTriangle className="h-3 w-3" />
+						JCRC resolving
+					</span>
+				)}
+				{awaitingApproval && (
+					<span className="text-[10px] text-muted-foreground">Awaiting JCRC approval</span>
+				)}
+			</div>
+			<div className="flex shrink-0 items-center gap-2">
+				<Badge
+					variant={solid ? "default" : "outline"}
+					style={
+						solid
+							? { backgroundColor: statusConfig.color, color: "#fff" }
+							: { borderColor: statusConfig.color, color: statusConfig.color }
+					}
+				>
+					{statusConfig.label}
+				</Badge>
+				{canWithdraw && (
+					<Button
+						size="sm"
+						variant="destructive"
+						className="h-7 text-xs"
+						isLoading={busy}
+						loadingText="Withdrawing…"
+						onClick={() => onWithdraw(claim.id)}
+					>
+						Withdraw
+					</Button>
+				)}
+			</div>
 		</div>
 	);
 }

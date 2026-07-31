@@ -50,10 +50,12 @@ describe("booking-schedules writes", () => {
 			hour: 19,
 			priority: 1,
 			reboks_activity: "Tennis",
+			start_date: null,
+			end_date: null,
 		});
 	});
 
-	it("createSchedule defaults priority to 100 and activity to null", async () => {
+	it("createSchedule defaults priority to 100, activity to null and bounds to unbounded", async () => {
 		const stub = insertStub({ data: {}, error: null });
 		mocks.createClient.mockResolvedValue(stub);
 		const { createSchedule } = await import("./booking-schedules");
@@ -66,7 +68,27 @@ describe("booking-schedules writes", () => {
 			hour: 21,
 			priority: 100,
 			reboks_activity: null,
+			start_date: null,
+			end_date: null,
 		});
+	});
+
+	it("createSchedule passes date bounds through", async () => {
+		const stub = insertStub({ data: {}, error: null });
+		mocks.createClient.mockResolvedValue(stub);
+		const { createSchedule } = await import("./booking-schedules");
+
+		await createSchedule({
+			facilityId: 5,
+			dayOfWeek: 3,
+			hour: 21,
+			startDate: "2026-08-01",
+			endDate: "2026-09-30",
+		});
+
+		expect(stub._insert).toHaveBeenCalledWith(
+			expect.objectContaining({ start_date: "2026-08-01", end_date: "2026-09-30" }),
+		);
 	});
 
 	it("createSchedule maps a unique (facility, day, hour) clash to 409", async () => {
@@ -74,9 +96,9 @@ describe("booking-schedules writes", () => {
 		mocks.createClient.mockResolvedValue(stub);
 		const { createSchedule } = await import("./booking-schedules");
 
-		await expect(
-			createSchedule({ facilityId: 2, dayOfWeek: 1, hour: 19 }),
-		).rejects.toMatchObject({ statusCode: 409 });
+		await expect(createSchedule({ facilityId: 2, dayOfWeek: 1, hour: 19 })).rejects.toMatchObject({
+			statusCode: 409,
+		});
 	});
 
 	it("updateSchedule patches priority/activity by id", async () => {

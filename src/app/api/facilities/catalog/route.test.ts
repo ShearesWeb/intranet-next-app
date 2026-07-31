@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { NextRequest } from "next/server";
 import { ApiError } from "@/lib/api/errors";
 
 const mocks = vi.hoisted(() => ({
@@ -24,14 +25,14 @@ vi.mock("@/lib/feature-flags", () => ({
 }));
 
 function postReq(body: unknown) {
-	return new Request("http://localhost/api/facilities/catalog", {
+	return new NextRequest("http://localhost/api/facilities/catalog", {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify(body),
 	});
 }
 function patchReq(body: unknown) {
-	return new Request("http://localhost/api/facilities/catalog", {
+	return new NextRequest("http://localhost/api/facilities/catalog", {
 		method: "PATCH",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify(body),
