@@ -1,6 +1,6 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { AlertCircle, Save } from "lucide-react";
 
 import { PositionRankingCard } from "@/components/ranking/position-ranking-card";
@@ -8,14 +8,17 @@ import { useRankingEditor } from "@/hooks/use-ranking-editor";
 import { useAuth } from "@/lib/auth/auth-context";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/page-header";
+import { DashedEmpty } from "@/components/shared/inline-states";
 import { DashboardTableSkeleton } from "@/components/layout/dashboard-skeletons";
 
 export default function CCARankingPage() {
 	const { user } = useAuth();
+	const params = useParams();
 	const searchParams = useSearchParams();
 	const ccaId = searchParams.get("ccaId");
+	const ccaNameParam = params?.ccaName;
+	const ccaName = typeof ccaNameParam === "string" ? decodeURIComponent(ccaNameParam) : "";
 	const {
 		isLoading,
 		isSaving,
@@ -33,9 +36,10 @@ export default function CCARankingPage() {
 	return (
 		<div className="flex flex-col space-y-6 p-4 md:p-6">
 			<PageHeader
-				title="Chair / Maincomm Ranking"
+				title={ccaName ? `Rank Members · ${ccaName}` : "Rank Members"}
+				description="Score each member and the rank order updates automatically."
 				backHref="/dashboard/my-cca/admin"
-				backLabel="Back to my CCAs"
+				backLabel="Back to CCA Ranking"
 				actions={
 					<Button
 						onClick={() => void handleSave()}
@@ -49,6 +53,14 @@ export default function CCARankingPage() {
 					</Button>
 				}
 			/>
+
+			{hasChanges && (
+				<div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/40 dark:bg-amber-950/30">
+					<p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+						You have unsaved ranking changes. Don&apos;t forget to save!
+					</p>
+				</div>
+			)}
 
 			{unrankedCount > 0 && (
 				<Alert>
@@ -70,25 +82,19 @@ export default function CCARankingPage() {
 					<AlertDescription>{error}</AlertDescription>
 				</Alert>
 			) : positionGroups.length > 0 ? (
-				<div className="space-y-6">
+				<div className="flex flex-col divide-y divide-border">
 					{positionGroups.map((group) => (
-						<PositionRankingCard
-							key={group.position_id}
-							group={group}
-							ccaType={ccaType}
-							onFieldChange={handleFieldChange}
-						/>
+						<div key={group.position_id} className="py-8 first:pt-0 last:pb-0">
+							<PositionRankingCard
+								group={group}
+								ccaType={ccaType}
+								onFieldChange={handleFieldChange}
+							/>
+						</div>
 					))}
-					<div className="text-sm text-muted-foreground">
-						Ranking updates automatically based on score.
-					</div>
 				</div>
 			) : (
-				<Card className="border-dashed bg-muted/40">
-					<CardContent className="py-12 text-center text-muted-foreground">
-						No members found
-					</CardContent>
-				</Card>
+				<DashedEmpty className="p-12">No members found</DashedEmpty>
 			)}
 		</div>
 	);

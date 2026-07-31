@@ -44,7 +44,7 @@ type NavItem = {
 	}[];
 };
 
-export const navOptions: NavItem[] = [
+const navOptions: NavItem[] = [
 	{
 		title: "Dashboard",
 		url: "/dashboard",
@@ -78,7 +78,7 @@ export const navOptions: NavItem[] = [
 		icon: Volleyball,
 		items: [
 			{
-				title: "CCA Admin",
+				title: "CCA Ranking",
 				url: "/dashboard/my-cca/admin",
 				chairOnly: true,
 				featureFlag: "memberRanking",

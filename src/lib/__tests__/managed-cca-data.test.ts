@@ -33,16 +33,37 @@ type CcaMetaFixture = {
 	description: string | null;
 };
 
+type AppointmentFixture = {
+	user_id: number;
+	position_id: number;
+	cut_status: string | null;
+	cca_positions: { cca_id: number; position_type: string | null };
+};
+
+type EvaluationFixture = {
+	user_id: number;
+	position_id: number;
+	scores: unknown;
+};
+
 function createSupabaseMock({
 	managedRows = [],
 	ccaRows = [],
+	appointmentRows = [],
+	evaluationRows = [],
 }: {
 	managedRows?: ManagedRowFixture[];
 	ccaRows?: CcaMetaFixture[];
+	appointmentRows?: AppointmentFixture[];
+	evaluationRows?: EvaluationFixture[];
 } = {}) {
 	const managedSelect = vi.fn().mockResolvedValue({ data: managedRows, error: null });
 	const ccaIn = vi.fn().mockResolvedValue({ data: ccaRows, error: null });
 	const ccaSelect = vi.fn().mockReturnValue({ in: ccaIn });
+	const appointmentsIn = vi.fn().mockResolvedValue({ data: appointmentRows, error: null });
+	const appointmentsSelect = vi.fn().mockReturnValue({ in: appointmentsIn });
+	const evaluationsIn = vi.fn().mockResolvedValue({ data: evaluationRows, error: null });
+	const evaluationsSelect = vi.fn().mockReturnValue({ in: evaluationsIn });
 
 	const supabase = {
 		from: vi.fn((table: string) => {
@@ -54,11 +75,19 @@ function createSupabaseMock({
 				return { select: ccaSelect };
 			}
 
+			if (table === "cca_appointments") {
+				return { select: appointmentsSelect };
+			}
+
+			if (table === "cca_appointment_evaluations") {
+				return { select: evaluationsSelect };
+			}
+
 			throw new Error(`Unexpected table: ${table}`);
 		}),
 	};
 
-	return { supabase, managedSelect, ccaSelect, ccaIn };
+	return { supabase, managedSelect, ccaSelect, ccaIn, appointmentsIn, evaluationsIn };
 }
 
 function createUser(appointments: AuthenticatedUser["appointments"] = []): AuthenticatedUser {
@@ -148,8 +177,53 @@ describe("getManagedCcaData", () => {
 				points: 0,
 				can_manage_members: false,
 				can_rank_members: true,
+				ranking_progress: { ranked: 0, total: 0 },
 			},
 		]);
+	});
+
+	it("computes ranking progress from appointments and evaluations", async () => {
+		const { supabase } = createSupabaseMock({
+			managedRows: [
+				{
+					cca_id: 10,
+					cca_name: "Debate Society",
+					positions: [
+						{
+							position_id: 7,
+							position_name: "Secretary",
+							position_type: "member",
+							description: null,
+							access_depth: 2,
+						},
+					],
+				},
+			],
+			ccaRows: [{ id: 10, name: "Debate Society", cca_type: "culture", description: null }],
+			appointmentRows: [
+				{
+					user_id: 1,
+					position_id: 7,
+					cut_status: null,
+					cca_positions: { cca_id: 10, position_type: "member" },
+				},
+				{
+					user_id: 2,
+					position_id: 7,
+					cut_status: null,
+					cca_positions: { cca_id: 10, position_type: "member" },
+				},
+			],
+			evaluationRows: [
+				{ user_id: 1, position_id: 7, scores: { attendance: 8, performance: 7 } },
+				{ user_id: 2, position_id: 7, scores: { attendance: 8 } },
+			],
+		});
+
+		const { getManagedCcaData } = await import("../managed-cca-data");
+		const result = await getManagedCcaData(supabase as never, createUser());
+
+		expect(result[0].ranking_progress).toEqual({ ranked: 1, total: 2 });
 	});
 
 	it("sorts the resulting CCAs alphabetically by name", async () => {

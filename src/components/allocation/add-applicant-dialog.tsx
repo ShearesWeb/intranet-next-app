@@ -81,14 +81,15 @@ export function AddApplicantDialog({ onAddApplicant, excludedIds = [] }: AddAppl
 			<DialogTrigger asChild>
 				<Button size="sm" className="gap-2">
 					<Plus className="h-4 w-4" />
-					Add applicant
+					Add candidate
 				</Button>
 			</DialogTrigger>
 			<DialogContent className="max-w-lg">
 				<DialogHeader>
-					<DialogTitle>Add an applicant</DialogTitle>
+					<DialogTitle>Add a candidate</DialogTitle>
 					<DialogDescription>
-						Search by name, email, or room. Click a result to add them to this position.
+						Search any resident by name, email, or room. Click a result to add them to this
+						position&apos;s ranking.
 					</DialogDescription>
 				</DialogHeader>
 

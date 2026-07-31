@@ -2,7 +2,7 @@
 
 import React from "react";
 import { type ColumnDef } from "@tanstack/react-table";
-import { ArrowUpDown } from "lucide-react";
+import { ArrowUpDown, Plus, Users } from "lucide-react";
 import { PositionTypeBadge } from "@/components/badges";
 import { DataTable } from "@/components/table/data-table";
 import { Button } from "@/components/ui/button";
@@ -15,11 +15,9 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { CommitmentPeriod, CutStatus, Member } from "@/types/members";
-import {
-	CULTURE_STATUS_OPTIONS,
-	formatCommitmentPeriod,
-	SPORTS_STATUS_OPTIONS,
-} from "@/lib/cca/member-helpers";
+import { formatCommitmentPeriod } from "@/lib/cca/member-helpers";
+import { CULTURE_STATUS_OPTIONS, SPORTS_STATUS_OPTIONS } from "@/lib/cca/cut-status";
+import { DashedEmpty } from "@/components/shared/inline-states";
 import { MoreHorizontal } from "lucide-react";
 
 interface MemberGroupTableProps {
@@ -302,22 +300,23 @@ export function MemberGroupTable({
 	return (
 		<div className="mb-8">
 			<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
-				<h3 className="text-xl font-semibold">{title}</h3>
+				<div className="flex flex-wrap items-center gap-2.5">
+					<h3 className="text-lg font-semibold">{title}</h3>
+					<span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs font-medium tabular-nums text-muted-foreground">
+						<Users className="h-3.5 w-3.5" />
+						{members.length} member{members.length !== 1 ? "s" : ""}
+					</span>
+				</div>
 				{canManage && showAddButton && isSportsCulture && onAddMember && (
-					<Button
-						onClick={onAddMember}
-						size="sm"
-						className="bg-green-500 text-white hover:bg-green-400 px-4 py-2 shadow-md font-bold cursor-pointer"
-					>
-						+ Add Member
+					<Button onClick={onAddMember} size="sm" className="gap-2">
+						<Plus className="h-4 w-4" />
+						Add member
 					</Button>
 				)}
 			</div>
 
 			{members.length === 0 ? (
-				<div className="p-4 border border-dashed rounded-md text-muted-foreground">
-					No {title.toLowerCase()} found.
-				</div>
+				<DashedEmpty className="p-4 text-left">No {title.toLowerCase()} found.</DashedEmpty>
 			) : (
 				<DataTable<Member>
 					searchColumn="name"

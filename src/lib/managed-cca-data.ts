@@ -1,14 +1,13 @@
 import { isChairPositionType } from "@/lib/cca/cca-chair-access";
+import {
+	computeRankingProgress,
+	type ProgressEvaluationRow,
+	type ProgressMemberRow,
+	type RankingProgress,
+} from "@/lib/ranking/ranking-progress";
 import type { AuthenticatedUser, CcaType, PositionType } from "@/types/user";
+import type { ManagedCcaPosition } from "@/types/cca-data";
 import { createClient } from "@/lib/supabase/server";
-
-export type ManagedCcaPosition = {
-	position_id: number;
-	position_name: string;
-	position_type: PositionType;
-	description: string | null;
-	access_depth: number;
-};
 
 export type ManagedCcaPositionsRow = {
 	cca_id: number;
@@ -23,6 +22,7 @@ export type ManagedCcaPositionsRow = {
 	points: number;
 	can_manage_members: boolean;
 	can_rank_members: boolean;
+	ranking_progress?: RankingProgress;
 };
 
 type ChairAppointment = {
@@ -44,6 +44,77 @@ type CcaMetadataRow = {
 	cca_type: CcaType | null;
 	description: string | null;
 };
+
+type AppointmentProgressRow = {
+	user_id: number;
+	position_id: number;
+	cut_status: string | null;
+	cca_positions:
+		| { cca_id: number; position_type: string | null }
+		| Array<{ cca_id: number; position_type: string | null }>
+		| null;
+};
+
+/**
+ * Ranked/total member counts per managed CCA in two batched queries
+ * (all managed position ids at once), so the overview page stays at
+ * O(1) queries regardless of how many CCAs the caller manages.
+ */
+async function loadRankingProgress(
+	supabase: Awaited<ReturnType<typeof createClient>>,
+	managedCcaRows: ManagedCcaViewRow[],
+	ccasById: Map<number, CcaMetadataRow>,
+): Promise<Map<number, RankingProgress>> {
+	const managedPositionIds = Array.from(
+		new Set(
+			managedCcaRows.flatMap((row) =>
+				(row.positions || []).map((position) => position.position_id),
+			),
+		),
+	);
+
+	if (managedPositionIds.length === 0) {
+		return new Map();
+	}
+
+	const [membersResult, evaluationsResult] = await Promise.all([
+		supabase
+			.from("cca_appointments")
+			.select("user_id, position_id, cut_status, cca_positions!inner(cca_id, position_type)")
+			.in("position_id", managedPositionIds),
+		supabase
+			.from("cca_appointment_evaluations")
+			.select("user_id, position_id, scores")
+			.in("position_id", managedPositionIds),
+	]);
+
+	if (membersResult.error) throw membersResult.error;
+	if (evaluationsResult.error) throw evaluationsResult.error;
+
+	const members: ProgressMemberRow[] = ((membersResult.data || []) as AppointmentProgressRow[])
+		.map((row) => {
+			const position = Array.isArray(row.cca_positions) ? row.cca_positions[0] : row.cca_positions;
+			if (!position) return null;
+			return {
+				cca_id: position.cca_id,
+				user_id: row.user_id,
+				position_id: row.position_id,
+				position_type: position.position_type,
+				cut_status: row.cut_status,
+			};
+		})
+		.filter((row): row is ProgressMemberRow => row !== null);
+
+	const ccaTypeById = new Map<number, string | null>(
+		Array.from(ccasById.values()).map((cca) => [cca.id, cca.cca_type]),
+	);
+
+	return computeRankingProgress({
+		members,
+		evaluations: (evaluationsResult.data || []) as ProgressEvaluationRow[],
+		ccaTypeById,
+	});
+}
 
 export async function getManagedCcaData(
 	supabase: Awaited<ReturnType<typeof createClient>>,
@@ -90,6 +161,8 @@ export async function getManagedCcaData(
 
 	const ccasById = new Map(((ccasData || []) as CcaMetadataRow[]).map((cca) => [cca.id, cca]));
 
+	const progressByCca = await loadRankingProgress(supabase, managedCcaRows, ccasById);
+
 	const transformedData = managedCcaIds.map((ccaId) => {
 		const managedCca = managedCcaById.get(ccaId);
 		const chairAppointment = chairAppointmentsByCcaId.get(ccaId);
@@ -114,6 +187,9 @@ export async function getManagedCcaData(
 			points: 0,
 			can_manage_members: hasChairAccess,
 			can_rank_members: hasManagedPositions,
+			ranking_progress: hasManagedPositions
+				? (progressByCca.get(ccaId) ?? { ranked: 0, total: 0 })
+				: undefined,
 		};
 	});
 

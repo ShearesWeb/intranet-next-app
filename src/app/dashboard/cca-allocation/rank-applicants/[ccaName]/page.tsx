@@ -9,6 +9,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/layout/empty-state";
 import { useApplicantRankings } from "@/hooks/use-applicant-rankings";
+import { useBeforeUnload } from "@/hooks/use-before-unload";
 import { PositionCard } from "@/components/allocation/position-card";
 import type { Applicant, Position } from "@/types/applicants";
 import type { UserSearchResult } from "@/types/members";
@@ -40,15 +41,7 @@ export default function RankCcaApplicants() {
 	} = useApplicantRankings(user?.email, { ccaId });
 
 	// Warn on full-page unload (refresh / close) while there are unsaved changes.
-	React.useEffect(() => {
-		if (!hasAnyChanges) return;
-		const handler = (e: BeforeUnloadEvent) => {
-			e.preventDefault();
-			e.returnValue = "";
-		};
-		window.addEventListener("beforeunload", handler);
-		return () => window.removeEventListener("beforeunload", handler);
-	}, [hasAnyChanges]);
+	useBeforeUnload(hasAnyChanges);
 
 	const goBack = React.useCallback(() => {
 		if (hasAnyChanges && !window.confirm("You have unsaved changes. Leave without saving?")) {
@@ -97,7 +90,7 @@ export default function RankCcaApplicants() {
 		<div className="flex flex-col space-y-6 p-4 md:p-6">
 			<PageHeader
 				title={ccaName}
-				description={`Rank applicants for this CCA. ${group.positions.length} position${group.positions.length > 1 ? "s" : ""} · ${totalApplicants} applicant${totalApplicants !== 1 ? "s" : ""}. Drag, search or use the move buttons, then save.`}
+				description={`${group.positions.length} position${group.positions.length > 1 ? "s" : ""} · ${totalApplicants} candidate${totalApplicants !== 1 ? "s" : ""} ranked. Drag or use the move buttons to rank, then save.`}
 				actions={
 					<>
 						<Button variant="outline" size="sm" className="group gap-2" onClick={goBack}>
@@ -118,12 +111,11 @@ export default function RankCcaApplicants() {
 				</div>
 			)}
 
-			<div className="flex flex-col gap-6">
+			<div className="flex flex-col divide-y divide-border">
 				{group.positions.map((pos: Position) => (
-					<div key={pos.id} className="rounded-lg border bg-card p-4">
+					<div key={pos.id} className="py-8 first:pt-0 last:pb-0">
 						<PositionCard
 							position={pos}
-							hideCcaName
 							hasChanges={hasChanges[pos.id] || false}
 							onAddApplicant={(userData: UserSearchResult) => handleAddApplicant(pos.id, userData)}
 							onRemoveApplicant={(userId: number) => handleRemoveApplicant(pos.id, userId)}
