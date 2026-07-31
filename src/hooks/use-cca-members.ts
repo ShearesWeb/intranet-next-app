@@ -14,7 +14,7 @@ import type {
 	PendingChange,
 	UserSearchResult,
 } from "@/types/members";
-import { getGroupFromStatus, getStatusLabel } from "@/lib/cca/member-status-helpers";
+import { getGroupFromStatus, getStatusLabel } from "@/lib/cca/cut-status";
 import { useMemberSearch } from "@/hooks/use-member-search";
 import { useMemberSave } from "@/hooks/use-member-save";
 

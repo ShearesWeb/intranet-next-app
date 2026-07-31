@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useAuth } from "@/lib/auth/auth-context";
 import { PageHeader } from "@/components/layout/page-header";
+import { DashedEmpty } from "@/components/shared/inline-states";
 import { SubsidyMonthGrid } from "@/components/holiday-subsidy/subsidy-month-grid";
 import { SubsidyDayPanel } from "@/components/holiday-subsidy/subsidy-day-panel";
 import { SubsidyDeclareDialog } from "@/components/holiday-subsidy/subsidy-declare-dialog";
@@ -18,25 +18,16 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { useApiQuery } from "@/hooks/use-api-query";
+import { useCalendarMonth } from "@/hooks/use-calendar-month";
+import { useChairCcas } from "@/hooks/use-chair-ccas";
 import { toast } from "sonner";
 import type { CalendarDeclaration, PositionOption } from "@/types/declarations";
 
-function getMonthRange(year: number, month: number) {
-	const start = `${year}-${String(month + 1).padStart(2, "0")}-01`;
-	const lastDay = new Date(year, month + 1, 0).getDate();
-	const end = `${year}-${String(month + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
-	return { start, end };
-}
-
 export default function HolidaySubsidyPage() {
-	const { user } = useAuth();
-	const today = new Date();
-	const [year, setYear] = useState(today.getFullYear());
-	const [month, setMonth] = useState(today.getMonth());
-	const [selectedDate, setSelectedDate] = useState<string>(today.toISOString().split("T")[0]);
-	const [declarations, setDeclarations] = useState<CalendarDeclaration[]>([]);
+	const { year, month, selectedDate, setSelectedDate, changeMonth, monthRange } =
+		useCalendarMonth();
 	const [positionsByCca, setPositionsByCca] = useState<Map<number, PositionOption[]>>(new Map());
-	const [loading, setLoading] = useState(true);
 
 	const [dialogOpen, setDialogOpen] = useState(false);
 	const [editingDecl, setEditingDecl] = useState<CalendarDeclaration | null>(null);
@@ -44,36 +35,20 @@ export default function HolidaySubsidyPage() {
 	const [pendingDelete, setPendingDelete] = useState<CalendarDeclaration | null>(null);
 	const [deleting, setDeleting] = useState(false);
 
-	const chairCcas = useMemo(() => {
-		if (!user) return [];
-		const seen = new Set<number>();
-		return user.appointments
-			.filter((a) => a.position_type === "lead" || a.position_type === "vice")
-			.filter((a) => {
-				if (seen.has(a.cca_id)) return false;
-				seen.add(a.cca_id);
-				return true;
-			})
-			.map((a) => ({ id: a.cca_id, name: a.cca_name }));
-	}, [user]);
+	const { chairCcas, isChair } = useChairCcas();
 
-	const isChair = chairCcas.length > 0;
-
-	const fetchDeclarations = useCallback(async () => {
-		const { start, end } = getMonthRange(year, month);
-		setLoading(true);
-		try {
-			const res = await fetch(`/api/holiday-subsidy/calendar?start=${start}&end=${end}`);
-			const json = await res.json();
-			if (res.ok) {
-				setDeclarations(json.data?.declarations ?? []);
-			}
-		} catch {
-			// fetch failed
-		} finally {
-			setLoading(false);
-		}
-	}, [year, month]);
+	const {
+		data,
+		loading,
+		refetch: fetchDeclarations,
+	} = useApiQuery<CalendarDeclaration[]>(
+		`/api/holiday-subsidy/calendar?start=${monthRange.start}&end=${monthRange.end}`,
+		{
+			select: (json) =>
+				(json as { data?: { declarations?: CalendarDeclaration[] } }).data?.declarations ?? [],
+		},
+	);
+	const declarations = data ?? [];
 
 	const fetchPositions = useCallback(async () => {
 		if (!chairCcas.length) return;
@@ -95,10 +70,6 @@ export default function HolidaySubsidyPage() {
 	}, [chairCcas]);
 
 	useEffect(() => {
-		fetchDeclarations();
-	}, [fetchDeclarations]);
-
-	useEffect(() => {
 		fetchPositions();
 	}, [fetchPositions]);
 
@@ -108,8 +79,7 @@ export default function HolidaySubsidyPage() {
 	}, [declarations, selectedDate]);
 
 	function handleChangeMonth(y: number, m: number) {
-		setYear(y);
-		setMonth(m);
+		changeMonth(y, m);
 		setMemberTarget(null);
 	}
 
@@ -165,9 +135,9 @@ export default function HolidaySubsidyPage() {
 		return (
 			<div className="flex flex-col space-y-6 p-4 md:p-6">
 				<PageHeader title="Holiday Subsidy" description="You are not a chair/vice for any CCA." />
-				<div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+				<DashedEmpty className="p-8">
 					Only CCA leads and vice leads can submit holiday subsidy declarations.
-				</div>
+				</DashedEmpty>
 			</div>
 		);
 	}

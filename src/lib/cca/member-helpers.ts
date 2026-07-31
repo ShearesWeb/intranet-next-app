@@ -1,14 +1,4 @@
-import type { CommitmentPeriod, CutStatus } from "@/types/members";
-
-export const SPORTS_STATUS_OPTIONS: Array<{ status: CutStatus; label: string }> = [
-	{ status: "ivp-ihg-team", label: "Move to IHG Team (IVP)" },
-	{ status: "ihg-team", label: "Move to IHG Team" },
-	{ status: "final-cut", label: "Move to Final Cut" },
-];
-
-export const CULTURE_STATUS_OPTIONS: Array<{ status: CutStatus; label: string }> = [
-	{ status: "first-cut", label: "Promote to IVP" },
-];
+import type { CommitmentPeriod } from "@/types/members";
 
 export function formatCommitmentPeriod(value: CommitmentPeriod | null | undefined): string {
 	switch (value) {
@@ -21,9 +11,4 @@ export function formatCommitmentPeriod(value: CommitmentPeriod | null | undefine
 		default:
 			return "-";
 	}
-}
-
-export function getStatusLabel(status: CutStatus): string {
-	const all = [...SPORTS_STATUS_OPTIONS, ...CULTURE_STATUS_OPTIONS];
-	return all.find((option) => option.status === status)?.label || status;
 }

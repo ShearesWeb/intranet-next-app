@@ -3,7 +3,10 @@
 import { useState } from "react";
 import { CalendarDeclaration, SUBSIDY_STATUS_CONFIG } from "@/types/declarations";
 import { Button } from "@/components/ui/button";
+import { StatusPill } from "@/components/shared/status-pill";
+import { DashedEmpty } from "@/components/shared/inline-states";
 import { cn } from "@/lib/utils";
+import { formatDisplayDate } from "@/lib/date";
 import { Users } from "lucide-react";
 
 type DeclAction = (decl: CalendarDeclaration) => void | Promise<void>;
@@ -19,11 +22,6 @@ interface SubsidyDayPanelProps {
 	onApprove?: DeclAction;
 	onReject?: DeclAction;
 	onAssignMembers?: (decl: CalendarDeclaration) => void;
-}
-
-function formatDisplayDate(dateStr: string): string {
-	const d = new Date(dateStr + "T00:00:00");
-	return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 }
 
 export function SubsidyDayPanel({
@@ -69,13 +67,11 @@ export function SubsidyDayPanel({
 			</div>
 
 			{sorted.length === 0 ? (
-				<div className="rounded-lg border border-dashed p-8 text-center">
-					<p className="text-sm text-muted-foreground">
-						{isChair
-							? 'No declarations on this day. Click "Declare Subsidy" to add one.'
-							: "No declarations on this day."}
-					</p>
-				</div>
+				<DashedEmpty className="p-8">
+					{isChair
+						? 'No declarations on this day. Click "Declare Subsidy" to add one.'
+						: "No declarations on this day."}
+				</DashedEmpty>
 			) : (
 				<div className="overflow-hidden rounded-lg border">
 					<table className="w-full text-sm">
@@ -158,15 +154,7 @@ function DeclRow({
 			<td className="px-3 py-2.5 tabular-nums">{decl.hours}h</td>
 			<td className="px-3 py-2.5">
 				<div className="flex items-center gap-2">
-					<span
-						className={cn("inline-block rounded-full px-2 py-0.5 text-xs font-medium")}
-						style={{
-							backgroundColor: `${statusConfig.color}20`,
-							color: statusConfig.color,
-						}}
-					>
-						{statusConfig.label}
-					</span>
+					<StatusPill label={statusConfig.label} color={statusConfig.color} />
 					{isApproved && (
 						<span
 							className={cn(

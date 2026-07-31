@@ -3,24 +3,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 /**
- * Generic page-shaped skeleton with a title and stacked body blocks.
- * Use this as the default fallback when a more specific variant doesn't fit.
- */
-export function DashboardPageSkeleton({ className }: { className?: string }) {
-	return (
-		<div className={cn("flex flex-col gap-4 p-4 md:p-6", className)}>
-			<Skeleton className="h-8 w-64" />
-			<Skeleton className="h-4 w-full max-w-2xl" />
-			<div className="flex flex-col gap-3 pt-2">
-				<Skeleton className="h-32 w-full" />
-				<Skeleton className="h-32 w-full" />
-				<Skeleton className="h-32 w-full" />
-			</div>
-		</div>
-	);
-}
-
-/**
  * Grid of skeleton cards. Sized to match dashboard landing pages
  * that render a grid of navigation / summary cards.
  */
