@@ -74,6 +74,7 @@ cloudflare-env.d.ts
 
 # playwright MCP artifacts (browser console logs from MCP tool runs)
 .playwright-mcp/
+.playwright-cli/
 
 # Supabase local working artifacts (config.toml IS committed; these are not)
 supabase/.branches/
