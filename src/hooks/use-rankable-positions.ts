@@ -6,6 +6,7 @@ import {
 	detectRankingSelectionChanges,
 	buildRankingsPayload,
 } from "@/lib/allocation/ranking-changes";
+import { MAX_PREFERENCES, canAddPreference } from "@/lib/allocation/preference-cap";
 import type { RankablePosition } from "@/types/preferences";
 
 export type RankStep = "selection" | "ranking";
@@ -76,17 +77,27 @@ export function useRankablePositions(userEmail: string | undefined) {
 		setHasChanges(changed);
 	}, [selectedIds, initialSelectedIds, selectedPositions, initialRankingOrder]);
 
-	const togglePositionSelection = useCallback((positionId: number) => {
-		setSelectedIds((prev) => {
-			const next = new Set(prev);
-			if (next.has(positionId)) {
-				next.delete(positionId);
-			} else {
-				next.add(positionId);
+	const togglePositionSelection = useCallback(
+		(positionId: number) => {
+			// Adding past the cap is refused outright; unticking always works.
+			if (!selectedIds.has(positionId) && !canAddPreference(selectedIds.size)) {
+				toast.error(
+					`You can rank at most ${MAX_PREFERENCES} preferences. Untick one to make room.`,
+				);
+				return;
 			}
-			return next;
-		});
-	}, []);
+			setSelectedIds((prev) => {
+				const next = new Set(prev);
+				if (next.has(positionId)) {
+					next.delete(positionId);
+				} else {
+					next.add(positionId);
+				}
+				return next;
+			});
+		},
+		[selectedIds],
+	);
 
 	const proceedToRanking = useCallback(() => {
 		const selected = allPositions.filter((p) => selectedIds.has(p.id));

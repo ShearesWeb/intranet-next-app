@@ -6,6 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/layout/page-header";
 import { DashedEmpty } from "@/components/shared/inline-states";
+import {
+	PreferenceCapMeter,
+	PreferenceCapMeterMini,
+} from "@/components/allocation/preference-cap-meter";
+import { MAX_PREFERENCES, getPreferenceUsage } from "@/lib/allocation/preference-cap";
 import { cn } from "@/lib/utils";
 import type { RankablePosition } from "@/types/preferences";
 
@@ -71,6 +76,7 @@ export function RankSelectionStep({
 }: RankSelectionStepProps) {
 	const [query, setQuery] = React.useState("");
 	const count = selectedIds.size;
+	const { atCap } = getPreferenceUsage(count);
 
 	const groups = React.useMemo(() => {
 		const q = query.trim().toLowerCase();
@@ -96,6 +102,16 @@ export function RankSelectionStep({
 					better the algorithm can match you. Picking only one or two is the most common reason
 					students end up unmatched.
 				</div>
+			</div>
+
+			<div className="max-w-xl rounded-xl border p-4">
+				<PreferenceCapMeter selectedCount={count} />
+				{atCap && (
+					<p className="mt-2 text-xs text-muted-foreground">
+						You&apos;ve used all {MAX_PREFERENCES} slots. Untick a position to swap in a different
+						one.
+					</p>
+				)}
 			</div>
 
 			<div className="relative max-w-sm">
@@ -130,18 +146,28 @@ export function RankSelectionStep({
 							<div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
 								{group.positions.map((pos) => {
 									const selected = selectedIds.has(pos.id);
+									const blocked = atCap && !selected;
 									return (
 										<button
 											key={pos.id}
 											type="button"
 											role="checkbox"
 											aria-checked={selected}
+											aria-disabled={blocked}
+											disabled={blocked}
+											title={
+												blocked
+													? `You can rank at most ${MAX_PREFERENCES} preferences. Untick one to make room.`
+													: undefined
+											}
 											onClick={() => onToggle(pos.id)}
 											className={cn(
 												"group flex items-start gap-3 rounded-lg border p-3 text-left transition-colors",
 												selected
 													? "border-primary/60 bg-primary/5 ring-1 ring-primary/40"
 													: "hover:border-primary/40 hover:bg-muted/40",
+												blocked &&
+													"cursor-not-allowed opacity-50 hover:border-border hover:bg-transparent",
 											)}
 										>
 											<span
@@ -173,11 +199,14 @@ export function RankSelectionStep({
 			)}
 
 			<div className="sticky bottom-4 z-10 flex items-center justify-between gap-3 rounded-xl border bg-background/95 p-3 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/80">
-				<span className="text-sm text-muted-foreground">
-					{count === 0
-						? "No preferences selected"
-						: `${count} preference${count === 1 ? "" : "s"} selected`}
-				</span>
+				<div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+					<PreferenceCapMeterMini selectedCount={count} />
+					<span className="text-sm text-muted-foreground">
+						{count === 0
+							? "No preferences selected"
+							: `${count} preference${count === 1 ? "" : "s"} selected`}
+					</span>
+				</div>
 				<Button onClick={onProceed} disabled={count === 0} className="gap-2">
 					Next: Order your preferences
 					<ArrowRight className="h-4 w-4" />

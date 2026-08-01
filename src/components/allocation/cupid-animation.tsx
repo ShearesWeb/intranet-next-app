@@ -2594,7 +2594,8 @@ export function CupidAnimation() {
 									textWrap: "pretty",
 								}}
 							>
-								Wayne only ranked <span style={{ color: "#FFC177", fontWeight: 600 }}>one applicant</span> for
+								Wayne only ranked{" "}
+								<span style={{ color: "#FFC177", fontWeight: 600 }}>one applicant</span> for
 								Publicity: Raegan.
 							</div>
 							<div
@@ -2607,7 +2608,8 @@ export function CupidAnimation() {
 									animation: "cupid-fade-up .6s ease-out .5s both",
 								}}
 							>
-								As raegan is allocated Programmes in round 1, there are no remaining allocatable candidate for Publicity.
+								As raegan is allocated Programmes in round 1, there are no remaining allocatable
+								candidate for Publicity.
 							</div>
 						</div>
 					</div>
