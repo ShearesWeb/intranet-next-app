@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/layout/page-header";
 import { OrderingTable } from "@/components/table/ordering-table";
 import { rankingOrderingColumns } from "@/components/allocation/ranking-columns";
+import { PreferenceCapMeter } from "@/components/allocation/preference-cap-meter";
 import type { RankablePosition } from "@/types/preferences";
 
 interface RankOrderingStepProps {
@@ -67,6 +68,10 @@ export function RankOrderingStep({
 					</>
 				}
 			/>
+
+			<div className="max-w-xl rounded-xl border p-4">
+				<PreferenceCapMeter selectedCount={selectedPositions.length} />
+			</div>
 
 			{hasChanges && (
 				<div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/40 dark:bg-amber-950/30">
