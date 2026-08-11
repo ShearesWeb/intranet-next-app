@@ -2,9 +2,10 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { extractSupabaseProjref, findForeignSupabaseCookies } from "./cookie-eviction";
 
-// Conservative ceiling below Node's 16 KB --max-http-header-size default,
-// leaving headroom for non-Cookie headers on the same request.
-const COOKIE_OVERFLOW_THRESHOLD_BYTES = 12 * 1024;
+// Conservative ceiling below the tightest limit any edge in front of this app
+// enforces (the AWS origin 413s at ~10 KB of request headers; Node defaults to
+// 16 KB), leaving headroom for non-Cookie headers on the same request.
+const COOKIE_OVERFLOW_THRESHOLD_BYTES = 8 * 1024;
 
 function readSupabaseConfig() {
 	return {
@@ -17,18 +18,13 @@ function readSupabaseConfig() {
 	};
 }
 
-function evictForeignProjrefCookies(
-	request: NextRequest,
-	response: NextResponse,
-	currentProjref: string | null,
-): number {
+function evictForeignProjrefCookies(request: NextRequest, currentProjref: string | null): string[] {
 	const allNames = request.cookies.getAll().map((c) => c.name);
 	const foreign = findForeignSupabaseCookies(allNames, currentProjref);
 	for (const name of foreign) {
 		request.cookies.delete(name);
-		response.cookies.set(name, "", { maxAge: 0, path: "/" });
 	}
-	return foreign.length;
+	return foreign;
 }
 
 function currentProjrefCookieNames(request: NextRequest, currentProjref: string): string[] {
@@ -39,15 +35,10 @@ function currentProjrefCookieNames(request: NextRequest, currentProjref: string)
 		.filter((n) => n.startsWith(prefix));
 }
 
-function clearCurrentProjrefCookies(
-	request: NextRequest,
-	response: NextResponse,
-	currentProjref: string,
-): string[] {
+function clearCurrentProjrefCookies(request: NextRequest, currentProjref: string): string[] {
 	const names = currentProjrefCookieNames(request, currentProjref);
 	for (const name of names) {
 		request.cookies.delete(name);
-		response.cookies.set(name, "", { maxAge: 0, path: "/" });
 	}
 	return names;
 }
@@ -60,28 +51,39 @@ export async function updateSession(request: NextRequest) {
 	const { url: supabaseUrl, key: supabaseKey } = readSupabaseConfig();
 	const currentProjref = extractSupabaseProjref(supabaseUrl);
 
-	let supabaseResponse = NextResponse.next({ request });
-
-	const evicted = evictForeignProjrefCookies(request, supabaseResponse, currentProjref);
-	if (evicted > 0) {
-		console.info(`[auth] evicted ${evicted} foreign-projref supabase cookies`);
+	// Cookies to expire on the browser. Re-stamped onto every response we may
+	// return: NextResponse.next()/redirect() each start with an empty cookie
+	// jar, so a Set-Cookie written on an earlier response object is lost.
+	const pendingClears: string[] = [];
+	function stampClears<T extends NextResponse>(response: T): T {
+		for (const name of pendingClears) {
+			response.cookies.set(name, "", { maxAge: 0, path: "/" });
+		}
+		return response;
 	}
 
+	let supabaseResponse = NextResponse.next({ request });
+
+	const evicted = evictForeignProjrefCookies(request, currentProjref);
+	pendingClears.push(...evicted);
+	if (evicted.length > 0) {
+		console.info(`[auth] evicted ${evicted.length} foreign-projref supabase cookies`);
+	}
+	stampClears(supabaseResponse);
+
 	if (currentProjref && cookieHeaderSize(request) > COOKIE_OVERFLOW_THRESHOLD_BYTES) {
-		const cleared = clearCurrentProjrefCookies(request, supabaseResponse, currentProjref);
+		const cleared = clearCurrentProjrefCookies(request, currentProjref);
+		pendingClears.push(...cleared);
 		console.warn(
 			`[auth] cookie header > ${COOKIE_OVERFLOW_THRESHOLD_BYTES}B — cleared ${cleared.length} sb-${currentProjref}-* cookies`,
 		);
+		stampClears(supabaseResponse);
 		const path = request.nextUrl.pathname;
 		if (!path.startsWith("/auth")) {
 			const loginUrl = request.nextUrl.clone();
 			loginUrl.pathname = "/auth/login";
 			loginUrl.searchParams.set("reason", "cookie_overflow");
-			const redirect = NextResponse.redirect(loginUrl);
-			for (const name of cleared) {
-				redirect.cookies.set(name, "", { maxAge: 0, path: "/" });
-			}
-			return redirect;
+			return stampClears(NextResponse.redirect(loginUrl));
 		}
 	}
 
@@ -99,15 +101,7 @@ export async function updateSession(request: NextRequest) {
 
 				// NextResponse.next() resets response cookies — re-stamp eviction
 				// Set-Cookies so they still reach the browser this turn.
-				if (currentProjref) {
-					const stillForeign = findForeignSupabaseCookies(
-						request.cookies.getAll().map((c) => c.name),
-						currentProjref,
-					);
-					for (const name of stillForeign) {
-						supabaseResponse.cookies.set(name, "", { maxAge: 0, path: "/" });
-					}
-				}
+				stampClears(supabaseResponse);
 
 				cookiesToSet.forEach(({ name, value, options }) =>
 					supabaseResponse.cookies.set(name, value, options),
@@ -140,7 +134,7 @@ export async function updateSession(request: NextRequest) {
 			loginUrl.pathname = "/auth/login";
 			loginUrl.searchParams.set("reason", "session_expired");
 			loginUrl.searchParams.set("next", request.nextUrl.pathname);
-			return NextResponse.redirect(loginUrl);
+			return stampClears(NextResponse.redirect(loginUrl));
 		}
 		return supabaseResponse;
 	}
@@ -150,13 +144,13 @@ export async function updateSession(request: NextRequest) {
 		loginUrl.pathname = "/auth/login";
 		loginUrl.searchParams.set("reason", "session_expired");
 		loginUrl.searchParams.set("next", request.nextUrl.pathname);
-		return NextResponse.redirect(loginUrl);
+		return stampClears(NextResponse.redirect(loginUrl));
 	}
 
 	if (isAuthenticated && path.startsWith("/auth")) {
 		const url = request.nextUrl.clone();
 		url.pathname = "/dashboard";
-		return NextResponse.redirect(url);
+		return stampClears(NextResponse.redirect(url));
 	}
 
 	return supabaseResponse;

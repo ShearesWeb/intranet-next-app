@@ -199,6 +199,58 @@ describe("updateSession", () => {
 			).toBeUndefined();
 		});
 
+		it("keeps eviction Set-Cookies when Supabase refreshes the session mid-request", async () => {
+			setupUpdateSession({
+				cookiesToSet: [
+					{
+						name: "sb-mlklfakrvuvkftgowzts-auth-token.0",
+						value: "fresh",
+						options: { path: "/" },
+					},
+				],
+			});
+
+			const request = new NextRequest("http://localhost/dashboard/my-cca");
+			request.cookies.set("sb-fekyehxztmfdnuknfmeq-auth-token.0", "stale");
+
+			const { updateSession } = await import("../middleware");
+			const response = await updateSession(request);
+
+			const evicted = response.cookies.get("sb-fekyehxztmfdnuknfmeq-auth-token.0");
+			expect(evicted?.value).toBe("");
+			expect(evicted?.maxAge).toBe(0);
+		});
+
+		it("keeps eviction Set-Cookies on the /dashboard -> /auth/login redirect", async () => {
+			setupUpdateSession({ claims: null, error: { message: "Auth session missing" } });
+
+			const request = new NextRequest("http://localhost/dashboard/my-cca");
+			request.cookies.set("sb-fekyehxztmfdnuknfmeq-auth-token.0", "stale");
+
+			const { updateSession } = await import("../middleware");
+			const response = await updateSession(request);
+
+			expect(response.status).toBe(307);
+			const evicted = response.cookies.get("sb-fekyehxztmfdnuknfmeq-auth-token.0");
+			expect(evicted?.value).toBe("");
+			expect(evicted?.maxAge).toBe(0);
+		});
+
+		it("keeps eviction Set-Cookies on the /auth -> /dashboard redirect", async () => {
+			setupUpdateSession();
+
+			const request = new NextRequest("http://localhost/auth/login");
+			request.cookies.set("sb-fekyehxztmfdnuknfmeq-auth-token.0", "stale");
+
+			const { updateSession } = await import("../middleware");
+			const response = await updateSession(request);
+
+			expect(response.status).toBe(307);
+			const evicted = response.cookies.get("sb-fekyehxztmfdnuknfmeq-auth-token.0");
+			expect(evicted?.value).toBe("");
+			expect(evicted?.maxAge).toBe(0);
+		});
+
 		it("removes foreign cookies from the request before Supabase reads them", async () => {
 			const auth = setupUpdateSession();
 
@@ -253,6 +305,18 @@ describe("updateSession", () => {
 			const cleared = response.cookies.get("sb-mlklfakrvuvkftgowzts-auth-token.0");
 			expect(cleared?.value).toBe("");
 			expect(cleared?.maxAge).toBe(0);
+		});
+
+		it("trips below 10 KB, the size at which the AWS origin 413s", async () => {
+			setupUpdateSession();
+
+			const request = new NextRequest("http://localhost/dashboard/my-cca");
+			request.cookies.set("sb-mlklfakrvuvkftgowzts-auth-token.0", big(9000));
+
+			const { updateSession } = await import("../middleware");
+			const response = await updateSession(request);
+
+			expect(response.headers.get("location")).toContain("reason=cookie_overflow");
 		});
 
 		it("does not trip when cookies are under the threshold", async () => {
