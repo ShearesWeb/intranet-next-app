@@ -2,7 +2,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { DayDetailPanel } from "@/components/facilities/day-detail-panel";
-import { BOOKING_STATUS_CONFIG, type BookingWithClaims } from "@/types/facilities";
+import { SLOT_STATUS_CONFIG, type SlotWithContext } from "@/types/facilities";
 
 /** Local YYYY-MM-DD, n days from today — the panel's lock logic compares against real time. */
 function dateFromToday(n: number): string {
@@ -16,19 +16,18 @@ function dateFromToday(n: number): string {
 const OPEN_DATE = dateFromToday(10);
 const LOCKED_DATE = dateFromToday(1);
 
-function booking(p: Partial<BookingWithClaims>): BookingWithClaims {
+function booking(p: Partial<SlotWithContext>): SlotWithContext {
 	return {
-		id: p.id ?? 1,
 		facility_id: p.facility_id ?? 1,
 		venue: p.venue ?? "Sheares Hall",
 		sub_venue: p.sub_venue ?? "MPSH",
 		type: p.type ?? "sheares",
-		booked_date: p.booked_date ?? OPEN_DATE,
+		date: p.date ?? OPEN_DATE,
 		hour: p.hour ?? 18,
 		status: p.status ?? "available",
+		live_claims: p.live_claims ?? p.claims?.length ?? 0,
 		claims: p.claims ?? [],
 		user_cca_claim: p.user_cca_claim ?? null,
-		recurring: p.recurring ?? false,
 	};
 }
 
@@ -65,7 +64,7 @@ function render(props: Partial<Parameters<typeof DayDetailPanel>[0]> = {}) {
 describe("DayDetailPanel", () => {
 	it("caps visible rows at 10 with pagination", () => {
 		const bookings = Array.from({ length: 25 }, (_, i) =>
-			booking({ id: i + 1, sub_venue: `Court ${i + 1}`, hour: 8 + (i % 15) }),
+			booking({ sub_venue: `Court ${i + 1}`, hour: 8 + (i % 15) }),
 		);
 		render({ bookings });
 
@@ -75,9 +74,9 @@ describe("DayDetailPanel", () => {
 
 	it("renders a search input that filters rows by venue", () => {
 		const bookings = [
-			booking({ id: 1, sub_venue: "Band Room", venue: "Sheares Hall" }),
-			booking({ id: 2, sub_venue: "Tennis Court 1", venue: "REBOKS" }),
-			booking({ id: 3, sub_venue: "Tennis Court 2", venue: "REBOKS" }),
+			booking({ hour: 18, sub_venue: "Band Room", venue: "Sheares Hall" }),
+			booking({ hour: 19, sub_venue: "Tennis Court 1", venue: "REBOKS" }),
+			booking({ hour: 20, sub_venue: "Tennis Court 2", venue: "REBOKS" }),
 		];
 		render({ bookings });
 
@@ -99,9 +98,9 @@ describe("DayDetailPanel", () => {
 	});
 
 	it("renders the Available badge in green", () => {
-		expect(BOOKING_STATUS_CONFIG.available.color).toBe("#10b981");
+		expect(SLOT_STATUS_CONFIG.available.color).toBe("#10b981");
 
-		render({ bookings: [booking({ id: 1, status: "available" })] });
+		render({ bookings: [booking({ hour: 18, status: "available" })] });
 		const badge = [...container.querySelectorAll("tbody span")].find(
 			(el) => el.textContent === "Available",
 		) as HTMLElement;
@@ -110,11 +109,11 @@ describe("DayDetailPanel", () => {
 	});
 
 	it("keeps Confirmed distinct from Available (not green)", () => {
-		expect(BOOKING_STATUS_CONFIG.confirmed.color).not.toBe(BOOKING_STATUS_CONFIG.available.color);
+		expect(SLOT_STATUS_CONFIG.confirmed.color).not.toBe(SLOT_STATUS_CONFIG.available.color);
 	});
 
 	it("shows Claim button for chairs on available slots", () => {
-		render({ bookings: [booking({ id: 1, status: "available" })], isChair: true });
+		render({ bookings: [booking({ hour: 18, status: "available" })], isChair: true });
 		const btn = [...container.querySelectorAll("button")].find((b) => b.textContent === "Claim");
 		expect(btn).toBeTruthy();
 	});
@@ -122,7 +121,7 @@ describe("DayDetailPanel", () => {
 	it("hides the Claim button and shows the lock note inside the 3-day window", () => {
 		render({
 			date: LOCKED_DATE,
-			bookings: [booking({ id: 1, status: "available", booked_date: LOCKED_DATE })],
+			bookings: [booking({ hour: 18, status: "available", date: LOCKED_DATE })],
 			isChair: true,
 		});
 		const btn = [...container.querySelectorAll("button")].find((b) => b.textContent === "Claim");
@@ -135,19 +134,14 @@ describe("DayDetailPanel", () => {
 			date: LOCKED_DATE,
 			bookings: [
 				booking({
-					id: 1,
 					status: "pending",
-					booked_date: LOCKED_DATE,
+					date: LOCKED_DATE,
 					user_cca_claim: {
-						id: 9,
-						booking_id: 1,
+						claim_id: 9,
 						cca_id: 3,
 						cca_name: "Volleyball",
 						status: "pending",
-						claimed_by: 42,
-						claimed_at: "2026-07-01T00:00:00Z",
-						resolved_at: null,
-						resolved_by: null,
+						created_by: 42,
 					},
 				}),
 			],

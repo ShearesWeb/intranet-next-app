@@ -1,5 +1,5 @@
 import { getManagedCcaAccess } from "@/lib/cca/cca-management-access";
-import { normalizeCutStatusForCca } from "@/lib/cca/cca-cut-status";
+import { normalizeTeamStatus } from "@/lib/cca/team-status";
 import {
 	buildRankingComments,
 	extractRankingCommentFields,
@@ -24,13 +24,13 @@ type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 type RankingContextRow = {
 	id: number;
 	name?: string | null;
-	cca_type?: string | null;
+	cca_kind?: string | null;
 };
 
 export async function loadCcaContext(supabase: SupabaseServerClient, ccaId: number) {
 	const [{ data: cca, error: ccaError }, { data: positions, error: positionsError }] =
 		await Promise.all([
-			supabase.from("ccas").select("id, name, cca_type").eq("id", ccaId).single(),
+			supabase.from("ccas").select("id, name, cca_kind").eq("id", ccaId).single(),
 			supabase.from("cca_positions").select("id, name, position_type, cca_id").eq("cca_id", ccaId),
 		]);
 
@@ -81,12 +81,12 @@ export async function loadManagedRankingAccess({
 export function mapRankingResponseMembers({
 	members,
 	rankings,
-	ccaType,
+	ccaKind,
 	rankablePositionIds,
 }: {
 	members: AppointmentRow[];
 	rankings: RankingRow[] | null | undefined;
-	ccaType?: string | null;
+	ccaKind?: string | null;
 	rankablePositionIds: number[];
 }): RankingResponseMember[] {
 	const normalizedMembers = members.map((member) => {
@@ -156,7 +156,7 @@ export function mapRankingResponseMembers({
 				position_id: positionId,
 				position: positionName,
 				position_type: positionType,
-				cut_status: normalizeCutStatusForCca(member.cut_status, ccaType),
+				team_status: normalizeTeamStatus(member.team_status) as string | null,
 				commitment_period: member.commitment_period,
 				ranking: ranking?.ranking ?? 0,
 				attendance: ranking?.attendance ?? 0,
@@ -171,8 +171,8 @@ export function mapRankingResponseMembers({
 		.filter((member) => {
 			if (!rankablePositionIds.includes(member.position_id)) return false;
 
-			if (ccaType === "sports" && member.position_type === "member") {
-				return member.cut_status !== null;
+			if (ccaKind === "sports" && member.position_type === "member") {
+				return member.team_status !== null;
 			}
 
 			return true;
@@ -192,12 +192,12 @@ export function buildRankingsUpsertPayloads({
 	rankings,
 	allowedPositionIds,
 	positionTypeById,
-	ccaType,
+	ccaKind,
 }: {
 	rankings: RankingPayload[];
 	allowedPositionIds: Set<number>;
 	positionTypeById: Map<number, string | null>;
-	ccaType?: string | null;
+	ccaKind?: string | null;
 }) {
 	return rankings
 		.filter((ranking) => allowedPositionIds.has(ranking.position_id))
@@ -213,7 +213,7 @@ export function buildRankingsUpsertPayloads({
 					attitude: ranking.attitude,
 				},
 				{
-					ccaType,
+					ccaKind,
 					positionType,
 				},
 			);
@@ -221,11 +221,11 @@ export function buildRankingsUpsertPayloads({
 		.map((ranking) => {
 			const positionType = positionTypeById.get(ranking.position_id);
 			const rankingMetricKeys = getRankingMetricKeys({
-				ccaType,
+				ccaKind,
 				positionType,
 			});
 			const normalizedPerformance =
-				ccaType !== "sports"
+				ccaKind !== "sports"
 					? ranking.performance
 					: ranking.performance > 0
 						? ranking.performance

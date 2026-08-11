@@ -1,17 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { AuthenticatedUser } from "@/types/user";
 
 const mocks = vi.hoisted(() => ({
 	createClient: vi.fn(),
-	isChairPositionType: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
 	createClient: mocks.createClient,
-}));
-
-vi.mock("@/lib/cca/cca-chair-access", () => ({
-	isChairPositionType: mocks.isChairPositionType,
 }));
 
 type ManagedRowFixture = {
@@ -22,305 +16,161 @@ type ManagedRowFixture = {
 		position_name: string;
 		position_type: string;
 		description: string | null;
-		access_depth: number;
 	}>;
 };
 
 type CcaMetaFixture = {
 	id: number;
 	name: string;
-	cca_type: string;
+	kind: string;
 	description: string | null;
 };
 
-type AppointmentFixture = {
-	user_id: number;
-	position_id: number;
-	cut_status: string | null;
-	cca_positions: { cca_id: number; position_type: string | null };
-};
-
-type EvaluationFixture = {
-	user_id: number;
-	position_id: number;
-	scores: unknown;
-};
-
+/**
+ * `managed_cca_positions` is queried with a bare select; `ccas` is queried with
+ * `.in("id", …)`. Route on table name rather than call order.
+ */
 function createSupabaseMock({
 	managedRows = [],
 	ccaRows = [],
-	appointmentRows = [],
-	evaluationRows = [],
+	managedError = null,
 }: {
 	managedRows?: ManagedRowFixture[];
 	ccaRows?: CcaMetaFixture[];
-	appointmentRows?: AppointmentFixture[];
-	evaluationRows?: EvaluationFixture[];
+	managedError?: unknown;
 } = {}) {
-	const managedSelect = vi.fn().mockResolvedValue({ data: managedRows, error: null });
-	const ccaIn = vi.fn().mockResolvedValue({ data: ccaRows, error: null });
-	const ccaSelect = vi.fn().mockReturnValue({ in: ccaIn });
-	const appointmentsIn = vi.fn().mockResolvedValue({ data: appointmentRows, error: null });
-	const appointmentsSelect = vi.fn().mockReturnValue({ in: appointmentsIn });
-	const evaluationsIn = vi.fn().mockResolvedValue({ data: evaluationRows, error: null });
-	const evaluationsSelect = vi.fn().mockReturnValue({ in: evaluationsIn });
+	const from = vi.fn((table: string) => {
+		if (table === "managed_cca_positions") {
+			return {
+				select: vi.fn().mockResolvedValue({ data: managedRows, error: managedError }),
+			};
+		}
+		if (table === "ccas") {
+			return {
+				select: vi.fn().mockReturnValue({
+					in: vi.fn().mockResolvedValue({ data: ccaRows, error: null }),
+				}),
+			};
+		}
+		throw new Error(`unexpected table: ${table}`);
+	});
 
-	const supabase = {
-		from: vi.fn((table: string) => {
-			if (table === "managed_cca_positions") {
-				return { select: managedSelect };
-			}
-
-			if (table === "ccas") {
-				return { select: ccaSelect };
-			}
-
-			if (table === "cca_appointments") {
-				return { select: appointmentsSelect };
-			}
-
-			if (table === "cca_appointment_evaluations") {
-				return { select: evaluationsSelect };
-			}
-
-			throw new Error(`Unexpected table: ${table}`);
-		}),
-	};
-
-	return { supabase, managedSelect, ccaSelect, ccaIn, appointmentsIn, evaluationsIn };
+	return { supabase: { from }, from };
 }
 
-function createUser(appointments: AuthenticatedUser["appointments"] = []): AuthenticatedUser {
-	return {
-		id: 1,
-		name: "Alex Chair",
-		display_name: "Alex Chair",
-		room: "A101",
-		email: "alex@example.com",
-		points: 12,
-		profile_photo_url: null,
-		is_admin: false,
-		is_jcrc: true,
-		is_culture_sports_admin: false,
-		appointments,
-	};
-}
+const { getManagedCcaData } = await import("@/lib/managed-cca-data");
 
 describe("getManagedCcaData", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		mocks.isChairPositionType.mockImplementation(
-			(positionType?: string | null) => positionType === "lead" || positionType === "vice",
-		);
 	});
 
-	it("returns an empty array when there are no chair appointments and no managed rows", async () => {
-		const { supabase, managedSelect, ccaSelect } = createSupabaseMock();
+	it("returns an empty array when the caller manages nothing", async () => {
+		const { supabase, from } = createSupabaseMock({ managedRows: [] });
 
-		const { getManagedCcaData } = await import("../managed-cca-data");
-		const result = await getManagedCcaData(supabase as never, createUser());
+		const result = await getManagedCcaData(supabase as never);
 
 		expect(result).toEqual([]);
-		expect(managedSelect).toHaveBeenCalledWith("*");
-		expect(ccaSelect).not.toHaveBeenCalled();
+		// No point querying `ccas` when there are no managed rows to enrich.
+		expect(from).toHaveBeenCalledTimes(1);
 	});
 
 	it("returns transformed rows with the expected flattened shape", async () => {
 		const { supabase } = createSupabaseMock({
 			managedRows: [
 				{
-					cca_id: 10,
-					cca_name: "Debate Society",
+					cca_id: 7,
+					cca_name: "Volleyball",
 					positions: [
 						{
-							position_id: 7,
-							position_name: "Secretary",
-							position_type: "member",
-							description: "Handles records",
-							access_depth: 2,
+							position_id: 70,
+							position_name: "Captain",
+							position_type: "lead",
+							description: "Runs the team",
 						},
 					],
 				},
 			],
-			ccaRows: [
-				{
-					id: 10,
-					name: "Debate Society",
-					cca_type: "culture",
-					description: "Public speaking club",
-				},
-			],
+			ccaRows: [{ id: 7, name: "Volleyball", kind: "sports", description: "Spikes" }],
 		});
 
-		const { getManagedCcaData } = await import("../managed-cca-data");
-		const result = await getManagedCcaData(supabase as never, createUser());
+		const result = await getManagedCcaData(supabase as never);
 
-		expect(result).toEqual([
-			{
-				cca_id: 10,
-				cca_name: "Debate Society",
-				positions: [
-					{
-						position_id: 7,
-						position_name: "Secretary",
-						position_type: "member",
-						description: "Handles records",
-						access_depth: 2,
-					},
-				],
-				id: 10,
-				name: "Debate Society",
-				role: "Secretary",
-				position_type: "member",
-				cca_type: "culture",
-				description: "Public speaking club",
-				points: 0,
-				can_manage_members: false,
-				can_rank_members: true,
-				ranking_progress: { ranked: 0, total: 0 },
-			},
-		]);
+		expect(result).toHaveLength(1);
+		expect(result[0]).toMatchObject({
+			cca_id: 7,
+			id: 7,
+			name: "Volleyball",
+			cca_kind: "sports",
+			description: "Spikes",
+			role: "Captain",
+			position_type: "lead",
+			can_manage_members: true,
+		});
+		expect(result[0].positions).toHaveLength(1);
 	});
 
-	it("computes ranking progress from appointments and evaluations", async () => {
+	it("includes a CCA the caller manages into but holds no appointment in", async () => {
+		// reporting_position_id may cross CCAs, so the view is the authority and
+		// the caller's own appointments are irrelevant here.
 		const { supabase } = createSupabaseMock({
 			managedRows: [
 				{
-					cca_id: 10,
-					cca_name: "Debate Society",
+					cca_id: 12,
+					cca_name: "Basketball",
 					positions: [
 						{
-							position_id: 7,
-							position_name: "Secretary",
-							position_type: "member",
+							position_id: 120,
+							position_name: "Captain",
+							position_type: "lead",
 							description: null,
-							access_depth: 2,
 						},
 					],
 				},
 			],
-			ccaRows: [{ id: 10, name: "Debate Society", cca_type: "culture", description: null }],
-			appointmentRows: [
-				{
-					user_id: 1,
-					position_id: 7,
-					cut_status: null,
-					cca_positions: { cca_id: 10, position_type: "member" },
-				},
-				{
-					user_id: 2,
-					position_id: 7,
-					cut_status: null,
-					cca_positions: { cca_id: 10, position_type: "member" },
-				},
-			],
-			evaluationRows: [
-				{ user_id: 1, position_id: 7, scores: { attendance: 8, performance: 7 } },
-				{ user_id: 2, position_id: 7, scores: { attendance: 8 } },
-			],
+			ccaRows: [{ id: 12, name: "Basketball", kind: "sports", description: null }],
 		});
 
-		const { getManagedCcaData } = await import("../managed-cca-data");
-		const result = await getManagedCcaData(supabase as never, createUser());
+		const result = await getManagedCcaData(supabase as never);
 
-		expect(result[0].ranking_progress).toEqual({ ranked: 1, total: 2 });
+		expect(result.map((r) => r.cca_id)).toEqual([12]);
+	});
+
+	it("falls back to the view's cca_name when metadata is missing", async () => {
+		const { supabase } = createSupabaseMock({
+			managedRows: [{ cca_id: 3, cca_name: "Choir", positions: [] }],
+			ccaRows: [],
+		});
+
+		const result = await getManagedCcaData(supabase as never);
+
+		expect(result[0].name).toBe("Choir");
+		expect(result[0].cca_kind).toBe("committee");
+		expect(result[0].can_manage_members).toBe(false);
 	});
 
 	it("sorts the resulting CCAs alphabetically by name", async () => {
 		const { supabase } = createSupabaseMock({
 			managedRows: [
-				{
-					cca_id: 2,
-					cca_name: "Zulu Club",
-					positions: [
-						{
-							position_id: 2,
-							position_name: "Member Lead",
-							position_type: "member",
-							description: null,
-							access_depth: 1,
-						},
-					],
-				},
-				{
-					cca_id: 1,
-					cca_name: "Alpha Club",
-					positions: [
-						{
-							position_id: 1,
-							position_name: "Member Lead",
-							position_type: "member",
-							description: null,
-							access_depth: 1,
-						},
-					],
-				},
+				{ cca_id: 1, cca_name: "Zumba", positions: [] },
+				{ cca_id: 2, cca_name: "Archery", positions: [] },
+				{ cca_id: 3, cca_name: "Muay Thai", positions: [] },
 			],
 			ccaRows: [
-				{ id: 1, name: "Alpha Club", cca_type: "culture", description: null },
-				{ id: 2, name: "Zulu Club", cca_type: "sports", description: null },
+				{ id: 1, name: "Zumba", kind: "sports", description: null },
+				{ id: 2, name: "Archery", kind: "sports", description: null },
+				{ id: 3, name: "Muay Thai", kind: "sports", description: null },
 			],
 		});
 
-		const { getManagedCcaData } = await import("../managed-cca-data");
-		const result = await getManagedCcaData(supabase as never, createUser());
+		const result = await getManagedCcaData(supabase as never);
 
-		expect(result.map((row) => row.name)).toEqual(["Alpha Club", "Zulu Club"]);
+		expect(result.map((r) => r.name)).toEqual(["Archery", "Muay Thai", "Zumba"]);
 	});
 
-	it("merges chair appointments with managed rows from the view", async () => {
-		const { supabase } = createSupabaseMock({
-			managedRows: [
-				{
-					cca_id: 20,
-					cca_name: "Robotics",
-					positions: [
-						{
-							position_id: 11,
-							position_name: "Treasurer",
-							position_type: "member",
-							description: null,
-							access_depth: 3,
-						},
-					],
-				},
-			],
-			ccaRows: [
-				{ id: 20, name: "Robotics", cca_type: "culture", description: "Build bots" },
-				{ id: 30, name: "Basketball", cca_type: "sports", description: "Play ball" },
-			],
-		});
+	it("propagates a view error rather than silently returning nothing", async () => {
+		const { supabase } = createSupabaseMock({ managedError: { message: "boom" } });
 
-		const user = createUser([
-			{
-				cca_id: 30,
-				cca_name: "Basketball",
-				position_id: 3,
-				position_name: "Chair",
-				position_type: "lead",
-				points: 5,
-				commitment_period: "full-year",
-				cut_status: null,
-			},
-		]);
-
-		const { getManagedCcaData } = await import("../managed-cca-data");
-		const result = await getManagedCcaData(supabase as never, user);
-
-		expect(result.map((row) => row.cca_id)).toEqual([30, 20]);
-		expect(result.find((row) => row.cca_id === 30)).toMatchObject({
-			name: "Basketball",
-			role: "Chair",
-			position_type: "lead",
-			positions: [],
-			can_manage_members: true,
-			can_rank_members: false,
-		});
-		expect(result.find((row) => row.cca_id === 20)).toMatchObject({
-			name: "Robotics",
-			role: "Treasurer",
-			can_manage_members: false,
-			can_rank_members: true,
-		});
+		await expect(getManagedCcaData(supabase as never)).rejects.toBeTruthy();
 	});
 });

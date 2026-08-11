@@ -18,26 +18,20 @@ import Link from "next/link";
 import { Avatar, AvatarImage } from "../ui/avatar";
 import { useAuth } from "@/lib/auth/auth-context";
 import { AuthenticatedUser } from "@/types/user";
-import { checkCcaAuthorizationFromJwt } from "@/lib/cca/cca-chair-access";
-import {
-	CoreServiceKey,
-	isCoreServiceEnabled,
-	isFeatureFlaggedItemEnabled,
-} from "@/lib/feature-flags";
+import { checkCcaAuthorizationFromProfile } from "@/lib/cca/cca-chair-access";
+import { CoreServiceKey, isFeatureFlaggedItemEnabled } from "@/lib/feature-flags";
 
 type NavItem = {
 	title: string;
 	url: string;
 	icon: LucideIcon;
 	isActive?: boolean;
-	adminOnly?: boolean;
 	jcrcOnly?: boolean;
 	chairOnly?: boolean;
 	featureFlag?: CoreServiceKey;
 	items?: {
 		title: string;
 		url: string;
-		adminOnly?: boolean;
 		jcrcOnly?: boolean;
 		chairOnly?: boolean;
 		featureFlag?: CoreServiceKey;
@@ -78,10 +72,12 @@ const navOptions: NavItem[] = [
 		icon: Volleyball,
 		items: [
 			{
-				title: "CCA Ranking",
+				// Deliberately unflagged. This page hosts Manage Members as well as the
+				// parked ranking editor, so gating it on `memberRanking` would take a
+				// chair's only route into member management down with it.
+				title: "Manage Members",
 				url: "/dashboard/my-cca/admin",
 				chairOnly: true,
-				featureFlag: "memberRanking",
 			},
 		],
 	},
@@ -129,27 +125,17 @@ const navOptions: NavItem[] = [
 ];
 
 export const buildNavItems = (user?: AuthenticatedUser | null) => {
-	const authResult = checkCcaAuthorizationFromJwt({ requestingUser: user });
-	const isChair = Boolean(user?.is_admin || (authResult.ok && authResult.data.hasChairAccess));
-	const hasMemberRankingAccess = isCoreServiceEnabled("memberRanking", {
-		isJcrc: user?.is_jcrc,
-	});
+	const authResult = checkCcaAuthorizationFromProfile({ requestingUser: user });
+	const isChair = Boolean(authResult.ok && authResult.data.hasChairAccess);
 
 	const allowItem = (item: {
-		adminOnly?: boolean;
 		jcrcOnly?: boolean;
 		chairOnly?: boolean;
 		featureFlag?: CoreServiceKey;
 	}) => {
-		if (!isFeatureFlaggedItemEnabled(item, { isJcrc: user?.is_jcrc })) return false;
-		if (item.adminOnly && item.jcrcOnly) {
-			return Boolean(user?.is_admin || user?.is_jcrc);
-		}
-		if (item.adminOnly) return Boolean(user?.is_admin);
+		if (!isFeatureFlaggedItemEnabled(item)) return false;
 		if (item.jcrcOnly) return Boolean(user?.is_jcrc);
-		if (item.chairOnly) {
-			return Boolean(isChair || (item.featureFlag === "memberRanking" && hasMemberRankingAccess));
-		}
+		if (item.chairOnly) return isChair;
 		return true;
 	};
 

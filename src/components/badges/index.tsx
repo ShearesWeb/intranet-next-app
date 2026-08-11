@@ -11,7 +11,7 @@ const positionStyles: Record<string, StyleMeta> = {
 	subcomm: { bg: "bg-blue-600", text: "text-white" },
 	subcommittee: { bg: "bg-blue-600", text: "text-white", label: "Subcomm" },
 	blockcomm: { bg: "bg-blue-600", text: "text-white" },
-	"team manager": { bg: "bg-green-600", text: "text-white" },
+	"team-manager": { bg: "bg-green-600", text: "text-white" },
 	teammanager: { bg: "bg-green-600", text: "text-white", label: "TM" },
 	tm: { bg: "bg-green-600", text: "text-white", label: "TM" },
 	crew: { bg: "bg-purple-600", text: "text-white" },

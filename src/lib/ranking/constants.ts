@@ -6,7 +6,7 @@ export const POSITION_TYPE_ORDER: Record<string, number> = {
 	maincomm: 3,
 	blockcomm: 4,
 	subcomm: 5,
-	"team manager": 6,
+	"team-manager": 6,
 	member: 7,
 	resident: 8,
 };

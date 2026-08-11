@@ -1,6 +1,6 @@
-import type { CommitmentPeriod } from "@/types/members";
+import type { Period } from "@/types/members";
 
-export function formatCommitmentPeriod(value: CommitmentPeriod | null | undefined): string {
+export function formatPeriod(value: Period | null | undefined): string {
 	switch (value) {
 		case "semester-1":
 			return "Semester 1";

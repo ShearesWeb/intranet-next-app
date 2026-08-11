@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import type { CommitmentPeriod, UserSearchResult } from "@/types/members";
-import { isChairPositionType } from "@/lib/cca/cca-chair-access";
+import type { Period, UserSearchResult } from "@/types/members";
+import { isLeadershipPositionType } from "@/lib/cca/cca-chair-access";
 
 interface AddMemberModalProps {
 	open: boolean;
@@ -22,7 +22,7 @@ interface AddMemberModalProps {
 		userEmail: string,
 		userRoom?: string,
 		positionId?: number,
-		commitmentPeriod?: CommitmentPeriod,
+		commitmentPeriod?: Period,
 	) => void;
 	onRemoveMember: (userId: number, name: string) => void;
 	allPositions: Array<{ id: number; name: string; position_type: string }>;
@@ -46,9 +46,9 @@ export function AddMemberModal({
 }: AddMemberModalProps) {
 	const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(null);
 	const [selectedPositionId, setSelectedPositionId] = useState<number | undefined>();
-	const [selectedCommitment, setSelectedCommitment] = useState<CommitmentPeriod>("full-year");
+	const [selectedCommitment, setSelectedCommitment] = useState<Period>("full-year");
 	const availablePositions = useMemo(
-		() => allPositions.filter((position) => !isChairPositionType(position.position_type)),
+		() => allPositions.filter((position) => !isLeadershipPositionType(position.position_type)),
 		[allPositions],
 	);
 
@@ -138,7 +138,7 @@ export function AddMemberModal({
 							<select
 								className="w-full border rounded p-2 bg-white"
 								value={selectedCommitment}
-								onChange={(e) => setSelectedCommitment(e.target.value as CommitmentPeriod)}
+								onChange={(e) => setSelectedCommitment(e.target.value as Period)}
 							>
 								<option value="full-year">Full Year</option>
 								<option value="semester-1">Semester 1</option>

@@ -19,7 +19,7 @@ function createMember(overrides: Partial<CCAMember> = {}): CCAMember {
 		position_id: positionId,
 		ranking: overrides.ranking ?? 0,
 		remarks: overrides.remarks ?? "",
-		cut_status: overrides.cut_status,
+		team_status: overrides.team_status,
 		commitment_period: overrides.commitment_period,
 		attendance: overrides.attendance ?? 0,
 		performance: overrides.performance ?? 0,

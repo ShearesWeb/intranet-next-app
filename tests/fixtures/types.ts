@@ -1,9 +1,11 @@
 // Single source of truth — types shared by personas.ts, ccas.ts, positions.ts, and generate.ts.
 // Mirrors the public schema from vendor/intranet/db/changelogs/.
 
-export type CcaType = "sports" | "culture" | "committee" | "jcrc" | "adhoc" | "supplementary";
+/** `enum.cca_kind`. Called `cca_type` before the refactor; that name now means something else. */
+export type CcaKind = "sports" | "culture" | "committee" | "jcrc" | "adhoc" | "supplementary";
 
-export type CcaTierType = "tier 1" | "tier 2" | "none";
+/** `enum.cca_tier`. Values gained hyphens in the refactor. */
+export type CcaTier = "tier-1" | "tier-2" | "none";
 
 export type PositionType =
 	| "lead"
@@ -11,7 +13,7 @@ export type PositionType =
 	| "blockcomm"
 	| "maincomm"
 	| "subcomm"
-	| "team manager"
+	| "team-manager"
 	| "member"
 	| "resident";
 
@@ -33,8 +35,8 @@ export type CcaKey =
 export type Cca = {
 	key: CcaKey;
 	name: string;
-	type: CcaType;
-	tierType: CcaTierType;
+	kind: CcaKind;
+	tier: CcaTier;
 	description: string;
 };
 
@@ -72,10 +74,18 @@ export type PersonaKey =
 	| "willow"
 	| "sage";
 
+/**
+ * Role predicates as the schema now derives them.
+ *
+ * `is_chair` and `is_jcrc` come straight off `my_profile`. The old `is_admin`
+ * flag had exactly `is_chair`'s meaning — the caller manages at least one
+ * position — so it maps across unchanged. `is_culture_sports_chair` is app
+ * policy derived from `my_profile.appointments`, not a column.
+ */
 export type ExpectedDerivedFlags = {
-	is_admin: boolean;
+	is_chair: boolean;
 	is_jcrc: boolean;
-	is_culture_sports_admin: boolean;
+	is_culture_sports_chair: boolean;
 };
 
 export type Persona = {

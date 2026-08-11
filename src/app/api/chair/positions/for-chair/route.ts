@@ -1,6 +1,6 @@
 import { apiOk, handleApiError } from "@/lib/api/response";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
-import { getPositionsForChair } from "@/lib/cca/position-service";
+import { getPositionsForChair } from "@/lib/allocation/candidate-service";
 
 export async function GET() {
 	const disabledResponse = getCoreServiceDisabledApiResponse("ccaApplications");

@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { useCalendarMonth } from "@/hooks/use-calendar-month";
 import { useChairCcas } from "@/hooks/use-chair-ccas";
-import { BookingWithClaims, FacilityType } from "@/types/facilities";
+import { SlotWithContext, FacilityType } from "@/types/facilities";
 import { toast } from "sonner";
 
 export default function FacilitiesPage() {
@@ -20,7 +20,7 @@ export default function FacilitiesPage() {
 		useCalendarMonth();
 	const [venueFilter, setVenueFilter] = useState<string[]>([]);
 	const [typeFilter, setTypeFilter] = useState<FacilityType[]>([]);
-	const [claimBooking, setClaimBooking] = useState<BookingWithClaims | null>(null);
+	const [claimBooking, setClaimBooking] = useState<SlotWithContext | null>(null);
 
 	const { chairCcas, isChair } = useChairCcas();
 
@@ -28,8 +28,8 @@ export default function FacilitiesPage() {
 		data,
 		loading,
 		refetch: fetchBookings,
-	} = useApiQuery<BookingWithClaims[]>(
-		`/api/facilities/bookings?start=${monthRange.start}&end=${monthRange.end}`,
+	} = useApiQuery<SlotWithContext[]>(
+		`/api/facilities/slots?start=${monthRange.start}&end=${monthRange.end}`,
 	);
 	const bookings = useMemo(() => data ?? [], [data]);
 
@@ -49,7 +49,7 @@ export default function FacilitiesPage() {
 
 	const dayBookings = useMemo(() => {
 		if (!selectedDate) return [];
-		return filtered.filter((b) => b.booked_date === selectedDate);
+		return filtered.filter((b) => b.date === selectedDate);
 	}, [filtered, selectedDate]);
 
 	async function handleWithdraw(claimId: number) {

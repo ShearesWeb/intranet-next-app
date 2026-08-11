@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from "react";
 import {
-	BookingWithClaims,
+	SlotWithContext,
 	FACILITY_TYPE_CONFIG,
-	BOOKING_STATUS_CONFIG,
+	SLOT_STATUS_CONFIG,
 	MIN_BOOKING_LEAD_DAYS,
 	formatHourRange,
 	isBookingLocked,
@@ -15,14 +15,13 @@ import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/shared/status-pill";
 import { cn } from "@/lib/utils";
 import { formatDisplayDate } from "@/lib/date";
-import { Repeat } from "lucide-react";
 
 interface DayDetailPanelProps {
 	date: string;
-	bookings: BookingWithClaims[];
+	bookings: SlotWithContext[];
 	isChair: boolean;
 	loading?: boolean;
-	onClaim: (booking: BookingWithClaims) => void;
+	onClaim: (booking: SlotWithContext) => void;
 	onWithdraw?: (claimId: number) => Promise<void> | void;
 }
 
@@ -44,8 +43,8 @@ export function DayDetailPanel({
 		[bookings],
 	);
 
-	const columns = useMemo<DataTableColumnDef<BookingWithClaims>[]>(() => {
-		const cols: DataTableColumnDef<BookingWithClaims>[] = [
+	const columns = useMemo<DataTableColumnDef<SlotWithContext>[]>(() => {
+		const cols: DataTableColumnDef<SlotWithContext>[] = [
 			{
 				id: "venue",
 				header: "Venue",
@@ -54,10 +53,7 @@ export function DayDetailPanel({
 					const b = row.original;
 					return (
 						<div>
-							<div className="flex items-center gap-1.5 font-medium">
-								{b.sub_venue}
-								{b.recurring && <Repeat className="h-3 w-3 text-muted-foreground" />}
-							</div>
+							<div className="flex items-center gap-1.5 font-medium">{b.sub_venue}</div>
 							{b.venue !== b.sub_venue && (
 								<div className="text-xs text-muted-foreground">{b.venue}</div>
 							)}
@@ -95,10 +91,10 @@ export function DayDetailPanel({
 			{
 				id: "status",
 				header: "Status",
-				accessorFn: (b) => BOOKING_STATUS_CONFIG[b.status].label,
+				accessorFn: (b) => SLOT_STATUS_CONFIG[b.status].label,
 				cell: ({ row }) => {
 					const b = row.original;
-					const statusConfig = BOOKING_STATUS_CONFIG[b.status];
+					const statusConfig = SLOT_STATUS_CONFIG[b.status];
 					const myClaim = b.user_cca_claim;
 					const myClaimActive =
 						myClaim && (myClaim.status === "pending" || myClaim.status === "approved");
@@ -167,9 +163,9 @@ function BookingActions({
 	onClaim,
 	onWithdraw,
 }: {
-	booking: BookingWithClaims;
+	booking: SlotWithContext;
 	locked: boolean;
-	onClaim: (booking: BookingWithClaims) => void;
+	onClaim: (booking: SlotWithContext) => void;
 	onWithdraw?: (claimId: number) => Promise<void> | void;
 }) {
 	const [busy, setBusy] = useState(false);
@@ -197,7 +193,7 @@ function BookingActions({
 				className="h-7 text-xs"
 				isLoading={busy}
 				loadingText="Withdrawing…"
-				onClick={() => handleWithdraw(myClaim!.id)}
+				onClick={() => handleWithdraw(myClaim!.claim_id)}
 			>
 				Withdraw
 			</Button>

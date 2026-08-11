@@ -10,13 +10,12 @@ export interface FacilityGroup {
 }
 
 /**
- * Active facilities matching `query` (case-insensitive substring of venue or
+ * Facilities matching `query` (case-insensitive substring of venue or
  * sub_venue), grouped by type in catalog order. Empty groups are dropped.
  */
 export function groupFacilitiesByType(facilities: Facility[], query: string): FacilityGroup[] {
 	const q = query.trim().toLowerCase();
 	const matches = facilities.filter((f) => {
-		if (!f.active) return false;
 		if (!q) return true;
 		return `${f.venue} ${f.sub_venue}`.toLowerCase().includes(q);
 	});

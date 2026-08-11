@@ -5,10 +5,15 @@ import {
 	canManageCcaMembers,
 	getCcaMemberManagementDisabledMessage,
 } from "@/lib/cca/cca-member-management";
-import { normalizeCutStatusForCca } from "@/lib/cca/cca-cut-status";
+import { normalizeTeamStatus, TEAM_STATUS_ORDER } from "@/lib/cca/team-status";
 import { getManagedCcaAccess } from "@/lib/cca/cca-management-access";
 import { fetchUserInfo } from "@/lib/auth/fetch-user-info";
-import type { MemberJoinPosition, MemberUpdate, MemberWithJoins } from "@/types/members";
+import type {
+	MemberJoinPosition,
+	MemberUpdate,
+	MemberWithJoins,
+	TeamStatus,
+} from "@/types/members";
 
 interface TransformedMember {
 	user_id: number;
@@ -20,16 +25,20 @@ interface TransformedMember {
 	position_type: string;
 	points: number;
 	appointed_date: string;
-	cut_status?: string | null;
+	team_status?: string | null;
 	commitment_period?: string | null;
 }
 
-type CcaRow = { id: number; name: string; cca_type: string };
+type CcaRow = { id: number; name: string; cca_kind: string };
 
-const CUT_STATUSES_BY_CCA_TYPE = {
-	sports: new Set(["ivp-ihg-team", "ihg-team", "final-cut"]),
-	culture: new Set(["first-cut"]),
-} as const;
+/**
+ * Kinds for which a team standing means anything.
+ *
+ * The schema calls `team_status` sports-only but does not enforce it, and this
+ * hall has always tracked a standing for culture too. Both kinds share the one
+ * `enum.team_status` ladder now; the old per-kind value split is gone.
+ */
+const TEAM_STATUS_CCA_KINDS = new Set(["sports", "culture"]);
 
 /** Shared: resolve CCA row and verify chair access for member management. */
 async function resolveCcaWithAccess(ccaIdStr: string) {
@@ -43,13 +52,17 @@ async function resolveCcaWithAccess(ccaIdStr: string) {
 
 	const { data: ccaData, error: ccaError } = await supabase
 		.from("ccas")
-		.select("id, name, cca_type")
+		.select("id, name, kind")
 		.eq("id", ccaId)
 		.single();
 
 	if (ccaError || !ccaData) throw new ApiError(404, "CCA not found");
 
-	return { supabase, requestingUser, ccaData: ccaData as CcaRow };
+	// `ccas.kind` is the column; the app carries it as `cca_kind` internally to
+	// match the shape `my_profile.appointments` already uses.
+	const row: CcaRow = { id: ccaData.id, name: ccaData.name, cca_kind: ccaData.kind };
+
+	return { supabase, requestingUser, ccaData: row };
 }
 
 async function requireMemberManagementAccess(ccaIdStr: string) {
@@ -87,6 +100,9 @@ export async function getMembers(ccaIdStr: string) {
 		.eq("cca_id", ccaData.id)
 		.order("name");
 
+	// Filter on the denormalized `cca_appointments.cca_id` rather than through the
+	// embedded position. A trigger keeps it true and a composite FK makes drift
+	// impossible, so this is exact and saves filtering through the join.
 	const { data: ccaMembers, error: membersError } = await supabase
 		.from("cca_appointments")
 		.select(
@@ -94,13 +110,13 @@ export async function getMembers(ccaIdStr: string) {
 			user_id,
 			points,
 			created_at,
-			cut_status,
+			team_status,
 			commitment_period,
-			authenticated_user_directory!inner(id, name, email, room),
+			users!inner(id, name, email, room),
 			cca_positions!inner(id, name, position_type, cca_id)
 		`,
 		)
-		.eq("cca_positions.cca_id", ccaData.id);
+		.eq("cca_id", ccaData.id);
 
 	if (membersError) {
 		console.error("Error fetching CCA members:", membersError);
@@ -110,7 +126,7 @@ export async function getMembers(ccaIdStr: string) {
 	const transformedMembers: TransformedMember[] = [];
 
 	(ccaMembers ?? []).forEach((member: MemberWithJoins) => {
-		const userData = unwrapRelation(member.authenticated_user_directory);
+		const userData = unwrapRelation(member.users);
 		const positionData = unwrapRelation<MemberJoinPosition>(member.cca_positions);
 
 		if (userData && positionData) {
@@ -124,7 +140,7 @@ export async function getMembers(ccaIdStr: string) {
 				position_type: positionData.position_type,
 				points: member.points || 0,
 				appointed_date: member.created_at,
-				cut_status: normalizeCutStatusForCca(member.cut_status, ccaData.cca_type),
+				team_status: normalizeTeamStatus(member.team_status),
 				commitment_period: member.commitment_period,
 			});
 		}
@@ -144,35 +160,35 @@ export async function getMembers(ccaIdStr: string) {
 			.filter((m) => m.position_type === "subcomm")
 			.sort((a, b) => a.position_name.localeCompare(b.position_name)),
 		teamManager: transformedMembers
-			.filter((m) => m.position_type === "team manager")
+			.filter((m) => m.position_type === "team-manager")
 			.sort((a, b) => a.position_name.localeCompare(b.position_name)),
-		ivpIhgTeam: transformedMembers
-			.filter((m) => m.cut_status === "ivp-ihg-team")
+		varsity: transformedMembers
+			.filter((m) => m.team_status === "varsity")
 			.sort((a, b) => a.name.localeCompare(b.name)),
-		ihgTeam: transformedMembers
-			.filter((m) => m.cut_status === "ihg-team")
+		mainTeam: transformedMembers
+			.filter((m) => m.team_status === "main-team")
 			.sort((a, b) => a.name.localeCompare(b.name)),
-		finalCut: transformedMembers
-			.filter((m) => m.cut_status === "final-cut")
+		reserve: transformedMembers
+			.filter((m) => m.team_status === "reserve")
 			.sort((a, b) => a.name.localeCompare(b.name)),
-		firstCut: transformedMembers
-			.filter((m) => m.cut_status === "first-cut")
+		shortlisted: transformedMembers
+			.filter((m) => m.team_status === "shortlisted")
 			.sort((a, b) => a.name.localeCompare(b.name)),
 		members: transformedMembers
-			.filter((m) => m.position_type === "member" && !m.cut_status)
+			.filter((m) => m.position_type === "member" && (!m.team_status || m.team_status === "none"))
 			.sort((a, b) => a.name.localeCompare(b.name)),
 	};
 
 	return {
-		cca: { id: ccaData.id, name: ccaData.name, cca_type: ccaData.cca_type },
+		cca: { id: ccaData.id, name: ccaData.name, cca_kind: ccaData.cca_kind },
 		groupedMembers,
 		member_position_id: memberPositionId?.id,
 		all_positions: allPositions,
 		total_members: transformedMembers.length,
 		permissions: {
-			canManageMembers: canManageCcaMembers(ccaData.cca_type),
-			ccaType: ccaData.cca_type,
-			managementMessage: getCcaMemberManagementDisabledMessage(ccaData.cca_type),
+			canManageMembers: canManageCcaMembers(ccaData.cca_kind),
+			ccaKind: ccaData.cca_kind,
+			managementMessage: getCcaMemberManagementDisabledMessage(ccaData.cca_kind),
 		},
 	};
 }
@@ -187,8 +203,8 @@ export async function addMember(
 ) {
 	const { supabase, ccaData } = await requireMemberManagementAccess(ccaIdStr);
 
-	if (!canManageCcaMembers(ccaData.cca_type)) {
-		throw new ApiError(403, getCcaMemberManagementDisabledMessage(ccaData.cca_type));
+	if (!canManageCcaMembers(ccaData.cca_kind)) {
+		throw new ApiError(403, getCcaMemberManagementDisabledMessage(ccaData.cca_kind));
 	}
 
 	let targetPositionId = body.position_id;
@@ -291,8 +307,8 @@ export async function removeMember(
 ) {
 	const { supabase, ccaData } = await requireMemberManagementAccess(ccaIdStr);
 
-	if (!canManageCcaMembers(ccaData.cca_type)) {
-		throw new ApiError(403, getCcaMemberManagementDisabledMessage(ccaData.cca_type));
+	if (!canManageCcaMembers(ccaData.cca_kind)) {
+		throw new ApiError(403, getCcaMemberManagementDisabledMessage(ccaData.cca_kind));
 	}
 
 	let targetPositionId = body.position_id;
@@ -330,46 +346,46 @@ export async function updateMember(
 	body: {
 		user_id: number;
 		position_id?: number;
-		cut_status?: string | null;
+		team_status?: string | null;
 		commitment_period?: string;
 	},
 ) {
 	const { supabase, ccaData } = await requireMemberManagementAccess(ccaIdStr);
 
 	if (
-		!canManageCcaMembers(ccaData.cca_type) &&
-		(body.cut_status !== undefined || body.commitment_period !== undefined)
+		!canManageCcaMembers(ccaData.cca_kind) &&
+		(body.team_status !== undefined || body.commitment_period !== undefined)
 	) {
-		throw new ApiError(403, getCcaMemberManagementDisabledMessage(ccaData.cca_type));
+		throw new ApiError(403, getCcaMemberManagementDisabledMessage(ccaData.cca_kind));
 	}
 
-	const normalizedCutStatus =
-		typeof body.cut_status === "string"
-			? normalizeCutStatusForCca(body.cut_status, ccaData.cca_type)
-			: body.cut_status;
+	const normalizedTeamStatus =
+		typeof body.team_status === "string" ? normalizeTeamStatus(body.team_status) : body.team_status;
 
-	if (body.cut_status !== undefined && body.cut_status !== null) {
-		if (typeof body.cut_status !== "string") {
-			throw new ApiError(400, "Invalid cut status");
+	if (body.team_status !== undefined && body.team_status !== null) {
+		if (typeof body.team_status !== "string" || normalizedTeamStatus === null) {
+			throw new ApiError(400, "Invalid team status");
 		}
 
-		const allowedStatuses =
-			CUT_STATUSES_BY_CCA_TYPE[ccaData.cca_type as keyof typeof CUT_STATUSES_BY_CCA_TYPE];
-		if (!allowedStatuses?.has(normalizedCutStatus as string)) {
-			throw new ApiError(400, "Cut status is not allowed for this CCA type");
+		if (!TEAM_STATUS_CCA_KINDS.has(ccaData.cca_kind) && normalizedTeamStatus !== "none") {
+			throw new ApiError(400, "Team status is not applicable to this CCA");
+		}
+
+		if (!TEAM_STATUS_ORDER.includes(normalizedTeamStatus as TeamStatus)) {
+			throw new ApiError(400, "Invalid team status");
 		}
 	}
 
 	const updates: MemberUpdate = {};
-	if (body.cut_status !== undefined)
-		updates.cut_status = normalizedCutStatus as MemberUpdate["cut_status"];
+	if (body.team_status !== undefined)
+		updates.team_status = normalizedTeamStatus as MemberUpdate["team_status"];
 	if (body.commitment_period !== undefined)
 		updates.commitment_period = body.commitment_period as MemberUpdate["commitment_period"];
 
 	if (Object.keys(updates).length === 0) return;
 
 	if (
-		(body.cut_status !== undefined || body.commitment_period !== undefined) &&
+		(body.team_status !== undefined || body.commitment_period !== undefined) &&
 		!body.position_id
 	) {
 		throw new ApiError(400, "position_id is required for member updates");
@@ -405,7 +421,7 @@ export async function searchUsers(ccaIdStr: string, query: string | null) {
 	const { supabase } = await requireMemberManagementAccess(ccaIdStr);
 
 	const { data, error } = await supabase
-		.from("authenticated_user_directory")
+		.from("users")
 		.select("id, name, email, room")
 		.or(`name.ilike.%${trimmedQuery}%,email.ilike.%${trimmedQuery}%,room.ilike.%${trimmedQuery}%`)
 		.order("name")

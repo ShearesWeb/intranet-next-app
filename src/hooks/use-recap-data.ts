@@ -53,10 +53,10 @@ export function useRecapData(
 			name: appointment.cca_name,
 			role: appointment.position_name,
 			position_type: appointment.position_type,
-			cca_type: "unknown",
+			cca_kind: appointment.cca_kind,
 			description: "",
 			points: appointment.points || 0,
-			cut_status: null,
+			team_status: null,
 		}));
 
 		setLoadingCcas(true);

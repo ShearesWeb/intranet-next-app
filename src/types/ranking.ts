@@ -1,4 +1,4 @@
-import type { CommitmentPeriod, CutStatus } from "@/types/members";
+import type { Period, TeamStatus } from "@/types/members";
 
 export interface CCAMember {
 	row_key: string;
@@ -9,8 +9,8 @@ export interface CCAMember {
 	position_id: number;
 	ranking: number;
 	remarks: string;
-	cut_status?: CutStatus | null;
-	commitment_period?: CommitmentPeriod | null;
+	team_status?: TeamStatus | null;
+	commitment_period?: Period | null;
 	attendance: number;
 	performance: number;
 	helpfulness: number;

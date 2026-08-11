@@ -6,11 +6,9 @@ import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/layout/empty-state";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FacilityTypeBadges } from "@/components/facilities/facility-type-badges";
-import { FacilityAddDialog } from "@/components/facilities/facility-add-dialog";
 import { ScheduleWeek } from "@/components/facilities/schedule-week";
 import { ScheduleClusterPanel } from "@/components/facilities/schedule-cluster-panel";
 import {
@@ -19,7 +17,7 @@ import {
 } from "@/components/facilities/schedule-slot-dialog";
 import { ManageApprovals } from "@/components/facilities/manage-approvals";
 import { type Cluster, type ScheduleSlot } from "@/lib/facilities/schedule-grid";
-import { BookingSchedule, Facility, FacilityType, FACILITY_TYPE_CONFIG } from "@/types/facilities";
+import { FacilitySchedule, Facility, FacilityType, FACILITY_TYPE_CONFIG } from "@/types/facilities";
 import { Shield, Plus, Building2 } from "lucide-react";
 
 // REBOKS venues are bot-owned — hidden from the facilities list and schedule editor.
@@ -29,9 +27,8 @@ export default function AdminFacilitiesPage() {
 	const { user } = useAuth();
 	const [type, setType] = useState<FacilityType>("sheares");
 	const [facilities, setFacilities] = useState<Facility[]>([]);
-	const [schedules, setSchedules] = useState<BookingSchedule[]>([]);
+	const [schedules, setSchedules] = useState<FacilitySchedule[]>([]);
 	const [loading, setLoading] = useState(true);
-	const [addOpen, setAddOpen] = useState(false);
 	const [facilityQuery, setFacilityQuery] = useState("");
 	const [slotOpen, setSlotOpen] = useState(false);
 	const [editing, setEditing] = useState<SlotEditTarget | null>(null);
@@ -54,11 +51,6 @@ export default function AdminFacilitiesPage() {
 	useEffect(() => {
 		fetchAll();
 	}, [fetchAll]);
-
-	// Materialise non-reboks bookable slots on every admin visit (JCRC session).
-	useEffect(() => {
-		fetch("/api/facilities/bookings/materialize", { method: "POST" }).catch(() => undefined);
-	}, []);
 
 	const facilitiesById = useMemo(() => {
 		const m = new Map<number, Facility>();
@@ -86,8 +78,6 @@ export default function AdminFacilitiesPage() {
 		}
 		return out;
 	}, [schedules, facilitiesById, type]);
-
-	const activeFacilities = useMemo(() => facilities.filter((f) => f.active), [facilities]);
 
 	const managedFacilities = useMemo(
 		() => facilities.filter((f) => f.type !== "reboks"),
@@ -136,10 +126,6 @@ export default function AdminFacilitiesPage() {
 							placeholder="Search facilities…"
 							className="h-9 max-w-xs"
 						/>
-						<Button size="sm" className="gap-1.5" onClick={() => setAddOpen(true)}>
-							<Plus className="h-4 w-4" />
-							Add facility
-						</Button>
 					</div>
 					{loading ? (
 						<Skeleton className="h-40 w-full" />
@@ -147,7 +133,7 @@ export default function AdminFacilitiesPage() {
 						<EmptyState
 							icon={Building2}
 							title="No facilities"
-							description="Add one to get started."
+							description="The facility catalog is empty."
 						/>
 					) : filteredFacilities.length === 0 ? (
 						<EmptyState
@@ -185,11 +171,6 @@ export default function AdminFacilitiesPage() {
 																</div>
 															)}
 														</div>
-														{!f.active && (
-															<Badge variant="secondary" className="shrink-0 text-[10px]">
-																Inactive
-															</Badge>
-														)}
 													</div>
 												))}
 											</div>
@@ -260,10 +241,9 @@ export default function AdminFacilitiesPage() {
 				</TabsContent>
 			</Tabs>
 
-			<FacilityAddDialog open={addOpen} onClose={() => setAddOpen(false)} onSuccess={fetchAll} />
 			<ScheduleSlotDialog
 				open={slotOpen}
-				facilities={activeFacilities}
+				facilities={facilities}
 				defaultType={type}
 				defaultDay={selected?.day}
 				defaultHour={selected?.cluster.startHour}

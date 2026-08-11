@@ -83,7 +83,7 @@ export async function getMemberApprovals(
 
 	const userIds = Array.from(new Set(userSubs.map((s) => s.user_id)));
 	const { data: directoryRaw, error: directoryError } = await supabase
-		.from("authenticated_user_directory")
+		.from("users")
 		.select("id, name, email")
 		.in("id", userIds);
 

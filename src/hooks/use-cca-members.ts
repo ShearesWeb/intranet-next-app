@@ -5,16 +5,16 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import type {
-	CommitmentPeriod,
+	Period,
 	CcaSummary,
-	CutStatus,
+	TeamStatus,
 	GroupedMembers,
 	Member,
 	MemberPermissions,
 	PendingChange,
 	UserSearchResult,
 } from "@/types/members";
-import { getGroupFromStatus, getStatusLabel } from "@/lib/cca/cut-status";
+import { getGroupFromStatus, getStatusLabel } from "@/lib/cca/team-status";
 import { useMemberSearch } from "@/hooks/use-member-search";
 import { useMemberSave } from "@/hooks/use-member-save";
 
@@ -47,18 +47,18 @@ interface UseCcaMembersReturn {
 		userEmail: string,
 		userRoom?: string,
 		positionId?: number,
-		commitmentPeriod?: CommitmentPeriod,
+		commitmentPeriod?: Period,
 	) => void;
 	removeMember: (userId: number, memberName: string) => void;
-	updateStatus: (userId: number, memberName: string, newStatus: CutStatus | null) => void;
-	updateCommitment: (userId: number, newPeriod: CommitmentPeriod) => void;
+	updateStatus: (userId: number, memberName: string, newStatus: TeamStatus | null) => void;
+	updateCommitment: (userId: number, newPeriod: Period) => void;
 	saveAll: () => Promise<void>;
 	refetch: () => Promise<void>;
 }
 
 const defaultPermissions: MemberPermissions = {
 	canManageMembers: false,
-	ccaType: "",
+	ccaKind: "",
 	managementMessage: "",
 };
 
@@ -74,8 +74,8 @@ export function useCcaMembers(ccaId: string | null): UseCcaMembersReturn {
 	const [error, setError] = useState<string | null>(null);
 	const [pendingChanges, setPendingChanges] = useState<PendingChange[]>([]);
 
-	const isSports = permissions.ccaType === "sports";
-	const isCulture = permissions.ccaType === "culture";
+	const isSports = permissions.ccaKind === "sports";
+	const isCulture = permissions.ccaKind === "culture";
 
 	const search = useMemberSearch(ccaId);
 	const { clearSearch } = search;
@@ -160,7 +160,7 @@ export function useCcaMembers(ccaId: string | null): UseCcaMembersReturn {
 			userEmail: string,
 			userRoom?: string,
 			positionId?: number,
-			commitmentPeriod?: CommitmentPeriod,
+			commitmentPeriod?: Period,
 		) => {
 			if (!permissions.canManageMembers) {
 				toast.error(permissions.managementMessage || "Member management is not available.");
@@ -198,7 +198,7 @@ export function useCcaMembers(ccaId: string | null): UseCcaMembersReturn {
 				email: userEmail,
 				room: userRoom || "",
 				position_name: positionName,
-				position_type: position?.position_type || "member",
+				position_type: (position?.position_type as Member["position_type"]) || "member",
 				points: 0,
 				appointed_date: new Date().toISOString(),
 				commitment_period: commitmentPeriod || null,
@@ -256,7 +256,7 @@ export function useCcaMembers(ccaId: string | null): UseCcaMembersReturn {
 	);
 
 	const updateStatus = useCallback(
-		(userId: number, memberName: string, newStatus: CutStatus | null) => {
+		(userId: number, memberName: string, newStatus: TeamStatus | null) => {
 			if (!permissions.canManageMembers) {
 				toast.error(permissions.managementMessage || "Member management is not available.");
 				return;
@@ -273,7 +273,7 @@ export function useCcaMembers(ccaId: string | null): UseCcaMembersReturn {
 				return;
 			}
 
-			if (member.cut_status === newStatus) {
+			if (member.team_status === newStatus) {
 				toast.error(`${memberName} is already in this status`);
 				return;
 			}
@@ -327,7 +327,7 @@ export function useCcaMembers(ccaId: string | null): UseCcaMembersReturn {
 				const targetGroup = getGroupFromStatus(newStatus);
 				updated[targetGroup] = [
 					...(updated[targetGroup] || []),
-					{ ...member, cut_status: newStatus },
+					{ ...member, team_status: newStatus },
 				];
 				return updated;
 			});
@@ -338,7 +338,7 @@ export function useCcaMembers(ccaId: string | null): UseCcaMembersReturn {
 	);
 
 	const updateCommitment = useCallback(
-		(userId: number, newPeriod: CommitmentPeriod) => {
+		(userId: number, newPeriod: Period) => {
 			if (!permissions.canManageMembers) {
 				toast.error(permissions.managementMessage || "Member management is not available.");
 				return;

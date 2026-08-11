@@ -2,16 +2,11 @@ import { ReactNode } from "react";
 
 import { ServiceDisabledState } from "@/components/feature-flags/service-disabled-state";
 import { isCoreServiceEnabled } from "@/lib/feature-flags";
-import { fetchUserInfo } from "@/lib/auth/fetch-user-info";
 
 export default async function ManageCcaRankMembersLayout({ children }: { children: ReactNode }) {
-	const user = await fetchUserInfo();
-
-	const isMemberRankingEnabled = isCoreServiceEnabled("memberRanking", {
-		isJcrc: user?.is_jcrc,
-	});
-
-	if (!isMemberRankingEnabled) {
+	// No per-role override any more: `memberRanking` is parked for everyone,
+	// JCRC included, because the evaluations table it reads no longer exists.
+	if (!isCoreServiceEnabled("memberRanking")) {
 		return <ServiceDisabledState service="memberRanking" />;
 	}
 

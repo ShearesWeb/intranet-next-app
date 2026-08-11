@@ -2,8 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
 	canManageCcaServerSide,
+	canManagePositionServerSide,
 	checkCcaAuthorization,
-	isChairPositionType,
+	isLeadershipPositionType,
+	isManagingAppointment,
 } from "./cca-chair-access";
 
 type RpcResult = {
@@ -19,40 +21,46 @@ function createSupabaseMock(result: RpcResult) {
 	};
 }
 
-describe("isChairPositionType", () => {
-	// Canonical position_type enum from ../intranet/db/changelogs/enum/03.position-type.sql
-	const CHAIR_POSITIONS = ["lead", "vice"] as const;
-	const NON_CHAIR_POSITIONS = [
+describe("isManagingAppointment", () => {
+	// Authority comes from the reporting chain, never from the title. See
+	// intranet/docs/api/README.md#the-management-chain.
+	it("is true when the position has reports beneath it", () => {
+		expect(isManagingAppointment({ has_reports: true })).toBe(true);
+	});
+
+	it("is false for a lead with nobody reporting to it", () => {
+		expect(isManagingAppointment({ has_reports: false })).toBe(false);
+	});
+});
+
+describe("isLeadershipPositionType", () => {
+	// Presentation only — it decides what a picker offers, never what a caller may do.
+	const LEADERSHIP = ["lead", "vice"] as const;
+	const NON_LEADERSHIP = [
 		"blockcomm",
 		"maincomm",
 		"subcomm",
-		"team manager",
+		"team-manager",
 		"member",
 		"resident",
 	] as const;
 
-	it.each(CHAIR_POSITIONS)("recognises %s as a chair position", (positionType) => {
-		expect(isChairPositionType(positionType)).toBe(true);
+	it.each(LEADERSHIP)("recognises %s", (positionType) => {
+		expect(isLeadershipPositionType(positionType)).toBe(true);
 	});
 
-	it.each(NON_CHAIR_POSITIONS)("rejects %s as a chair position", (positionType) => {
-		expect(isChairPositionType(positionType)).toBe(false);
+	it.each(NON_LEADERSHIP)("rejects %s", (positionType) => {
+		expect(isLeadershipPositionType(positionType)).toBe(false);
 	});
 
 	it.each([undefined, null, ""])("rejects falsy / empty position type %p", (positionType) => {
-		expect(isChairPositionType(positionType as string | null | undefined)).toBe(false);
+		expect(isLeadershipPositionType(positionType as string | null | undefined)).toBe(false);
 	});
 
-	it("is case-insensitive", () => {
-		expect(isChairPositionType("LEAD")).toBe(true);
-		expect(isChairPositionType("Vice")).toBe(true);
-		expect(isChairPositionType("MEMBER")).toBe(false);
-	});
-
-	it("trims surrounding whitespace", () => {
-		expect(isChairPositionType("  lead  ")).toBe(true);
-		expect(isChairPositionType(" vice")).toBe(true);
-		expect(isChairPositionType("member ")).toBe(false);
+	it("is case-insensitive and trims whitespace", () => {
+		expect(isLeadershipPositionType("LEAD")).toBe(true);
+		expect(isLeadershipPositionType("  Vice ")).toBe(true);
+		expect(isLeadershipPositionType("MEMBER")).toBe(false);
 	});
 });
 
@@ -61,99 +69,110 @@ describe("canManageCcaServerSide", () => {
 		vi.clearAllMocks();
 	});
 
-	it("calls the can_manage_any_position_in_cca RPC with the cca id", async () => {
+	it("calls the can_manage_cca RPC with the cca id", async () => {
 		const { supabase, rpc } = createSupabaseMock({ data: true, error: null });
 
 		const result = await canManageCcaServerSide(supabase as never, 42);
 
 		expect(rpc).toHaveBeenCalledTimes(1);
-		expect(rpc).toHaveBeenCalledWith("can_manage_any_position_in_cca", {
-			p_cca_id: 42,
-		});
+		expect(rpc).toHaveBeenCalledWith("can_manage_cca", { p_cca_id: 42 });
 		expect(result).toBe(true);
 	});
 
 	it("returns false when the RPC returns false", async () => {
 		const { supabase } = createSupabaseMock({ data: false, error: null });
 
-		const result = await canManageCcaServerSide(supabase as never, 7);
-
-		expect(result).toBe(false);
+		expect(await canManageCcaServerSide(supabase as never, 7)).toBe(false);
 	});
 
 	it("returns false on RPC error", async () => {
 		const { supabase } = createSupabaseMock({ data: null, error: { message: "boom" } });
 
-		const result = await canManageCcaServerSide(supabase as never, 9);
-
-		expect(result).toBe(false);
+		expect(await canManageCcaServerSide(supabase as never, 9)).toBe(false);
 	});
 
 	it("returns false when the RPC throws", async () => {
-		const supabase = {
-			rpc: vi.fn().mockRejectedValue(new Error("network down")),
-		};
+		const supabase = { rpc: vi.fn().mockRejectedValue(new Error("network down")) };
 
-		const result = await canManageCcaServerSide(supabase as never, 9);
-
-		expect(result).toBe(false);
+		expect(await canManageCcaServerSide(supabase as never, 9)).toBe(false);
 	});
 
 	it("treats a null RPC response as false", async () => {
 		const { supabase } = createSupabaseMock({ data: null, error: null });
 
-		const result = await canManageCcaServerSide(supabase as never, 9);
+		expect(await canManageCcaServerSide(supabase as never, 9)).toBe(false);
+	});
+});
 
-		expect(result).toBe(false);
+describe("canManagePositionServerSide", () => {
+	it("calls the can_manage_cca_position RPC with the position id", async () => {
+		const { supabase, rpc } = createSupabaseMock({ data: true, error: null });
+
+		const result = await canManagePositionServerSide(supabase as never, 5);
+
+		expect(rpc).toHaveBeenCalledWith("can_manage_cca_position", { p_position_id: 5 });
+		expect(result).toBe(true);
+	});
+
+	it("returns false on RPC error", async () => {
+		const { supabase } = createSupabaseMock({ data: null, error: { message: "nope" } });
+
+		expect(await canManagePositionServerSide(supabase as never, 5)).toBe(false);
 	});
 });
 
 describe("checkCcaAuthorization", () => {
-	const buildUser = (appointments: Array<{ cca_id: number; position_type: string }> = []) => ({
+	const buildUser = (
+		appointments: Array<{ cca_id: number; has_reports: boolean }> = [],
+		isChair = appointments.some((a) => a.has_reports),
+	) => ({
 		id: 1,
+		is_chair: isChair,
 		appointments: appointments.map((a) => ({
 			cca_id: a.cca_id,
 			cca_name: "X",
+			cca_kind: "sports" as const,
 			position_id: 100,
 			position_name: "X",
-			position_type: a.position_type,
+			position_type: "maincomm" as const,
+			has_reports: a.has_reports,
 			points: 0,
 			commitment_period: "full-year" as const,
-			cut_status: null,
+			team_status: "none" as const,
 		})),
+	});
+
+	beforeEach(() => {
+		vi.clearAllMocks();
 	});
 
 	it("returns 401 for unauthenticated callers", async () => {
 		const result = await checkCcaAuthorization({ requestingUser: null });
 
 		expect(result.ok).toBe(false);
-		if (!result.ok) {
-			expect(result.status).toBe(401);
-		}
+		if (!result.ok) expect(result.status).toBe(401);
 	});
 
-	it("returns chair access via the JWT fast path without calling the RPC", async () => {
+	it("denies without a round-trip when is_chair is false", async () => {
 		const { supabase, rpc } = createSupabaseMock({ data: true, error: null });
-		const user = buildUser([{ cca_id: 12, position_type: "lead" }]);
+		const user = buildUser([{ cca_id: 99, has_reports: false }]);
 
 		const result = await checkCcaAuthorization({
 			requestingUser: user,
 			cca: { id: 12 },
 			supabase: supabase as never,
+			require: "chair",
 		});
 
+		// is_chair === false is definitive: the caller manages nothing anywhere.
 		expect(rpc).not.toHaveBeenCalled();
-		expect(result.ok).toBe(true);
-		if (result.ok) {
-			expect(result.data.hasChairAccess).toBe(true);
-			expect(result.data.viaReportingChain).toBeUndefined();
-			expect(result.data.authorizedCcaIds).toEqual([12]);
-		}
+		expect(result.ok).toBe(false);
+		if (!result.ok) expect(result.status).toBe(403);
 	});
 
-	it("falls back to the DB RPC when no chair appointment is present", async () => {
+	it("consults can_manage_cca when the caller manages something somewhere", async () => {
 		const { supabase, rpc } = createSupabaseMock({ data: true, error: null });
-		const user = buildUser([{ cca_id: 99, position_type: "maincomm" }]);
+		const user = buildUser([{ cca_id: 99, has_reports: true }]);
 
 		const result = await checkCcaAuthorization({
 			requestingUser: user,
@@ -161,9 +180,7 @@ describe("checkCcaAuthorization", () => {
 			supabase: supabase as never,
 		});
 
-		expect(rpc).toHaveBeenCalledWith("can_manage_any_position_in_cca", {
-			p_cca_id: 12,
-		});
+		expect(rpc).toHaveBeenCalledWith("can_manage_cca", { p_cca_id: 12 });
 		expect(result.ok).toBe(true);
 		if (result.ok) {
 			expect(result.data.hasChairAccess).toBe(true);
@@ -171,9 +188,24 @@ describe("checkCcaAuthorization", () => {
 		}
 	});
 
-	it("returns 403 when the JWT fast path fails and the DB widened check also returns false", async () => {
+	it("grants access to a CCA the caller holds no appointment in, via the chain", async () => {
+		// A JCRC director manages sports captains without being in those CCAs.
+		const { supabase } = createSupabaseMock({ data: true, error: null });
+		const user = buildUser([{ cca_id: 99, has_reports: true }]);
+
+		const result = await checkCcaAuthorization({
+			requestingUser: user,
+			cca: { id: 12 },
+			supabase: supabase as never,
+			require: "chair",
+		});
+
+		expect(result.ok).toBe(true);
+	});
+
+	it("returns 403 when the DB check says no", async () => {
 		const { supabase } = createSupabaseMock({ data: false, error: null });
-		const user = buildUser([{ cca_id: 99, position_type: "member" }]);
+		const user = buildUser([{ cca_id: 99, has_reports: true }]);
 
 		const result = await checkCcaAuthorization({
 			requestingUser: user,
@@ -183,13 +215,11 @@ describe("checkCcaAuthorization", () => {
 		});
 
 		expect(result.ok).toBe(false);
-		if (!result.ok) {
-			expect(result.status).toBe(403);
-		}
+		if (!result.ok) expect(result.status).toBe(403);
 	});
 
 	it("marks results as degraded when no supabase client is supplied", async () => {
-		const user = buildUser([{ cca_id: 99, position_type: "member" }]);
+		const user = buildUser([{ cca_id: 99, has_reports: true }]);
 
 		const result = await checkCcaAuthorization({
 			requestingUser: user,
@@ -205,7 +235,7 @@ describe("checkCcaAuthorization", () => {
 
 	it("does not mark results as degraded once the DB check has been consulted", async () => {
 		const { supabase } = createSupabaseMock({ data: false, error: null });
-		const user = buildUser([{ cca_id: 99, position_type: "member" }]);
+		const user = buildUser([{ cca_id: 99, has_reports: true }]);
 
 		const result = await checkCcaAuthorization({
 			requestingUser: user,
@@ -214,13 +244,11 @@ describe("checkCcaAuthorization", () => {
 		});
 
 		expect(result.ok).toBe(true);
-		if (result.ok) {
-			expect(result.degraded).toBeUndefined();
-		}
+		if (result.ok) expect(result.degraded).toBeUndefined();
 	});
 
-	it("require: 'chair' without supabase still degraded-allows when JWT says yes", async () => {
-		const user = buildUser([{ cca_id: 12, position_type: "vice" }]);
+	it("degraded-allows when the profile hint covers the CCA and no client is supplied", async () => {
+		const user = buildUser([{ cca_id: 12, has_reports: true }]);
 
 		const result = await checkCcaAuthorization({
 			requestingUser: user,
@@ -229,8 +257,6 @@ describe("checkCcaAuthorization", () => {
 		});
 
 		expect(result.ok).toBe(true);
-		if (result.ok) {
-			expect(result.data.hasChairAccess).toBe(true);
-		}
+		if (result.ok) expect(result.data.hasChairAccess).toBe(true);
 	});
 });

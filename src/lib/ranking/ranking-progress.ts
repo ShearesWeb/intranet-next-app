@@ -6,7 +6,7 @@ export type ProgressMemberRow = {
 	user_id: number;
 	position_id: number;
 	position_type: string | null;
-	cut_status: string | null;
+	team_status: string | null;
 };
 
 export type ProgressEvaluationRow = {
@@ -28,11 +28,11 @@ export type RankingProgress = {
 export function computeRankingProgress({
 	members,
 	evaluations,
-	ccaTypeById,
+	ccaKindById,
 }: {
 	members: ProgressMemberRow[];
 	evaluations: ProgressEvaluationRow[];
-	ccaTypeById: Map<number, string | null>;
+	ccaKindById: Map<number, string | null>;
 }): Map<number, RankingProgress> {
 	const scoresByMember = new Map<string, unknown>(
 		evaluations.map((row) => [`${row.user_id}:${row.position_id}`, row.scores]),
@@ -41,19 +41,19 @@ export function computeRankingProgress({
 	const progressByCca = new Map<number, RankingProgress>();
 
 	for (const memberRow of members) {
-		const ccaType = ccaTypeById.get(memberRow.cca_id) ?? null;
+		const ccaKind = ccaKindById.get(memberRow.cca_id) ?? null;
 
 		if (
-			ccaType === "sports" &&
+			ccaKind === "sports" &&
 			memberRow.position_type === "member" &&
-			memberRow.cut_status === null
+			memberRow.team_status === null
 		) {
 			continue;
 		}
 
 		const scores = scoresByMember.get(`${memberRow.user_id}:${memberRow.position_id}`);
 		const ranked = hasRequiredRankingInputs(extractRankingCommentFields(scores), {
-			ccaType,
+			ccaKind,
 			positionType: memberRow.position_type,
 		});
 

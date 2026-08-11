@@ -6,7 +6,7 @@ describe("GET /api/user", () => {
 	it("returns the authenticated user (declan)", async () => {
 		asPersona("declan");
 		const { GET } = await import("@/app/api/user/route");
-		const { status, data, error } = await readJson<{ email: string; is_admin: boolean }>(await GET());
+		const { status, data, error } = await readJson<{ email: string; is_chair: boolean }>(await GET());
 
 		expect(status).toBe(200);
 		expect(error).toBeNull();
@@ -17,15 +17,15 @@ describe("GET /api/user", () => {
 		asPersona("sage");
 		const { GET } = await import("@/app/api/user/route");
 		const { status, data } = await readJson<{
-			is_admin: boolean;
+			is_chair: boolean;
 			is_jcrc: boolean;
-			is_culture_sports_admin: boolean;
+			is_culture_sports_chair: boolean;
 		}>(await GET());
 
 		expect(status).toBe(200);
-		expect(data.is_admin).toBe(true);
+		expect(data.is_chair).toBe(true);
 		expect(data.is_jcrc).toBe(true);
-		expect(data.is_culture_sports_admin).toBe(true);
+		expect(data.is_culture_sports_chair).toBe(true);
 	});
 
 	it("401s for an anonymous caller", async () => {

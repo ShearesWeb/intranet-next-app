@@ -31,7 +31,7 @@ const RECAP_CATEGORY_CONFIG: RecapCategoryConfig[] = [
 		descriptionWhenEmpty: "This part of your year stayed in the background.",
 		statLabel: "Points so far",
 		accent: "from-[#2b124c] via-[#ff4d8d] to-[#ff9f43]",
-		filter: (cca) => cca.cca_type === "culture",
+		filter: (cca) => cca.cca_kind === "culture",
 		buildSupportingText: () => "All your trainings, concerts, practices led to this.",
 	},
 	{
@@ -42,7 +42,7 @@ const RECAP_CATEGORY_CONFIG: RecapCategoryConfig[] = [
 		descriptionWhenEmpty: "Perhaps your energy showed up somewhere else this year?",
 		statLabel: "Points so far",
 		accent: "from-[#10203f] via-[#1e90ff] to-[#00c6ff]",
-		filter: (cca) => cca.cca_type === "sports",
+		filter: (cca) => cca.cca_kind === "sports",
 		buildSupportingText: () => "Sheares Hall Sports Hall??",
 	},
 	{
@@ -55,7 +55,7 @@ const RECAP_CATEGORY_CONFIG: RecapCategoryConfig[] = [
 		statLabel: "Points so far",
 		accent: "from-[#35155d] via-[#c94b4b] to-[#f2994a]",
 		filter: (cca) => {
-			if (cca.cca_type !== "committee") return false;
+			if (cca.cca_kind !== "committee") return false;
 			const posType = String(cca.position_type || "")
 				.trim()
 				.toLowerCase();
@@ -83,7 +83,7 @@ const RECAP_CATEGORY_CONFIG: RecapCategoryConfig[] = [
 		descriptionWhenEmpty: "No supplementary points showed up this time.",
 		statLabel: "Points so far",
 		accent: "from-[#064e3b] via-[#166534] to-[#10b981]",
-		filter: (cca) => cca.cca_type === "supplementary",
+		filter: (cca) => cca.cca_kind === "supplementary",
 		buildSupportingText: ({ points }) =>
 			points > 0 ? "Small additions still make the total feel very different." : undefined,
 	},
@@ -95,7 +95,7 @@ const RECAP_CATEGORY_CONFIG: RecapCategoryConfig[] = [
 		descriptionWhenEmpty: "Did you join them?",
 		statLabel: "Points so far",
 		accent: "from-[#4c1d95] via-[#7e22ce] to-[#c084fc]",
-		filter: (cca) => cca.cca_type === "adhoc",
+		filter: (cca) => cca.cca_kind === "adhoc",
 		buildSupportingText: ({ points }) => (points > 0 ? "Every little event counts." : undefined),
 	},
 ];
@@ -133,7 +133,7 @@ export function buildRecapSlides(user: AuthenticatedUser, ccas: CCAData[]): Reca
 	const cumulativeAfterAdhoc = cumulativeAfterSupplementary + adhocPoints;
 	const sportsIhgTeamCount = sportsCcas.filter((cca) =>
 		ihgTeamStatuses.has(
-			String(cca.cut_status || "")
+			String(cca.team_status || "")
 				.trim()
 				.toLowerCase(),
 		),

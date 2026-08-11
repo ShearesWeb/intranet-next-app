@@ -1,17 +1,15 @@
 // src/app/api/user/ccas/route.ts
 // API route to get CCAs a user is appointed to
 import { createClient } from "@/lib/supabase/server";
-import { isCoreServiceEnabled } from "@/lib/feature-flags";
 import { requireAuth } from "@/lib/api/auth";
 import { apiOk, handleApiError } from "@/lib/api/response";
-import { isChairPositionType } from "@/lib/cca/cca-chair-access";
-import { getManagedCcaData } from "@/lib/managed-cca-data";
-import { CcaType } from "@/types/user";
+import { isManagingAppointment } from "@/lib/cca/cca-chair-access";
+import { CcaKind } from "@/types/user";
 
 type CCAMeta = {
 	id: number;
 	name: string;
-	cca_type: CcaType;
+	kind: CcaKind;
 	description: string;
 	image_url: string | null;
 };
@@ -34,7 +32,7 @@ export async function GET(request: Request) {
 
 		const { data: ccas, error: ccasError } = await supabase
 			.from("ccas")
-			.select("id, name, cca_type, description, image_url")
+			.select("id, name, kind, description, image_url")
 			.in("id", ccaIds);
 
 		if (ccasError) {
@@ -44,23 +42,6 @@ export async function GET(request: Request) {
 
 		const ccaMap = new Map<number, CCAMeta>((ccas || []).map((cca) => [cca.id, cca as CCAMeta]));
 
-		const rankableCcaIds = new Set<number>();
-
-		try {
-			const managedCcas = await getManagedCcaData(supabase, user);
-			managedCcas.forEach((managedCca) => {
-				if (
-					isCoreServiceEnabled("memberRanking", {
-						isJcrc: user.is_jcrc && Boolean(managedCca.can_rank_members),
-					})
-				) {
-					rankableCcaIds.add(managedCca.cca_id);
-				}
-			});
-		} catch (managedCcaError) {
-			console.error("Error fetching managed CCA positions:", managedCcaError);
-		}
-
 		const appointmentsByCca = new Map(
 			appointments.map((appointment) => [appointment.cca_id, appointment]),
 		);
@@ -68,10 +49,9 @@ export async function GET(request: Request) {
 			? appointments
 			: Array.from(appointmentsByCca.values());
 
-		// `cut_status` is now projected on each appointment by
-		// `public.authenticated_user_appointments` (see
-		// `view/core/03.authenticated-user-info.sql`), so the previous secondary
-		// `cca_appointments` lookup is redundant.
+		// `my_profile.appointments` already carries kind, points, commitment and
+		// team status per appointment, so no secondary `cca_appointments` lookup
+		// is needed. Only the CCA description and image come from `ccas`.
 		const transformedData = appointmentsToTransform.map((appointment) => {
 			const cca = ccaMap.get(appointment.cca_id);
 
@@ -80,12 +60,11 @@ export async function GET(request: Request) {
 				name: cca?.name || appointment.cca_name,
 				role: appointment.position_name,
 				position_type: appointment.position_type,
-				cca_type: cca?.cca_type || "committee",
+				cca_kind: appointment.cca_kind ?? cca?.kind ?? "committee",
 				description: cca?.description || "",
 				points: appointment.points || 0,
-				cut_status: appointment.cut_status ?? null,
-				can_manage_members: isChairPositionType(appointment.position_type),
-				can_rank_members: rankableCcaIds.has(appointment.cca_id),
+				team_status: appointment.team_status ?? null,
+				can_manage_members: isManagingAppointment(appointment),
 			};
 		});
 

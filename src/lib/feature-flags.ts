@@ -1,16 +1,31 @@
+/**
+ * Compile-time service gates. Changing one requires a code edit + deploy.
+ *
+ * `memberRanking` and `holidaySubsidy` are parked pending a schema decision,
+ * not retired. Their source is intentionally still in the tree:
+ *
+ * - `memberRanking` has no backing table at all. The schema refactor dropped
+ *   the `evaluations` domain, so `cca_appointment_evaluations` no longer
+ *   exists and every read and write in that feature would fail at runtime.
+ * - `holidaySubsidy` is excluded from all three changelog masters, so
+ *   `cca_subsidies` and `cca_user_subsidies` are absent from a freshly applied
+ *   database. The `subsidy/` directory is still in the schema repo, so
+ *   restoring it is a one-line change per master — but the app also has to
+ *   re-key envelopes from CCA to position first, because authorization now
+ *   resolves through the management chain.
+ *
+ * Turning either back on means doing that work first. See the migration notes
+ * on the schema-refactor branch.
+ */
 const CORE_SERVICE_FLAGS = {
-	memberRanking: true,
+	memberRanking: false,
 	ccaApplications: true,
-	holidaySubsidy: true,
+	holidaySubsidy: false,
 	facilities: true,
 };
 
 export type CoreServiceKey = keyof typeof CORE_SERVICE_FLAGS;
 export type CoreServiceFlags = typeof CORE_SERVICE_FLAGS;
-
-export type CoreServiceFlagContext = {
-	isJcrc?: boolean;
-};
 
 export function getCoreServiceFlags(): CoreServiceFlags {
 	return CORE_SERVICE_FLAGS;
@@ -26,37 +41,32 @@ export function getCoreServiceTitle(service: CoreServiceKey) {
 		.join(" ");
 }
 
-function isCoreServicePositionOverrideEnabled(
-	service: CoreServiceKey,
-	context?: CoreServiceFlagContext,
-) {
-	if (service === "memberRanking") {
-		return Boolean(context?.isJcrc);
-	}
-
+/**
+ * Per-role escape hatch on top of the compile-time flag.
+ *
+ * Deliberately empty while `memberRanking` is parked. The JCRC override used to
+ * live here, and reinstating it now would hand JCRC a feature whose table the
+ * schema no longer has. Restore the `memberRanking`/`isJcrc` case in the same
+ * change that restores the flag.
+ */
+function isCoreServicePositionOverrideEnabled() {
 	return false;
 }
 
-export function isCoreServiceEnabled(service: CoreServiceKey, context?: CoreServiceFlagContext) {
-	return CORE_SERVICE_FLAGS[service] || isCoreServicePositionOverrideEnabled(service, context);
+export function isCoreServiceEnabled(service: CoreServiceKey) {
+	return CORE_SERVICE_FLAGS[service] || isCoreServicePositionOverrideEnabled();
 }
 
 export function getCoreServiceDisabledMessage(service: CoreServiceKey) {
 	return `${getCoreServiceTitle(service)} is currently disabled.`;
 }
 
-export function isFeatureFlaggedItemEnabled(
-	item: { featureFlag?: CoreServiceKey },
-	context?: CoreServiceFlagContext,
-) {
-	return !item.featureFlag || isCoreServiceEnabled(item.featureFlag, context);
+export function isFeatureFlaggedItemEnabled(item: { featureFlag?: CoreServiceKey }) {
+	return !item.featureFlag || isCoreServiceEnabled(item.featureFlag);
 }
 
-export function getCoreServiceDisabledApiResponse(
-	service: CoreServiceKey,
-	context?: CoreServiceFlagContext,
-) {
-	if (isCoreServiceEnabled(service, context)) {
+export function getCoreServiceDisabledApiResponse(service: CoreServiceKey) {
+	if (isCoreServiceEnabled(service)) {
 		return null;
 	}
 

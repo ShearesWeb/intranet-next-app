@@ -4,25 +4,43 @@ import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 import {
 	listPendingApprovals,
 	listUpcomingConfirmed,
-	approveClaim,
-	rejectAllClaims,
-	revokeBooking,
+	rejectClaims,
+	resolveSlot,
 } from "@/lib/facilities/facility-approvals";
+import { deleteClaim } from "@/lib/facilities/facility-claims";
 import { todayKey } from "@/lib/date";
 import { NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-/** JCRC approvals queue: bookings awaiting approval + upcoming confirmed (revocable). */
+/**
+ * How far ahead the approvals queue looks.
+ *
+ * Slots are computed, so the queue is a window over `facility_slots()` rather
+ * than a table scan. Cost is linear in slots returned, so this stays a few
+ * weeks rather than the 366-day maximum the function permits.
+ */
+const APPROVAL_WINDOW_DAYS = 28;
+
+function windowEnd(from: string, days: number): string {
+	const end = new Date(from + "T00:00:00");
+	end.setDate(end.getDate() + days);
+	return end.toISOString().slice(0, 10);
+}
+
+/** JCRC approvals queue: slots awaiting approval + upcoming confirmed (revocable). */
 export async function GET() {
 	const disabledResponse = getCoreServiceDisabledApiResponse("facilities");
 	if (disabledResponse) return disabledResponse;
 
 	try {
 		await requireJcrcAccess();
+		const from = todayKey();
+		const to = windowEnd(from, APPROVAL_WINDOW_DAYS);
+
 		const [pending, confirmed] = await Promise.all([
-			listPendingApprovals(),
-			listUpcomingConfirmed(todayKey()),
+			listPendingApprovals(from, to),
+			listUpcomingConfirmed(from, to),
 		]);
 		return apiOk({ pending, confirmed });
 	} catch (e) {
@@ -30,26 +48,36 @@ export async function GET() {
 	}
 }
 
-/** JCRC acts on a booking: approve one claim, reject all claims, or revoke a confirmed booking. */
+/**
+ * JCRC acts on a slot: approve one claim (rejecting its competitors), reject
+ * every claim, or revoke a confirmed booking.
+ *
+ * Actions are keyed by claim id rather than booking id — there is no booking
+ * row to name. Revoking deletes the claim, since there is no cancelled status.
+ */
 export async function POST(req: NextRequest) {
 	const disabledResponse = getCoreServiceDisabledApiResponse("facilities");
 	if (disabledResponse) return disabledResponse;
 
 	try {
-		const user = await requireJcrcAccess();
-		const { action, booking_id, winning_claim_id } = await req.json();
-
-		if (booking_id == null) return apiError("booking_id is required", 400);
+		await requireJcrcAccess();
+		const { action, claim_id, claim_ids, competing_claim_ids } = await req.json();
 
 		if (action === "approve") {
-			if (winning_claim_id == null) {
-				return apiError("winning_claim_id is required to approve", 400);
-			}
-			await approveClaim(booking_id, winning_claim_id, user.id);
+			if (claim_id == null) return apiError("claim_id is required to approve", 400);
+			await resolveSlot(claim_id, Array.isArray(competing_claim_ids) ? competing_claim_ids : []);
 		} else if (action === "reject") {
-			await rejectAllClaims(booking_id, user.id);
+			// Rejecting a contested slot has to clear every claim on it, not just one.
+			const targets: number[] = Array.isArray(claim_ids)
+				? claim_ids
+				: claim_id != null
+					? [claim_id]
+					: [];
+			if (!targets.length) return apiError("claim_id or claim_ids is required to reject", 400);
+			await rejectClaims(targets);
 		} else if (action === "revoke") {
-			await revokeBooking(booking_id, user.id);
+			if (claim_id == null) return apiError("claim_id is required to revoke", 400);
+			await deleteClaim(claim_id);
 		} else {
 			return apiError("action must be approve, reject or revoke", 400);
 		}

@@ -2,7 +2,6 @@ import { requireAuth } from "@/lib/api/auth";
 import { apiOk, apiError, handleApiError } from "@/lib/api/response";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 import { getClaimsForCca, createClaim } from "@/lib/facilities/facility-claims";
-import { getBooking } from "@/lib/facilities/facility-bookings";
 import { isChairOfCca, getChairCcaIds } from "@/lib/facilities/facility-access";
 import { MIN_BOOKING_LEAD_DAYS, isBookingLocked } from "@/types/facilities";
 import { NextRequest } from "next/server";
@@ -41,22 +40,23 @@ export async function POST(req: NextRequest) {
 
 	try {
 		const user = await requireAuth();
-		const { booking_id, cca_id } = await req.json();
+		const { facility_id, date, hour, cca_id } = await req.json();
 
-		if (booking_id == null || cca_id == null) {
-			return apiError("booking_id and cca_id are required", 400);
+		if (facility_id == null || !date || hour == null || cca_id == null) {
+			return apiError("facility_id, date, hour and cca_id are required", 400);
 		}
+		if (hour < 0 || hour > 23) return apiError("hour must be 0–23", 400);
 		if (!isChairOfCca(user, cca_id)) {
 			return apiError("Not authorized to claim for this CCA", 403);
 		}
 
-		const booking = await getBooking(booking_id);
-		if (!booking) return apiError("Booking not found", 404);
-		if (isBookingLocked(booking.booked_date)) {
+		// The slot carries its own date now, so no booking lookup is needed. The
+		// DB still checks that a schedule actually publishes it.
+		if (isBookingLocked(date)) {
 			return apiError(`Bookings lock ${MIN_BOOKING_LEAD_DAYS} days before the slot date`, 403);
 		}
 
-		const claim = await createClaim(booking_id, cca_id, user.id);
+		const claim = await createClaim(facility_id, date, hour, cca_id, user.id);
 		return apiOk(claim, 201);
 	} catch (e) {
 		return handleApiError(e);

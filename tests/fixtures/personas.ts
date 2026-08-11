@@ -12,7 +12,7 @@ export const PERSONAS: readonly Persona[] = [
 		room: null,
 		stayPeriod: "full-year",
 		appointments: [],
-		expected: { is_admin: false, is_jcrc: false, is_culture_sports_admin: false },
+		expected: { is_chair: false, is_jcrc: false, is_culture_sports_chair: false },
 	},
 	{
 		key: "aria",
@@ -22,7 +22,7 @@ export const PERSONAS: readonly Persona[] = [
 		room: "SH/A/2/203",
 		stayPeriod: "full-year",
 		appointments: [],
-		expected: { is_admin: false, is_jcrc: false, is_culture_sports_admin: false },
+		expected: { is_chair: false, is_jcrc: false, is_culture_sports_chair: false },
 	},
 	{
 		key: "mason",
@@ -32,7 +32,7 @@ export const PERSONAS: readonly Persona[] = [
 		room: "SH/B/3/315",
 		stayPeriod: "full-year",
 		appointments: [{ ccaKey: "volleyball", positionName: "Player", points: 0 }],
-		expected: { is_admin: false, is_jcrc: false, is_culture_sports_admin: false },
+		expected: { is_chair: false, is_jcrc: false, is_culture_sports_chair: false },
 	},
 	{
 		key: "chloe",
@@ -43,7 +43,7 @@ export const PERSONAS: readonly Persona[] = [
 		stayPeriod: "full-year",
 		appointments: [{ ccaKey: "volleyball", positionName: "Team Manager", points: 0 }],
 		// team manager has no children in the graph → no admin flag
-		expected: { is_admin: false, is_jcrc: false, is_culture_sports_admin: false },
+		expected: { is_chair: false, is_jcrc: false, is_culture_sports_chair: false },
 	},
 	{
 		key: "declan",
@@ -53,8 +53,8 @@ export const PERSONAS: readonly Persona[] = [
 		room: "SH/A/4/412",
 		stayPeriod: "full-year",
 		appointments: [{ ccaKey: "volleyball", positionName: "Captain", points: 0 }],
-		// lead has children (vice, team manager, member) → is_admin; sports → is_culture_sports_admin
-		expected: { is_admin: true, is_jcrc: false, is_culture_sports_admin: true },
+		// lead has children (vice, team manager, member) → is_chair; sports → is_culture_sports_chair
+		expected: { is_chair: true, is_jcrc: false, is_culture_sports_chair: true },
 	},
 	{
 		key: "alexis",
@@ -64,8 +64,8 @@ export const PERSONAS: readonly Persona[] = [
 		room: "SH/D/2/202",
 		stayPeriod: "full-year",
 		appointments: [{ ccaKey: "volleyball", positionName: "Vice Captain", points: 0 }],
-		// vice has members reporting to it → is_admin; Volleyball is sports → is_culture_sports_admin
-		expected: { is_admin: true, is_jcrc: false, is_culture_sports_admin: true },
+		// vice has members reporting to it → is_chair; Volleyball is sports → is_culture_sports_chair
+		expected: { is_chair: true, is_jcrc: false, is_culture_sports_chair: true },
 	},
 	{
 		key: "sienna",
@@ -75,7 +75,7 @@ export const PERSONAS: readonly Persona[] = [
 		room: "SH/B/2/210",
 		stayPeriod: "full-year",
 		appointments: [{ ccaKey: "choir", positionName: "Chorister", points: 0 }],
-		expected: { is_admin: false, is_jcrc: false, is_culture_sports_admin: false },
+		expected: { is_chair: false, is_jcrc: false, is_culture_sports_chair: false },
 	},
 	{
 		key: "kai",
@@ -85,8 +85,8 @@ export const PERSONAS: readonly Persona[] = [
 		room: "SH/C/4/401",
 		stayPeriod: "full-year",
 		appointments: [{ ccaKey: "choir", positionName: "Conductor", points: 0 }],
-		// lead Choir (culture) → is_admin + is_culture_sports_admin
-		expected: { is_admin: true, is_jcrc: false, is_culture_sports_admin: true },
+		// lead Choir (culture) → is_chair + is_culture_sports_chair
+		expected: { is_chair: true, is_jcrc: false, is_culture_sports_chair: true },
 	},
 	{
 		key: "harper",
@@ -97,7 +97,7 @@ export const PERSONAS: readonly Persona[] = [
 		stayPeriod: "full-year",
 		appointments: [{ ccaKey: "shweb", positionName: "Subcomm", points: 0 }],
 		// subcomm has no children → no flags
-		expected: { is_admin: false, is_jcrc: false, is_culture_sports_admin: false },
+		expected: { is_chair: false, is_jcrc: false, is_culture_sports_chair: false },
 	},
 	{
 		key: "ezra",
@@ -107,8 +107,8 @@ export const PERSONAS: readonly Persona[] = [
 		room: "SH/A/3/301",
 		stayPeriod: "full-year",
 		appointments: [{ ccaKey: "shweb", positionName: "Maincomm", points: 0 }],
-		// maincomm has subcomm child → is_admin. SHWEB is committee, not culture/sports → not CSA
-		expected: { is_admin: true, is_jcrc: false, is_culture_sports_admin: false },
+		// maincomm has subcomm child → is_chair. SHWEB is committee, not culture/sports → not CSA
+		expected: { is_chair: true, is_jcrc: false, is_culture_sports_chair: false },
 	},
 	{
 		key: "layla",
@@ -118,8 +118,8 @@ export const PERSONAS: readonly Persona[] = [
 		room: "SH/D/4/405",
 		stayPeriod: "full-year",
 		appointments: [{ ccaKey: "shweb", positionName: "President", points: 0 }],
-		// lead SHWEB (committee) → is_admin only, NOT is_culture_sports_admin
-		expected: { is_admin: true, is_jcrc: false, is_culture_sports_admin: false },
+		// lead SHWEB (committee) → is_chair only, NOT is_culture_sports_chair
+		expected: { is_chair: true, is_jcrc: false, is_culture_sports_chair: false },
 	},
 	{
 		key: "jasper",
@@ -129,8 +129,8 @@ export const PERSONAS: readonly Persona[] = [
 		room: "SH/B/4/406",
 		stayPeriod: "full-year",
 		appointments: [{ ccaKey: "jcrc", positionName: "Blockcomm", points: 0 }],
-		// blockcomm has no children → no admin; any JCRC appointment → is_jcrc
-		expected: { is_admin: false, is_jcrc: true, is_culture_sports_admin: false },
+		// blockcomm has no children → no chair; any JCRC appointment → is_jcrc
+		expected: { is_chair: false, is_jcrc: true, is_culture_sports_chair: false },
 	},
 	{
 		key: "brielle",
@@ -140,8 +140,8 @@ export const PERSONAS: readonly Persona[] = [
 		room: "SH/C/3/312",
 		stayPeriod: "full-year",
 		appointments: [{ ccaKey: "jcrc", positionName: "Maincomm", points: 0 }],
-		// maincomm JCRC has blockcomm child → is_admin; JCRC → is_jcrc; not culture/sports
-		expected: { is_admin: true, is_jcrc: true, is_culture_sports_admin: false },
+		// maincomm JCRC has blockcomm child → is_chair; JCRC → is_jcrc; not culture/sports
+		expected: { is_chair: true, is_jcrc: true, is_culture_sports_chair: false },
 	},
 	{
 		key: "nova",
@@ -154,9 +154,9 @@ export const PERSONAS: readonly Persona[] = [
 			{ ccaKey: "basketball", positionName: "Captain", points: 0 },
 			{ ccaKey: "secc", positionName: "Subcomm", points: 0 },
 		],
-		// lead Basketball (sports) → is_admin + is_culture_sports_admin
+		// lead Basketball (sports) → is_chair + is_culture_sports_chair
 		// subcomm SECC has no children → contributes nothing
-		expected: { is_admin: true, is_jcrc: false, is_culture_sports_admin: true },
+		expected: { is_chair: true, is_jcrc: false, is_culture_sports_chair: true },
 	},
 	{
 		key: "willow",
@@ -166,8 +166,8 @@ export const PERSONAS: readonly Persona[] = [
 		room: "SH/D/1/108",
 		stayPeriod: "full-year",
 		appointments: [{ ccaKey: "dance", positionName: "Captain", points: 0 }],
-		// lead Dance (culture) → is_admin + is_culture_sports_admin
-		expected: { is_admin: true, is_jcrc: false, is_culture_sports_admin: true },
+		// lead Dance (culture) → is_chair + is_culture_sports_chair
+		expected: { is_chair: true, is_jcrc: false, is_culture_sports_chair: true },
 	},
 	{
 		key: "sage",
@@ -180,9 +180,9 @@ export const PERSONAS: readonly Persona[] = [
 			{ ccaKey: "drama", positionName: "Director", points: 0 },
 			{ ccaKey: "jcrc", positionName: "Maincomm", points: 0 },
 		],
-		// lead Drama (culture) → is_admin + is_culture_sports_admin
-		// maincomm JCRC → is_admin (additive, same flag); is_jcrc
-		expected: { is_admin: true, is_jcrc: true, is_culture_sports_admin: true },
+		// lead Drama (culture) → is_chair + is_culture_sports_chair
+		// maincomm JCRC → is_chair (additive, same flag); is_jcrc
+		expected: { is_chair: true, is_jcrc: true, is_culture_sports_chair: true },
 	},
 ] as const;
 

@@ -13,16 +13,16 @@ import {
 } from "@/components/ui/table";
 import type { CCAMember, PositionGroup, ScoreField } from "@/types/ranking";
 import { RESIDENT_METRICS, SCORE_OPTIONS } from "@/lib/ranking/constants";
-import { formatCommitmentPeriod, isResidentPositionType } from "@/lib/ranking/ranking-editor";
-import { formatCutStatus } from "@/lib/cca/cut-status";
+import { formatPeriod, isResidentPositionType } from "@/lib/ranking/ranking-editor";
+import { formatTeamStatus } from "@/lib/cca/team-status";
 
 type PositionRankingCardProps = {
 	group: PositionGroup;
-	ccaType: string;
+	ccaKind: string;
 	onFieldChange: <K extends keyof CCAMember>(rowKey: string, field: K, value: CCAMember[K]) => void;
 };
 
-export function PositionRankingCard({ group, ccaType, onFieldChange }: PositionRankingCardProps) {
+export function PositionRankingCard({ group, ccaKind, onFieldChange }: PositionRankingCardProps) {
 	const isResidentGroup = isResidentPositionType(group.position_type);
 	const renderScoreSelect = (member: CCAMember, field: ScoreField) => (
 		<select
@@ -64,7 +64,7 @@ export function PositionRankingCard({ group, ccaType, onFieldChange }: PositionR
 							<TableHead className="w-[88px]">Rank</TableHead>
 							<TableHead>Name</TableHead>
 							{!isResidentGroup &&
-								(ccaType === "sports" ? (
+								(ccaKind === "sports" ? (
 									<TableHead>Status</TableHead>
 								) : (
 									<TableHead>Commitment</TableHead>
@@ -75,12 +75,12 @@ export function PositionRankingCard({ group, ccaType, onFieldChange }: PositionR
 								))
 							) : (
 								<TableHead>
-									{ccaType === "sports"
+									{ccaKind === "sports"
 										? "Captain's Appraisal (1-10)"
 										: "Attendance and Attitude (1-10)"}
 								</TableHead>
 							)}
-							{!isResidentGroup && ccaType !== "sports" && (
+							{!isResidentGroup && ccaKind !== "sports" && (
 								<TableHead>Performance (1-10)</TableHead>
 							)}
 							<TableHead>Remarks</TableHead>
@@ -99,11 +99,13 @@ export function PositionRankingCard({ group, ccaType, onFieldChange }: PositionR
 								</TableCell>
 								<TableCell className="font-medium">{member.name}</TableCell>
 								{!isResidentGroup &&
-									(ccaType === "sports" ? (
-										<TableCell className="text-sm">{formatCutStatus(member.cut_status)}</TableCell>
+									(ccaKind === "sports" ? (
+										<TableCell className="text-sm">
+											{formatTeamStatus(member.team_status)}
+										</TableCell>
 									) : (
 										<TableCell className="text-sm">
-											{formatCommitmentPeriod(member.commitment_period)}
+											{formatPeriod(member.commitment_period)}
 										</TableCell>
 									))}
 								{isResidentGroup ? (
@@ -115,7 +117,7 @@ export function PositionRankingCard({ group, ccaType, onFieldChange }: PositionR
 								) : (
 									<TableCell>{renderScoreSelect(member, "attendance")}</TableCell>
 								)}
-								{!isResidentGroup && ccaType !== "sports" && (
+								{!isResidentGroup && ccaKind !== "sports" && (
 									<TableCell>{renderScoreSelect(member, "performance")}</TableCell>
 								)}
 								<TableCell className="min-w-[220px]">

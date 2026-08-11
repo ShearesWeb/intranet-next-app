@@ -14,9 +14,9 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { CommitmentPeriod, CutStatus, Member } from "@/types/members";
-import { formatCommitmentPeriod } from "@/lib/cca/member-helpers";
-import { CULTURE_STATUS_OPTIONS, SPORTS_STATUS_OPTIONS } from "@/lib/cca/cut-status";
+import type { Period, TeamStatus, Member } from "@/types/members";
+import { formatPeriod } from "@/lib/cca/member-helpers";
+import { TEAM_STATUS_OPTIONS } from "@/lib/cca/team-status";
 import { DashedEmpty } from "@/components/shared/inline-states";
 import { MoreHorizontal } from "lucide-react";
 
@@ -24,10 +24,10 @@ interface MemberGroupTableProps {
 	title: string;
 	members: Member[];
 	canManage: boolean;
-	ccaType: string;
+	ccaKind: string;
 	onRemoveMember: (userId: number, name: string) => void;
-	onUpdateStatus: (userId: number, name: string, status: CutStatus | null) => void;
-	onUpdateCommitment: (userId: number, period: CommitmentPeriod) => void;
+	onUpdateStatus: (userId: number, name: string, status: TeamStatus | null) => void;
+	onUpdateCommitment: (userId: number, period: Period) => void;
 	onAddMember?: () => void;
 	showActions?: boolean;
 	showAddButton?: boolean;
@@ -36,13 +36,13 @@ interface MemberGroupTableProps {
 function buildMemberColumns(
 	showActions: boolean,
 	canManage: boolean,
-	ccaType: string,
+	ccaKind: string,
 	onRemoveMember: (userId: number, name: string) => void,
-	onUpdateStatus: (userId: number, name: string, status: CutStatus | null) => void,
-	onUpdateCommitment: (userId: number, period: CommitmentPeriod) => void,
+	onUpdateStatus: (userId: number, name: string, status: TeamStatus | null) => void,
+	onUpdateCommitment: (userId: number, period: Period) => void,
 ): ColumnDef<Member>[] {
-	const isSports = ccaType === "sports";
-	const isCulture = ccaType === "culture";
+	const isSports = ccaKind === "sports";
+	const isCulture = ccaKind === "culture";
 	const showEditableCommitment = canManage && !isSports;
 
 	const baseColumns: ColumnDef<Member>[] = [
@@ -130,9 +130,7 @@ function buildMemberColumns(
 									? row.original.commitment_period
 									: null) || "full-year"
 							}
-							onChange={(e) =>
-								onUpdateCommitment(row.original.user_id, e.target.value as CommitmentPeriod)
-							}
+							onChange={(e) => onUpdateCommitment(row.original.user_id, e.target.value as Period)}
 							className="h-9 w-28 px-3 border rounded-md bg-transparent text-sm cursor-pointer transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:border-primary/60"
 							onClick={(e) => e.stopPropagation()}
 						>
@@ -141,11 +139,7 @@ function buildMemberColumns(
 							<option value="semester-2">Semester 2</option>
 						</select>
 					) : (
-						<span>
-							{formatCommitmentPeriod(
-								row.original.commitment_period as CommitmentPeriod | null | undefined,
-							)}
-						</span>
+						<span>{formatPeriod(row.original.commitment_period as Period | null | undefined)}</span>
 					),
 			},
 			{
@@ -165,15 +159,15 @@ function buildMemberColumns(
 								<DropdownMenuContent align="end">
 									<DropdownMenuLabel>Actions</DropdownMenuLabel>
 									<DropdownMenuSeparator />
-									{row.original.cut_status && (
+									{row.original.team_status && (
 										<DropdownMenuItem
 											onClick={() => onUpdateStatus(row.original.user_id, row.original.name, null)}
 										>
 											Move to Members
 										</DropdownMenuItem>
 									)}
-									{SPORTS_STATUS_OPTIONS.filter(
-										(option) => option.status !== row.original.cut_status,
+									{TEAM_STATUS_OPTIONS.filter(
+										(option) => option.status !== row.original.team_status,
 									).map((option) => (
 										<DropdownMenuItem
 											key={option.status}
@@ -204,15 +198,15 @@ function buildMemberColumns(
 								<DropdownMenuContent align="end">
 									<DropdownMenuLabel>Actions</DropdownMenuLabel>
 									<DropdownMenuSeparator />
-									{row.original.cut_status ? (
+									{row.original.team_status ? (
 										<DropdownMenuItem
 											onClick={() => onUpdateStatus(row.original.user_id, row.original.name, null)}
 										>
 											Move to Members
 										</DropdownMenuItem>
 									) : null}
-									{CULTURE_STATUS_OPTIONS.filter(
-										(option) => option.status !== row.original.cut_status,
+									{TEAM_STATUS_OPTIONS.filter(
+										(option) => option.status !== row.original.team_status,
 									).map((option) => (
 										<DropdownMenuItem
 											key={option.status}
@@ -254,11 +248,7 @@ function buildMemberColumns(
 			header: () => <div className="font-semibold">Commitment</div>,
 			enableSorting: false,
 			cell: ({ row }) => (
-				<span>
-					{formatCommitmentPeriod(
-						row.original.commitment_period as CommitmentPeriod | null | undefined,
-					)}
-				</span>
+				<span>{formatPeriod(row.original.commitment_period as Period | null | undefined)}</span>
 			),
 		},
 	];
@@ -268,7 +258,7 @@ export function MemberGroupTable({
 	title,
 	members,
 	canManage,
-	ccaType,
+	ccaKind,
 	onRemoveMember,
 	onUpdateStatus,
 	onUpdateCommitment,
@@ -276,8 +266,8 @@ export function MemberGroupTable({
 	showActions = false,
 	showAddButton = false,
 }: MemberGroupTableProps) {
-	const isSports = ccaType === "sports";
-	const isCulture = ccaType === "culture";
+	const isSports = ccaKind === "sports";
+	const isCulture = ccaKind === "culture";
 	const isSportsCulture = isSports || isCulture;
 
 	const columnsToUse = React.useMemo(
@@ -285,12 +275,12 @@ export function MemberGroupTable({
 			buildMemberColumns(
 				showActions,
 				canManage,
-				ccaType,
+				ccaKind,
 				onRemoveMember,
 				onUpdateStatus,
 				onUpdateCommitment,
 			),
-		[showActions, canManage, ccaType, onRemoveMember, onUpdateStatus, onUpdateCommitment],
+		[showActions, canManage, ccaKind, onRemoveMember, onUpdateStatus, onUpdateCommitment],
 	);
 
 	if (members.length === 0 && !showActions && !showAddButton) {

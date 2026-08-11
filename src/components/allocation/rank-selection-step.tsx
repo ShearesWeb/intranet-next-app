@@ -28,7 +28,7 @@ const GROUP_LABELS: Record<string, string> = {
 	maincomm: "Maincomm",
 	subcomm: "Subcomm",
 	blockcomm: "Blockcomm",
-	"team manager": "Team Manager",
+	"team-manager": "Team Manager",
 };
 
 const humanize = (value: string) =>

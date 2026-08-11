@@ -5,14 +5,14 @@ import { PERSONAS } from "../tests/fixtures/personas";
 import { POSITIONS } from "../tests/fixtures/positions";
 
 function roleTags(expected: {
-	is_admin?: boolean;
+	is_chair?: boolean;
 	is_jcrc?: boolean;
-	is_culture_sports_admin?: boolean;
+	is_culture_sports_chair?: boolean;
 }): string[] {
 	const tags: string[] = [];
-	if (expected.is_admin) tags.push("admin");
+	if (expected.is_chair) tags.push("chair");
 	if (expected.is_jcrc) tags.push("JCRC");
-	if (expected.is_culture_sports_admin) tags.push("CSA");
+	if (expected.is_culture_sports_chair) tags.push("culture/sports chair");
 	return tags;
 }
 

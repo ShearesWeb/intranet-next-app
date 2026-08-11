@@ -10,24 +10,29 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCalendarMonth } from "@/hooks/use-calendar-month";
 import {
-	BookingWithClaims,
+	SlotWithContext,
 	ClaimStatus,
 	CLAIM_STATUS_CONFIG,
 	FACILITY_TYPE_CONFIG,
-	FacilityBooking,
+	FacilityType,
 	formatHourRange,
 } from "@/types/facilities";
 import { toast } from "sonner";
-import { Calendar, AlertTriangle, X } from "lucide-react";
+import { Calendar, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDisplayDate } from "@/lib/date";
 
 interface ClaimRow {
 	id: number;
+	facility_id: number;
+	date: string;
+	hour: number;
 	cca_id: number;
 	cca_name: string;
 	status: ClaimStatus;
-	booking: FacilityBooking | null;
+	venue: string;
+	sub_venue: string;
+	facility_type: FacilityType;
 }
 
 // No cancelled tab — a withdrawn claim is the chair's own action, not worth surfacing.
@@ -157,7 +162,7 @@ export function MyCcaBookings() {
 					<StatusCalendar
 						key={status}
 						status={status}
-						claims={visible.filter((c) => c.status === status && c.booking !== null)}
+						claims={visible.filter((c) => c.status === status)}
 						year={year}
 						month={month}
 						dateFilter={dateFilter}
@@ -198,26 +203,28 @@ function StatusCalendar({
 }) {
 	const statusConfig = CLAIM_STATUS_CONFIG[status];
 
-	// MonthGrid renders BookingWithClaims; wrap each claim's booking in that shape.
-	const calendarBookings = useMemo<BookingWithClaims[]>(
+	// MonthGrid renders SlotWithContext; project each claim into that shape.
+	const calendarBookings = useMemo<SlotWithContext[]>(
 		() =>
 			claims.map((c) => ({
-				...c.booking!,
+				facility_id: c.facility_id,
+				venue: c.venue,
+				sub_venue: c.sub_venue,
+				type: c.facility_type,
+				date: c.date,
+				hour: c.hour,
+				status: c.status === "approved" ? "confirmed" : "pending",
+				live_claims: 1,
 				claims: [],
 				user_cca_claim: null,
-				recurring: false,
 			})),
 		[claims],
 	);
 
 	// The list always shows every claim of this status; a selected day narrows it.
 	const listed = useMemo(() => {
-		const base = dateFilter ? claims.filter((c) => c.booking!.booked_date === dateFilter) : claims;
-		return [...base].sort(
-			(a, b) =>
-				a.booking!.booked_date.localeCompare(b.booking!.booked_date) ||
-				a.booking!.hour - b.booking!.hour,
-		);
+		const base = dateFilter ? claims.filter((c) => c.date === dateFilter) : claims;
+		return [...base].sort((a, b) => a.date.localeCompare(b.date) || a.hour - b.hour);
 	}, [claims, dateFilter]);
 
 	return (
@@ -289,11 +296,11 @@ function ClaimDayRow({
 	busy: boolean;
 	onWithdraw: (claimId: number) => void;
 }) {
-	const b = claim.booking!;
 	const statusConfig = CLAIM_STATUS_CONFIG[claim.status];
-	const typeConfig = FACILITY_TYPE_CONFIG[b.type];
-	const conflicted = b.status === "conflicted";
-	const awaitingApproval = claim.status === "pending" && !conflicted;
+	const typeConfig = FACILITY_TYPE_CONFIG[claim.facility_type];
+	// Contention is a property of the slot, not the claim, and this list is
+	// claim-shaped — so a pending claim simply reads as awaiting approval.
+	const awaitingApproval = claim.status === "pending";
 	const canWithdraw = claim.status === "pending" || claim.status === "approved";
 	const solid = claim.status === "approved";
 
@@ -305,18 +312,16 @@ function ClaimDayRow({
 						className="h-2 w-2 shrink-0 rounded-full"
 						style={{ backgroundColor: typeConfig.color }}
 					/>
-					{b.sub_venue}
+					{claim.sub_venue}
 				</div>
 				<div className="text-xs text-muted-foreground">
-					{formatDisplayDate(b.booked_date, { weekday: "short", month: "short", day: "numeric" })} ·{" "}
-					{formatHourRange(b.hour)} · {claim.cca_name}
+					{formatDisplayDate(claim.date, {
+						weekday: "short",
+						month: "short",
+						day: "numeric",
+					})}{" "}
+					· {formatHourRange(claim.hour)} · {claim.cca_name}
 				</div>
-				{conflicted && (
-					<span className="inline-flex items-center gap-1 text-[10px] text-amber-600">
-						<AlertTriangle className="h-3 w-3" />
-						JCRC resolving
-					</span>
-				)}
 				{awaitingApproval && (
 					<span className="text-[10px] text-muted-foreground">Awaiting JCRC approval</span>
 				)}
