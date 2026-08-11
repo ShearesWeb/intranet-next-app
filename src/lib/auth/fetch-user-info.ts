@@ -6,29 +6,28 @@ import { unstable_noStore as noStore } from "next/cache";
 
 /**
  * Fetch the authenticated caller's profile + appointments via the
- * `public.authenticated_user_info` view.
+ * `public.my_profile` view.
  *
- * Row-level security on the view (`security_invoker = on`,
- * `internal.auth_user_id() = id`) restricts the result to the caller, so no
- * explicit `.eq("email", …)` / `.eq("id", …)` filter is needed. Use
- * `.maybeSingle()` so unauthenticated callers receive `null` instead of an
- * exception when the view yields no rows.
+ * The view is `security_invoker = on` and filters on
+ * `internal.auth_user_id() = id`, so it returns at most one row and needs no
+ * explicit filter. Use `.maybeSingle()` so unauthenticated callers receive
+ * `null` rather than an exception.
  *
- * See: intranet-wiki/wiki/entity/view/public.authenticated_user_info.md
+ * See: intranet/docs/api/core.md#my_profile
  */
 export async function fetchUserInfo(): Promise<AuthenticatedUser | null> {
 	noStore();
 	const supabase = await createClient();
 
 	const { data, error } = await supabase
-		.from("authenticated_user_info")
+		.from("my_profile")
 		.select(
-			"id, email, name, room, points, profile_photo_path, appointments, is_admin, is_jcrc, is_culture_sports_admin",
+			"id, email, name, room, points, profile_photo_path, telegram_handle, stay_period, matric, is_chair, is_jcrc, appointments",
 		)
 		.maybeSingle();
 
 	if (error) {
-		console.error("Error retrieving authenticated user info:", error);
+		console.error("Error retrieving my_profile:", error);
 		return null;
 	}
 	if (!data) {
@@ -45,11 +44,13 @@ export async function fetchUserInfo(): Promise<AuthenticatedUser | null> {
 		email: data.email,
 		name: data.name,
 		room: data.room,
-		points: data.points,
+		points: data.points ?? 0,
 		profile_photo_url: publicUrl,
-		is_admin: data.is_admin,
+		telegram_handle: data.telegram_handle,
+		stay_period: data.stay_period,
+		matric: data.matric,
+		is_chair: data.is_chair,
 		is_jcrc: data.is_jcrc,
-		is_culture_sports_admin: data.is_culture_sports_admin,
 		appointments: data.appointments ?? [],
 	};
 
@@ -59,19 +60,14 @@ export async function fetchUserInfo(): Promise<AuthenticatedUser | null> {
 /**
  * Get the authenticated user's ID using the active Supabase session.
  *
- * Resolves through `public.authenticated_user_info`, which is gated by
+ * Resolves through `public.my_profile`, which is gated by
  * `internal.auth_user_id()`. Unauthenticated callers receive `null`.
- *
- * The previous implementation tried `app_user_id`/`intranet_user_id`/
- * `internal_user_id` JWT claims first, but the new Supabase auth path does
- * not emit those claims — the DB derives the id from `auth.email()`
- * server-side. The claim fast path is removed.
  */
 export async function fetchUserId(): Promise<number | null> {
 	noStore();
 	const supabase = await createClient();
 
-	const { data, error } = await supabase.from("authenticated_user_info").select("id").maybeSingle();
+	const { data, error } = await supabase.from("my_profile").select("id").maybeSingle();
 
 	if (error) {
 		console.error("Error retrieving user ID from database:", error);

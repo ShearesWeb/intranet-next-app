@@ -29,11 +29,11 @@ export async function GET(request: Request) {
 			return apiError("Query must be at least 2 characters.", 400);
 		}
 
-		// `authenticated_user_directory` exposes `id, email, name, room, telegram_handle,
-		// profile_photo_path` to authenticated callers (see
-		// intranet-wiki/wiki/entity/view/public.authenticated_user_directory.md).
+		// `authenticated` holds SELECT on every `users` column, so the directory
+		// view this used to read is gone and the base table serves it directly.
+		// `anon` is column-limited to id/name/profile_photo_path, hence the guard above.
 		const { data, error } = await supabase
-			.from("authenticated_user_directory")
+			.from("users")
 			.select("id, name, email, room")
 			.or(`name.ilike.%${query}%,email.ilike.%${query}%,room.ilike.%${query}%`)
 			.order("name")

@@ -1,9 +1,9 @@
-export function canManageCcaMembers(ccaType: string | null | undefined) {
-	return ccaType !== "committee";
+export function canManageCcaMembers(ccaKind: string | null | undefined) {
+	return ccaKind !== "committee";
 }
 
-export function getCcaMemberManagementDisabledMessage(ccaType: string | null | undefined) {
-	if (ccaType === "committee") {
+export function getCcaMemberManagementDisabledMessage(ccaKind: string | null | undefined) {
+	if (ccaKind === "committee") {
 		return "Committee member management is read-only.";
 	}
 

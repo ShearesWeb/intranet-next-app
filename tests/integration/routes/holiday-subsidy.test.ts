@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 import { asPersona, ccaIdByName, makeRequest, readJson, routeParams } from "../helpers";
 
 // GET /api/holiday-subsidy/members/[cca-id] — chair-gated member assignments.
-describe("GET /api/holiday-subsidy/members/[cca-id]", () => {
+// Skipped while `holidaySubsidy` is parked. The subsidy domain is excluded from
+// all three changelog masters, so cca_subsidies and cca_user_subsidies are not
+// in the database and every route here answers 503. Unskip in the same change
+// that restores the includeAll and re-keys the app from CCA to position.
+describe.skip("GET /api/holiday-subsidy/members/[cca-id]", () => {
 	it("lets the CCA chair read assignments for a day", async () => {
 		asPersona("declan");
 		const ccaId = await ccaIdByName("Volleyball");
@@ -51,7 +55,7 @@ describe("GET /api/holiday-subsidy/members/[cca-id]", () => {
 });
 
 // GET /api/holiday-subsidy/approvals — JCRC-only approvals index.
-describe("GET /api/holiday-subsidy/approvals", () => {
+describe.skip("GET /api/holiday-subsidy/approvals", () => {
 	it("lets a JCRC member (sage) read the approvals index", async () => {
 		asPersona("sage");
 		const { GET } = await import("@/app/api/holiday-subsidy/approvals/route");

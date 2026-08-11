@@ -20,20 +20,20 @@ describe("isResidentPositionType", () => {
 
 describe("getRankingMetricKeys", () => {
 	it("returns only attendance for sports members", () => {
-		expect(getRankingMetricKeys({ ccaType: "sports", positionType: "member" })).toEqual([
+		expect(getRankingMetricKeys({ ccaKind: "sports", positionType: "member" })).toEqual([
 			"attendance",
 		]);
 	});
 
 	it("returns attendance and performance for culture leads", () => {
-		expect(getRankingMetricKeys({ ccaType: "culture", positionType: "lead" })).toEqual([
+		expect(getRankingMetricKeys({ ccaKind: "culture", positionType: "lead" })).toEqual([
 			"attendance",
 			"performance",
 		]);
 	});
 
 	it("returns behavioral metrics for resident positions", () => {
-		expect(getRankingMetricKeys({ ccaType: "committee", positionType: "resident" })).toEqual([
+		expect(getRankingMetricKeys({ ccaKind: "committee", positionType: "resident" })).toEqual([
 			"helpfulness",
 			"initiative",
 			"attitude",
@@ -44,13 +44,13 @@ describe("getRankingMetricKeys", () => {
 describe("hasRequiredRankingInputs", () => {
 	it("requires all configured metrics for sports and culture rows", () => {
 		expect(
-			hasRequiredRankingInputs({ attendance: 6 }, { ccaType: "sports", positionType: "member" }),
+			hasRequiredRankingInputs({ attendance: 6 }, { ccaKind: "sports", positionType: "member" }),
 		).toBe(true);
 
 		expect(
 			hasRequiredRankingInputs(
 				{ attendance: 6, performance: 0 },
-				{ ccaType: "culture", positionType: "lead" },
+				{ ccaKind: "culture", positionType: "lead" },
 			),
 		).toBe(false);
 	});
@@ -59,14 +59,14 @@ describe("hasRequiredRankingInputs", () => {
 		expect(
 			hasRequiredRankingInputs(
 				{ helpfulness: 4, initiative: 5, attitude: 6 },
-				{ ccaType: "committee", positionType: "resident" },
+				{ ccaKind: "committee", positionType: "resident" },
 			),
 		).toBe(true);
 
 		expect(
 			hasRequiredRankingInputs(
 				{ helpfulness: 4, initiative: 5, attitude: 0 },
-				{ ccaType: "committee", positionType: "resident" },
+				{ ccaKind: "committee", positionType: "resident" },
 			),
 		).toBe(false);
 	});
@@ -74,19 +74,19 @@ describe("hasRequiredRankingInputs", () => {
 
 describe("getRankingScore", () => {
 	it("sums the active metrics for each ranking mode", () => {
-		expect(getRankingScore({ attendance: 6 }, { ccaType: "sports", positionType: "member" })).toBe(
+		expect(getRankingScore({ attendance: 6 }, { ccaKind: "sports", positionType: "member" })).toBe(
 			6,
 		);
 		expect(
 			getRankingScore(
 				{ attendance: 6, performance: 4 },
-				{ ccaType: "culture", positionType: "lead" },
+				{ ccaKind: "culture", positionType: "lead" },
 			),
 		).toBe(10);
 		expect(
 			getRankingScore(
 				{ helpfulness: 4, initiative: 5, attitude: 6 },
-				{ ccaType: "committee", positionType: "resident" },
+				{ ccaKind: "committee", positionType: "resident" },
 			),
 		).toBe(15);
 	});

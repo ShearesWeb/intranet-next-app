@@ -12,7 +12,7 @@ import { ErrorCard } from "@/components/layout/error-card";
 import { useCcaList } from "@/hooks/use-cca-list";
 import type { CCAData } from "@/types/cca-data";
 import { PositionTypeBadge } from "@/components/badges";
-import { ccaNameColumn, ccaTypeColumn } from "@/components/cca/cca-column-defs";
+import { ccaNameColumn, ccaKindColumn } from "@/components/cca/cca-column-defs";
 
 const ccaTableColumns: ColumnDef<CCAData>[] = [
 	ccaNameColumn,
@@ -38,7 +38,7 @@ const ccaTableColumns: ColumnDef<CCAData>[] = [
 			/>
 		),
 	},
-	ccaTypeColumn,
+	ccaKindColumn,
 	{
 		accessorKey: "points",
 		header: ({ column }) => (

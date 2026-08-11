@@ -15,14 +15,14 @@ describe("mapRankingResponseMembers", () => {
 		const members: AppointmentRow[] = [
 			{
 				user_id: 1,
-				cut_status: null,
+				team_status: null,
 				commitment_period: "full-year",
 				public_user_info: [{ name: "Alex" }],
 				cca_positions: [{ id: 10, cca_id: 99, name: "Chair", position_type: "lead" }],
 			},
 			{
 				user_id: 2,
-				cut_status: "first-cut",
+				team_status: "first-cut",
 				commitment_period: "semester",
 				public_user_info: { name: "Blair" },
 				cca_positions: { id: 11, cca_id: 99, name: "Resident", position_type: "resident" },
@@ -39,10 +39,12 @@ describe("mapRankingResponseMembers", () => {
 		const normalized = mapRankingResponseMembers({
 			members,
 			rankings,
-			ccaType: "culture",
+			ccaKind: "culture",
 			rankablePositionIds: [10, 11],
 		});
 
+		// normalizeTeamStatus ports legacy cut_status values onto the team_status
+		// ladder, so `first-cut` surfaces as `shortlisted`.
 		expect(normalized).toEqual([
 			{
 				user_id: 1,
@@ -50,7 +52,7 @@ describe("mapRankingResponseMembers", () => {
 				position_id: 10,
 				position: "Chair",
 				position_type: "lead",
-				cut_status: null,
+				team_status: null,
 				commitment_period: "full-year",
 				ranking: 1,
 				attendance: 8,
@@ -66,7 +68,7 @@ describe("mapRankingResponseMembers", () => {
 				position_id: 11,
 				position: "Resident",
 				position_type: "resident",
-				cut_status: "first-cut",
+				team_status: "shortlisted",
 				commitment_period: "semester",
 				ranking: 0,
 				attendance: 0,
@@ -125,7 +127,7 @@ describe("buildRankingsUpsertPayloads", () => {
 				[10, "lead"],
 				[11, "lead"],
 			]),
-			ccaType: "culture",
+			ccaKind: "culture",
 		});
 
 		expect(payloads).toEqual([
@@ -156,7 +158,7 @@ describe("buildRankingsUpsertPayloads", () => {
 			rankings,
 			allowedPositionIds: new Set([20]),
 			positionTypeById: new Map([[20, "resident"]]),
-			ccaType: "resident",
+			ccaKind: "resident",
 		});
 
 		expect(payloads).toHaveLength(1);

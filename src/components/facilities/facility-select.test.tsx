@@ -5,8 +5,8 @@ import { FacilitySelect } from "@/components/facilities/facility-select";
 import type { Facility } from "@/types/facilities";
 
 const FACILITIES: Facility[] = [
-	{ id: 1, venue: "Sheares Hall", sub_venue: "Multi-Purpose Hall", type: "sheares", active: true },
-	{ id: 2, venue: "Kent Ridge", sub_venue: "Tennis Court 1", type: "reboks", active: true },
+	{ id: 1, venue: "Sheares Hall", sub_venue: "Multi-Purpose Hall", type: "sheares" },
+	{ id: 2, venue: "Kent Ridge", sub_venue: "Tennis Court 1", type: "reboks" },
 ];
 
 let container: HTMLDivElement;

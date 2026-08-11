@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { apiOk, handleApiError } from "@/lib/api/response";
-import { requireJcrcOrAdminAccess } from "@/lib/api/auth";
+import { requireJcrcAccess } from "@/lib/api/auth";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 import { ApiError } from "@/lib/api/errors";
 import { getWeeklyApprovals, batchApproveWeekly } from "@/lib/holiday-subsidy/weekly-service";
@@ -21,7 +21,7 @@ export async function GET(_request: Request, { params }: Params) {
 	if (disabledResponse) return disabledResponse;
 
 	try {
-		await requireJcrcOrAdminAccess();
+		await requireJcrcAccess();
 		const { ccaId, weekId } = parseParams(await params);
 		const result = await getWeeklyApprovals(ccaId, weekId);
 		return NextResponse.json(
@@ -38,7 +38,7 @@ export async function PATCH(request: Request, { params }: Params) {
 	if (disabledResponse) return disabledResponse;
 
 	try {
-		await requireJcrcOrAdminAccess();
+		await requireJcrcAccess();
 		parseParams(await params); // validate params
 
 		const body = await request.json();

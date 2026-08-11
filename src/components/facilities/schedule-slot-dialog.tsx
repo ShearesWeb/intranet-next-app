@@ -80,8 +80,8 @@ export function ScheduleSlotDialog({
 		setStartDate("");
 		setEndDate("");
 		const def =
-			(defaultType && selectableFacilities.find((f) => f.active && f.type === defaultType)) ??
-			selectableFacilities.find((f) => f.active);
+			(defaultType && selectableFacilities.find((f) => f.type === defaultType)) ??
+			selectableFacilities[0];
 		setFacilityId(def?.id ?? null);
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [open]);

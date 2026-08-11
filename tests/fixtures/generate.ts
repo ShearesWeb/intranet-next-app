@@ -37,6 +37,15 @@ function renderSql(): string {
 	const fixtureUserEmails = PERSONAS.filter((p) => p.email !== null)
 		.map((p) => q(p.email))
 		.join(", ");
+	// facility_claims must go first, and by hand. Its created_by FK is ON DELETE
+	// SET NULL, but validate_facility_claim treats created_by as immutable, so the
+	// cascade raises "Facility claim slot, CCA and claimant are immutable" and the
+	// whole reseed aborts. Its cca_id FK is ON DELETE RESTRICT, which would block
+	// the CCA delete below for the same rows.
+	lines.push(
+		`DELETE FROM facility_claims WHERE created_by IN (SELECT id FROM users WHERE email IN (${fixtureUserEmails}))` +
+			` OR cca_id IN (SELECT id FROM ccas WHERE name IN (${fixtureCcaNames}));`,
+	);
 	lines.push(`DELETE FROM users WHERE email IN (${fixtureUserEmails});`);
 	lines.push(`DELETE FROM ccas WHERE name IN (${fixtureCcaNames});`);
 	lines.push("");
@@ -45,13 +54,13 @@ function renderSql(): string {
 	lines.push("-- CCAs (spec § 5.3)");
 	for (const cca of CCAS) {
 		lines.push(
-			`INSERT INTO ccas (name, cca_type, tier_type, description) VALUES (${q(cca.name)}, ${q(cca.type)}, ${q(cca.tierType)}, ${q(cca.description)});`,
+			`INSERT INTO ccas (name, kind, tier, description) VALUES (${q(cca.name)}, ${q(cca.kind)}, ${q(cca.tier)}, ${q(cca.description)});`,
 		);
 	}
 	lines.push("");
 
 	// --- Positions, two passes (FK self-reference) ---
-	lines.push("-- CCA positions: insert all rows first, then patch reporting_position via UPDATE.");
+	lines.push("-- CCA positions: insert all rows first, then patch reporting_position_id via UPDATE.");
 	for (const pos of POSITIONS) {
 		const ccaSubquery = `(SELECT id FROM ccas WHERE name = ${q(ccaName(pos.ccaKey))})`;
 		const cap = pos.capacity === null ? "NULL" : String(pos.capacity);
@@ -61,12 +70,12 @@ function renderSql(): string {
 	}
 	lines.push("");
 
-	lines.push("-- Patch self-FKs (reporting_position).");
+	lines.push("-- Patch self-FKs (reporting_position_id).");
 	for (const pos of POSITIONS) {
 		if (pos.reportsTo === null) continue;
 		const ccaSubquery = `(SELECT id FROM ccas WHERE name = ${q(ccaName(pos.ccaKey))})`;
 		lines.push(
-			`UPDATE cca_positions SET reporting_position = (` +
+			`UPDATE cca_positions SET reporting_position_id = (` +
 				`SELECT id FROM cca_positions WHERE cca_id = ${ccaSubquery} AND name = ${q(pos.reportsTo)}` +
 				`) WHERE cca_id = ${ccaSubquery} AND name = ${q(pos.name)};`,
 		);
@@ -121,23 +130,23 @@ function renderMd(): string {
 	lines.push("");
 	lines.push("## CCAs");
 	lines.push("");
-	lines.push("| Key | Name | Type | Tier |");
+	lines.push("| Key | Name | Kind | Tier |");
 	lines.push("|---|---|---|---|");
 	for (const cca of CCAS) {
-		lines.push(`| \`${cca.key}\` | ${cca.name} | ${cca.type} | ${cca.tierType} |`);
+		lines.push(`| \`${cca.key}\` | ${cca.name} | ${cca.kind} | ${cca.tier} |`);
 	}
 	lines.push("");
 
 	lines.push("## Personas");
 	lines.push("");
-	lines.push("| Key | Email | Name | Room | Appointments | is_admin | is_jcrc | is_culture_sports_admin |");
+	lines.push("| Key | Email | Name | Room | Appointments | is_chair | is_jcrc | is_culture_sports_chair |");
 	lines.push("|---|---|---|---|---|---|---|---|");
 	for (const p of PERSONAS) {
 		const appts = p.appointments.length === 0
 			? "—"
 			: p.appointments.map((a) => `${ccaName(a.ccaKey)} / ${a.positionName}`).join("; ");
 		lines.push(
-			`| \`${p.key}\` | ${p.email ?? "—"} | ${p.name ?? "—"} | ${p.room ?? "—"} | ${appts} | ${flag(p.expected.is_admin)} | ${flag(p.expected.is_jcrc)} | ${flag(p.expected.is_culture_sports_admin)} |`,
+			`| \`${p.key}\` | ${p.email ?? "—"} | ${p.name ?? "—"} | ${p.room ?? "—"} | ${appts} | ${flag(p.expected.is_chair)} | ${flag(p.expected.is_jcrc)} | ${flag(p.expected.is_culture_sports_chair)} |`,
 		);
 	}
 	lines.push("");

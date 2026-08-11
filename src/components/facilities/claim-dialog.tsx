@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { BookingWithClaims, FACILITY_TYPE_CONFIG, formatHourRange } from "@/types/facilities";
+import { SlotWithContext, FACILITY_TYPE_CONFIG, formatHourRange } from "@/types/facilities";
 import { toast } from "sonner";
 
 interface ChairCca {
@@ -19,7 +19,7 @@ interface ChairCca {
 }
 
 interface ClaimDialogProps {
-	booking: BookingWithClaims | null;
+	booking: SlotWithContext | null;
 	chairCcas: ChairCca[];
 	onClose: () => void;
 	onSuccess: () => void;
@@ -47,7 +47,12 @@ export function ClaimDialog({ booking, chairCcas, onClose, onSuccess }: ClaimDia
 			const res = await fetch("/api/facilities/claims", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ booking_id: booking!.id, cca_id: selectedCcaId }),
+				body: JSON.stringify({
+					facility_id: booking!.facility_id,
+					date: booking!.date,
+					hour: booking!.hour,
+					cca_id: selectedCcaId,
+				}),
 			});
 
 			const json = await res.json();
@@ -95,7 +100,7 @@ export function ClaimDialog({ booking, chairCcas, onClose, onSuccess }: ClaimDia
 							{booking.venue} — {booking.sub_venue}
 						</div>
 						<div className="mt-1 text-muted-foreground">
-							{booking.booked_date} · {formatHourRange(booking.hour)}
+							{booking.date} · {formatHourRange(booking.hour)}
 						</div>
 					</div>
 

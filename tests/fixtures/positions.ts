@@ -21,15 +21,15 @@ import type { PositionDef } from "./types";
 //
 // JCRC:
 //   maincomm (no parent — JCRC has no lead, per spec § 5.3)
-//   └── blockcomm (no children — keeps Jasper's is_admin off; only is_jcrc)
+//   └── blockcomm (no children — keeps Jasper's is_chair off; only is_jcrc)
 //
 // Derived-flag consequences (asserted in smoke test):
-// - "lead" in any non-JCRC CCA → has children → is_admin = true
-//   For culture/sports CCAs → also is_culture_sports_admin = true
-// - "vice" in a sports/culture CCA → has a member child → is_admin = true
-//   and is_culture_sports_admin = true (it manages the CCA's members)
-// - "maincomm" in committee/JCRC → has children (subcomm/blockcomm) → is_admin = true
-//   In JCRC → also is_jcrc; never is_culture_sports_admin (cca_type != culture/sports)
+// - "lead" in any non-JCRC CCA → has children → is_chair = true
+//   For culture/sports CCAs → also is_culture_sports_chair = true
+// - "vice" in a sports/culture CCA → has a member child → is_chair = true
+//   and is_culture_sports_chair = true (it manages the CCA's members)
+// - "maincomm" in committee/JCRC → has children (subcomm/blockcomm) → is_chair = true
+//   In JCRC → also is_jcrc; never is_culture_sports_chair (cca_kind != culture/sports)
 // - "team manager", "subcomm", "blockcomm", "member", "resident" → no children → no flags from chain.
 //   `is_jcrc` still derives from CCA membership alone for anyone with a JCRC appointment.
 
@@ -37,13 +37,13 @@ export const POSITIONS: readonly PositionDef[] = [
 	// Volleyball
 	{ ccaKey: "volleyball", positionType: "lead", name: "Captain", reportsTo: null, capacity: 1 },
 	{ ccaKey: "volleyball", positionType: "vice", name: "Vice Captain", reportsTo: "Captain", capacity: 1 },
-	{ ccaKey: "volleyball", positionType: "team manager", name: "Team Manager", reportsTo: "Captain", capacity: 1 },
+	{ ccaKey: "volleyball", positionType: "team-manager", name: "Team Manager", reportsTo: "Captain", capacity: 1 },
 	{ ccaKey: "volleyball", positionType: "member", name: "Player", reportsTo: "Vice Captain", capacity: 12 },
 
 	// Basketball
 	{ ccaKey: "basketball", positionType: "lead", name: "Captain", reportsTo: null, capacity: 1 },
 	{ ccaKey: "basketball", positionType: "vice", name: "Vice Captain", reportsTo: "Captain", capacity: 1 },
-	{ ccaKey: "basketball", positionType: "team manager", name: "Team Manager", reportsTo: "Captain", capacity: 1 },
+	{ ccaKey: "basketball", positionType: "team-manager", name: "Team Manager", reportsTo: "Captain", capacity: 1 },
 	{ ccaKey: "basketball", positionType: "member", name: "Player", reportsTo: "Vice Captain", capacity: 12 },
 
 	// Choir

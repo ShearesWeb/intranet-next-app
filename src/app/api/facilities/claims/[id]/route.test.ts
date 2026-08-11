@@ -53,7 +53,7 @@ describe("DELETE /api/facilities/claims/[id] — withdrawal is never time-locked
 			id: 5,
 			cca_id: 3,
 			booking_id: 9,
-			booked_date: futureDate(1),
+			date: futureDate(1),
 		});
 		const { DELETE } = await import("./route");
 		const res = await DELETE(del(), params());
@@ -68,7 +68,7 @@ describe("DELETE /api/facilities/claims/[id] — withdrawal is never time-locked
 			id: 5,
 			cca_id: 3,
 			booking_id: 9,
-			booked_date: futureDate(1),
+			date: futureDate(1),
 		});
 		const { DELETE } = await import("./route");
 		const res = await DELETE(del(), params());
@@ -82,7 +82,7 @@ describe("DELETE /api/facilities/claims/[id] — withdrawal is never time-locked
 			id: 5,
 			cca_id: 3,
 			booking_id: 9,
-			booked_date: futureDate(7),
+			date: futureDate(7),
 		});
 		const { DELETE } = await import("./route");
 		const res = await DELETE(del(), params());

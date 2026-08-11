@@ -12,8 +12,12 @@ describe("GET /api/chair/positions/for-chair", () => {
 	});
 });
 
-// GET /api/cca/[cca-id]/rankings — chair/JCRC-gated ranking view.
-describe("GET /api/cca/[cca-id]/rankings", () => {
+// GET /api/cca/[cca-id]/rankings — member evaluation ranking.
+//
+// Skipped while `memberRanking` is parked. The schema dropped the evaluations
+// domain, so `cca_appointment_evaluations` does not exist and the route is
+// gated to 503. Unskip in the same change that restores the table and the flag.
+describe.skip("GET /api/cca/[cca-id]/rankings", () => {
 	it("404s for a non-existent CCA", async () => {
 		asPersona("declan");
 		const { GET } = await import("@/app/api/cca/[cca-id]/rankings/route");

@@ -98,3 +98,4 @@ e2e/.session-cache.json
 # Claude Code harness artifacts
 .claude/scheduled_tasks.lock
 .superpowers/
+docs/superpowers/

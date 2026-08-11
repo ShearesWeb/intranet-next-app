@@ -1,216 +1,164 @@
 import { createClient } from "@/lib/supabase/server";
 import { ApiError } from "@/lib/api/errors";
+import { getSlots } from "@/lib/facilities/facility-slots";
 import {
-	BookingApprovalView,
-	ConfirmedBookingView,
 	ApprovalClaimant,
-	FacilityBooking,
-	FacilityClaim,
-	FacilityType,
-	BookingStatus,
-	ClaimStatus,
+	ConfirmedBookingView,
+	SlotApprovalView,
 	daysUntilBooking,
 } from "@/types/facilities";
 
-interface BookingRow {
-	id: number;
-	facility_id: number;
-	booked_date: string;
-	hour: number;
-	status: BookingStatus;
-	facilities: { venue: string; sub_venue: string; type: FacilityType } | null;
-}
-
-function flattenBooking(row: BookingRow): FacilityBooking {
-	return {
-		id: row.id,
-		facility_id: row.facility_id,
-		venue: row.facilities?.venue ?? "",
-		sub_venue: row.facilities?.sub_venue ?? "",
-		type: row.facilities?.type ?? "external",
-		booked_date: row.booked_date,
-		hour: row.hour,
-		status: row.status,
-	};
-}
-
-/** Every booking with outstanding claims (single or competing), with claimants + chair contacts. */
-export async function listPendingApprovals(): Promise<BookingApprovalView[]> {
-	const supabase = await createClient();
-
-	const { data: bookings, error } = await supabase
-		.from("facility_bookings")
-		.select("*, facilities(venue, sub_venue, type)")
-		.in("status", ["pending", "conflicted"])
-		.order("booked_date")
-		.order("hour");
-
-	if (error) {
-		console.error("Error fetching bookings awaiting approval:", error);
-		throw new ApiError(500, "Failed to load approvals");
-	}
-	if (!bookings || bookings.length === 0) return [];
-
-	const bookingIds = bookings.map((b) => b.id);
-
-	const { data: claimRows } = await supabase
-		.from("facility_claims")
-		.select("*, ccas(name)")
-		.in("booking_id", bookingIds)
-		.eq("status", "pending");
-
-	const claimerIds = [...new Set((claimRows ?? []).map((c) => c.claimed_by))];
+/**
+ * The approvals queue is derived from the computed calendar rather than from a
+ * bookings table, because no bookings table exists. `facility_slots()` already
+ * returns each slot's status and its live claims as JSON, so one call gives
+ * both the queue and the claimant list.
+ */
+async function contactsFor(userIds: number[]) {
 	const contacts = new Map<number, { name: string; telegram: string }>();
-	if (claimerIds.length > 0) {
-		const { data: users } = await supabase
-			.from("users")
-			.select("id, name, telegram_handle")
-			.in("id", claimerIds);
-		for (const u of users ?? []) {
-			contacts.set(u.id, { name: u.name ?? "", telegram: u.telegram_handle ?? "" });
-		}
-	}
+	if (!userIds.length) return contacts;
 
-	const claimantsByBooking = new Map<number, ApprovalClaimant[]>();
-	for (const row of claimRows ?? []) {
-		const claim: FacilityClaim = {
-			id: row.id,
-			booking_id: row.booking_id,
-			cca_id: row.cca_id,
-			cca_name: (row.ccas as { name: string } | null)?.name ?? "Unknown CCA",
-			status: row.status as ClaimStatus,
-			claimed_by: row.claimed_by,
-			claimed_at: row.claimed_at,
-			resolved_at: row.resolved_at,
-			resolved_by: row.resolved_by,
-		};
-		const contact = contacts.get(row.claimed_by);
-		const claimant: ApprovalClaimant = {
-			claim,
-			cca_name: claim.cca_name,
-			chair_name: contact?.name ?? "",
-			chair_telegram: contact?.telegram ?? "",
-		};
-		const list = claimantsByBooking.get(row.booking_id) ?? [];
-		list.push(claimant);
-		claimantsByBooking.set(row.booking_id, list);
-	}
+	const supabase = await createClient();
+	const { data: users } = await supabase
+		.from("users")
+		.select("id, name, telegram_handle")
+		.in("id", userIds);
 
-	return bookings.map((row) => {
-		const booking = flattenBooking(row as BookingRow);
+	for (const u of users ?? []) {
+		contacts.set(u.id, { name: u.name ?? "", telegram: u.telegram_handle ?? "" });
+	}
+	return contacts;
+}
+
+/** Every slot with outstanding claims (single or competing), with chair contacts. */
+export async function listPendingApprovals(from: string, to: string): Promise<SlotApprovalView[]> {
+	const slots = await getSlots(from, to);
+	const awaiting = slots.filter(
+		(slot) => slot.status === "pending" || slot.status === "conflicted",
+	);
+
+	if (!awaiting.length) return [];
+
+	const claimerIds = [
+		...new Set(
+			awaiting.flatMap((slot) =>
+				slot.claims
+					.filter((claim) => claim.status === "pending")
+					.map((claim) => claim.created_by)
+					.filter((id): id is number => typeof id === "number"),
+			),
+		),
+	];
+
+	const contacts = await contactsFor(claimerIds);
+
+	return awaiting.map((slot) => {
+		const claimants: ApprovalClaimant[] = slot.claims
+			.filter((claim) => claim.status === "pending")
+			.map((claim) => {
+				const contact = claim.created_by ? contacts.get(claim.created_by) : undefined;
+				return {
+					claim,
+					cca_name: claim.cca_name,
+					chair_name: contact?.name ?? "",
+					chair_telegram: contact?.telegram ?? "",
+				};
+			});
+
 		return {
-			booking,
-			claimants: claimantsByBooking.get(row.id) ?? [],
-			days_until_booking: daysUntilBooking(row.booked_date),
+			slot,
+			claimants,
+			days_until_booking: daysUntilBooking(slot.date),
 		};
 	});
 }
 
-/** Upcoming confirmed bookings (today onward) with the holding CCA — JCRC can revoke these. */
-export async function listUpcomingConfirmed(fromDate: string): Promise<ConfirmedBookingView[]> {
-	const supabase = await createClient();
+/** Upcoming confirmed bookings with the holding CCA — JCRC can revoke these. */
+export async function listUpcomingConfirmed(
+	from: string,
+	to: string,
+): Promise<ConfirmedBookingView[]> {
+	const slots = await getSlots(from, to);
 
-	const { data: bookings, error } = await supabase
-		.from("facility_bookings")
-		.select("*, facilities(venue, sub_venue, type)")
-		.eq("status", "confirmed")
-		.gte("booked_date", fromDate)
-		.order("booked_date")
-		.order("hour");
-
-	if (error) {
-		console.error("Error fetching confirmed bookings:", error);
-		throw new ApiError(500, "Failed to load confirmed bookings");
-	}
-	if (!bookings || bookings.length === 0) return [];
-
-	const { data: claimRows } = await supabase
-		.from("facility_claims")
-		.select("booking_id, ccas(name)")
-		.in(
-			"booking_id",
-			bookings.map((b) => b.id),
-		)
-		.eq("status", "approved");
-
-	const ccaByBooking = new Map<number, string>();
-	for (const row of claimRows ?? []) {
-		const cca = row.ccas as { name: string } | { name: string }[] | null;
-		const name = Array.isArray(cca) ? cca[0]?.name : cca?.name;
-		ccaByBooking.set(row.booking_id, name ?? "Unknown CCA");
-	}
-
-	return bookings.map((row) => ({
-		booking: flattenBooking(row as BookingRow),
-		cca_name: ccaByBooking.get(row.id) ?? "Unknown CCA",
-		days_until_booking: daysUntilBooking(row.booked_date),
-	}));
+	return slots
+		.filter((slot) => slot.status === "confirmed")
+		.map((slot) => {
+			// At most one claim per slot is ever approved, which is what makes
+			// `confirmed` unambiguous.
+			const approved = slot.claims.find((claim) => claim.status === "approved");
+			return {
+				slot,
+				cca_name: approved?.cca_name ?? "Unknown CCA",
+				claim_id: approved?.claim_id ?? 0,
+				days_until_booking: daysUntilBooking(slot.date),
+			};
+		})
+		.filter((view) => view.claim_id !== 0);
 }
 
-/** Approve the winning claim and reject the rest. Booking flips to 'confirmed' via trigger. */
-export async function approveClaim(
-	bookingId: number,
-	winningClaimId: number,
-	userId: number,
-): Promise<void> {
+/** Reject every named claim, freeing the slot for those CCAs to claim again. */
+export async function rejectClaims(claimIds: number[]): Promise<void> {
+	if (!claimIds.length) return;
+
 	const supabase = await createClient();
-	const now = new Date().toISOString();
-
-	const { error: approveError } = await supabase
+	const { data, error } = await supabase
 		.from("facility_claims")
-		.update({ status: "approved", resolved_at: now, resolved_by: userId })
-		.eq("id", winningClaimId)
-		.eq("booking_id", bookingId);
-
-	if (approveError) {
-		console.error("Error approving winning claim:", approveError);
-		throw new ApiError(500, "Failed to approve claim");
-	}
-
-	const { error: rejectError } = await supabase
-		.from("facility_claims")
-		.update({ status: "rejected", resolved_at: now, resolved_by: userId })
-		.eq("booking_id", bookingId)
-		.eq("status", "pending")
-		.neq("id", winningClaimId);
-
-	if (rejectError) {
-		console.error("Error rejecting other claims:", rejectError);
-		throw new ApiError(500, "Failed to reject competing claims");
-	}
-}
-
-/** Reject every pending claim on a booking. Slot returns to 'available' via trigger. */
-export async function rejectAllClaims(bookingId: number, userId: number): Promise<void> {
-	const supabase = await createClient();
-
-	const { error } = await supabase
-		.from("facility_claims")
-		.update({ status: "rejected", resolved_at: new Date().toISOString(), resolved_by: userId })
-		.eq("booking_id", bookingId)
-		.eq("status", "pending");
+		.update({ status: "rejected" })
+		.in("id", claimIds)
+		.select("id");
 
 	if (error) {
 		console.error("Error rejecting claims:", error);
 		throw new ApiError(500, "Failed to reject claims");
 	}
+
+	// A filtered UPDATE matches no rows rather than raising.
+	if (!data || data.length === 0) {
+		throw new ApiError(403, "Only JCRC may resolve or reopen a facility claim");
+	}
 }
 
 /**
- * Revoke a confirmed booking: reject its approved claim(s). The status trigger rolls the
- * booking back (any still-pending claims resurface for approval, else 'available').
+ * Approve one claim on a slot and reject the rest.
+ *
+ * Ordering matters: `uq_facility_claims_approved_slot` allows only one approved
+ * claim per slot, so the losers are rejected first. Both statements go through
+ * the JCRC-only UPDATE policy.
  */
-export async function revokeBooking(bookingId: number, userId: number): Promise<void> {
+export async function resolveSlot(claimId: number, competingClaimIds: number[]): Promise<void> {
 	const supabase = await createClient();
 
-	const { error } = await supabase
+	const losers = competingClaimIds.filter((id) => id !== claimId);
+
+	if (losers.length) {
+		const { error: rejectError } = await supabase
+			.from("facility_claims")
+			.update({ status: "rejected" })
+			.in("id", losers);
+
+		if (rejectError) {
+			console.error("Error rejecting competing claims:", rejectError);
+			throw new ApiError(500, "Failed to reject competing claims");
+		}
+	}
+
+	const { data, error } = await supabase
 		.from("facility_claims")
-		.update({ status: "rejected", resolved_at: new Date().toISOString(), resolved_by: userId })
-		.eq("booking_id", bookingId)
-		.eq("status", "approved");
+		.update({ status: "approved" })
+		.eq("id", claimId)
+		.select("id")
+		.maybeSingle();
 
 	if (error) {
-		console.error("Error revoking booking:", error);
-		throw new ApiError(500, "Failed to revoke booking");
+		if (error.code === "23505") {
+			throw new ApiError(409, "That slot is already confirmed for another CCA");
+		}
+		console.error("Error approving claim:", error);
+		throw new ApiError(500, "Failed to approve claim");
+	}
+
+	// A filtered UPDATE matches no rows rather than raising.
+	if (!data) {
+		throw new ApiError(403, "Only JCRC may resolve or reopen a facility claim");
 	}
 }

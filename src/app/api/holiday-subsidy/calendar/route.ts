@@ -26,7 +26,7 @@ export async function GET(request: Request) {
 		if (ccaIdParam) {
 			ccaIds = [parseInt(ccaIdParam, 10)];
 			if (isNaN(ccaIds[0])) throw new ApiError(400, "Invalid ccaId");
-		} else if (user.is_jcrc || user.is_admin) {
+		} else if (user.is_jcrc) {
 			ccaIds = undefined;
 		} else {
 			ccaIds = getChairCcaIds(user);

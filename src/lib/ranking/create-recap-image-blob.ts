@@ -82,14 +82,14 @@ export async function createRecapImageBlob(
 		{
 			label: "Culture",
 			items: (ccas || [])
-				.filter((c) => c.cca_type === "culture")
+				.filter((c) => c.cca_kind === "culture")
 				.map((c) => ({ name: formatName(c), points: c.points || 0 })),
 			total: recap.totals.culturePoints || 0,
 		},
 		{
 			label: "Sports",
 			items: (ccas || [])
-				.filter((c) => c.cca_type === "sports")
+				.filter((c) => c.cca_kind === "sports")
 				.map((c) => ({ name: formatName(c), points: c.points || 0 })),
 			total: recap.totals.sportsPoints || 0,
 		},
@@ -97,7 +97,7 @@ export async function createRecapImageBlob(
 			label: "Committees",
 			items: (ccas || [])
 				.filter((c) => {
-					if (c.cca_type !== "committee") return false;
+					if (c.cca_kind !== "committee") return false;
 					const posType = String(c.position_type || "")
 						.trim()
 						.toLowerCase();
@@ -120,14 +120,14 @@ export async function createRecapImageBlob(
 		{
 			label: "Supplementary",
 			items: (ccas || [])
-				.filter((c) => c.cca_type === "supplementary")
+				.filter((c) => c.cca_kind === "supplementary")
 				.map((c) => ({ name: formatName(c), points: c.points || 0 })),
 			total: recap.totals.supplementaryPoints || 0,
 		},
 		{
 			label: "Adhoc",
 			items: (ccas || [])
-				.filter((c) => c.cca_type === "adhoc")
+				.filter((c) => c.cca_kind === "adhoc")
 				.map((c) => ({ name: formatName(c), points: c.points || 0 })),
 			total: recap.totals.adhocPoints || 0,
 		},

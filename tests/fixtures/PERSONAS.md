@@ -6,20 +6,20 @@ These personas are the single source of truth for test data. The TS source is `t
 
 ## CCAs
 
-| Key | Name | Type | Tier |
+| Key | Name | Kind | Tier |
 |---|---|---|---|
-| `volleyball` | Volleyball | sports | tier 1 |
-| `basketball` | Basketball | sports | tier 1 |
-| `choir` | Choir | culture | tier 1 |
-| `dance` | Dance | culture | tier 2 |
-| `drama` | Drama | culture | tier 1 |
+| `volleyball` | Volleyball | sports | tier-1 |
+| `basketball` | Basketball | sports | tier-1 |
+| `choir` | Choir | culture | tier-1 |
+| `dance` | Dance | culture | tier-2 |
+| `drama` | Drama | culture | tier-1 |
 | `shweb` | SHWEB | committee | none |
 | `secc` | SECC | committee | none |
 | `jcrc` | JCRC | jcrc | none |
 
 ## Personas
 
-| Key | Email | Name | Room | Appointments | is_admin | is_jcrc | is_culture_sports_admin |
+| Key | Email | Name | Room | Appointments | is_chair | is_jcrc | is_culture_sports_chair |
 |---|---|---|---|---|---|---|---|
 | `anonymous` | — | — | — | — | — | — | — |
 | `aria` | aria.tan.sg@gmail.com | Aria Tan | SH/A/2/203 | — | — | — | — |
@@ -46,7 +46,7 @@ These personas are the single source of truth for test data. The TS source is `t
 |---|---|---|---|
 | Captain | lead | — | 1 |
 | Vice Captain | vice | Captain | 1 |
-| Team Manager | team manager | Captain | 1 |
+| Team Manager | team-manager | Captain | 1 |
 | Player | member | Vice Captain | 12 |
 
 ### Basketball
@@ -55,7 +55,7 @@ These personas are the single source of truth for test data. The TS source is `t
 |---|---|---|---|
 | Captain | lead | — | 1 |
 | Vice Captain | vice | Captain | 1 |
-| Team Manager | team manager | Captain | 1 |
+| Team Manager | team-manager | Captain | 1 |
 | Player | member | Vice Captain | 12 |
 
 ### Choir

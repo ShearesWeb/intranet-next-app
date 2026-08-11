@@ -19,24 +19,7 @@ vi.mock("@/lib/feature-flags", () => ({
 }));
 
 function buildSupabaseStub(rpc: ReturnType<typeof vi.fn>) {
-	// Chained delete().eq().not() and delete().eq() builder. Each call to
-	// `.from()` returns a new builder so we can inspect the chain.
-	const deleteBuilder = {
-		eq: vi.fn(),
-		not: vi.fn(),
-	};
-	deleteBuilder.eq.mockReturnValue(deleteBuilder);
-	deleteBuilder.not.mockResolvedValue({ error: null });
-
-	const fromBuilder = {
-		delete: () => deleteBuilder,
-	};
-
-	return {
-		from: vi.fn(() => fromBuilder),
-		rpc,
-		_deleteBuilder: deleteBuilder,
-	};
+	return { from: vi.fn(), rpc };
 }
 
 describe("rankings route", () => {
@@ -63,10 +46,57 @@ describe("rankings route", () => {
 		expect(await response.json()).toEqual({ data: null, error: "Unauthorized" });
 	});
 
-	it("calls upsert_cca_user_preference with the user-side RPC payload shape per ranking", async () => {
+	it("replaces the whole list in a single set_preferred_positions call", async () => {
 		const rpc = vi.fn().mockResolvedValue({ error: null });
-		const stub = buildSupabaseStub(rpc);
-		mocks.createClient.mockResolvedValue(stub);
+		mocks.createClient.mockResolvedValue(buildSupabaseStub(rpc));
+		mocks.fetchUserId.mockResolvedValue(55);
+
+		const { POST } = await import("./route");
+		const response = await POST(
+			new Request("http://localhost/api/user/rankings", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					rankings: [
+						{ position_id: 7, ranking: 2 },
+						{ position_id: 4, ranking: 1 },
+					],
+				}),
+			}),
+		);
+
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual({ data: { success: true }, error: null });
+
+		// One RPC, not the old 2N staged writes. Rank comes from array order, so
+		// the payload must be sorted by the requested ranking.
+		expect(rpc).toHaveBeenCalledTimes(1);
+		expect(rpc).toHaveBeenCalledWith("set_preferred_positions", {
+			p_position_ids: [4, 7],
+		});
+	});
+
+	it("clears the list when given an empty array", async () => {
+		const rpc = vi.fn().mockResolvedValue({ error: null });
+		mocks.createClient.mockResolvedValue(buildSupabaseStub(rpc));
+		mocks.fetchUserId.mockResolvedValue(55);
+
+		const { POST } = await import("./route");
+		const response = await POST(
+			new Request("http://localhost/api/user/rankings", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ rankings: [] }),
+			}),
+		);
+
+		expect(response.status).toBe(200);
+		expect(rpc).toHaveBeenCalledWith("set_preferred_positions", { p_position_ids: [] });
+	});
+
+	it("rejects a repeated position rather than letting the RPC do it", async () => {
+		const rpc = vi.fn().mockResolvedValue({ error: null });
+		mocks.createClient.mockResolvedValue(buildSupabaseStub(rpc));
 		mocks.fetchUserId.mockResolvedValue(55);
 
 		const { POST } = await import("./route");
@@ -77,33 +107,19 @@ describe("rankings route", () => {
 				body: JSON.stringify({
 					rankings: [
 						{ position_id: 4, ranking: 1 },
-						{ position_id: 7, ranking: 2 },
+						{ position_id: 4, ranking: 2 },
 					],
 				}),
 			}),
 		);
 
-		expect(response.status).toBe(200);
-		expect(await response.json()).toEqual({ data: { success: true }, error: null });
-
-		// 2 staging calls + 2 final calls = 4 total
-		expect(rpc).toHaveBeenCalledTimes(4);
-		// Every call must use the user-side RPC name and payload shape.
-		for (const call of rpc.mock.calls) {
-			expect(call[0]).toBe("upsert_cca_user_preference");
-			expect(Object.keys(call[1]).sort()).toEqual(["p_position_id", "p_rank"]);
-			expect(call[1]).not.toHaveProperty("p_user_id");
-		}
-		// Final-pass writes must use the real rank.
-		const finalCalls = rpc.mock.calls.slice(2);
-		expect(finalCalls[0][1]).toEqual({ p_position_id: 4, p_rank: 1 });
-		expect(finalCalls[1][1]).toEqual({ p_position_id: 7, p_rank: 2 });
+		expect(response.status).toBe(400);
+		expect(rpc).not.toHaveBeenCalled();
 	});
 
-	it("returns 500 when the staging RPC fails", async () => {
+	it("returns 500 when the RPC fails", async () => {
 		const rpc = vi.fn().mockResolvedValue({ error: { message: "rpc failed" } });
-		const stub = buildSupabaseStub(rpc);
-		mocks.createClient.mockResolvedValue(stub);
+		mocks.createClient.mockResolvedValue(buildSupabaseStub(rpc));
 		mocks.fetchUserId.mockResolvedValue(55);
 
 		const { POST } = await import("./route");

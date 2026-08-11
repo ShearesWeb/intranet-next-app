@@ -41,9 +41,7 @@ export default function ManageMembersPage() {
 		saveAll,
 	} = useCcaMembers(ccaId);
 	const [showAddMemberModal, setShowAddMemberModal] = useState(false);
-	const isSports = permissions.ccaType === "sports";
-	const isCulture = permissions.ccaType === "culture";
-	const isSportsCulture = ["sports", "culture"].includes(permissions.ccaType);
+	const isSportsCulture = ["sports", "culture"].includes(permissions.ccaKind);
 	const leadershipMembers = [...(groupedMembers.lead || []), ...(groupedMembers.vice || [])];
 	const existingMemberIds = useMemo(
 		() =>
@@ -73,27 +71,27 @@ export default function ManageMembersPage() {
 			showActions: false,
 			showAddButton: false,
 		},
-		isSports && {
-			title: "Final Cut - IHG Team Members (IVP)",
-			members: groupedMembers.ivpIhgTeam || [],
+		isSportsCulture && {
+			title: "Varsity - IVP Squad (also plays IHG)",
+			members: groupedMembers.varsity || [],
 			showActions: true,
 			showAddButton: false,
 		},
-		isSports && {
-			title: "Final Cut - IHG Team Members",
-			members: groupedMembers.ihgTeam || [],
+		isSportsCulture && {
+			title: "Main Team - IHG Team Sheet",
+			members: groupedMembers.mainTeam || [],
 			showActions: true,
 			showAddButton: false,
 		},
-		isSports && {
-			title: "Final Cut Members",
-			members: groupedMembers.finalCut || [],
+		isSportsCulture && {
+			title: "Reserves - On the Team, Not Fielded",
+			members: groupedMembers.reserve || [],
 			showActions: true,
 			showAddButton: false,
 		},
-		isCulture && {
-			title: "IVP Members",
-			members: groupedMembers.firstCut || [],
+		isSportsCulture && {
+			title: "Shortlisted - Past the First Cut",
+			members: groupedMembers.shortlisted || [],
 			showActions: true,
 			showAddButton: false,
 		},
@@ -178,7 +176,7 @@ export default function ManageMembersPage() {
 							title={section.title}
 							members={section.members}
 							canManage={permissions.canManageMembers}
-							ccaType={permissions.ccaType}
+							ccaKind={permissions.ccaKind}
 							onRemoveMember={removeMember}
 							onUpdateStatus={updateStatus}
 							onUpdateCommitment={updateCommitment}

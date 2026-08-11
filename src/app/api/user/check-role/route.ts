@@ -21,8 +21,8 @@ export async function GET() {
 
 		const userInfo = await requireAuth();
 
-		// `checkCcaAuthorization` is async (see `cca-chair-access.ts`): with no
-		// `cca` argument it short-circuits on the JWT fast path (no DB round-trip).
+		// With no `cca` argument this resolves from `my_profile.is_chair` alone,
+		// so there is no DB round-trip.
 		const authResult = await checkCcaAuthorization({ requestingUser: userInfo });
 		const userPositions: UserPositionSummary[] = (userInfo.appointments || []).map(
 			(appointment) => ({
@@ -35,14 +35,6 @@ export async function GET() {
 			isAuthorized: authResult.ok && authResult.data.hasChairAccess,
 			positions: userPositions.map((pos) => `${pos.position} (${pos.position_type}) - ${pos.cca}`),
 		};
-
-		// Allow admins to access chair features.
-		if (userInfo.is_admin) {
-			roleResult.isAuthorized = true;
-			if (roleResult.positions.length === 0) {
-				roleResult.positions.push("Administrator Access");
-			}
-		}
 
 		return apiOk(roleResult, 200, CACHE_HEADERS);
 	} catch (e) {

@@ -19,7 +19,7 @@ const membersResponse = {
 			position_id: 1,
 			position: "Chair",
 			position_type: "lead",
-			cut_status: null,
+			team_status: null,
 			commitment_period: "full-year",
 			ranking: 1,
 			attendance: 8,
@@ -35,7 +35,7 @@ const membersResponse = {
 			position_id: 1,
 			position: "Chair",
 			position_type: "lead",
-			cut_status: null,
+			team_status: null,
 			commitment_period: "full-year",
 			ranking: 2,
 			attendance: 6,
@@ -46,7 +46,7 @@ const membersResponse = {
 			remarks: "",
 		},
 	],
-	cca_type: "culture",
+	cca_kind: "culture",
 };
 
 describe("useRankingEditor", () => {
@@ -104,7 +104,7 @@ describe("useRankingEditor", () => {
 
 		await waitFor(() => expect(result.current?.isLoading).toBe(false));
 		expect(result.current?.error).toBeNull();
-		expect(result.current?.ccaType).toBe("culture");
+		expect(result.current?.ccaKind).toBe("culture");
 		expect(result.current?.members).toHaveLength(2);
 		expect(result.current?.positionGroups).toHaveLength(1);
 		unmount();
@@ -140,7 +140,7 @@ describe("useRankingEditor", () => {
 
 		const { result, unmount } = renderRankingEditorHook("42");
 		await waitFor(() => expect(result.current?.isLoading).toBe(false));
-		await waitFor(() => expect(result.current?.ccaType).toBe("culture"));
+		await waitFor(() => expect(result.current?.ccaKind).toBe("culture"));
 
 		await act(async () => {
 			result.current?.handleFieldChange("2:1", "attendance", 10);

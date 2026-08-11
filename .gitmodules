@@ -1,3 +1,4 @@
 [submodule "vendor/intranet"]
 	path = vendor/intranet
 	url = git@github.com:ShearesWeb/intranet.git
+	branch = main

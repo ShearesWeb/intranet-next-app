@@ -6,16 +6,17 @@ import { ApprovalCard } from "@/components/facilities/approval-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import {
-	BookingApprovalView,
+	SlotApprovalView,
 	ConfirmedBookingView,
 	FACILITY_TYPE_CONFIG,
 	formatHourRange,
+	slotKey,
 } from "@/types/facilities";
 import { toast } from "sonner";
 import { CalendarCheck, Inbox } from "lucide-react";
 
 interface ApprovalsPayload {
-	pending: BookingApprovalView[];
+	pending: SlotApprovalView[];
 	confirmed: ConfirmedBookingView[];
 }
 
@@ -49,13 +50,13 @@ export function ManageApprovals() {
 		[data.pending],
 	);
 
-	async function revoke(bookingId: number) {
-		setBusyId(bookingId);
+	async function revoke(claimId: number) {
+		setBusyId(claimId);
 		try {
 			const res = await fetch("/api/facilities/approvals", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ action: "revoke", booking_id: bookingId }),
+				body: JSON.stringify({ action: "revoke", claim_id: claimId }),
 			});
 			if (!res.ok) {
 				const json = await res.json();
@@ -93,7 +94,7 @@ export function ManageApprovals() {
 				) : (
 					pending.map((approval) => (
 						<ApprovalCard
-							key={approval.booking.id}
+							key={slotKey(approval.slot.facility_id, approval.slot.date, approval.slot.hour)}
 							approval={approval}
 							onChanged={fetchApprovals}
 						/>
@@ -122,13 +123,16 @@ export function ManageApprovals() {
 							</thead>
 							<tbody>
 								{data.confirmed.map((row) => {
-									const typeConfig = FACILITY_TYPE_CONFIG[row.booking.type];
+									const typeConfig = FACILITY_TYPE_CONFIG[row.slot.type];
 									return (
-										<tr key={row.booking.id} className="border-b last:border-0 hover:bg-accent/50">
+										<tr
+											key={slotKey(row.slot.facility_id, row.slot.date, row.slot.hour)}
+											className="border-b last:border-0 hover:bg-accent/50"
+										>
 											<td className="px-3 py-2.5">
-												<div className="font-medium">{row.booking.sub_venue}</div>
-												{row.booking.venue !== row.booking.sub_venue && (
-													<div className="text-xs text-muted-foreground">{row.booking.venue}</div>
+												<div className="font-medium">{row.slot.sub_venue}</div>
+												{row.slot.venue !== row.slot.sub_venue && (
+													<div className="text-xs text-muted-foreground">{row.slot.venue}</div>
 												)}
 											</td>
 											<td className="px-3 py-2.5 whitespace-nowrap tabular-nums">
@@ -137,7 +141,7 @@ export function ManageApprovals() {
 														className="h-2 w-2 rounded-full shrink-0"
 														style={{ backgroundColor: typeConfig.color }}
 													/>
-													{row.booking.booked_date} · {formatHourRange(row.booking.hour)}
+													{row.slot.date} · {formatHourRange(row.slot.hour)}
 												</span>
 											</td>
 											<td className="px-3 py-2.5">{row.cca_name}</td>
@@ -146,9 +150,9 @@ export function ManageApprovals() {
 													size="sm"
 													variant="destructive"
 													className="h-7 text-xs"
-													isLoading={busyId === row.booking.id}
+													isLoading={busyId === row.claim_id}
 													loadingText="Revoking…"
-													onClick={() => revoke(row.booking.id)}
+													onClick={() => revoke(row.claim_id)}
 												>
 													Revoke
 												</Button>

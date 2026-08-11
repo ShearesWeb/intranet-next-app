@@ -6,7 +6,7 @@ import {
 	createSchedule,
 	updateSchedule,
 	deleteSchedule,
-} from "@/lib/facilities/booking-schedules";
+} from "@/lib/facilities/facility-schedules";
 import { NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -32,15 +32,15 @@ export async function POST(req: NextRequest) {
 
 	try {
 		await requireJcrcAccess();
-		const { facility_id, day_of_week, hour, priority, reboks_activity, start_date, end_date } =
-			await req.json();
+		// `priority` and `reboks_activity` are accepted-and-ignored: both columns went
+		// away with the facilities rebuild.
+		const { facility_id, day_of_week, hour, start_date, end_date } = await req.json();
 
 		if (facility_id == null || day_of_week == null || hour == null) {
 			return apiError("facility_id, day_of_week and hour are required", 400);
 		}
 		if (day_of_week < 0 || day_of_week > 6) return apiError("day_of_week must be 0–6", 400);
 		if (hour < 0 || hour > 23) return apiError("hour must be 0–23", 400);
-		if (priority != null && priority < 0) return apiError("priority must be >= 0", 400);
 
 		const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 		if (start_date != null && !DATE_RE.test(start_date)) {
@@ -57,8 +57,6 @@ export async function POST(req: NextRequest) {
 			facilityId: facility_id,
 			dayOfWeek: day_of_week,
 			hour,
-			priority: priority ?? undefined,
-			reboksActivity: reboks_activity ?? null,
 			startDate: start_date ?? null,
 			endDate: end_date ?? null,
 		});
@@ -74,14 +72,22 @@ export async function PATCH(req: NextRequest) {
 
 	try {
 		await requireJcrcAccess();
-		const { id, priority, reboks_activity } = await req.json();
+		const { id, start_date, end_date } = await req.json();
 
 		if (id == null) return apiError("id is required", 400);
-		if (priority != null && priority < 0) return apiError("priority must be >= 0", 400);
 
-		const patch: { priority?: number; reboks_activity?: string | null } = {};
-		if (priority !== undefined) patch.priority = priority;
-		if (reboks_activity !== undefined) patch.reboks_activity = reboks_activity;
+		const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+		if (start_date != null && !DATE_RE.test(start_date)) {
+			return apiError("start_date must be YYYY-MM-DD", 400);
+		}
+		if (end_date != null && !DATE_RE.test(end_date)) {
+			return apiError("end_date must be YYYY-MM-DD", 400);
+		}
+
+		// End-dating is how a slot stops being offered; it never touches a claim.
+		const patch: { start_date?: string | null; end_date?: string | null } = {};
+		if (start_date !== undefined) patch.start_date = start_date;
+		if (end_date !== undefined) patch.end_date = end_date;
 
 		const schedule = await updateSchedule(id, patch);
 		return apiOk(schedule);

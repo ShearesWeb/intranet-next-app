@@ -26,7 +26,7 @@ export default function CCARankingPage() {
 		positionGroups,
 		unrankedCount,
 		hasChanges,
-		ccaType,
+		ccaKind,
 		handleFieldChange,
 		handleSave,
 	} = useRankingEditor(ccaId);
@@ -87,7 +87,7 @@ export default function CCARankingPage() {
 						<div key={group.position_id} className="py-8 first:pt-0 last:pb-0">
 							<PositionRankingCard
 								group={group}
-								ccaType={ccaType}
+								ccaKind={ccaKind}
 								onFieldChange={handleFieldChange}
 							/>
 						</div>

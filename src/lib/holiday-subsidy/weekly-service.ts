@@ -149,7 +149,7 @@ export async function getWeeklyCommitments(ccaId: number, weekIdNum: number) {
 
 	if (userIds.length > 0) {
 		const { data: directoryRaw, error: directoryError } = await supabase
-			.from("authenticated_user_directory")
+			.from("users")
 			.select("id, name, email")
 			.in("id", userIds);
 
@@ -384,7 +384,7 @@ export async function getWeeklyApprovals(ccaId: number, weekIdNum: number) {
 	const directoryMap = new Map<number, { id: number; name: string; email: string }>();
 	if (userIds.length > 0) {
 		const { data: directoryRaw, error: directoryError } = await supabase
-			.from("authenticated_user_directory")
+			.from("users")
 			.select("id, name, email")
 			.in("id", userIds);
 

@@ -22,17 +22,17 @@ export const isResidentPositionType = (positionType?: string | null) =>
 	normalizePositionType(positionType) === "resident";
 
 export function getRankingMetricKeys({
-	ccaType,
+	ccaKind,
 	positionType,
 }: {
-	ccaType?: string | null;
+	ccaKind?: string | null;
 	positionType?: string | null;
 }): RankingMetricKey[] {
 	if (isResidentPositionType(positionType)) {
 		return ["helpfulness", "initiative", "attitude"];
 	}
 
-	if (ccaType === "sports") {
+	if (ccaKind === "sports") {
 		return ["attendance"];
 	}
 
@@ -42,7 +42,7 @@ export function getRankingMetricKeys({
 export function hasRequiredRankingInputs(
 	input: RankingMetricInput,
 	options: {
-		ccaType?: string | null;
+		ccaKind?: string | null;
 		positionType?: string | null;
 	},
 ) {
@@ -52,7 +52,7 @@ export function hasRequiredRankingInputs(
 export function getRankingScore(
 	input: RankingMetricInput,
 	options: {
-		ccaType?: string | null;
+		ccaKind?: string | null;
 		positionType?: string | null;
 	},
 ) {

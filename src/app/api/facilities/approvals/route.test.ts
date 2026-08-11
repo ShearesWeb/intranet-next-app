@@ -6,9 +6,9 @@ const mocks = vi.hoisted(() => ({
 	requireJcrcAccess: vi.fn(),
 	listPendingApprovals: vi.fn(),
 	listUpcomingConfirmed: vi.fn(),
-	approveClaim: vi.fn(),
-	rejectAllClaims: vi.fn(),
-	revokeBooking: vi.fn(),
+	resolveSlot: vi.fn(),
+	rejectClaims: vi.fn(),
+	deleteClaim: vi.fn(),
 	getCoreServiceDisabledApiResponse: vi.fn(),
 }));
 
@@ -16,9 +16,11 @@ vi.mock("@/lib/api/auth", () => ({ requireJcrcAccess: mocks.requireJcrcAccess })
 vi.mock("@/lib/facilities/facility-approvals", () => ({
 	listPendingApprovals: mocks.listPendingApprovals,
 	listUpcomingConfirmed: mocks.listUpcomingConfirmed,
-	approveClaim: mocks.approveClaim,
-	rejectAllClaims: mocks.rejectAllClaims,
-	revokeBooking: mocks.revokeBooking,
+	resolveSlot: mocks.resolveSlot,
+	rejectClaims: mocks.rejectClaims,
+}));
+vi.mock("@/lib/facilities/facility-claims", () => ({
+	deleteClaim: mocks.deleteClaim,
 }));
 vi.mock("@/lib/feature-flags", () => ({
 	getCoreServiceDisabledApiResponse: mocks.getCoreServiceDisabledApiResponse,
@@ -40,8 +42,8 @@ describe("approvals route", () => {
 	});
 
 	it("GET returns pending + confirmed lists", async () => {
-		mocks.listPendingApprovals.mockResolvedValue([{ booking: { id: 1 } }]);
-		mocks.listUpcomingConfirmed.mockResolvedValue([{ booking: { id: 2 } }]);
+		mocks.listPendingApprovals.mockResolvedValue([{ slot: { facility_id: 1 } }]);
+		mocks.listUpcomingConfirmed.mockResolvedValue([{ slot: { facility_id: 2 }, claim_id: 9 }]);
 		const { GET } = await import("./route");
 		const res = await GET();
 		expect(res.status).toBe(200);
@@ -56,37 +58,45 @@ describe("approvals route", () => {
 		expect((await GET()).status).toBe(403);
 	});
 
-	it("POST approve requires winning_claim_id", async () => {
+	// Slots are computed and have no id, so every action is keyed by claim.
+	it("POST approve requires claim_id", async () => {
 		const { POST } = await import("./route");
-		const res = await POST(post({ action: "approve", booking_id: 1 }));
+		const res = await POST(post({ action: "approve" }));
 		expect(res.status).toBe(400);
-		expect(mocks.approveClaim).not.toHaveBeenCalled();
+		expect(mocks.resolveSlot).not.toHaveBeenCalled();
 	});
 
-	it("POST approve forwards booking, claim and user ids", async () => {
+	it("POST approve forwards the winner and its competitors", async () => {
 		const { POST } = await import("./route");
-		const res = await POST(post({ action: "approve", booking_id: 1, winning_claim_id: 5 }));
+		const res = await POST(post({ action: "approve", claim_id: 5, competing_claim_ids: [5, 6] }));
 		expect(res.status).toBe(200);
-		expect(mocks.approveClaim).toHaveBeenCalledWith(1, 5, 7);
+		expect(mocks.resolveSlot).toHaveBeenCalledWith(5, [5, 6]);
 	});
 
-	it("POST reject rejects all claims on the booking", async () => {
+	it("POST reject clears every claim named", async () => {
 		const { POST } = await import("./route");
-		const res = await POST(post({ action: "reject", booking_id: 1 }));
+		const res = await POST(post({ action: "reject", claim_ids: [5, 6] }));
 		expect(res.status).toBe(200);
-		expect(mocks.rejectAllClaims).toHaveBeenCalledWith(1, 7);
+		expect(mocks.rejectClaims).toHaveBeenCalledWith([5, 6]);
 	});
 
-	it("POST revoke revokes the confirmed booking", async () => {
+	it("POST reject accepts a single claim_id", async () => {
 		const { POST } = await import("./route");
-		const res = await POST(post({ action: "revoke", booking_id: 1 }));
+		const res = await POST(post({ action: "reject", claim_id: 5 }));
 		expect(res.status).toBe(200);
-		expect(mocks.revokeBooking).toHaveBeenCalledWith(1, 7);
+		expect(mocks.rejectClaims).toHaveBeenCalledWith([5]);
+	});
+
+	it("POST revoke deletes the approved claim", async () => {
+		const { POST } = await import("./route");
+		const res = await POST(post({ action: "revoke", claim_id: 9 }));
+		expect(res.status).toBe(200);
+		expect(mocks.deleteClaim).toHaveBeenCalledWith(9);
 	});
 
 	it("POST rejects unknown actions", async () => {
 		const { POST } = await import("./route");
-		const res = await POST(post({ action: "smite", booking_id: 1 }));
+		const res = await POST(post({ action: "smite", claim_id: 1 }));
 		expect(res.status).toBe(400);
 	});
 });

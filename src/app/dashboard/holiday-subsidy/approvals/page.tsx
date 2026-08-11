@@ -23,7 +23,7 @@ export default function HolidaySubsidyApprovalsPage() {
 		Map<number, CalendarDeclaration["status"]>
 	>(new Map());
 
-	const isAuthorized = Boolean(user?.is_jcrc || user?.is_admin);
+	const isAuthorized = Boolean(user?.is_jcrc);
 
 	const {
 		data,

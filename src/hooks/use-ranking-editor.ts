@@ -24,7 +24,7 @@ export function useRankingEditor(ccaId: string | null) {
 	const [isSaving, setIsSaving] = useState(false);
 	const [members, setMembers] = useState<CCAMember[]>([]);
 	const [initialMembers, setInitialMembers] = useState<CCAMember[]>([]);
-	const [ccaType, setCcaType] = useState("");
+	const [ccaKind, setCcaType] = useState("");
 	const [error, setError] = useState<string | null>(null);
 
 	const loadRankings = useCallback(async () => {
@@ -49,12 +49,12 @@ export function useRankingEditor(ccaId: string | null) {
 			const data = (await response.json()) as RankingsApiResponse;
 			const normalizedMembers = recalculateRankings(
 				data.members.map(mapRankingsApiMemberToEditorMember),
-				data.cca_type || "",
+				data.cca_kind || "",
 			);
 
 			setMembers(normalizedMembers);
 			setInitialMembers(cloneMembers(normalizedMembers));
-			setCcaType(data.cca_type || "");
+			setCcaType(data.cca_kind || "");
 			setError(null);
 		} catch (error) {
 			const message = error instanceof Error ? error.message : "Failed to fetch rankings";
@@ -74,7 +74,7 @@ export function useRankingEditor(ccaId: string | null) {
 	}, [loadRankings]);
 
 	const positionGroups = useMemo(() => buildPositionGroups(members), [members]);
-	const unrankedCount = useMemo(() => getUnrankedCount(members, ccaType), [members, ccaType]);
+	const unrankedCount = useMemo(() => getUnrankedCount(members, ccaKind), [members, ccaKind]);
 	const hasChanges = useMemo(
 		() => getHasChanges(members, initialMembers),
 		[members, initialMembers],
@@ -86,10 +86,10 @@ export function useRankingEditor(ccaId: string | null) {
 				const updated = prev.map((member) =>
 					member.row_key === rowKey ? { ...member, [field]: value as CCAMember[K] } : member,
 				);
-				return recalculateRankings(updated, ccaType);
+				return recalculateRankings(updated, ccaKind);
 			});
 		},
-		[ccaType],
+		[ccaKind],
 	);
 
 	const handleSave = useCallback(async () => {
@@ -141,7 +141,7 @@ export function useRankingEditor(ccaId: string | null) {
 		isSaving,
 		members,
 		initialMembers,
-		ccaType,
+		ccaKind,
 		error,
 		positionGroups,
 		unrankedCount,

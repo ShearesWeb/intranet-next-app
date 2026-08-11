@@ -108,7 +108,7 @@ export async function getMemberAssignments(
 
 	if (userIds.length > 0) {
 		const { data: directoryRaw, error: directoryError } = await supabase
-			.from("authenticated_user_directory")
+			.from("users")
 			.select("id, name, email")
 			.in("id", userIds);
 

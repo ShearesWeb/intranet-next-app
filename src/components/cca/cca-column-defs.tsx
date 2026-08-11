@@ -30,8 +30,8 @@ export const ccaNameColumn: ColumnDef<CCAData> = {
 	),
 };
 
-export const ccaTypeColumn: ColumnDef<CCAData> = {
-	accessorKey: "cca_type",
+export const ccaKindColumn: ColumnDef<CCAData> = {
+	accessorKey: "cca_kind",
 	header: ({ column }) => (
 		<div className="flex items-center gap-2">
 			<span className="font-semibold">Type</span>
@@ -44,5 +44,5 @@ export const ccaTypeColumn: ColumnDef<CCAData> = {
 			</Button>
 		</div>
 	),
-	cell: ({ row }) => <CcaTypeBadge value={String(row.getValue("cca_type"))} className="text-xs" />,
+	cell: ({ row }) => <CcaTypeBadge value={String(row.getValue("cca_kind"))} className="text-xs" />,
 };

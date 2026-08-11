@@ -15,7 +15,7 @@ type AppointmentUserRow = {
 
 export type AppointmentRow = {
 	user_id: number;
-	cut_status: string | null;
+	team_status: string | null;
 	commitment_period: string | null;
 	public_user_info: AppointmentUserRow | AppointmentUserRow[] | null;
 	cca_positions: AppointmentPositionRow | AppointmentPositionRow[] | null;
@@ -53,7 +53,7 @@ export type RankingResponseMember = {
 	position_id: number;
 	position: string;
 	position_type: string;
-	cut_status: string | null;
+	team_status: string | null;
 	commitment_period: string | null;
 	ranking: number;
 	attendance: number;
@@ -66,6 +66,6 @@ export type RankingResponseMember = {
 
 export type RankingsApiResponse = {
 	members: RankingResponseMember[];
-	cca_type?: string | null;
+	cca_kind?: string | null;
 	cca_name?: string | null;
 };

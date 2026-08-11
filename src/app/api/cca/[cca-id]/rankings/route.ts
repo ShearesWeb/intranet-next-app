@@ -45,9 +45,7 @@ export async function GET(
 	}
 
 	const rankablePositionIds = accessResult.allowedPositionIds;
-	const disabledResponse = getCoreServiceDisabledApiResponse("memberRanking", {
-		isJcrc: requestingUser?.is_jcrc,
-	});
+	const disabledResponse = getCoreServiceDisabledApiResponse("memberRanking");
 
 	if (disabledResponse) {
 		return disabledResponse;
@@ -58,7 +56,7 @@ export async function GET(
 		.select(
 			`
 			user_id,
-			cut_status,
+			team_status,
 			commitment_period,
 			public_user_info!inner(name),
 			cca_positions!inner(id, name, position_type)
@@ -76,7 +74,7 @@ export async function GET(
 	}
 
 	if (!members || members.length === 0) {
-		return NextResponse.json({ members: [], cca_type: cca.cca_type, cca_name: cca.name });
+		return NextResponse.json({ members: [], cca_kind: cca.cca_kind, cca_name: cca.name });
 	}
 
 	const positionIds = ((members || []) as AppointmentRow[])
@@ -106,13 +104,13 @@ export async function GET(
 	const scopedMembers = mapRankingResponseMembers({
 		members: (members || []) as AppointmentRow[],
 		rankings: rankings as RankingRow[] | null | undefined,
-		ccaType: cca.cca_type,
+		ccaKind: cca.cca_kind,
 		rankablePositionIds,
 	});
 
 	return NextResponse.json({
 		members: scopedMembers,
-		cca_type: cca.cca_type,
+		cca_kind: cca.cca_kind,
 		cca_name: accessResult.managedCca?.cca_name || cca.name,
 	});
 }
@@ -148,9 +146,7 @@ export async function POST(
 	}
 
 	const allowedPositionIds = new Set(accessResult.allowedPositionIds);
-	const disabledResponse = getCoreServiceDisabledApiResponse("memberRanking", {
-		isJcrc: requestingUser?.is_jcrc,
-	});
+	const disabledResponse = getCoreServiceDisabledApiResponse("memberRanking");
 
 	if (disabledResponse) {
 		return disabledResponse;
@@ -167,7 +163,7 @@ export async function POST(
 		rankings,
 		allowedPositionIds,
 		positionTypeById,
-		ccaType: cca.cca_type,
+		ccaKind: cca.cca_kind,
 	});
 
 	if (rankingsToUpsert.length === 0) {

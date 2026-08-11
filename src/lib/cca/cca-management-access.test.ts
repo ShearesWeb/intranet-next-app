@@ -54,8 +54,8 @@ describe("getManagedCcaAccess", () => {
 		const { getManagedCcaAccess } = await import("./cca-management-access");
 		const result = await getManagedCcaAccess({
 			supabase: supabase as never,
-			requestingUser: { id: 1, appointments: [] },
-			cca: { id: 12, name: "Debate Society", cca_type: "culture" },
+			requestingUser: { id: 1, appointments: [], is_chair: false },
+			cca: { id: 12, name: "Debate Society" },
 			accessLevel: "manage_members",
 		});
 
@@ -79,8 +79,8 @@ describe("getManagedCcaAccess", () => {
 		const { getManagedCcaAccess } = await import("./cca-management-access");
 		const result = await getManagedCcaAccess({
 			supabase: supabase as never,
-			requestingUser: { id: 1, appointments: [] },
-			cca: { id: 12, name: "Debate Society", cca_type: "culture" },
+			requestingUser: { id: 1, appointments: [], is_chair: false },
+			cca: { id: 12, name: "Debate Society" },
 			accessLevel: "rank_members",
 		});
 

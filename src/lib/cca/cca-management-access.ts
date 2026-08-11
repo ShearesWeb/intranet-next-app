@@ -13,14 +13,14 @@ type ManagedCcaAccessRow = {
 type AccessLevel = "manage_members" | "rank_members" | "either";
 
 /**
- * Resolves whether the requesting user has chair / managed-ranking access to a CCA
- * and (when `requireAccess` is true) short-circuits with a friendly 403 if not.
+ * Resolves whether the requesting user has chair / managed access to a CCA and
+ * (when `requireAccess` is true) short-circuits with a friendly 403 if not.
  *
- * Note: this helper is for UX-friendly early returns. The DB is the authoritative
- * guard — RLS on `cca_appointments` (and on `cca_appointment_evaluations` for the
- * ranking domain) enforces writes via `internal.can_manage_cca_appointments`. If
- * this helper allows a request through but the caller is not actually permitted,
- * the subsequent Supabase write will be rejected by RLS.
+ * This helper is for UX-friendly early returns. The DB is the authoritative
+ * guard: RLS on `cca_appointments` gates writes on
+ * `internal.managed_position_ids(internal.auth_user_id())`. If this helper lets
+ * a request through but the caller is not actually permitted, the subsequent
+ * Supabase write is rejected by RLS.
  */
 export async function getManagedCcaAccess({
 	supabase,
@@ -30,8 +30,8 @@ export async function getManagedCcaAccess({
 	accessLevel = "either",
 }: {
 	supabase: Awaited<ReturnType<typeof createClient>>;
-	requestingUser: Pick<AuthenticatedUser, "id" | "appointments"> | null | undefined;
-	cca: { id: number; name?: string | null; cca_type?: string | null };
+	requestingUser: Pick<AuthenticatedUser, "id" | "appointments" | "is_chair"> | null | undefined;
+	cca: { id: number; name?: string | null };
 	requireAccess?: boolean;
 	accessLevel?: AccessLevel;
 }): Promise<
@@ -46,9 +46,8 @@ export async function getManagedCcaAccess({
 		return { ok: false, status: 401, error: "Unauthorized" };
 	}
 
-	// `checkCcaAuthorization` is now async (DB-widened reporting-chain check via
-	// `public.can_manage_any_position_in_cca`); pass `supabase` so the widened
-	// path is consulted when the JWT fast path doesn't grant access.
+	// Pass `supabase` so `can_manage_cca` walks the reporting chain rather than
+	// trusting the profile hint, which cannot see cross-CCA reporting.
 	const chairAccessResult = await checkCcaAuthorization({
 		requestingUser,
 		cca,

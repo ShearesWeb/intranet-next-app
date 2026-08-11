@@ -77,7 +77,7 @@ export function useMemberSave(ccaId: string | null, deps: UseMemberSaveDeps): Us
 								body: JSON.stringify({
 									user_id: change.user_id,
 									position_id: resolvedPositionId,
-									cut_status: change.new_status,
+									team_status: change.new_status,
 								}),
 							});
 
@@ -118,7 +118,7 @@ export function useMemberSave(ccaId: string | null, deps: UseMemberSaveDeps): Us
 							body: JSON.stringify({
 								user_id: change.user_id,
 								position_id: change.position_id || memberPositionId,
-								cut_status: change.new_status,
+								team_status: change.new_status,
 							}),
 						});
 

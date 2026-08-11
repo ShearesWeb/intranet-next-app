@@ -16,7 +16,7 @@ vi.mock("@/lib/api/auth", () => ({
 	requireAuth: mocks.requireAuth,
 	requireJcrcAccess: mocks.requireJcrcAccess,
 }));
-vi.mock("@/lib/facilities/booking-schedules", () => ({
+vi.mock("@/lib/facilities/facility-schedules", () => ({
 	listSchedules: mocks.listSchedules,
 	createSchedule: mocks.createSchedule,
 	updateSchedule: mocks.updateSchedule,
@@ -56,17 +56,11 @@ describe("schedules route writes", () => {
 		expect(mocks.createSchedule).not.toHaveBeenCalled();
 	});
 
-	it("POST forwards priority + reboks_activity and returns 201", async () => {
+	// `priority` and `reboks_activity` did not survive the facilities rebuild,
+	// so a body carrying them is accepted and the extras are simply not forwarded.
+	it("POST forwards only the surviving columns and returns 201", async () => {
 		mocks.requireJcrcAccess.mockResolvedValue({ is_jcrc: true });
-		const row = {
-			id: 1,
-			facility_id: 2,
-			day_of_week: 1,
-			hour: 19,
-			priority: 1,
-			reboks_activity: "Tennis",
-		};
-		mocks.createSchedule.mockResolvedValue(row);
+		mocks.createSchedule.mockResolvedValue({ id: 1, facility_id: 2, day_of_week: 1, hour: 19 });
 		const { POST } = await import("./route");
 		const res = await POST(
 			req("POST", {
@@ -82,8 +76,6 @@ describe("schedules route writes", () => {
 			facilityId: 2,
 			dayOfWeek: 1,
 			hour: 19,
-			priority: 1,
-			reboksActivity: "Tennis",
 			startDate: null,
 			endDate: null,
 		});
@@ -137,28 +129,33 @@ describe("schedules route writes", () => {
 	it("PATCH returns 400 without an id", async () => {
 		mocks.requireJcrcAccess.mockResolvedValue({ is_jcrc: true });
 		const { PATCH } = await import("./route");
-		const res = await PATCH(req("PATCH", { priority: 2 }));
+		const res = await PATCH(req("PATCH", { end_date: "2026-09-30" }));
 		expect(res.status).toBe(400);
 		expect(mocks.updateSchedule).not.toHaveBeenCalled();
 	});
 
-	it("PATCH updates and returns 200", async () => {
+	// End-dating is how availability is withdrawn without touching a claim.
+	it("PATCH updates the date window and returns 200", async () => {
 		mocks.requireJcrcAccess.mockResolvedValue({ is_jcrc: true });
-		const row = {
+		mocks.updateSchedule.mockResolvedValue({
 			id: 7,
 			facility_id: 2,
 			day_of_week: 1,
 			hour: 19,
-			priority: 2,
-			reboks_activity: "Squash",
-		};
-		mocks.updateSchedule.mockResolvedValue(row);
-		const { PATCH } = await import("./route");
-		const res = await PATCH(req("PATCH", { id: 7, priority: 2, reboks_activity: "Squash" }));
-		expect(res.status).toBe(200);
-		expect(mocks.updateSchedule).toHaveBeenCalledWith(7, {
-			priority: 2,
-			reboks_activity: "Squash",
+			start_date: null,
+			end_date: "2026-09-30",
 		});
+		const { PATCH } = await import("./route");
+		const res = await PATCH(req("PATCH", { id: 7, end_date: "2026-09-30" }));
+		expect(res.status).toBe(200);
+		expect(mocks.updateSchedule).toHaveBeenCalledWith(7, { end_date: "2026-09-30" });
+	});
+
+	it("PATCH rejects a malformed end_date", async () => {
+		mocks.requireJcrcAccess.mockResolvedValue({ is_jcrc: true });
+		const { PATCH } = await import("./route");
+		const res = await PATCH(req("PATCH", { id: 7, end_date: "30-09-2026" }));
+		expect(res.status).toBe(400);
+		expect(mocks.updateSchedule).not.toHaveBeenCalled();
 	});
 });

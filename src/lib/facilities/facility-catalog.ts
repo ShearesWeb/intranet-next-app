@@ -2,16 +2,14 @@ import { createClient } from "@/lib/supabase/server";
 import { ApiError } from "@/lib/api/errors";
 import { Facility, FacilityType } from "@/types/facilities";
 
-export async function listFacilities(opts?: {
-	type?: FacilityType;
-	activeOnly?: boolean;
-}): Promise<Facility[]> {
+const FACILITY_SELECT = "id, venue, sub_venue, type";
+
+export async function listFacilities(opts?: { type?: FacilityType }): Promise<Facility[]> {
 	const supabase = await createClient();
 
-	let query = supabase.from("facilities").select("*").order("venue").order("sub_venue");
+	let query = supabase.from("facilities").select(FACILITY_SELECT).order("venue").order("sub_venue");
 
 	if (opts?.type) query = query.eq("type", opts.type);
-	if (opts?.activeOnly) query = query.eq("active", true);
 
 	const { data, error } = await query;
 
@@ -20,51 +18,26 @@ export async function listFacilities(opts?: {
 		throw new ApiError(500, "Failed to load facilities");
 	}
 
-	return data ?? [];
+	return (data ?? []) as Facility[];
 }
 
 /**
- * Create a facility. REBOKS venues have a fixed identity owned by the bot's catalog
- * scrape, so the app refuses to create them — only sheares/nus/external are app-managed.
+ * Rename a facility.
+ *
+ * There is no active flag any more. To retire a venue, remove or end-date its
+ * schedules: it then offers no further slots while its past bookings stay
+ * readable. Deleting it outright is refused once anything has claimed it.
  */
-export async function createFacility(input: {
-	type: FacilityType;
-	venue: string;
-	sub_venue: string;
-}): Promise<Facility> {
-	if (input.type === "reboks") {
-		throw new ApiError(400, "Reboks facilities cannot be added in-app");
-	}
-
-	const supabase = await createClient();
-	const { data, error } = await supabase
-		.from("facilities")
-		.insert({ venue: input.venue, sub_venue: input.sub_venue, type: input.type, active: true })
-		.select("*")
-		.single();
-
-	if (error) {
-		if (error.code === "23505") {
-			throw new ApiError(409, "A facility with that venue and sub-venue already exists");
-		}
-		console.error("Error creating facility:", error);
-		throw new ApiError(500, "Failed to create facility");
-	}
-
-	return data;
-}
-
-/** Patch a facility's editable fields (active toggle, venue rename). */
 export async function updateFacility(
 	id: number,
-	patch: { active?: boolean; venue?: string; sub_venue?: string },
+	patch: { venue?: string; sub_venue?: string },
 ): Promise<Facility> {
 	const supabase = await createClient();
 	const { data, error } = await supabase
 		.from("facilities")
 		.update(patch)
 		.eq("id", id)
-		.select("*")
+		.select(FACILITY_SELECT)
 		.single();
 
 	if (error) {
@@ -75,5 +48,5 @@ export async function updateFacility(
 		throw new ApiError(500, "Failed to update facility");
 	}
 
-	return data;
+	return data as Facility;
 }

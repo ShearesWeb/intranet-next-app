@@ -6,7 +6,6 @@ const mocks = vi.hoisted(() => ({
 	requireAuth: vi.fn(),
 	requireJcrcAccess: vi.fn(),
 	listFacilities: vi.fn(),
-	createFacility: vi.fn(),
 	updateFacility: vi.fn(),
 	getCoreServiceDisabledApiResponse: vi.fn(),
 }));
@@ -17,20 +16,12 @@ vi.mock("@/lib/api/auth", () => ({
 }));
 vi.mock("@/lib/facilities/facility-catalog", () => ({
 	listFacilities: mocks.listFacilities,
-	createFacility: mocks.createFacility,
 	updateFacility: mocks.updateFacility,
 }));
 vi.mock("@/lib/feature-flags", () => ({
 	getCoreServiceDisabledApiResponse: mocks.getCoreServiceDisabledApiResponse,
 }));
 
-function postReq(body: unknown) {
-	return new NextRequest("http://localhost/api/facilities/catalog", {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify(body),
-	});
-}
 function patchReq(body: unknown) {
 	return new NextRequest("http://localhost/api/facilities/catalog", {
 		method: "PATCH",
@@ -45,35 +36,12 @@ describe("catalog route writes", () => {
 		mocks.getCoreServiceDisabledApiResponse.mockReturnValue(null);
 	});
 
-	it("POST returns 403 for non-JCRC callers", async () => {
+	it("PATCH returns 403 for non-JCRC callers", async () => {
 		mocks.requireJcrcAccess.mockRejectedValue(new ApiError(403, "Unauthorized"));
-		const { POST } = await import("./route");
-		const res = await POST(postReq({ type: "sheares", venue: "MPH", sub_venue: "MPH" }));
+		const { PATCH } = await import("./route");
+		const res = await PATCH(patchReq({ id: 3, venue: "Pool" }));
 		expect(res.status).toBe(403);
-		expect(mocks.createFacility).not.toHaveBeenCalled();
-	});
-
-	it("POST returns 400 when required fields are missing", async () => {
-		mocks.requireJcrcAccess.mockResolvedValue({ is_jcrc: true });
-		const { POST } = await import("./route");
-		const res = await POST(postReq({ type: "sheares" }));
-		expect(res.status).toBe(400);
-		expect(mocks.createFacility).not.toHaveBeenCalled();
-	});
-
-	it("POST creates a facility and returns 201", async () => {
-		mocks.requireJcrcAccess.mockResolvedValue({ is_jcrc: true });
-		const created = { id: 9, venue: "MPH", sub_venue: "MPH", type: "sheares", active: true };
-		mocks.createFacility.mockResolvedValue(created);
-		const { POST } = await import("./route");
-		const res = await POST(postReq({ type: "sheares", venue: "MPH", sub_venue: "MPH" }));
-		expect(res.status).toBe(201);
-		expect(await res.json()).toEqual({ data: created, error: null });
-		expect(mocks.createFacility).toHaveBeenCalledWith({
-			type: "sheares",
-			venue: "MPH",
-			sub_venue: "MPH",
-		});
+		expect(mocks.updateFacility).not.toHaveBeenCalled();
 	});
 
 	it("PATCH returns 400 without an id", async () => {

@@ -6,9 +6,9 @@ import { getManagedCcaData } from "@/lib/managed-cca-data";
 
 export async function GET() {
 	try {
-		const user = await requireAuth();
+		await requireAuth();
 		const supabase = await createClient();
-		const data = await getManagedCcaData(supabase, user);
+		const data = await getManagedCcaData(supabase);
 		return apiOk(data);
 	} catch (e) {
 		return handleApiError(e);
