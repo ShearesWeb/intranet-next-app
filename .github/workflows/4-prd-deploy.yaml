@@ -37,7 +37,9 @@ jobs:
     env:
       # Embedded into the client bundle at build time.
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY }}
+      # prd stores this as NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, preprod as
+      # ..._DEFAULT_KEY. Accept either until the two are named the same.
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY || secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
       # Consumed by the OpenNext/wrangler deploy step.
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
