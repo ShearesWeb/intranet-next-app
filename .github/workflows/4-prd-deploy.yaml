@@ -1,21 +1,27 @@
 # .github/workflows/4-prd-deploy.yaml
 name: Production Deploy (Cloudflare)
 
-# Trigger:
-#   - A clean semver tag `vX.Y.Z` (no `-beta` suffix) is pushed.
-#     Promotion from preprod -> prd is done manually in the GitHub web UI by
-#     creating the production tag/release with the `-beta` suffix removed
-#     (e.g. `v1.0.0-beta` -> `v1.0.0`). A tag created by a human in the UI
-#     triggers this workflow (unlike one created by GITHUB_TOKEN).
-#   - workflow_dispatch for manual re-deploys.
+# Trigger: workflow_dispatch only. Give it the production tag to ship.
 #
-# The tag glob below intentionally has no suffix, so it matches `v1.0.0` but
-# NOT `v1.0.0-beta` — keeping the prd line cleanly separated from preprod.
+# `3-preprod-deploy.yaml` creates `vX.Y.Z` automatically once that build's
+# `vX.Y.Z-rc` has deployed to preprod, so the tag says "this passed preprod",
+# not "send this to prd". Promotion is the deliberate act of running this
+# workflow against such a tag.
+#
+# Do NOT add a `push: tags` trigger here. Tag creation is automated now, so a
+# push trigger would make every green preprod deploy ship itself to prd. That is
+# currently held back only by GitHub declining to re-trigger on a GITHUB_TOKEN
+# tag push — an implicit guard that disappears the moment the promote job is
+# switched to a PAT or App token.
 on:
-  push:
-    tags:
-      - "v[0-9]+.[0-9]+.[0-9]+"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Production tag to deploy (e.g. v1.0.0)"
+        required: true
+        type: string
+
+run-name: Deploy ${{ inputs.tag }} to prd
 
 concurrency:
   group: "prd-deploy"
@@ -45,18 +51,29 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
     steps:
-      - name: 1. 📄 Checkout Repository
+      - name: 1. ✅ Validate Tag Input
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          case "$TAG" in
+            v*.*.*-*) echo "::error::'$TAG' is a pre-release tag — prd ships clean vX.Y.Z only."; exit 1 ;;
+            v*.*.*) ;;
+            *) echo "::error::'$TAG' is not a vX.Y.Z tag."; exit 1 ;;
+          esac
+
+      - name: 2. 📄 Checkout Repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref }}
+          ref: refs/tags/${{ inputs.tag }}
 
-      - name: 2. ⚙️ Setup Node.js
+      - name: 3. ⚙️ Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "22.22"
           cache: npm
 
-      - name: 3. ⬇️ Restore Next.js Cache
+      - name: 4. ⬇️ Restore Next.js Cache
         uses: actions/cache@v4
         with:
           path: |
@@ -65,18 +82,18 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nextjs-
 
-      - name: 4. 📦 Install Dependencies
+      - name: 5. 📦 Install Dependencies
         run: npm ci --prefer-offline --no-audit --no-fund
 
       # Provision Cloudflare infra (R2 cache bucket + custom domain) before the
       # Worker deploy, so the R2 binding in wrangler.jsonc resolves. State lives
       # in R2 (s3 backend); prd uses key prd/intranet-web/terraform.tfstate.
-      - name: 5. 🏗️ Setup Terraform
+      - name: 6. 🏗️ Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_wrapper: false
 
-      - name: 6. ☁️ Terraform Apply (prd infra)
+      - name: 7. ☁️ Terraform Apply (prd infra)
         working-directory: infra
         env:
           # Cloudflare provider (api_token = var.cloudflare_api_token).
@@ -90,5 +107,5 @@ jobs:
           terraform init -backend-config=config/prd.tfbackend
           terraform apply -var-file=config/prd.tfvars -auto-approve
 
-      - name: 7. 🚧 Build + Deploy with OpenNext (Cloudflare)
+      - name: 8. 🚧 Build + Deploy with OpenNext (Cloudflare)
         run: make deploy ENV=prd

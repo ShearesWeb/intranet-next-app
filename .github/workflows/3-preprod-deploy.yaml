@@ -3,11 +3,16 @@ name: Pre-production Deploy (Cloudflare)
 
 # Trigger — exactly two cases:
 #   1. A pull request is merged into `main`.
-#      -> Auto-create the next `vX.Y.Z-beta` tag (patch bump from the latest
-#         beta tag), then deploy that commit to Cloudflare preprod.
-#   2. A pre-production tag `vX.Y.Z-beta` is pushed.
+#      -> Auto-create the next `vX.Y.Z-rc` tag (patch bump from the latest
+#         rc tag), then deploy that commit to Cloudflare preprod.
+#   2. A pre-production tag `vX.Y.Z-rc` is pushed.
 #      -> Deploy that tag directly (use this to redeploy, or to cut a
 #         minor/major bump that the auto patch-bump won't produce).
+#
+# Either way, a preprod deploy that succeeds ends by cutting the matching
+# production tag with the `-rc` stripped (`v1.0.0-rc` -> `v1.0.0`). That tag
+# deploys nothing on its own; it marks a build as eligible for prd. Shipping it
+# is a manual `workflow_dispatch` of `4-prd-deploy.yaml`.
 #
 # Note: a tag created by the default GITHUB_TOKEN does NOT re-trigger workflows,
 # so the PR-merge path must create the tag AND deploy within this same run
@@ -155,3 +160,54 @@ jobs:
 
       - name: 7. 🚧 Build + Deploy with OpenNext (Cloudflare)
         run: make deploy ENV=preprod
+
+  # ---------------------------------------------------------------------------
+  # Promote: the preprod deploy passed, so cut `vX.Y.Z` from `vX.Y.Z-rc`.
+  #
+  # This creates a tag, it does not deploy. `4-prd-deploy.yaml` is dispatch-only,
+  # so nothing reaches prd until a human runs it against this tag.
+  # ---------------------------------------------------------------------------
+  promote:
+    name: 🏷️ Create Production Tag
+    runs-on: ubuntu-latest
+    needs: [tag, deploy]
+    # `tag` is skipped on the tag-push path, which would skip this job too.
+    # Gate on the deploy result directly instead.
+    if: ${{ !cancelled() && needs.deploy.result == 'success' }}
+    permissions:
+      contents: write
+
+    steps:
+      - name: 1. 📄 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: 2. 🏷️ Cut Production Tag
+        env:
+          # PR-merge path: the tag job just made it. Tag-push path: it is the ref.
+          RC_TAG: ${{ needs.tag.outputs.tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+          git fetch --tags --force
+
+          case "$RC_TAG" in
+            v*.*.*-rc) ;;
+            *) echo "::error::'$RC_TAG' is not a vX.Y.Z-rc tag — refusing to promote."; exit 1 ;;
+          esac
+
+          PRD_TAG="${RC_TAG%-rc}"
+
+          if git rev-parse -q --verify "refs/tags/$PRD_TAG" >/dev/null; then
+            echo "::notice::$PRD_TAG already exists — nothing to promote."
+            exit 0
+          fi
+
+          # Tag the exact commit preprod deployed, not whatever main points at now.
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "$PRD_TAG" "${RC_TAG}^{commit}"
+          git push origin "$PRD_TAG"
+
+          echo "::notice::Cut $PRD_TAG from $RC_TAG. Deploy it via the Production Deploy workflow."
