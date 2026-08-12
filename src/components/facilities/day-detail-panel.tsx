@@ -53,10 +53,8 @@ export function DayDetailPanel({
 					const b = row.original;
 					return (
 						<div>
-							<div className="flex items-center gap-1.5 font-medium">{b.sub_venue}</div>
-							{b.venue !== b.sub_venue && (
-								<div className="text-xs text-muted-foreground">{b.venue}</div>
-							)}
+							<div className="flex items-center gap-1.5 font-medium">{b.venue}</div>
+							<div className="text-xs text-muted-foreground">{b.sub_venue}</div>
 						</div>
 					);
 				},

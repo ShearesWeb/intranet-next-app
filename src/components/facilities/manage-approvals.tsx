@@ -130,10 +130,8 @@ export function ManageApprovals() {
 											className="border-b last:border-0 hover:bg-accent/50"
 										>
 											<td className="px-3 py-2.5">
-												<div className="font-medium">{row.slot.sub_venue}</div>
-												{row.slot.venue !== row.slot.sub_venue && (
-													<div className="text-xs text-muted-foreground">{row.slot.venue}</div>
-												)}
+												<div className="font-medium">{row.slot.venue}</div>
+												<div className="text-xs text-muted-foreground">{row.slot.sub_venue}</div>
 											</td>
 											<td className="px-3 py-2.5 whitespace-nowrap tabular-nums">
 												<span className="inline-flex items-center gap-1.5">
