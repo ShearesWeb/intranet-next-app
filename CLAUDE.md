@@ -37,9 +37,10 @@ make e2e-login PERSONA=declan  # Print a magic-link to log in as persona (no bro
 
 # Cloudflare (Makefile)
 make preview                   # Build + run locally via wrangler dev
-make deploy                    # Build + deploy to production ("intranet")
-make deploy ENV=preprod        # Build + deploy to "intranet-preprod"
 make cf-typegen                # Generate cloudflare-env.d.ts from wrangler bindings
+
+# `make deploy ENV=prd|preprod` exists, but it is CI's entry point, not yours.
+# Deploys run only from the workflows below. Never deploy from a workstation.
 ```
 
 **Running a single test**: `npx vitest run src/lib/ranking/cca-ranking-metrics.test.ts`
@@ -64,12 +65,14 @@ Three automated layers + manual QA via persona login — see `docs/TESTING.md` f
 
 ## CI
 
-Two workflows in `.github/workflows/`:
+Four workflows in `.github/workflows/`, numbered in the order a change moves through them:
 
 | Trigger | Workflow | What runs |
 |---|---|---|
 | Push to any non-`main` branch | `1-feature-branch-ci.yml` | prettier, lint, typecheck, unit + component tests |
 | PR into `main` | `2-merge-request-ci.yml` | all of the above + `next build` + integration tests (Postgres + PostgREST) |
+| PR merged into `main`, or push of a `vX.Y.Z-rc` tag | `3-preprod-deploy.yaml` | cuts the next `vX.Y.Z-rc` tag, Terraform apply, deploys preprod, then cuts `vX.Y.Z` |
+| `workflow_dispatch` with a `vX.Y.Z` tag input | `4-prd-deploy.yaml` | Terraform apply, deploys prd |
 
 **Required secret**: `SUBMODULE_SSH_KEY` — a read-only deploy key for `ShearesWeb/intranet` (the private schema submodule). The built-in `GITHUB_TOKEN` can't access a sibling private repo. See `docs/TESTING.md` for one-time setup.
 
@@ -79,6 +82,10 @@ Two workflows in `.github/workflows/`:
 
 - **Production**: Worker `"intranet"` → `intranet.shweb.org`
 - **Preprod**: Worker `"intranet-preprod"` → `intranet-beta.shweb.org`
+
+**Release flow**: merging a PR into `main` cuts `vX.Y.Z-rc` (patch bump off the latest rc) and deploys it to preprod. A preprod deploy that succeeds cuts the same version without the suffix, `vX.Y.Z`. That tag deploys nothing on its own — it marks a build as preprod-proven. Ship it by dispatching `4-prd-deploy.yaml` with the tag as its input. Never add a `push: tags` trigger to the prd workflow; tag creation is automated, so a push trigger would auto-ship every green preprod build.
+
+Both environments deploy from CI only. The workflows run Terraform before the Worker deploy so the R2 binding in `wrangler.jsonc` resolves, and they build from a tag rather than a working tree, so what ships always matches a commit.
 
 **Terraform** (`infra/`): Owns R2 cache buckets and Cloudflare Workers custom domains. Resource naming convention: `{env}-web-{resource}-{project}` (e.g. `prd-web-cache-intranet-web`). Apply per environment with `var.env = "prd" | "preprod"`. **wrangler and Terraform must not manage the same resource** — Terraform owns R2 + custom domains; wrangler owns the Worker script and its bindings.
 
