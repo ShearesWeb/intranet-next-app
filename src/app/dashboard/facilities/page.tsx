@@ -69,13 +69,23 @@ export default function FacilitiesPage() {
 
 	return (
 		<div className="flex flex-col space-y-6 p-4 md:p-6">
-			<PageHeader title="Facilities" description="Browse and claim venue slots for your CCA" />
+			<PageHeader
+				title="Facilities"
+				description={
+					isChair
+						? "Browse and claim venue slots for your CCA"
+						: "Browse venue availability. Only CCA chairs can claim slots."
+				}
+			/>
 
 			<Tabs defaultValue="book">
-				<TabsList>
-					<TabsTrigger value="book">Book Facilities</TabsTrigger>
-					{isChair && <TabsTrigger value="my-bookings">My bookings</TabsTrigger>}
-				</TabsList>
+				{/* A lone tab reads as a dead control, so non-chairs get no tab bar. */}
+				{isChair && (
+					<TabsList>
+						<TabsTrigger value="book">Book Facilities</TabsTrigger>
+						<TabsTrigger value="my-bookings">My bookings</TabsTrigger>
+					</TabsList>
+				)}
 
 				<TabsContent value="book" className="space-y-6">
 					<div className="flex flex-wrap items-center gap-3">
