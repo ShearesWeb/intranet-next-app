@@ -53,6 +53,8 @@ const navOptions: NavItem[] = [
 		featureFlag: "facilities",
 		items: [
 			{
+				// Deliberately not chairOnly. Residents get a read-only availability
+				// calendar here; only chairs see claim actions inside it.
 				title: "Book Facilities",
 				url: "/dashboard/facilities",
 				featureFlag: "facilities",
