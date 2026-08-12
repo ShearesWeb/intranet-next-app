@@ -45,7 +45,14 @@ export function FacilitySelect({
 					selected ? "text-foreground" : "text-muted-foreground",
 				)}
 			>
-				<span className="truncate">{selected ? selected.sub_venue : placeholder}</span>
+				{selected ? (
+					<span className="flex min-w-0 flex-1 items-center justify-between gap-2">
+						<span className="truncate">{selected.venue}</span>
+						<span className="truncate text-[10px] text-muted-foreground">{selected.sub_venue}</span>
+					</span>
+				) : (
+					<span className="truncate">{placeholder}</span>
+				)}
 				<ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" />
 			</button>
 
@@ -90,12 +97,10 @@ export function FacilitySelect({
 													: "text-foreground hover:bg-accent",
 											)}
 										>
-											<span className="truncate">{f.sub_venue}</span>
-											{f.venue !== f.sub_venue && (
-												<span className="truncate text-[10px] text-muted-foreground">
-													{f.venue}
-												</span>
-											)}
+											<span className="truncate">{f.venue}</span>
+											<span className="truncate text-[10px] text-muted-foreground">
+												{f.sub_venue}
+											</span>
 										</button>
 									))}
 								</div>

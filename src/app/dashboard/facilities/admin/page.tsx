@@ -164,12 +164,10 @@ export default function AdminFacilitiesPage() {
 														className="flex items-center justify-between gap-2 rounded-lg border px-3 py-2.5"
 													>
 														<div className="min-w-0">
-															<div className="truncate font-medium">{f.sub_venue}</div>
-															{f.venue !== f.sub_venue && (
-																<div className="truncate text-xs text-muted-foreground">
-																	{f.venue}
-																</div>
-															)}
+															<div className="truncate font-medium">{f.venue}</div>
+															<div className="truncate text-xs text-muted-foreground">
+																{f.sub_venue}
+															</div>
 														</div>
 													</div>
 												))}
