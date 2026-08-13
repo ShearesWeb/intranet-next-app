@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { asPersona, ccaIdByName, readJson, routeParams } from "../helpers";
+import { asPersona, ccaIdByName, jsonRequest, readJson, routeParams } from "../helpers";
+import { pgPool } from "../setup";
+import type { Position } from "@/types/applicants";
 
 // GET /api/chair/positions/for-chair — positions visible to the calling chair.
 describe("GET /api/chair/positions/for-chair", () => {
@@ -9,6 +11,47 @@ describe("GET /api/chair/positions/for-chair", () => {
 		const { status, error } = await readJson(await GET());
 		expect(status).toBe(200);
 		expect(error).toBeNull();
+	});
+
+	// A chair may shortlist a resident who never applied. That candidate lives in
+	// preferred_candidates only, so a roster read that covers preferred_positions
+	// alone loses them: they vanish from the list and the next whole-list write
+	// deletes them.
+	it("lists a chair-added candidate who never applied", async () => {
+		const positionId = (
+			await pgPool.query(
+				`SELECT cp.id
+				   FROM cca_positions cp
+				   JOIN ccas c ON c.id = cp.cca_id
+				  WHERE c.name = 'Volleyball' AND cp.position_type = 'member'
+				  ORDER BY cp.id
+				  LIMIT 1`,
+			)
+		).rows[0].id as number;
+		const userId = (
+			await pgPool.query("SELECT id FROM users WHERE email = 'aria.tan.sg@gmail.com'")
+		).rows[0].id as number;
+
+		asPersona("declan");
+		const { POST } = await import("@/app/api/chair/positions/[position-id]/applicants/route");
+		const added = await readJson(
+			await POST(
+				jsonRequest(`/api/chair/positions/${positionId}/applicants`, "POST", { user_id: userId }),
+				routeParams({ "position-id": String(positionId) }),
+			),
+		);
+		expect(added.status).toBe(200);
+
+		const { GET } = await import("@/app/api/chair/positions/for-chair/route");
+		const { data } = await readJson<{ positions: Position[] }>(await GET());
+		const position = data.positions.find((p) => p.id === positionId);
+		const candidate = position?.applicants.find((a) => a.id === userId);
+
+		expect(candidate).toBeDefined();
+		expect(candidate?.applied).toBe(false);
+		expect(candidate?.ranking).toBe(1);
+		// She never applied, so she must not inflate the applicant count.
+		expect(position?.applied_count).toBe(0);
 	});
 });
 

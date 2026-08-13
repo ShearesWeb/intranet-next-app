@@ -3,7 +3,7 @@ import { deriveCcaRankingStatus } from "@/lib/allocation/cca-ranking-status";
 import type { Applicant, CcaPositionGroup, Position } from "@/types/applicants";
 
 function applicant(id: number, ranking: number | null): Applicant {
-	return { id, name: `A${id}`, email: `a${id}@x.io`, room: "01-1", ranking };
+	return { id, name: `A${id}`, email: `a${id}@x.io`, room: "01-1", ranking, applied: true };
 }
 
 function position(id: number, applicants: Applicant[]): Position {
