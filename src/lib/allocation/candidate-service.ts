@@ -5,6 +5,10 @@
 // `position_applicants` view instead. `preferred_candidates` is the chair's own
 // ranking, written whole-list through `set_preferred_candidates`.
 //
+// The view returns the union of the two, flagged by `applied`, because a chair
+// may shortlist someone who never applied. Read one table only and those
+// candidates vanish from the list and get deleted by the next whole-list write.
+//
 // See intranet/docs/api/cca-allocation.md.
 
 import { createClient } from "@/lib/supabase/server";
@@ -24,6 +28,7 @@ type ApplicantRow = {
 	stay_period: string;
 	shortlist_rank: number | null;
 	preallocated: boolean;
+	applied: boolean;
 };
 
 type ManagedRow = {
@@ -52,6 +57,7 @@ export interface ChairApplicant {
 	room: string;
 	ranking: number | null;
 	preallocated: boolean;
+	applied: boolean;
 }
 
 /**
@@ -122,7 +128,9 @@ export async function getPositionsForChair() {
 	const [applicantsResult, availabilityResult] = await Promise.all([
 		supabase
 			.from("position_applicants")
-			.select("position_id, user_id, name, room, matric, stay_period, shortlist_rank, preallocated")
+			.select(
+				"position_id, user_id, name, room, matric, stay_period, shortlist_rank, preallocated, applied",
+			)
 			.in("position_id", positionIds),
 		supabase
 			.from("position_availability")
@@ -171,6 +179,7 @@ export async function getPositionsForChair() {
 			room: row.room,
 			ranking: row.shortlist_rank,
 			preallocated: row.preallocated,
+			applied: row.applied,
 		});
 		applicantsByPosition.set(row.position_id, list);
 	}
@@ -196,7 +205,9 @@ export async function getPositionsForChair() {
 			cca_name: position.cca_name,
 			capacity: availability?.capacity ?? null,
 			available_capacity: availability?.available ?? null,
-			applied_count: list.length,
+			// The roster mixes self-applied residents with chair-added ones; this
+			// count is the former only.
+			applied_count: list.filter((a) => a.applied).length,
 			position_type: position.position_type,
 			applicants: list,
 		};

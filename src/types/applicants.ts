@@ -15,12 +15,14 @@ export interface Applicant {
 	email: string;
 	room: string;
 	ranking: number | null;
+	// False for a candidate the chair added, who never applied themself.
+	applied: boolean;
 }
 
 /**
- * Chair-side position view model. `applied_count` is derived from the count of
- * `cca_position_preferences` rows for the position (the chair-visible market;
- * RLS hides the reciprocal user-side ranks).
+ * Chair-side position view model. `applicants` is the whole roster — residents
+ * who applied plus candidates the chair added — while `applied_count` counts
+ * only the residents who applied themselves.
  */
 export interface Position {
 	id: number;

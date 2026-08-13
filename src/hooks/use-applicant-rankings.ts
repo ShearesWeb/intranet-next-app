@@ -87,6 +87,7 @@ export function useApplicantRankings(userEmail: string | undefined, opts?: { cca
 						email: userData.email,
 						room: userData.room || "N/A",
 						ranking: null,
+						applied: false,
 					};
 					const updatedApplicants = [...pos.applicants, newApplicant];
 					setTimeout(() => checkForChanges(positionId, updatedApplicants), 0);
