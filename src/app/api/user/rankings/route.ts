@@ -1,12 +1,16 @@
 // src/app/api/user/rankings/route.ts
 // API route to save the requesting user's CCA preference ranking.
 //
-// Delegates to `saveRankings` in the ranking service, which handles the
-// staged-rank pattern for UNIQUE constraint safety and prunes stale rows.
+// The open ranking periods are resolved server-side on every save, so a
+// submission after a window closes is rejected here regardless of what the
+// client showed. `saveRankings` scopes the write to the open periods and
+// carries locked rows over untouched.
 import { fetchUserId } from "@/lib/auth/fetch-user-info";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 import { apiOk, apiError, handleApiError } from "@/lib/api/response";
 import { saveRankings } from "@/lib/allocation/preference-service";
+import { getRankingPeriodStates } from "@/lib/timed-flags/service";
+import { openPositionTypes } from "@/lib/timed-flags/ranking-periods";
 
 export async function POST(request: Request) {
 	const disabledResponse = getCoreServiceDisabledApiResponse("ccaApplications");
@@ -19,7 +23,8 @@ export async function POST(request: Request) {
 		const { rankings } = await request.json();
 		if (!Array.isArray(rankings)) return apiError("Missing or invalid rankings array", 400);
 
-		await saveRankings(userId, rankings);
+		const periods = await getRankingPeriodStates();
+		await saveRankings(userId, rankings, openPositionTypes(periods));
 		return apiOk({ success: true });
 	} catch (e) {
 		return handleApiError(e);
