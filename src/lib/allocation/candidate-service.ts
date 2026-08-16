@@ -14,10 +14,13 @@
 import { createClient } from "@/lib/supabase/server";
 import { ApiError } from "@/lib/api/errors";
 import { canManagePositionServerSide } from "@/lib/cca/cca-chair-access";
+import { RANKABLE_POSITION_TYPES } from "@/lib/timed-flags/ranking-periods";
 import type { PositionType } from "@/types/user";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-const NON_APPLICANT_POSITION_TYPES = new Set(["lead", "vice", "resident"]);
+// Chairs rank the same universe residents apply to. Untimed on purpose: chairs
+// keep working their shortlists after a period closes.
+const CHAIR_RANKABLE_POSITION_TYPES = new Set<string>(RANKABLE_POSITION_TYPES);
 
 type ApplicantRow = {
 	position_id: number;
@@ -76,7 +79,7 @@ async function resolveManagedPosition(supabase: SupabaseClient, positionIdStr: s
 
 	if (error || !position) throw new ApiError(404, "Position not found");
 
-	if (NON_APPLICANT_POSITION_TYPES.has((position.position_type || "").toLowerCase())) {
+	if (!CHAIR_RANKABLE_POSITION_TYPES.has((position.position_type || "").toLowerCase())) {
 		throw new ApiError(403, "This position cannot be ranked");
 	}
 
@@ -115,7 +118,7 @@ export async function getPositionsForChair() {
 
 	const rankablePositions = managed.flatMap((row) =>
 		(row.positions ?? [])
-			.filter((p) => !NON_APPLICANT_POSITION_TYPES.has((p.position_type || "").toLowerCase()))
+			.filter((p) => CHAIR_RANKABLE_POSITION_TYPES.has((p.position_type || "").toLowerCase()))
 			.map((p) => ({ ...p, cca_id: row.cca_id, cca_name: row.cca_name })),
 	);
 
