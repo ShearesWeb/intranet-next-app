@@ -10,6 +10,8 @@ BEGIN;
 DELETE FROM facility_claims WHERE created_by IN (SELECT id FROM users WHERE email IN ('aria.tan.sg@gmail.com', 'mason.lim.99@gmail.com', 'chloe.ng.j@gmail.com', 'declanho.sg@gmail.com', 'alexis.goh.99@gmail.com', 'sienna.lee.j@gmail.com', 'kai.koh.96@gmail.com', 'harper.tan.2k@gmail.com', 'ezrasim.nus@gmail.com', 'layla.ng.97@gmail.com', 'jasper.chua.sg@gmail.com', 'brielle.koh.j@gmail.com', 'nova.tay.sg@gmail.com', 'willow.rahman.gg@gmail.com', 'sage.lim.97@gmail.com')) OR cca_id IN (SELECT id FROM ccas WHERE name IN ('Volleyball', 'Basketball', 'Choir', 'Dance', 'Drama', 'SHWEB', 'SECC', 'JCRC'));
 DELETE FROM users WHERE email IN ('aria.tan.sg@gmail.com', 'mason.lim.99@gmail.com', 'chloe.ng.j@gmail.com', 'declanho.sg@gmail.com', 'alexis.goh.99@gmail.com', 'sienna.lee.j@gmail.com', 'kai.koh.96@gmail.com', 'harper.tan.2k@gmail.com', 'ezrasim.nus@gmail.com', 'layla.ng.97@gmail.com', 'jasper.chua.sg@gmail.com', 'brielle.koh.j@gmail.com', 'nova.tay.sg@gmail.com', 'willow.rahman.gg@gmail.com', 'sage.lim.97@gmail.com');
 DELETE FROM ccas WHERE name IN ('Volleyball', 'Basketball', 'Choir', 'Dance', 'Drama', 'SHWEB', 'SECC', 'JCRC');
+-- Timed ranking-period flags are inserted by tests; reseed clears them.
+DELETE FROM feature_flags WHERE name IN ('maincomm-ranking-period', 'subcomm-ranking-period');
 
 -- CCAs (spec § 5.3)
 INSERT INTO ccas (name, kind, tier, description) VALUES ('Volleyball', 'sports', 'tier-1', 'Primary sports CCA; full position roster including vice and team manager.');

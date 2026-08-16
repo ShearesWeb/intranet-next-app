@@ -1,13 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiError } from "@/lib/api/errors";
 
 const mocks = vi.hoisted(() => ({
-	createClient: vi.fn(),
 	fetchUserId: vi.fn(),
 	getCoreServiceDisabledApiResponse: vi.fn(),
-}));
-
-vi.mock("@/lib/supabase/server", () => ({
-	createClient: mocks.createClient,
+	saveRankings: vi.fn(),
+	getRankingPeriodStates: vi.fn(),
 }));
 
 vi.mock("@/lib/auth/fetch-user-info", () => ({
@@ -18,118 +16,111 @@ vi.mock("@/lib/feature-flags", () => ({
 	getCoreServiceDisabledApiResponse: mocks.getCoreServiceDisabledApiResponse,
 }));
 
-function buildSupabaseStub(rpc: ReturnType<typeof vi.fn>) {
-	return { from: vi.fn(), rpc };
+vi.mock("@/lib/allocation/preference-service", () => ({
+	saveRankings: mocks.saveRankings,
+}));
+
+vi.mock("@/lib/timed-flags/service", () => ({
+	getRankingPeriodStates: mocks.getRankingPeriodStates,
+}));
+
+function subcommOpenPeriods() {
+	return [
+		{
+			key: "maincomm",
+			label: "Maincomm & Blockcomm",
+			active: false,
+			startsAt: null,
+			expiresAt: null,
+			upcoming: false,
+			positionTypes: ["maincomm", "blockcomm"],
+		},
+		{
+			key: "subcomm",
+			label: "Subcomm",
+			active: true,
+			startsAt: null,
+			expiresAt: "2026-09-01T00:00:00Z",
+			upcoming: false,
+			positionTypes: ["subcomm"],
+		},
+	];
+}
+
+function postRequest(body: unknown) {
+	return new Request("http://localhost/api/user/rankings", {
+		method: "POST",
+		headers: { "Content-Type": "application/json" },
+		body: JSON.stringify(body),
+	});
 }
 
 describe("rankings route", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mocks.getCoreServiceDisabledApiResponse.mockReturnValue(null);
+		mocks.getRankingPeriodStates.mockResolvedValue(subcommOpenPeriods());
 	});
 
 	it("returns 401 when fetchUserId cannot identify the caller", async () => {
-		const rpc = vi.fn();
-		mocks.createClient.mockResolvedValue(buildSupabaseStub(rpc));
 		mocks.fetchUserId.mockResolvedValue(null);
 
 		const { POST } = await import("./route");
-		const response = await POST(
-			new Request("http://localhost/api/user/rankings", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ rankings: [{ position_id: 4, ranking: 1 }] }),
-			}),
-		);
+		const response = await POST(postRequest({ rankings: [{ position_id: 4, ranking: 1 }] }));
 
 		expect(response.status).toBe(401);
 		expect(await response.json()).toEqual({ data: null, error: "Unauthorized" });
+		expect(mocks.saveRankings).not.toHaveBeenCalled();
 	});
 
-	it("replaces the whole list in a single set_preferred_positions call", async () => {
-		const rpc = vi.fn().mockResolvedValue({ error: null });
-		mocks.createClient.mockResolvedValue(buildSupabaseStub(rpc));
+	it("400s on a malformed body without touching the service", async () => {
 		mocks.fetchUserId.mockResolvedValue(55);
 
 		const { POST } = await import("./route");
-		const response = await POST(
-			new Request("http://localhost/api/user/rankings", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					rankings: [
-						{ position_id: 7, ranking: 2 },
-						{ position_id: 4, ranking: 1 },
-					],
-				}),
-			}),
-		);
+		const response = await POST(postRequest({ rankings: "nope" }));
+
+		expect(response.status).toBe(400);
+		expect(mocks.saveRankings).not.toHaveBeenCalled();
+	});
+
+	it("resolves the open periods server-side and hands their types to the service", async () => {
+		mocks.fetchUserId.mockResolvedValue(55);
+		mocks.saveRankings.mockResolvedValue(undefined);
+
+		const { POST } = await import("./route");
+		const rankings = [
+			{ position_id: 7, ranking: 2 },
+			{ position_id: 4, ranking: 1 },
+		];
+		const response = await POST(postRequest({ rankings }));
 
 		expect(response.status).toBe(200);
 		expect(await response.json()).toEqual({ data: { success: true }, error: null });
-
-		// One RPC, not the old 2N staged writes. Rank comes from array order, so
-		// the payload must be sorted by the requested ranking.
-		expect(rpc).toHaveBeenCalledTimes(1);
-		expect(rpc).toHaveBeenCalledWith("set_preferred_positions", {
-			p_position_ids: [4, 7],
-		});
+		expect(mocks.saveRankings).toHaveBeenCalledWith(55, rankings, ["subcomm"]);
 	});
 
-	it("clears the list when given an empty array", async () => {
-		const rpc = vi.fn().mockResolvedValue({ error: null });
-		mocks.createClient.mockResolvedValue(buildSupabaseStub(rpc));
+	it("passes an empty type list when every period is closed", async () => {
 		mocks.fetchUserId.mockResolvedValue(55);
-
-		const { POST } = await import("./route");
-		const response = await POST(
-			new Request("http://localhost/api/user/rankings", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ rankings: [] }),
-			}),
+		mocks.getRankingPeriodStates.mockResolvedValue(
+			subcommOpenPeriods().map((p) => ({ ...p, active: false })),
+		);
+		mocks.saveRankings.mockRejectedValue(
+			new ApiError(403, "Preference submissions are closed right now."),
 		);
 
-		expect(response.status).toBe(200);
-		expect(rpc).toHaveBeenCalledWith("set_preferred_positions", { p_position_ids: [] });
+		const { POST } = await import("./route");
+		const response = await POST(postRequest({ rankings: [] }));
+
+		expect(response.status).toBe(403);
+		expect(mocks.saveRankings).toHaveBeenCalledWith(55, [], []);
 	});
 
-	it("rejects a repeated position rather than letting the RPC do it", async () => {
-		const rpc = vi.fn().mockResolvedValue({ error: null });
-		mocks.createClient.mockResolvedValue(buildSupabaseStub(rpc));
+	it("surfaces service failures through the error envelope", async () => {
 		mocks.fetchUserId.mockResolvedValue(55);
+		mocks.saveRankings.mockRejectedValue(new ApiError(500, "Failed to save rankings"));
 
 		const { POST } = await import("./route");
-		const response = await POST(
-			new Request("http://localhost/api/user/rankings", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					rankings: [
-						{ position_id: 4, ranking: 1 },
-						{ position_id: 4, ranking: 2 },
-					],
-				}),
-			}),
-		);
-
-		expect(response.status).toBe(400);
-		expect(rpc).not.toHaveBeenCalled();
-	});
-
-	it("returns 500 when the RPC fails", async () => {
-		const rpc = vi.fn().mockResolvedValue({ error: { message: "rpc failed" } });
-		mocks.createClient.mockResolvedValue(buildSupabaseStub(rpc));
-		mocks.fetchUserId.mockResolvedValue(55);
-
-		const { POST } = await import("./route");
-		const response = await POST(
-			new Request("http://localhost/api/user/rankings", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ rankings: [{ position_id: 4, ranking: 1 }] }),
-			}),
-		);
+		const response = await POST(postRequest({ rankings: [{ position_id: 4, ranking: 1 }] }));
 
 		expect(response.status).toBe(500);
 		expect(await response.json()).toEqual({ data: null, error: "Failed to save rankings" });

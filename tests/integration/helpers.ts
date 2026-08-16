@@ -16,6 +16,27 @@ export function asPersona(key: PersonaKey): void {
 	setPersona(key);
 }
 
+/**
+ * Upsert a timed feature flag. Offsets are relative to the DB clock; the
+ * beforeEach reseed deletes these rows, so every test starts closed.
+ */
+export async function setFeatureFlag(
+	name: string,
+	opts: { enabled: boolean; startsInMs?: number | null; expiresInMs?: number | null },
+): Promise<void> {
+	await pgPool.query(
+		`INSERT INTO feature_flags (name, enabled, starts_at, expires_at)
+		 VALUES ($1, $2,
+		         CASE WHEN $3::bigint IS NULL THEN NULL ELSE now() + make_interval(secs => $3::bigint / 1000.0) END,
+		         CASE WHEN $4::bigint IS NULL THEN NULL ELSE now() + make_interval(secs => $4::bigint / 1000.0) END)
+		 ON CONFLICT (name) DO UPDATE
+		 SET enabled = EXCLUDED.enabled,
+		     starts_at = EXCLUDED.starts_at,
+		     expires_at = EXCLUDED.expires_at`,
+		[name, opts.enabled, opts.startsInMs ?? null, opts.expiresInMs ?? null],
+	);
+}
+
 type NextRequestInit = ConstructorParameters<typeof NextRequest>[1];
 
 export function makeRequest(pathAndQuery: string, init?: NextRequestInit): NextRequest {

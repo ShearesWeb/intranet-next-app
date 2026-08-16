@@ -7,11 +7,6 @@ import { createClient } from "@/lib/supabase/server";
 import { ApiError } from "@/lib/api/errors";
 import type { PositionType } from "@/types/user";
 
-/** Positions nobody applies to: leadership seats and the auto-managed resident rows. */
-const NON_APPLICANT_POSITION_TYPES = ["lead", "vice", "resident"] as const;
-
-export const NON_RANKABLE_POSITION_TYPES_FILTER = `(${NON_APPLICANT_POSITION_TYPES.join(",")})`;
-
 type CcaRow = {
 	id: number;
 	name: string;
@@ -59,8 +54,68 @@ function unwrapCca(value: PositionRow["ccas"]): CcaRow | null {
 	return Array.isArray(value) ? (value[0] ?? null) : value;
 }
 
+// PostgREST types embedded to-one joins as object-or-array; collapse to one.
+function unwrapJoin<T>(value: T | T[] | null | undefined): T | null {
+	if (!value) return null;
+	return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
+type SavedPositionJoin = {
+	name: string;
+	position_type: PositionType;
+	ccas: { name: string } | { name: string }[] | null;
+};
+
+type SavedPreferenceJoinRow = {
+	position_id: number;
+	rank: number;
+	cca_positions: SavedPositionJoin | SavedPositionJoin[] | null;
+};
+
+export interface SavedPreference {
+	position_id: number;
+	rank: number;
+	name: string;
+	cca_name: string;
+	position_type: PositionType;
+}
+
+/** The caller's full saved preference list in rank order, open and locked alike. */
+export async function getSavedPreferences(userId: number): Promise<SavedPreference[]> {
+	const supabase = await createClient();
+
+	const { data, error } = await supabase
+		.from("preferred_positions")
+		.select("position_id, rank, cca_positions!inner(name, position_type, ccas!inner(name))")
+		.eq("user_id", userId)
+		.order("rank", { ascending: true });
+
+	if (error) {
+		console.error("Error fetching saved preferences:", error);
+		throw new ApiError(500, "Failed to load your saved preferences");
+	}
+
+	return ((data ?? []) as unknown as SavedPreferenceJoinRow[]).flatMap((row) => {
+		const position = unwrapJoin(row.cca_positions);
+		if (!position) return [];
+		return [
+			{
+				position_id: row.position_id,
+				rank: row.rank,
+				name: position.name,
+				cca_name: unwrapJoin(position.ccas)?.name ?? "Unknown",
+				position_type: position.position_type,
+			},
+		];
+	});
+}
+
 /**
  * Positions the caller can rank, enriched with their existing preferences.
+ *
+ * `allowedTypes` is the union of the ranking periods open right now; the
+ * caller resolves it from the timed feature flags. An empty list means every
+ * period is closed, so nothing is rankable.
  *
  * `position_availability` is keys and counts only, so names come from
  * `cca_positions` and `ccas`, both of which every signed-in caller can read.
@@ -68,7 +123,12 @@ function unwrapCca(value: PositionRow["ccas"]): CcaRow | null {
  * is over a few hundred rows and this does not depend on PostgREST inferring a
  * relationship to a view.
  */
-export async function getRankablePositions(userId: number): Promise<RankablePosition[]> {
+export async function getRankablePositions(
+	userId: number,
+	allowedTypes: PositionType[],
+): Promise<RankablePosition[]> {
+	if (allowedTypes.length === 0) return [];
+
 	const supabase = await createClient();
 
 	const [positionsResult, availabilityResult, preferencesResult] = await Promise.all([
@@ -77,7 +137,7 @@ export async function getRankablePositions(userId: number): Promise<RankablePosi
 			.select(
 				"id, name, position_type, description, capacity, cca_id, ccas!inner(id, name, kind, description, image_url)",
 			)
-			.not("position_type", "in", NON_RANKABLE_POSITION_TYPES_FILTER)
+			.in("position_type", allowedTypes)
 			.order("name", { ascending: true }),
 		supabase.from("position_availability").select("position_id, capacity, filled, available"),
 		supabase.from("preferred_positions").select("position_id, rank").eq("user_id", userId),
@@ -129,27 +189,79 @@ export async function getRankablePositions(userId: number): Promise<RankablePosi
 }
 
 /**
- * Replace the caller's whole preference list.
+ * Replace the open-period slice of the caller's preference list.
  *
- * `set_preferred_positions` takes rank from array order, deletes anything
- * absent, and clears the list on an empty array. That replaces the old
- * delete-then-stage-then-finalise dance, which issued 2N sequential RPCs with a
- * +1000 rank offset to dodge a deferred unique constraint. The caller is
- * inferred from the JWT, so there is no user argument.
+ * `openTypes` is the union of the ranking periods open right now. Every
+ * submitted position must belong to one of them; positions saved during a
+ * period that has since closed are locked, so they are carried over
+ * server-side in their stored order and the submission appends after them.
+ * The whole composed list then goes to `set_preferred_positions`, which takes
+ * rank from array order, deletes anything absent, and infers the caller from
+ * the JWT.
  */
-export async function saveRankings(_userId: number, rankings: RankingEntry[]): Promise<void> {
+export async function saveRankings(
+	userId: number,
+	rankings: RankingEntry[],
+	openTypes: PositionType[],
+): Promise<void> {
+	if (openTypes.length === 0) {
+		throw new ApiError(403, "Preference submissions are closed right now.");
+	}
+
 	const supabase = await createClient();
 
-	const orderedPositionIds = [...rankings]
+	const submittedIds = [...rankings]
 		.sort((a, b) => a.ranking - b.ranking)
 		.map((entry) => entry.position_id);
 
-	if (new Set(orderedPositionIds).size !== orderedPositionIds.length) {
+	if (new Set(submittedIds).size !== submittedIds.length) {
 		throw new ApiError(400, "A position may only appear once in your preferences");
 	}
 
+	const openTypeSet = new Set<string>(openTypes);
+
+	if (submittedIds.length > 0) {
+		const { data: submittedRows, error: submittedError } = await supabase
+			.from("cca_positions")
+			.select("id, position_type")
+			.in("id", submittedIds);
+
+		if (submittedError) {
+			console.error("Error validating submitted positions:", submittedError);
+			throw new ApiError(500, "Failed to save rankings");
+		}
+
+		const typeById = new Map(
+			(submittedRows ?? []).map((row) => [row.id as number, row.position_type as string]),
+		);
+		for (const id of submittedIds) {
+			const positionType = typeById.get(id);
+			if (!positionType || !openTypeSet.has(positionType)) {
+				throw new ApiError(403, "A submitted position is not open for preferences right now.");
+			}
+		}
+	}
+
+	const { data: savedRows, error: savedError } = await supabase
+		.from("preferred_positions")
+		.select("position_id, cca_positions!inner(position_type)")
+		.eq("user_id", userId)
+		.order("rank", { ascending: true });
+
+	if (savedError) {
+		console.error("Error loading saved preferences:", savedError);
+		throw new ApiError(500, "Failed to save rankings");
+	}
+
+	const lockedIds = ((savedRows ?? []) as unknown as SavedPreferenceJoinRow[])
+		.filter((row) => {
+			const position = unwrapJoin(row.cca_positions);
+			return position !== null && !openTypeSet.has(position.position_type);
+		})
+		.map((row) => row.position_id);
+
 	const { error } = await supabase.rpc("set_preferred_positions", {
-		p_position_ids: orderedPositionIds,
+		p_position_ids: [...lockedIds, ...submittedIds],
 	});
 
 	if (error) {

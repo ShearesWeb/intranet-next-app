@@ -48,6 +48,10 @@ function renderSql(): string {
 	);
 	lines.push(`DELETE FROM users WHERE email IN (${fixtureUserEmails});`);
 	lines.push(`DELETE FROM ccas WHERE name IN (${fixtureCcaNames});`);
+	lines.push("-- Timed ranking-period flags are inserted by tests; reseed clears them.");
+	lines.push(
+		`DELETE FROM feature_flags WHERE name IN ('maincomm-ranking-period', 'subcomm-ranking-period');`,
+	);
 	lines.push("");
 
 	// --- CCAs ---
