@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { asPersona, jsonRequest, makeRequest, readJson, setFeatureFlag } from "../helpers";
+import { asPersona, makeRequest, readJson, setFeatureFlag } from "../helpers";
 import type { RankingPeriodState } from "@/lib/timed-flags/ranking-periods";
 import type { TimedFlagRow } from "@/lib/timed-flags/window";
-import type { RankablePosition, SavedPreference } from "@/lib/allocation/preference-service";
+import type { RankablePosition } from "@/lib/allocation/preference-service";
 
 const HOUR_MS = 3_600_000;
 
@@ -81,60 +81,5 @@ describe("GET /api/user/rankable-positions", () => {
 		expect(status).toBe(200);
 		const types = new Set(data.positions.map((p) => p.position_type));
 		expect(types).toEqual(new Set(["maincomm", "blockcomm"]));
-	});
-});
-
-// GET /api/user/preferences — the caller's saved list, locked rows included.
-describe("GET /api/user/preferences", () => {
-	it("returns the saved list in rank order with position details", async () => {
-		await setFeatureFlag("subcomm-ranking-period", { enabled: true, expiresInMs: HOUR_MS });
-		asPersona("aria");
-
-		const { POST } = await import("@/app/api/user/rankings/route");
-		const { pgPool } = await import("../setup");
-		const ids = await pgPool.query(
-			`SELECT cp.id, c.name AS cca_name
-			   FROM cca_positions cp
-			   JOIN ccas c ON c.id = cp.cca_id
-			  WHERE cp.name = 'Subcomm' AND c.name IN ('SHWEB', 'SECC')
-			  ORDER BY c.name`,
-		);
-		const [secc, shweb] = ids.rows;
-		await POST(
-			jsonRequest("/api/user/rankings", "POST", {
-				rankings: [
-					{ position_id: shweb.id, ranking: 1 },
-					{ position_id: secc.id, ranking: 2 },
-				],
-			}),
-		);
-
-		const { GET } = await import("@/app/api/user/preferences/route");
-		const { status, data } = await readJson<{ preferences: SavedPreference[] }>(await GET());
-
-		expect(status).toBe(200);
-		expect(data.preferences).toEqual([
-			{
-				position_id: shweb.id,
-				rank: 1,
-				name: "Subcomm",
-				cca_name: "SHWEB",
-				position_type: "subcomm",
-			},
-			{
-				position_id: secc.id,
-				rank: 2,
-				name: "Subcomm",
-				cca_name: "SECC",
-				position_type: "subcomm",
-			},
-		]);
-	});
-
-	it("401s for anonymous", async () => {
-		asPersona("anonymous");
-		const { GET } = await import("@/app/api/user/preferences/route");
-		const { status } = await readJson(await GET());
-		expect(status).toBe(401);
 	});
 });

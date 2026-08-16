@@ -60,55 +60,10 @@ function unwrapJoin<T>(value: T | T[] | null | undefined): T | null {
 	return Array.isArray(value) ? (value[0] ?? null) : value;
 }
 
-type SavedPositionJoin = {
-	name: string;
-	position_type: PositionType;
-	ccas: { name: string } | { name: string }[] | null;
-};
-
 type SavedPreferenceJoinRow = {
 	position_id: number;
-	rank: number;
-	cca_positions: SavedPositionJoin | SavedPositionJoin[] | null;
+	cca_positions: { position_type: PositionType } | { position_type: PositionType }[] | null;
 };
-
-export interface SavedPreference {
-	position_id: number;
-	rank: number;
-	name: string;
-	cca_name: string;
-	position_type: PositionType;
-}
-
-/** The caller's full saved preference list in rank order, open and locked alike. */
-export async function getSavedPreferences(userId: number): Promise<SavedPreference[]> {
-	const supabase = await createClient();
-
-	const { data, error } = await supabase
-		.from("preferred_positions")
-		.select("position_id, rank, cca_positions!inner(name, position_type, ccas!inner(name))")
-		.eq("user_id", userId)
-		.order("rank", { ascending: true });
-
-	if (error) {
-		console.error("Error fetching saved preferences:", error);
-		throw new ApiError(500, "Failed to load your saved preferences");
-	}
-
-	return ((data ?? []) as unknown as SavedPreferenceJoinRow[]).flatMap((row) => {
-		const position = unwrapJoin(row.cca_positions);
-		if (!position) return [];
-		return [
-			{
-				position_id: row.position_id,
-				rank: row.rank,
-				name: position.name,
-				cca_name: unwrapJoin(position.ccas)?.name ?? "Unknown",
-				position_type: position.position_type,
-			},
-		];
-	});
-}
 
 /**
  * Positions the caller can rank, enriched with their existing preferences.

@@ -96,11 +96,6 @@ const navOptions: NavItem[] = [
 				featureFlag: "ccaApplications",
 			},
 			{
-				title: "Saved Preferences",
-				url: "/dashboard/cca-allocation/my-preferences",
-				featureFlag: "ccaApplications",
-			},
-			{
 				title: "Chair Preferences",
 				url: "/dashboard/cca-allocation/rank-applicants",
 				chairOnly: true,

@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
 	buildRankingPeriodStates,
 	openPositionTypes,
-	periodKeyForPositionType,
 	RANKING_PERIOD_FLAG_NAMES,
 } from "@/lib/timed-flags/ranking-periods";
 import type { TimedFlagRow } from "@/lib/timed-flags/window";
@@ -51,15 +50,5 @@ describe("buildRankingPeriodStates", () => {
 			"maincomm-ranking-period",
 			"subcomm-ranking-period",
 		]);
-	});
-});
-
-describe("periodKeyForPositionType", () => {
-	it("maps the gated types to their period and everything else to null", () => {
-		expect(periodKeyForPositionType("maincomm")).toBe("maincomm");
-		expect(periodKeyForPositionType("blockcomm")).toBe("maincomm");
-		expect(periodKeyForPositionType("subcomm")).toBe("subcomm");
-		expect(periodKeyForPositionType("member")).toBeNull();
-		expect(periodKeyForPositionType("lead")).toBeNull();
 	});
 });
