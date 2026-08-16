@@ -23,7 +23,7 @@ describe("GET /api/chair/positions/for-chair", () => {
 				`SELECT cp.id
 				   FROM cca_positions cp
 				   JOIN ccas c ON c.id = cp.cca_id
-				  WHERE c.name = 'Volleyball' AND cp.position_type = 'member'
+				  WHERE c.name = 'SHWEB' AND cp.position_type = 'maincomm'
 				  ORDER BY cp.id
 				  LIMIT 1`,
 			)
@@ -32,7 +32,7 @@ describe("GET /api/chair/positions/for-chair", () => {
 			await pgPool.query("SELECT id FROM users WHERE email = 'aria.tan.sg@gmail.com'")
 		).rows[0].id as number;
 
-		asPersona("declan");
+		asPersona("layla");
 		const { POST } = await import("@/app/api/chair/positions/[position-id]/applicants/route");
 		const added = await readJson(
 			await POST(
@@ -52,6 +52,41 @@ describe("GET /api/chair/positions/for-chair", () => {
 		expect(candidate?.ranking).toBe(1);
 		// She never applied, so she must not inflate the applicant count.
 		expect(position?.applied_count).toBe(0);
+	});
+
+	// Only maincomm, blockcomm, and subcomm are allocation positions now, so a
+	// sports chair's member seats are outside chair ranking entirely.
+	it("403s a chair-add on a member position", async () => {
+		const positionId = (
+			await pgPool.query(
+				`SELECT cp.id
+				   FROM cca_positions cp
+				   JOIN ccas c ON c.id = cp.cca_id
+				  WHERE c.name = 'Volleyball' AND cp.position_type = 'member'
+				  ORDER BY cp.id
+				  LIMIT 1`,
+			)
+		).rows[0].id as number;
+		const userId = (
+			await pgPool.query("SELECT id FROM users WHERE email = 'aria.tan.sg@gmail.com'")
+		).rows[0].id as number;
+
+		asPersona("declan");
+		const { POST } = await import("@/app/api/chair/positions/[position-id]/applicants/route");
+		const { status } = await readJson(
+			await POST(
+				jsonRequest(`/api/chair/positions/${positionId}/applicants`, "POST", { user_id: userId }),
+				routeParams({ "position-id": String(positionId) }),
+			),
+		);
+		expect(status).toBe(403);
+	});
+
+	it("omits non-committee positions from a sports chair's list", async () => {
+		asPersona("declan");
+		const { GET } = await import("@/app/api/chair/positions/for-chair/route");
+		const { data } = await readJson<{ positions: Position[] }>(await GET());
+		expect(data.positions).toEqual([]);
 	});
 });
 
