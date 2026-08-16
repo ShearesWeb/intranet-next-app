@@ -74,11 +74,3 @@ export function buildRankingPeriodStates(
 export function openPositionTypes(periods: RankingPeriodState[]): PositionType[] {
 	return periods.filter((p) => p.active).flatMap((p) => p.positionTypes);
 }
-
-/** The period a position type belongs to, or null for types outside every period. */
-export function periodKeyForPositionType(positionType: PositionType): RankingPeriodKey | null {
-	for (const key of RANKING_PERIOD_KEYS) {
-		if (RANKING_PERIODS[key].positionTypes.includes(positionType)) return key;
-	}
-	return null;
-}
