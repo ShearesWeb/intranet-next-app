@@ -30,8 +30,9 @@ interface CcaRow {
 
 const STATUS_STYLES: Record<CcaRankingStatus, string> = {
 	ranked: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200",
-	"needs-ranking": "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200",
-	"no-applicants": "bg-muted text-muted-foreground",
+	"below-goal": "bg-sky-100 text-sky-800 dark:bg-sky-950 dark:text-sky-200",
+	incomplete: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200",
+	"no-candidates": "bg-muted text-muted-foreground",
 };
 
 export default function RankApplicants() {
@@ -131,7 +132,7 @@ export default function RankApplicants() {
 			{rows.length === 0 ? (
 				<EmptyState
 					title="No CCA positions to manage"
-					description="You don't manage any positions with available capacity. This could mean all positions are filled, or you don't have chair/reporting-chain access to any CCA."
+					description="Chair preferences cover committee positions only (maincomm, blockcomm, and subcomm). You don't manage any committee positions with available capacity, or you don't have chair/reporting-chain access to a CCA that has them."
 				/>
 			) : (
 				<>
