@@ -30,9 +30,9 @@ export const RANKING_PERIOD_FLAG_NAMES = RANKING_PERIOD_KEYS.map(
 );
 
 /** Every position type covered by some ranking period; the rankable universe. */
-export const RANKABLE_POSITION_TYPES: PositionType[] = RANKING_PERIOD_KEYS.flatMap((key) => [
-	...RANKING_PERIODS[key].positionTypes,
-]);
+export const RANKABLE_POSITION_TYPES: PositionType[] = [
+	...new Set(RANKING_PERIOD_KEYS.flatMap((key) => RANKING_PERIODS[key].positionTypes)),
+];
 
 export interface RankingPeriodState {
 	key: RankingPeriodKey;
