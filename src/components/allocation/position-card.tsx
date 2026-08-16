@@ -33,14 +33,7 @@ export function PositionCard({
 				header: "Candidate",
 				cell: (_value, row) => (
 					<div>
-						<div className="flex flex-wrap items-center gap-2">
-							<span className="font-medium">{row.name}</span>
-							{!row.applied && (
-								<Badge variant="secondary" className="font-normal">
-									Added by chair
-								</Badge>
-							)}
-						</div>
+						<div className="font-medium">{row.name}</div>
 						<div className="text-sm text-muted-foreground">
 							{row.email} &middot; Room {row.room}
 						</div>
