@@ -6,7 +6,12 @@ function applicant(id: number, ranking: number | null): Applicant {
 	return { id, name: `A${id}`, email: `a${id}@x.io`, room: "01-1", ranking, applied: true };
 }
 
-function position(id: number, applicants: Applicant[], openSlots: number): Position {
+function position(
+	id: number,
+	applicants: Applicant[],
+	openSlots: number,
+	unrankedApplicants: Applicant[] = [],
+): Position {
 	return {
 		id,
 		cca_id: 1,
@@ -14,9 +19,10 @@ function position(id: number, applicants: Applicant[], openSlots: number): Posit
 		cca_name: "CCA",
 		capacity: 10,
 		available_capacity: openSlots,
-		applied_count: applicants.length,
+		applied_count: applicants.length + unrankedApplicants.length,
 		position_type: "member",
 		applicants,
+		unranked_applicants: unrankedApplicants,
 	};
 }
 
@@ -31,13 +37,18 @@ describe("deriveCcaRankingStatus", () => {
 		);
 	});
 
-	it("returns incomplete when any applicant has a null ranking", () => {
-		const g = group([position(1, [applicant(1, 1), applicant(2, null)], 1)]);
+	it("returns incomplete when an applicant sits outside the ranking", () => {
+		const g = group([position(1, [applicant(1, 1)], 1, [applicant(2, null)])]);
 		expect(deriveCcaRankingStatus(g)).toBe("incomplete");
 	});
 
 	it("returns incomplete when the unranked applicant is in a different position", () => {
-		const g = group([position(1, [applicant(1, 1)], 1), position(2, [applicant(2, null)], 1)]);
+		const g = group([position(1, [applicant(1, 1)], 1), position(2, [], 1, [applicant(2, null)])]);
+		expect(deriveCcaRankingStatus(g)).toBe("incomplete");
+	});
+
+	it("returns incomplete when only unranked applicants exist", () => {
+		const g = group([position(1, [], 1, [applicant(1, null)])]);
 		expect(deriveCcaRankingStatus(g)).toBe("incomplete");
 	});
 

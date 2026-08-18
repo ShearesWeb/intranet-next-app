@@ -35,6 +35,7 @@ export default function RankCcaApplicants() {
 		hasAnyChanges,
 		mounted,
 		handleAddApplicant,
+		handleRankApplicant,
 		handleRemoveApplicant,
 		handleReorderApplicants,
 		handleSaveAll,
@@ -118,6 +119,7 @@ export default function RankCcaApplicants() {
 							position={pos}
 							hasChanges={hasChanges[pos.id] || false}
 							onAddApplicant={(userData: UserSearchResult) => handleAddApplicant(pos.id, userData)}
+							onRankApplicant={(userId: number) => handleRankApplicant(pos.id, userId)}
 							onRemoveApplicant={(userId: number) => handleRemoveApplicant(pos.id, userId)}
 							onReorderApplicants={(newApplicants: Applicant[]) =>
 								handleReorderApplicants(pos.id, newApplicants)
