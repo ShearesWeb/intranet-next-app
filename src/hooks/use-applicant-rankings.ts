@@ -81,7 +81,10 @@ export function useApplicantRankings(userEmail: string | undefined, opts?: { cca
 						toast.error("Applicant already added to this position");
 						return pos;
 					}
-					const newApplicant: Applicant = {
+					// If they applied and sit in the unranked pool, move that row
+					// instead of minting a duplicate that would drop `applied`.
+					const pooled = pos.unranked_applicants.find((app) => app.id === userData.id);
+					const newApplicant: Applicant = pooled ?? {
 						id: userData.id,
 						name: userData.name,
 						email: userData.email,
@@ -91,7 +94,34 @@ export function useApplicantRankings(userEmail: string | undefined, opts?: { cca
 					};
 					const updatedApplicants = [...pos.applicants, newApplicant];
 					setTimeout(() => checkForChanges(positionId, updatedApplicants), 0);
-					return { ...pos, applicants: updatedApplicants };
+					return {
+						...pos,
+						applicants: updatedApplicants,
+						unranked_applicants: pooled
+							? pos.unranked_applicants.filter((app) => app.id !== userData.id)
+							: pos.unranked_applicants,
+					};
+				}),
+			);
+		},
+		[checkForChanges],
+	);
+
+	/** Move an applicant from the unranked pool to the end of the ranking. */
+	const handleRankApplicant = useCallback(
+		(positionId: number, userId: number) => {
+			setPositions((prevPositions) =>
+				prevPositions.map((pos) => {
+					if (pos.id !== positionId) return pos;
+					const pooled = pos.unranked_applicants.find((app) => app.id === userId);
+					if (!pooled) return pos;
+					const updatedApplicants = [...pos.applicants, pooled];
+					setTimeout(() => checkForChanges(positionId, updatedApplicants), 0);
+					return {
+						...pos,
+						applicants: updatedApplicants,
+						unranked_applicants: pos.unranked_applicants.filter((app) => app.id !== userId),
+					};
 				}),
 			);
 		},
@@ -103,9 +133,17 @@ export function useApplicantRankings(userEmail: string | undefined, opts?: { cca
 			setPositions((prevPositions) =>
 				prevPositions.map((pos) => {
 					if (pos.id !== positionId) return pos;
+					const removed = pos.applicants.find((app) => app.id === userId);
 					const updatedApplicants = pos.applicants.filter((app) => app.id !== userId);
 					setTimeout(() => checkForChanges(positionId, updatedApplicants), 0);
-					return { ...pos, applicants: updatedApplicants };
+					// A resident who applied stays an applicant: removal takes them
+					// out of the ranking but returns them to the unranked pool.
+					const updatedPool = removed?.applied
+						? [...pos.unranked_applicants, { ...removed, ranking: null }].sort((a, b) =>
+								a.name.localeCompare(b.name),
+							)
+						: pos.unranked_applicants;
+					return { ...pos, applicants: updatedApplicants, unranked_applicants: updatedPool };
 				}),
 			);
 		},
@@ -244,6 +282,7 @@ export function useApplicantRankings(userEmail: string | undefined, opts?: { cca
 		hasAnyChanges,
 		mounted,
 		handleAddApplicant,
+		handleRankApplicant,
 		handleRemoveApplicant,
 		handleReorderApplicants,
 		handleSaveAll,

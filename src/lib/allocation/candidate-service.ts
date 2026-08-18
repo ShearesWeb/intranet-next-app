@@ -187,19 +187,19 @@ export async function getPositionsForChair() {
 		applicantsByPosition.set(row.position_id, list);
 	}
 
-	// Ranked applicants first in rank order, then the unranked alphabetically.
-	for (const list of applicantsByPosition.values()) {
-		list.sort((a, b) => {
-			if (a.ranking !== null && b.ranking !== null) return a.ranking - b.ranking;
-			if (a.ranking !== null) return -1;
-			if (b.ranking !== null) return 1;
-			return a.name.localeCompare(b.name);
-		});
-	}
-
 	const positions = rankablePositions.map((position) => {
 		const list = applicantsByPosition.get(position.position_id) ?? [];
 		const availability = availabilityByPosition.get(position.position_id);
+
+		// The chair's preference list is the shortlisted rows only, in rank
+		// order. Applicants outside it are surfaced separately so they never
+		// merge back into the ranking on the next whole-list save.
+		const ranked = list
+			.filter((a) => a.ranking !== null)
+			.sort((a, b) => (a.ranking ?? 0) - (b.ranking ?? 0));
+		const unranked = list
+			.filter((a) => a.ranking === null)
+			.sort((a, b) => a.name.localeCompare(b.name));
 
 		return {
 			id: position.position_id,
@@ -212,7 +212,8 @@ export async function getPositionsForChair() {
 			// count is the former only.
 			applied_count: list.filter((a) => a.applied).length,
 			position_type: position.position_type,
-			applicants: list,
+			applicants: ranked,
+			unranked_applicants: unranked,
 		};
 	});
 

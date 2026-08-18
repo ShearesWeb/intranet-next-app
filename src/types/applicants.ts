@@ -20,9 +20,11 @@ export interface Applicant {
 }
 
 /**
- * Chair-side position view model. `applicants` is the whole roster — residents
- * who applied plus candidates the chair added — while `applied_count` counts
- * only the residents who applied themselves.
+ * Chair-side position view model. `applicants` is the chair's ranked preference
+ * list only. Residents who applied but aren't in that list sit in
+ * `unranked_applicants` until the chair ranks them — keeping the two separate
+ * is what lets a removal from the ranking persist across saves.
+ * `applied_count` counts the residents who applied themselves, across both.
  */
 export interface Position {
 	id: number;
@@ -34,6 +36,7 @@ export interface Position {
 	applied_count: number;
 	position_type: PositionType;
 	applicants: Applicant[];
+	unranked_applicants: Applicant[];
 }
 
 export interface CcaPositionGroup {

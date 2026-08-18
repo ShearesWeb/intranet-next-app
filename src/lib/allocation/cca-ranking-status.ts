@@ -5,20 +5,22 @@ export type CcaRankingStatus = "no-candidates" | "incomplete" | "below-goal" | "
 
 /**
  * Derive a chair-preferences status for one CCA from its positions:
- * - `no-candidates` — no candidate on any position yet
- * - `incomplete`    — an unranked candidate exists, or coverage is under 100%
- *                     of open slots
- * - `below-goal`    — everyone is ranked but coverage is under the 200% goal
- * - `ranked`        — everyone is ranked and the 200% goal is met (or no
- *                     slots are open)
+ * - `no-candidates` — no ranked candidate and no applicant on any position yet
+ * - `incomplete`    — an applicant is still outside the ranking, or coverage
+ *                     is under 100% of open slots
+ * - `below-goal`    — every applicant is ranked but coverage is under the
+ *                     200% goal
+ * - `ranked`        — every applicant is ranked and the 200% goal is met (or
+ *                     no slots are open)
  */
 export function deriveCcaRankingStatus(group: CcaPositionGroup): CcaRankingStatus {
-	const applicants = group.positions.flatMap((p) => p.applicants);
-	if (applicants.length === 0) return "no-candidates";
-	if (applicants.some((a) => a.ranking == null)) return "incomplete";
+	const ranked = group.positions.flatMap((p) => p.applicants);
+	const unranked = group.positions.flatMap((p) => p.unranked_applicants);
+	if (ranked.length === 0 && unranked.length === 0) return "no-candidates";
+	if (unranked.length > 0) return "incomplete";
 
 	const openSlots = group.positions.reduce((sum, p) => sum + p.available_capacity, 0);
-	switch (getCandidateCoverage(applicants.length, openSlots).tier) {
+	switch (getCandidateCoverage(ranked.length, openSlots).tier) {
 		case "critical":
 			return "incomplete";
 		case "low":
