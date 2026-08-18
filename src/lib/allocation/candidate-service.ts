@@ -1,13 +1,10 @@
 // Server-side business logic for a chair's candidate shortlist.
 //
-// Two tables back this. `preferred_positions` is where residents apply, and it
-// is own-rows-only under RLS, so a chair reads applicants through the
-// `position_applicants` view instead. `preferred_candidates` is the chair's own
-// ranking, written whole-list through `set_preferred_candidates`.
-//
-// The view returns the union of the two, flagged by `applied`, because a chair
-// may shortlist someone who never applied. Read one table only and those
-// candidates vanish from the list and get deleted by the next whole-list write.
+// Backed by `preferred_candidates` alone — the chair's own ranking, written
+// whole-list through `set_preferred_candidates`. Residents' applications
+// (`preferred_positions`) are deliberately never read here: who applied is
+// private to the resident, mirroring how a chair's ranking never surfaces to
+// residents. Chairs build their list by searching for candidates directly.
 //
 // See intranet/docs/api/cca-allocation.md.
 
@@ -22,16 +19,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 // keep working their shortlists after a period closes.
 const CHAIR_RANKABLE_POSITION_TYPES = new Set<string>(RANKABLE_POSITION_TYPES);
 
-type ApplicantRow = {
+type ShortlistRow = {
 	position_id: number;
 	user_id: number;
-	name: string;
-	room: string;
-	matric: string | null;
-	stay_period: string;
-	shortlist_rank: number | null;
-	preallocated: boolean;
-	applied: boolean;
+	rank: number;
 };
 
 type ManagedRow = {
@@ -59,8 +50,6 @@ export interface ChairApplicant {
 	email: string;
 	room: string;
 	ranking: number | null;
-	preallocated: boolean;
-	applied: boolean;
 }
 
 /**
@@ -95,9 +84,9 @@ async function resolveManagedPosition(supabase: SupabaseClient, positionIdStr: s
  * Every position the caller manages, with its applicants and remaining slots.
  *
  * Three round trips regardless of how many CCAs the caller administers:
- * `managed_cca_positions` is already grouped and chain-aware, and
- * `position_applicants` returns nothing for positions outside that chain, so no
- * client-side authorization filtering is needed.
+ * `managed_cca_positions` is already grouped and chain-aware, and RLS on
+ * `preferred_candidates` returns nothing for positions outside that chain, so
+ * no client-side authorization filtering is needed.
  */
 export async function getPositionsForChair() {
 	const supabase = await createClient();
@@ -128,44 +117,45 @@ export async function getPositionsForChair() {
 
 	const positionIds = rankablePositions.map((p) => p.position_id);
 
-	const [applicantsResult, availabilityResult] = await Promise.all([
+	const [shortlistResult, availabilityResult] = await Promise.all([
 		supabase
-			.from("position_applicants")
-			.select(
-				"position_id, user_id, name, room, matric, stay_period, shortlist_rank, preallocated, applied",
-			)
-			.in("position_id", positionIds),
+			.from("preferred_candidates")
+			.select("position_id, user_id, rank")
+			.in("position_id", positionIds)
+			.order("rank", { ascending: true }),
 		supabase
 			.from("position_availability")
 			.select("position_id, cca_id, capacity, filled, available")
 			.in("position_id", positionIds),
 	]);
 
-	if (applicantsResult.error) {
-		console.error("Error fetching position applicants:", applicantsResult.error);
-		throw new ApiError(500, "Failed to load applicants");
+	if (shortlistResult.error) {
+		console.error("Error fetching preferred candidates:", shortlistResult.error);
+		throw new ApiError(500, "Failed to load candidates");
 	}
 	if (availabilityResult.error) {
 		console.error("Error fetching position availability:", availabilityResult.error);
 		throw new ApiError(500, "Failed to load positions");
 	}
 
-	const applicants = (applicantsResult.data ?? []) as ApplicantRow[];
+	const shortlist = (shortlistResult.data ?? []) as ShortlistRow[];
 
-	// `position_applicants` deliberately withholds the applicant's own rank and
-	// carries no email, so fetch emails separately for the display list.
-	const applicantUserIds = Array.from(new Set(applicants.map((a) => a.user_id)));
-	const emailByUser = new Map<number, string>();
-	if (applicantUserIds.length) {
+	// `preferred_candidates` is keys and ranks only; every signed-in caller can
+	// read `users`, so fetch the display fields in one extra round trip.
+	const candidateUserIds = Array.from(new Set(shortlist.map((row) => row.user_id)));
+	const userById = new Map<number, { name: string; email: string; room: string }>();
+	if (candidateUserIds.length) {
 		const { data: userRows, error: usersError } = await supabase
 			.from("users")
-			.select("id, email")
-			.in("id", applicantUserIds);
+			.select("id, name, email, room")
+			.in("id", candidateUserIds);
 		if (usersError) {
-			console.error("Error fetching applicant emails:", usersError);
-			throw new ApiError(500, "Failed to load applicant details");
+			console.error("Error fetching candidate details:", usersError);
+			throw new ApiError(500, "Failed to load candidate details");
 		}
-		for (const row of userRows ?? []) emailByUser.set(row.id, row.email);
+		for (const row of userRows ?? []) {
+			userById.set(row.id, { name: row.name, email: row.email, room: row.room });
+		}
 	}
 
 	const availabilityByPosition = new Map<number, AvailabilityRow>(
@@ -173,33 +163,21 @@ export async function getPositionsForChair() {
 	);
 
 	const applicantsByPosition = new Map<number, ChairApplicant[]>();
-	for (const row of applicants) {
+	for (const row of shortlist) {
 		const list = applicantsByPosition.get(row.position_id) ?? [];
+		const user = userById.get(row.user_id);
 		list.push({
 			id: row.user_id,
-			name: row.name,
-			email: emailByUser.get(row.user_id) ?? "",
-			room: row.room,
-			ranking: row.shortlist_rank,
-			preallocated: row.preallocated,
-			applied: row.applied,
+			name: user?.name ?? "Unknown",
+			email: user?.email ?? "",
+			room: user?.room ?? "N/A",
+			ranking: row.rank,
 		});
 		applicantsByPosition.set(row.position_id, list);
 	}
 
 	const positions = rankablePositions.map((position) => {
-		const list = applicantsByPosition.get(position.position_id) ?? [];
 		const availability = availabilityByPosition.get(position.position_id);
-
-		// The chair's preference list is the shortlisted rows only, in rank
-		// order. Applicants outside it are surfaced separately so they never
-		// merge back into the ranking on the next whole-list save.
-		const ranked = list
-			.filter((a) => a.ranking !== null)
-			.sort((a, b) => (a.ranking ?? 0) - (b.ranking ?? 0));
-		const unranked = list
-			.filter((a) => a.ranking === null)
-			.sort((a, b) => a.name.localeCompare(b.name));
 
 		return {
 			id: position.position_id,
@@ -208,12 +186,9 @@ export async function getPositionsForChair() {
 			cca_name: position.cca_name,
 			capacity: availability?.capacity ?? null,
 			available_capacity: availability?.available ?? null,
-			// The roster mixes self-applied residents with chair-added ones; this
-			// count is the former only.
-			applied_count: list.filter((a) => a.applied).length,
 			position_type: position.position_type,
-			applicants: ranked,
-			unranked_applicants: unranked,
+			// Already in rank order from the shortlist query.
+			applicants: applicantsByPosition.get(position.position_id) ?? [],
 		};
 	});
 

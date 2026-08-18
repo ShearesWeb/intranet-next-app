@@ -33,11 +33,9 @@ describe("GET /api/chair/positions/for-chair", () => {
 		expect(error).toBeNull();
 	});
 
-	// A chair may shortlist a resident who never applied. That candidate lives in
-	// preferred_candidates only, so a roster read that covers preferred_positions
-	// alone loses them: they vanish from the list and the next whole-list write
-	// deletes them.
-	it("lists a chair-added candidate who never applied", async () => {
+	// The chair's list is preferred_candidates alone: a candidate the chair adds
+	// must read back from it, complete with display fields from `users`.
+	it("lists a chair-added candidate", async () => {
 		const positionId = await positionIdFor("SHWEB", "maincomm");
 		const userId = await userIdByEmail("aria.tan.sg@gmail.com");
 
@@ -57,10 +55,86 @@ describe("GET /api/chair/positions/for-chair", () => {
 		const candidate = position?.applicants.find((a) => a.id === userId);
 
 		expect(candidate).toBeDefined();
-		expect(candidate?.applied).toBe(false);
 		expect(candidate?.ranking).toBe(1);
-		// She never applied, so she must not inflate the applicant count.
-		expect(position?.applied_count).toBe(0);
+		expect(candidate?.email).toBe("aria.tan.sg@gmail.com");
+	});
+
+	// Applications are private to the resident: a chair must never learn who
+	// applied. Someone who applied but was never shortlisted stays invisible.
+	it("does not surface a resident's application to the chair", async () => {
+		const positionId = await positionIdFor("SHWEB", "maincomm");
+		const userId = await userIdByEmail("aria.tan.sg@gmail.com");
+
+		await pgPool.query(
+			"INSERT INTO preferred_positions (user_id, position_id, rank) VALUES ($1, $2, 1)",
+			[userId, positionId],
+		);
+
+		asPersona("layla");
+		const { GET } = await import("@/app/api/chair/positions/for-chair/route");
+		const { data } = await readJson<{ positions: Position[] }>(await GET());
+		const position = data.positions.find((p) => p.id === positionId);
+
+		expect(position).toBeDefined();
+		expect(position?.applicants.some((a) => a.id === userId)).toBe(false);
+	});
+
+	// Removing a candidate from the ranking must survive a save + reload — even
+	// when that resident also applied themselves (the original regression).
+	it("keeps a removed candidate out of the list after a whole-list save", async () => {
+		const positionId = await positionIdFor("SHWEB", "maincomm");
+		const ariaId = await userIdByEmail("aria.tan.sg@gmail.com");
+		const declanId = await userIdByEmail("declanho.sg@gmail.com");
+
+		// Aria applied herself, and the chair had previously ranked both.
+		await pgPool.query(
+			"INSERT INTO preferred_positions (user_id, position_id, rank) VALUES ($1, $2, 1)",
+			[ariaId, positionId],
+		);
+
+		asPersona("layla");
+		const { POST: addCandidate } =
+			await import("@/app/api/chair/positions/[position-id]/applicants/route");
+		for (const userId of [ariaId, declanId]) {
+			const { status } = await readJson(
+				await addCandidate(
+					jsonRequest(`/api/chair/positions/${positionId}/applicants`, "POST", {
+						user_id: userId,
+					}),
+					routeParams({ "position-id": String(positionId) }),
+				),
+			);
+			expect(status).toBe(200);
+		}
+
+		// The client save sequence for "remove aria, keep declan".
+		const { DELETE } = await import("@/app/api/chair/positions/[position-id]/applicants/route");
+		const removed = await readJson(
+			await DELETE(
+				jsonRequest(`/api/chair/positions/${positionId}/applicants`, "DELETE", {
+					user_id: ariaId,
+				}),
+				routeParams({ "position-id": String(positionId) }),
+			),
+		);
+		expect(removed.status).toBe(200);
+
+		const { POST: rank } = await import("@/app/api/chair/positions/[position-id]/rank/route");
+		const ranked = await readJson(
+			await rank(
+				jsonRequest(`/api/chair/positions/${positionId}/rank`, "POST", {
+					rankings: [{ user_id: declanId, ranking: 1 }],
+				}),
+				routeParams({ "position-id": String(positionId) }),
+			),
+		);
+		expect(ranked.status).toBe(200);
+
+		const { GET } = await import("@/app/api/chair/positions/for-chair/route");
+		const { data } = await readJson<{ positions: Position[] }>(await GET());
+		const position = data.positions.find((p) => p.id === positionId);
+
+		expect(position?.applicants.map((a) => a.id)).toEqual([declanId]);
 	});
 
 	// Only maincomm, blockcomm, and subcomm are allocation positions now, so a
