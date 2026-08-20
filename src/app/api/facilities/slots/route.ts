@@ -3,7 +3,7 @@ import { apiOk, apiError, handleApiError } from "@/lib/api/response";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 import { getSlots, withUserCcaContext } from "@/lib/facilities/facility-slots";
 import { getChairCcaIds } from "@/lib/facilities/facility-access";
-import { FacilityType } from "@/types/facilities";
+import { FacilityType, isHorizonRestricted } from "@/types/facilities";
 import { NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -33,10 +33,18 @@ export async function GET(req: NextRequest) {
 
 		const slots = await getSlots(start, end);
 
+		// REBOKS availability is secured a month at a time, so slots past the end
+		// of this month are offers the hall does not hold yet. Withheld from
+		// everyone but JCRC, who need the full horizon to plan against.
+		// Only reboks is trimmed — a September Comm Hall slot is still real.
+		const withinHorizon = user.is_jcrc
+			? slots
+			: slots.filter((slot) => !isHorizonRestricted(slot.type, slot.date));
+
 		const type = VALID_TYPES.includes(typeParam as FacilityType)
 			? (typeParam as FacilityType)
 			: undefined;
-		const filtered = type ? slots.filter((slot) => slot.type === type) : slots;
+		const filtered = type ? withinHorizon.filter((slot) => slot.type === type) : withinHorizon;
 
 		return apiOk(withUserCcaContext(filtered, getChairCcaIds(user)));
 	} catch (e) {
