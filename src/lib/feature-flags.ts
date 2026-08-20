@@ -22,7 +22,25 @@ const CORE_SERVICE_FLAGS = {
 	ccaApplications: true,
 	holidaySubsidy: false,
 	facilities: true,
+	allocationReveal: true,
 };
+
+/**
+ * Which allocation round the My CCAs reveal is currently showing.
+ *
+ * Allocation runs in two rounds — maincomm/blockcomm first, subcomm after — and
+ * the reveal has to follow, not lead: pointing it at `subcomm` before that round
+ * has been allocated would show every resident an empty result. Flip this in the
+ * same change that ships the subcomm allocation, and set `allocationReveal` to
+ * false outside a reveal window so nobody gets an envelope out of season.
+ */
+export type AllocationRevealPeriod = "maincomm" | "subcomm";
+
+const ALLOCATION_REVEAL_PERIOD: AllocationRevealPeriod = "maincomm";
+
+export function getAllocationRevealPeriod(): AllocationRevealPeriod {
+	return ALLOCATION_REVEAL_PERIOD;
+}
 
 export type CoreServiceKey = keyof typeof CORE_SERVICE_FLAGS;
 export type CoreServiceFlags = typeof CORE_SERVICE_FLAGS;
