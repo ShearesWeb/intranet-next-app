@@ -907,3 +907,257 @@ textarea {
 	box-shadow: 0 10px 32px rgba(255, 61, 130, 0.5);
 	transform: translateY(-1px);
 }
+
+/* CCA allocation reveal — scoped keyframes for the envelope overlay. */
+@keyframes reveal-fade-in {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+@keyframes reveal-fade-in-up {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+@keyframes reveal-fade-up-lg {
+	from {
+		opacity: 0;
+		transform: translateY(28px);
+	}
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+@keyframes reveal-blob {
+	0%,
+	100% {
+		transform: scale(1);
+		opacity: 0.4;
+	}
+	50% {
+		transform: scale(1.12);
+		opacity: 0.7;
+	}
+}
+@keyframes reveal-blob-alt {
+	0%,
+	100% {
+		transform: scale(1);
+		opacity: 0.3;
+	}
+	50% {
+		transform: scale(1.08);
+		opacity: 0.6;
+	}
+}
+@keyframes reveal-hand {
+	0% {
+		transform: translateX(0);
+		opacity: 0;
+	}
+	12% {
+		opacity: 0.9;
+	}
+	80% {
+		opacity: 0.9;
+	}
+	100% {
+		transform: translateX(300px);
+		opacity: 0;
+	}
+}
+@keyframes reveal-hand-trail {
+	0% {
+		transform: scaleX(0);
+		opacity: 0;
+	}
+	14% {
+		opacity: 0.55;
+	}
+	100% {
+		transform: scaleX(1);
+		opacity: 0;
+	}
+}
+@keyframes reveal-envelope-open {
+	0% {
+		transform: none;
+		opacity: 1;
+	}
+	60% {
+		transform: translateY(16px) scale(0.98);
+	}
+	100% {
+		transform: translateY(46px) scale(0.96);
+		opacity: 0;
+	}
+}
+@keyframes reveal-seal-left {
+	0% {
+		transform: none;
+		opacity: 1;
+	}
+	100% {
+		transform: translate(-60px, 34px) rotate(-38deg);
+		opacity: 0;
+	}
+}
+@keyframes reveal-seal-right {
+	0% {
+		transform: none;
+		opacity: 1;
+	}
+	100% {
+		transform: translate(60px, 40px) rotate(42deg);
+		opacity: 0;
+	}
+}
+@keyframes reveal-slot-in {
+	0% {
+		opacity: 0;
+		transform: translateY(26px) scale(0.97);
+	}
+	100% {
+		opacity: 1;
+		transform: none;
+	}
+}
+@keyframes reveal-card-settle {
+	0% {
+		opacity: 0;
+		transform: translateY(20px) scale(0.96);
+	}
+	58% {
+		opacity: 1;
+		transform: translateY(-5px) scale(1.012);
+	}
+	100% {
+		opacity: 1;
+		transform: none;
+	}
+}
+@keyframes reveal-shimmer {
+	0% {
+		background-position: -220% 0;
+	}
+	100% {
+		background-position: 220% 0;
+	}
+}
+@keyframes reveal-dots {
+	0%,
+	20% {
+		opacity: 0.25;
+	}
+	50% {
+		opacity: 1;
+	}
+	80%,
+	100% {
+		opacity: 0.25;
+	}
+}
+@keyframes reveal-confetti {
+	0% {
+		opacity: 0;
+		transform: translate3d(0, 0, 0) rotate(0);
+	}
+	8% {
+		opacity: 1;
+	}
+	100% {
+		opacity: 0;
+		transform: translate3d(var(--reveal-dx), 110vh, 0) rotate(var(--reveal-rot));
+	}
+}
+@keyframes reveal-nudge {
+	0%,
+	100% {
+		transform: none;
+	}
+	25% {
+		transform: translateX(-5px);
+	}
+	75% {
+		transform: translateX(5px);
+	}
+}
+
+/* Dashboard action cards — the idle "click me" loop on a highlighted card. */
+@keyframes action-pop {
+	0%,
+	46%,
+	100% {
+		transform: none;
+		box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+	}
+	62% {
+		transform: translateY(-5px) scale(1.025);
+		box-shadow: 0 16px 30px -10px rgba(234, 88, 12, 0.55);
+	}
+	80% {
+		transform: translateY(-1px) scale(1.006);
+		box-shadow: 0 6px 16px -8px rgba(234, 88, 12, 0.35);
+	}
+}
+@keyframes action-glow {
+	0%,
+	40%,
+	100% {
+		opacity: 0.18;
+		transform: scale(0.98);
+	}
+	58% {
+		opacity: 0.8;
+		transform: scale(1.02);
+	}
+	82% {
+		opacity: 0.45;
+		transform: scale(1);
+	}
+}
+/*
+ * The strip is a third of the card wide and starts a third off its left edge,
+ * and translate percentages resolve against the strip, not the card — so a full
+ * crossing is 400% of the strip, not 100% of anything.
+ */
+@keyframes action-sheen {
+	0%,
+	34% {
+		transform: translateX(0) skewX(12deg);
+	}
+	86%,
+	100% {
+		transform: translateX(400%) skewX(12deg);
+	}
+}
+@keyframes action-ring {
+	0%,
+	42%,
+	100% {
+		box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.5);
+	}
+	72% {
+		box-shadow: 0 0 0 16px rgba(255, 255, 255, 0);
+	}
+}
+@keyframes action-dot {
+	0%,
+	100% {
+		opacity: 0.35;
+		transform: scale(0.85);
+	}
+	50% {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
