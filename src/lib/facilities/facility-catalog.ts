@@ -22,6 +22,30 @@ export async function listFacilities(opts?: { type?: FacilityType }): Promise<Fa
 }
 
 /**
+ * One facility's type, for rules that depend on it.
+ *
+ * Its own query rather than a column on the claim payload: the client must not
+ * be able to talk its way past a type-scoped rule by mislabelling the venue.
+ * Returns null when no such facility exists, leaving the caller to decide.
+ */
+export async function getFacilityType(facilityId: number): Promise<FacilityType | null> {
+	const supabase = await createClient();
+
+	const { data, error } = await supabase
+		.from("facilities")
+		.select("type")
+		.eq("id", facilityId)
+		.maybeSingle();
+
+	if (error) {
+		console.error("Error reading facility type:", error);
+		throw new ApiError(500, "Failed to load the facility");
+	}
+
+	return (data?.type as FacilityType) ?? null;
+}
+
+/**
  * Rename a facility.
  *
  * There is no active flag any more. To retire a venue, remove or end-date its

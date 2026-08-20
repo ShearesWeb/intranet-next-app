@@ -3,7 +3,13 @@ import { apiOk, apiError, handleApiError } from "@/lib/api/response";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 import { getClaimsForCca, createClaim } from "@/lib/facilities/facility-claims";
 import { isChairOfCca, getChairCcaIds } from "@/lib/facilities/facility-access";
-import { MIN_BOOKING_LEAD_DAYS, isBookingLocked } from "@/types/facilities";
+import { getFacilityType } from "@/lib/facilities/facility-catalog";
+import {
+	MIN_BOOKING_LEAD_DAYS,
+	bookingHorizonEnd,
+	isBookingLocked,
+	isHorizonRestricted,
+} from "@/types/facilities";
 import { NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -54,6 +60,18 @@ export async function POST(req: NextRequest) {
 		// DB still checks that a schedule actually publishes it.
 		if (isBookingLocked(date)) {
 			return apiError(`Bookings lock ${MIN_BOOKING_LEAD_DAYS} days before the slot date`, 403);
+		}
+
+		// The far edge of the same window. The type comes from the DB, not the
+		// request, so a hand-rolled payload cannot claim to be a Sheares venue.
+		if (!user.is_jcrc) {
+			const type = await getFacilityType(facility_id);
+			if (type && isHorizonRestricted(type, date)) {
+				return apiError(
+					`REBOKS bookings open one month at a time — ${bookingHorizonEnd()} is the last date currently open`,
+					403,
+				);
+			}
 		}
 
 		const claim = await createClaim(facility_id, date, hour, cca_id, user.id);
