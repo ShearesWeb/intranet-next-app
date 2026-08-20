@@ -1091,3 +1091,73 @@ textarea {
 		transform: translateX(5px);
 	}
 }
+
+/* Dashboard action cards — the idle "click me" loop on a highlighted card. */
+@keyframes action-pop {
+	0%,
+	46%,
+	100% {
+		transform: none;
+		box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+	}
+	62% {
+		transform: translateY(-5px) scale(1.025);
+		box-shadow: 0 16px 30px -10px rgba(234, 88, 12, 0.55);
+	}
+	80% {
+		transform: translateY(-1px) scale(1.006);
+		box-shadow: 0 6px 16px -8px rgba(234, 88, 12, 0.35);
+	}
+}
+@keyframes action-glow {
+	0%,
+	40%,
+	100% {
+		opacity: 0.18;
+		transform: scale(0.98);
+	}
+	58% {
+		opacity: 0.8;
+		transform: scale(1.02);
+	}
+	82% {
+		opacity: 0.45;
+		transform: scale(1);
+	}
+}
+/*
+ * The strip is a third of the card wide and starts a third off its left edge,
+ * and translate percentages resolve against the strip, not the card — so a full
+ * crossing is 400% of the strip, not 100% of anything.
+ */
+@keyframes action-sheen {
+	0%,
+	34% {
+		transform: translateX(0) skewX(12deg);
+	}
+	86%,
+	100% {
+		transform: translateX(400%) skewX(12deg);
+	}
+}
+@keyframes action-ring {
+	0%,
+	42%,
+	100% {
+		box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.5);
+	}
+	72% {
+		box-shadow: 0 0 0 16px rgba(255, 255, 255, 0);
+	}
+}
+@keyframes action-dot {
+	0%,
+	100% {
+		opacity: 0.35;
+		transform: scale(0.85);
+	}
+	50% {
+		opacity: 1;
+		transform: scale(1);
+	}
+}

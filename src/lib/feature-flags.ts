@@ -1,6 +1,11 @@
 /**
  * Compile-time service gates. Changing one requires a code edit + deploy.
  *
+ * `pointsRecap` is off outside the end-of-year window: points keep moving until
+ * the year closes, so a recap shown in October would be a wrapped-up story
+ * about an unfinished year. While it is off the dashboard card invites
+ * residents to check back instead of offering a recap to open.
+ *
  * `memberRanking` and `holidaySubsidy` are parked pending a schema decision,
  * not retired. Their source is intentionally still in the tree:
  *
@@ -23,6 +28,7 @@ const CORE_SERVICE_FLAGS = {
 	holidaySubsidy: false,
 	facilities: true,
 	allocationReveal: true,
+	pointsRecap: false,
 };
 
 /**

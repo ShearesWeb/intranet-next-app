@@ -446,7 +446,9 @@ export function AllocationRevealOverlay({ reveal, onClose }: AllocationRevealOve
 									}}
 								/>
 							</div>
-							{sealed && (
+							{/* The pointer demo is a prompt, not a companion — once the
+							    resident is cutting, it gets out of the way. */}
+							{sealed && !dragging && (
 								<div
 									aria-hidden
 									style={{

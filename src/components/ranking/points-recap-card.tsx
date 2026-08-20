@@ -10,8 +10,49 @@ import { useRecapNavigation } from "@/hooks/use-recap-navigation";
 import { useRecapAudio } from "@/hooks/use-recap-audio";
 import { RecapSlideContent } from "@/components/ranking/recap-slide-content";
 import { createRecapImageBlob } from "@/lib/ranking/create-recap-image-blob";
+import { isCoreServiceEnabled } from "@/lib/feature-flags";
 import { cn } from "@/lib/utils";
 import type { AuthenticatedUser } from "@/types/user";
+
+/** The card's chrome, shared by the recap and the waiting state. */
+function RecapCardShell({ children }: { children: React.ReactNode }) {
+	return (
+		<div className="relative flex min-h-[22rem] w-full flex-col justify-between overflow-hidden rounded-[32px] border border-orange-400/50 bg-gradient-to-br from-[#ff6a00] via-[#ff9500] to-[#ffb700] p-6 py-12 text-white shadow-lg shadow-orange-500/20 md:p-8 md:py-16">
+			<div className="absolute -right-16 -top-16 h-52 w-52 rounded-full bg-white/30 blur-3xl animate-[pulse-blob_6s_ease-in-out_infinite]" />
+			<div className="absolute -bottom-20 left-[-2rem] h-64 w-64 rounded-full bg-yellow-200/40 blur-3xl animate-[pulse-blob-alt_7s_ease-in-out_1s_infinite]" />
+			<div className="relative z-10 flex h-full flex-col justify-between gap-8">{children}</div>
+		</div>
+	);
+}
+
+/**
+ * Shown while `pointsRecap` is off. Deliberately shows no total: points are
+ * awarded at the end of the year, so early on the number is 0 for everyone and
+ * printing it reads as a verdict rather than a not-yet.
+ */
+function PointsRecapWaitingCard() {
+	return (
+		<RecapCardShell>
+			<div className="max-w-xl space-y-3">
+				<h3 className="text-4xl font-bold leading-tight text-white md:text-5xl">
+					Check back at the end of the year
+				</h3>
+				<p className="max-w-lg text-base font-medium leading-7 text-white/90">
+					Your hall points and your Sheares Wrapped unlock once the year wraps up.
+				</p>
+			</div>
+			<div className="relative z-10 flex flex-col gap-3">
+				<Button
+					asChild
+					size="lg"
+					className="w-fit rounded-full bg-white px-6 font-semibold text-orange-600 hover:bg-orange-50 hover:text-orange-700 shadow-sm"
+				>
+					<Link href="/dashboard/my-cca">View breakdown</Link>
+				</Button>
+			</div>
+		</RecapCardShell>
+	);
+}
 
 export function PointsRecapCard({
 	user,
@@ -20,6 +61,7 @@ export function PointsRecapCard({
 	user: AuthenticatedUser;
 	onSeenStateChange?: (hasSeenRecap: boolean) => void;
 }) {
+	const recapEnabled = isCoreServiceEnabled("pointsRecap");
 	const [open, setOpen] = useState(false);
 	const [imgGenerating, setImgGenerating] = useState(false);
 	const { ccas, hasSeenRecap, isMounted, loadingCcas, recap, setHasSeenRecap } = useRecapData(
@@ -83,99 +125,100 @@ export function PointsRecapCard({
 	};
 	const slide = recap.slides[currentSlide];
 
+	// Every hook above runs either way — the flag only decides what renders.
+	if (!recapEnabled) {
+		return <PointsRecapWaitingCard />;
+	}
+
 	return (
 		<>
-			<div className="relative flex min-h-[22rem] w-full flex-col justify-between overflow-hidden rounded-[32px] border border-orange-400/50 bg-gradient-to-br from-[#ff6a00] via-[#ff9500] to-[#ffb700] p-6 py-12 text-white shadow-lg shadow-orange-500/20 md:p-8 md:py-16">
-				<div className="absolute -right-16 -top-16 h-52 w-52 rounded-full bg-white/30 blur-3xl animate-[pulse-blob_6s_ease-in-out_infinite]" />
-				<div className="absolute -bottom-20 left-[-2rem] h-64 w-64 rounded-full bg-yellow-200/40 blur-3xl animate-[pulse-blob-alt_7s_ease-in-out_1s_infinite]" />
-				<div className="relative z-10 flex h-full flex-col justify-between gap-8">
-					{!isMounted ? (
-						<div className="animate-pulse space-y-5">
-							<div className="h-12 w-3/4 rounded-lg bg-white/20" />
-							<div className="h-6 w-1/2 rounded-lg bg-white/20" />
-						</div>
-					) : (
-						<>
-							<div className="space-y-5">
-								<div className="max-w-xl space-y-3">
-									<h3 className="text-4xl font-bold leading-tight text-white md:text-5xl">
-										{hasSeenRecap ? "Final Hall Points" : "Your points are ready!"}
-									</h3>
-									<p className="max-w-lg text-base font-medium leading-7 text-white/90">
-										{!hasSeenRecap
-											? "View your points recap?"
-											: recap.totals.totalCcas > 0
-												? `${recap.totals.totalCcas === 1 ? "1 CCA" : `${recap.totals.totalCcas} CCAs`} joined.`
-												: "No CCAs joined"}
-									</p>
-								</div>
-								{hasSeenRecap ? (
-									<div className="pt-2 animate-[slide-fade-in_0.3s_ease-out_both]">
-										<h3 className="text-7xl font-black leading-tight text-white md:text-8xl">
-											{user.points || 0}
-										</h3>
-									</div>
-								) : null}
+			<RecapCardShell>
+				{!isMounted ? (
+					<div className="animate-pulse space-y-5">
+						<div className="h-12 w-3/4 rounded-lg bg-white/20" />
+						<div className="h-6 w-1/2 rounded-lg bg-white/20" />
+					</div>
+				) : (
+					<>
+						<div className="space-y-5">
+							<div className="max-w-xl space-y-3">
+								<h3 className="text-4xl font-bold leading-tight text-white md:text-5xl">
+									{hasSeenRecap ? "Final Hall Points" : "Your points are ready!"}
+								</h3>
+								<p className="max-w-lg text-base font-medium leading-7 text-white/90">
+									{!hasSeenRecap
+										? "View your points recap?"
+										: recap.totals.totalCcas > 0
+											? `${recap.totals.totalCcas === 1 ? "1 CCA" : `${recap.totals.totalCcas} CCAs`} joined.`
+											: "No CCAs joined"}
+								</p>
 							</div>
-							<div className="relative z-10 flex flex-col gap-3">
-								{hasSeenRecap ? (
-									<>
-										<Button
-											asChild
-											size="lg"
-											className="w-fit rounded-full bg-white px-6 font-semibold text-orange-600 hover:bg-orange-50 hover:text-orange-700 shadow-sm"
-										>
-											<Link href="/dashboard/my-cca">View breakdown</Link>
-										</Button>
-										<div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap">
-											<Button
-												type="button"
-												size="lg"
-												onClick={shareRecapImageToLinkedIn}
-												disabled={imgGenerating}
-												className="w-fit rounded-full border border-white/20 bg-white/20 px-6 font-semibold text-white shadow-sm backdrop-blur-sm hover:bg-white/30"
-											>
-												Share your certificate!
-											</Button>
-											<Button
-												type="button"
-												size="lg"
-												variant="ghost"
-												onClick={() => {
-													setCurrentSlide(0);
-													setDirection(1);
-													playRecapAudio();
-													setOpen(true);
-												}}
-												className="w-fit rounded-full text-white hover:bg-white/20 hover:text-white"
-											>
-												<Sparkles className="h-4 w-4 mr-2" />
-												Replay recap
-											</Button>
-										</div>
-									</>
-								) : (
+							{hasSeenRecap ? (
+								<div className="pt-2 animate-[slide-fade-in_0.3s_ease-out_both]">
+									<h3 className="text-7xl font-black leading-tight text-white md:text-8xl">
+										{user.points || 0}
+									</h3>
+								</div>
+							) : null}
+						</div>
+						<div className="relative z-10 flex flex-col gap-3">
+							{hasSeenRecap ? (
+								<>
 									<Button
-										type="button"
+										asChild
 										size="lg"
-										onClick={() => {
-											setCurrentSlide(0);
-											setDirection(1);
-											playRecapAudio();
-											setOpen(true);
-										}}
-										disabled={loadingCcas}
 										className="w-fit rounded-full bg-white px-6 font-semibold text-orange-600 hover:bg-orange-50 hover:text-orange-700 shadow-sm"
 									>
-										<Sparkles className="h-4 w-4 mr-1" />
-										{loadingCcas ? "Loading..." : "View points recap"}
+										<Link href="/dashboard/my-cca">View breakdown</Link>
 									</Button>
-								)}
-							</div>
-						</>
-					)}
-				</div>
-			</div>
+									<div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap">
+										<Button
+											type="button"
+											size="lg"
+											onClick={shareRecapImageToLinkedIn}
+											disabled={imgGenerating}
+											className="w-fit rounded-full border border-white/20 bg-white/20 px-6 font-semibold text-white shadow-sm backdrop-blur-sm hover:bg-white/30"
+										>
+											Share your certificate!
+										</Button>
+										<Button
+											type="button"
+											size="lg"
+											variant="ghost"
+											onClick={() => {
+												setCurrentSlide(0);
+												setDirection(1);
+												playRecapAudio();
+												setOpen(true);
+											}}
+											className="w-fit rounded-full text-white hover:bg-white/20 hover:text-white"
+										>
+											<Sparkles className="h-4 w-4 mr-2" />
+											Replay recap
+										</Button>
+									</div>
+								</>
+							) : (
+								<Button
+									type="button"
+									size="lg"
+									onClick={() => {
+										setCurrentSlide(0);
+										setDirection(1);
+										playRecapAudio();
+										setOpen(true);
+									}}
+									disabled={loadingCcas}
+									className="w-fit rounded-full bg-white px-6 font-semibold text-orange-600 hover:bg-orange-50 hover:text-orange-700 shadow-sm"
+								>
+									<Sparkles className="h-4 w-4 mr-1" />
+									{loadingCcas ? "Loading..." : "View points recap"}
+								</Button>
+							)}
+						</div>
+					</>
+				)}
+			</RecapCardShell>
 			<Dialog
 				open={open}
 				onOpenChange={(nextOpen) => {
