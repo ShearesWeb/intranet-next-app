@@ -72,7 +72,7 @@ Four workflows in `.github/workflows/`, numbered in the order a change moves thr
 | Push to any non-`main` branch | `1-feature-branch-ci.yml` | prettier, lint, typecheck, unit + component tests |
 | PR into `main` | `2-merge-request-ci.yml` | all of the above + `next build` + integration tests (Postgres + PostgREST) |
 | PR merged into `main`, or push of a `vX.Y.Z-rc` tag | `3-preprod-deploy.yaml` | cuts the next `vX.Y.Z-rc` tag, Terraform apply, deploys preprod, then cuts `vX.Y.Z` |
-| `workflow_dispatch` with a `vX.Y.Z` tag input | `4-prd-deploy.yaml` | Terraform apply, deploys prd |
+| `workflow_dispatch` run against a `vX.Y.Z` tag | `4-prd-deploy.yaml` | Terraform apply, deploys prd |
 
 **Required secret**: `SUBMODULE_SSH_KEY` — a read-only deploy key for `ShearesWeb/intranet` (the private schema submodule). The built-in `GITHUB_TOKEN` can't access a sibling private repo. See `docs/TESTING.md` for one-time setup.
 
@@ -83,7 +83,7 @@ Four workflows in `.github/workflows/`, numbered in the order a change moves thr
 - **Production**: Worker `"intranet"` → `intranet.shweb.org`
 - **Preprod**: Worker `"intranet-preprod"` → `intranet-beta.shweb.org`
 
-**Release flow**: merging a PR into `main` cuts `vX.Y.Z-rc` (patch bump off the latest rc) and deploys it to preprod. A preprod deploy that succeeds cuts the same version without the suffix, `vX.Y.Z`. That tag deploys nothing on its own — it marks a build as preprod-proven. Ship it by dispatching `4-prd-deploy.yaml` with the tag as its input. Never add a `push: tags` trigger to the prd workflow; tag creation is automated, so a push trigger would auto-ship every green preprod build.
+**Release flow**: merging a PR into `main` cuts `vX.Y.Z-rc` (patch bump off the latest rc) and deploys it to preprod. A preprod deploy that succeeds cuts the same version without the suffix, `vX.Y.Z`. That tag deploys nothing on its own — it marks a build as preprod-proven. Ship it by dispatching `4-prd-deploy.yaml` against that tag (pick it in the "Use workflow from" dropdown, or `gh workflow run 4-prd-deploy.yaml --ref vX.Y.Z`); the dispatched ref is the deploy target, there is no tag input. Because dispatch runs the workflow file as it exists on the chosen ref, a tag cut before a workflow change runs the old definition. Never add a `push: tags` trigger to the prd workflow; tag creation is automated, so a push trigger would auto-ship every green preprod build.
 
 Both environments deploy from CI only. The workflows run Terraform before the Worker deploy so the R2 binding in `wrangler.jsonc` resolves, and they build from a tag rather than a working tree, so what ships always matches a commit.
 
