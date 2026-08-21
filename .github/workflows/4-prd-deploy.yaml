@@ -1,7 +1,10 @@
 # .github/workflows/4-prd-deploy.yaml
 name: Production Deploy (Cloudflare)
 
-# Trigger: workflow_dispatch only. Give it the production tag to ship.
+# Trigger: workflow_dispatch only, run against the production tag you want to
+# ship — pick it in the "Use workflow from" dropdown (or `gh workflow run
+# 4-prd-deploy.yaml --ref vX.Y.Z`). The dispatched ref *is* the deploy target,
+# so there is no tag input to keep in sync with it.
 #
 # `3-preprod-deploy.yaml` creates `vX.Y.Z` automatically once that build's
 # `vX.Y.Z-rc` has deployed to preprod, so the tag says "this passed preprod",
@@ -14,14 +17,9 @@ name: Production Deploy (Cloudflare)
 # tag push — an implicit guard that disappears the moment the promote job is
 # switched to a PAT or App token.
 on:
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: "Production tag to deploy (e.g. v1.0.0)"
-        required: true
-        type: string
+  workflow_dispatch: {}
 
-run-name: Deploy ${{ inputs.tag }} to prd
+run-name: Deploy ${{ github.ref_name }} to prd
 
 concurrency:
   group: "prd-deploy"
@@ -51,11 +49,15 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
     steps:
-      - name: 1. ✅ Validate Tag Input
+      - name: 1. ✅ Validate Dispatched Ref
         env:
-          TAG: ${{ inputs.tag }}
+          REF_TYPE: ${{ github.ref_type }}
+          TAG: ${{ github.ref_name }}
         run: |
           set -euo pipefail
+          if [ "$REF_TYPE" != "tag" ]; then
+            echo "::error::Dispatched on $REF_TYPE '$TAG' — prd deploys run from a vX.Y.Z tag."; exit 1
+          fi
           case "$TAG" in
             v*.*.*-*) echo "::error::'$TAG' is a pre-release tag — prd ships clean vX.Y.Z only."; exit 1 ;;
             v*.*.*) ;;
@@ -64,8 +66,6 @@ jobs:
 
       - name: 2. 📄 Checkout Repository
         uses: actions/checkout@v4
-        with:
-          ref: refs/tags/${{ inputs.tag }}
 
       - name: 3. ⚙️ Setup Node.js
         uses: actions/setup-node@v4
