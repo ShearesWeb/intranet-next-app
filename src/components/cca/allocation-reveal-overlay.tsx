@@ -85,6 +85,14 @@ export function AllocationRevealOverlay({ reveal, onClose }: AllocationRevealOve
 	const [resolved, setResolved] = useState(0);
 
 	const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+	/**
+	 * The drag lifecycle is driven off a ref, not the `dragging` state. Pointer
+	 * events in one batch see a stale render closure, which dropped the first
+	 * move of a fast flick and let the release run twice — once from React's
+	 * handler and once from the window fallback, double-counting the nudge.
+	 * `dragging` stays as state purely because the knob renders off it.
+	 */
+	const draggingRef = useRef(false);
 	const dragOrigin = useRef(0);
 	const envelopeLeft = useRef(0);
 	const envelopeWidth = useRef(480);
@@ -116,6 +124,7 @@ export function AllocationRevealOverlay({ reveal, onClose }: AllocationRevealOve
 
 	const beginOpen = useCallback(() => {
 		clearTimers();
+		draggingRef.current = false;
 		setStage("opening");
 		setDragging(false);
 		setCut(1);
@@ -142,6 +151,7 @@ export function AllocationRevealOverlay({ reveal, onClose }: AllocationRevealOve
 		clearTimers();
 		setStage("sealed");
 		setCut(0);
+		draggingRef.current = false;
 		setDragging(false);
 		setNudges(0);
 		setShown(0);
@@ -159,29 +169,60 @@ export function AllocationRevealOverlay({ reveal, onClose }: AllocationRevealOve
 		envelopeLeft.current = box.left;
 		envelopeWidth.current = box.width || 480;
 		event.currentTarget.setPointerCapture?.(event.pointerId);
+		draggingRef.current = true;
 		setDragging(true);
 		setCut(cutAt(event.clientX));
 	};
 
 	const onCutMove = (event: React.PointerEvent<HTMLDivElement>) => {
-		if (!dragging || stage !== "sealed") return;
+		if (!draggingRef.current || stage !== "sealed") return;
 		const next = cutAt(event.clientX);
 		setCut(next);
 		if (next >= 1 && event.clientX - dragOrigin.current >= MIN_CUT_DRAG) beginOpen();
 	};
 
-	const onCutEnd = (event: React.PointerEvent<HTMLDivElement>) => {
-		if (stage !== "sealed" || !dragging) return;
-		if (cut >= CUT_DONE && event.clientX - dragOrigin.current >= MIN_CUT_DRAG) {
-			beginOpen();
-			return;
-		}
-		// Not far enough — snap back and nudge, so the gesture reads as unfinished
-		// rather than broken.
-		setDragging(false);
-		setCut(0);
-		setNudges((count) => count + 1);
-	};
+	const finishCut = useCallback(
+		(clientX: number) => {
+			if (stage !== "sealed" || !draggingRef.current) return;
+			draggingRef.current = false;
+			/*
+			 * Measure the release from the event, not from `cut`. React state read
+			 * through this closure can be a frame stale: a quick flick puts the last
+			 * `pointermove` and the `pointerup` in the same batch, so the pending
+			 * `setCut` has not flushed and the cut reads short. The pointer's own
+			 * coordinate is always current.
+			 */
+			const finalCut = cutAt(clientX);
+			if (finalCut >= CUT_DONE && clientX - dragOrigin.current >= MIN_CUT_DRAG) {
+				beginOpen();
+				return;
+			}
+			// Not far enough — snap back and nudge, so the gesture reads as unfinished
+			// rather than broken.
+			setDragging(false);
+			setCut(0);
+			setNudges((count) => count + 1);
+		},
+		[beginOpen, stage],
+	);
+
+	const onCutEnd = (event: React.PointerEvent<HTMLDivElement>) => finishCut(event.clientX);
+
+	/**
+	 * Pointer capture normally keeps the release on the envelope, but if it is
+	 * unavailable the pointer can come up anywhere. Watch the window so a drag
+	 * cannot be left hanging.
+	 */
+	useEffect(() => {
+		if (!dragging || stage !== "sealed") return;
+		const end = (event: PointerEvent) => finishCut(event.clientX);
+		window.addEventListener("pointerup", end);
+		window.addEventListener("pointercancel", end);
+		return () => {
+			window.removeEventListener("pointerup", end);
+			window.removeEventListener("pointercancel", end);
+		};
+	}, [dragging, stage, finishCut]);
 
 	if (!mounted) return null;
 
@@ -357,7 +398,6 @@ export function AllocationRevealOverlay({ reveal, onClose }: AllocationRevealOve
 							onPointerMove={onCutMove}
 							onPointerUp={onCutEnd}
 							onPointerCancel={onCutEnd}
-							onPointerLeave={onCutEnd}
 							onKeyDown={(event) => {
 								if (stage !== "sealed") return;
 								if (event.key === "Enter" || event.key === " ") {
