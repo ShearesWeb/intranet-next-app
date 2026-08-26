@@ -85,6 +85,34 @@ function drag(fromX: number, toX: number) {
 	});
 }
 
+/**
+ * A quick flick: the release lands in the same React batch as the last move, so
+ * any state the end-of-drag path reads through its render closure is a frame
+ * stale. Separate `act()` calls per event would flush that away and hide it.
+ */
+function flick(fromX: number, toX: number, onChild = false) {
+	const envelope = document.querySelector<HTMLElement>(
+		'[aria-label="Open your allocation envelope"]',
+	);
+	expect(envelope).not.toBeNull();
+	// Tapping the dashed cut line hits a descendant, not the envelope itself.
+	const target = onChild ? (envelope!.querySelector("span") ?? envelope!) : envelope!;
+	const fire = (type: string, clientX: number, node: Element = target) =>
+		node.dispatchEvent(new MouseEvent(type, { bubbles: true, clientX }));
+
+	act(() => {
+		fire("pointerdown", fromX);
+	});
+	act(() => {
+		// Pointer capture moves the pointer off the tapped child; React synthesises
+		// a leave on the envelope from this, which must not end the drag.
+		fire("pointerout", fromX);
+		fire("pointerleave", fromX);
+		for (let i = 1; i <= 6; i++) fire("pointermove", fromX + ((toX - fromX) * i) / 6, envelope!);
+		fire("pointerup", toX, envelope!);
+	});
+}
+
 describe("AllocationRevealOverlay", () => {
 	beforeEach(() => {
 		globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -204,6 +232,49 @@ describe("AllocationRevealOverlay", () => {
 		expect(second).toContain("reveal-nudge");
 		expect(second).not.toBe(first);
 		expect(view.text()).toContain("Your allocations are ready.");
+
+		view.unmount();
+	});
+
+	// A flick ends with the last move and the release in one batch. Reading `cut`
+	// from the render closure there saw a stale value and rejected the swipe.
+	it("opens on a flick whose release batches with the last move", () => {
+		stubEnvelopeBox();
+		const view = render([VOLLEYBALL]);
+
+		flick(ENVELOPE_LEFT + ENVELOPE_WIDTH * 0.3, ENVELOPE_LEFT + ENVELOPE_WIDTH * 0.85);
+
+		act(() => vi.advanceTimersByTime(3000));
+		expect(view.text()).toContain("Sheares Volleyball");
+
+		view.unmount();
+	});
+
+	// Pressing the dashed cut line lands on a descendant. Capture then moves the
+	// pointer to the envelope, which React reports as a leave on the envelope —
+	// wiring that to the end-of-drag path killed the gesture on contact.
+	it("survives the leave that pointer capture fires when the press starts on a child", () => {
+		stubEnvelopeBox();
+		const view = render([VOLLEYBALL]);
+
+		flick(ENVELOPE_LEFT + ENVELOPE_WIDTH * 0.3, ENVELOPE_LEFT + ENVELOPE_WIDTH * 0.85, true);
+
+		act(() => vi.advanceTimersByTime(3000));
+		expect(view.text()).toContain("Sheares Volleyball");
+
+		view.unmount();
+	});
+
+	// WebKit supports only `-webkit-user-select`, so React's inline `userSelect`
+	// is dropped outright and the overlay stayed selectable on iOS — a long press
+	// selected the page instead of starting the drag. Tailwind's `select-none`
+	// emits both forms, and `user-select` inherits, so it belongs on the root.
+	it("suppresses text selection and the iOS callout across the overlay", () => {
+		const view = render([VOLLEYBALL]);
+		const dialog = document.querySelector('[role="dialog"]');
+
+		expect(dialog?.className).toContain("select-none");
+		expect(dialog?.className).toContain("reveal-no-callout");
 
 		view.unmount();
 	});
