@@ -303,12 +303,21 @@ export function AllocationRevealOverlay({ reveal, onClose }: AllocationRevealOve
 					top: 16,
 					right: 16,
 					zIndex: 6,
-					border: "1px solid rgba(255,255,255,.18)",
+					// 44px is the smallest comfortable tap target on a phone; at the
+					// old 6px padding this rendered 29px tall.
+					display: "inline-flex",
+					alignItems: "center",
+					minHeight: 44,
+					// Pinned to the viewport, so it passes over the white result cards
+					// as they scroll under it. A translucent white fill left it as white
+					// text on white; the tint has to be dark enough to carry the label
+					// over the cards as well as over the backdrop.
+					border: "1px solid rgba(255,255,255,.24)",
 					borderRadius: 9999,
-					padding: "6px 14px",
-					background: "rgba(255,255,255,.08)",
+					padding: "0 18px",
+					background: "rgba(24,12,4,.78)",
 					backdropFilter: "blur(6px)",
-					color: "rgba(255,255,255,.82)",
+					color: "rgba(255,255,255,.92)",
 					fontSize: 12,
 					fontWeight: 600,
 					cursor: "pointer",
