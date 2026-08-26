@@ -265,6 +265,20 @@ describe("AllocationRevealOverlay", () => {
 		view.unmount();
 	});
 
+	// WebKit supports only `-webkit-user-select`, so React's inline `userSelect`
+	// is dropped outright and the overlay stayed selectable on iOS — a long press
+	// selected the page instead of starting the drag. Tailwind's `select-none`
+	// emits both forms, and `user-select` inherits, so it belongs on the root.
+	it("suppresses text selection and the iOS callout across the overlay", () => {
+		const view = render([VOLLEYBALL]);
+		const dialog = document.querySelector('[role="dialog"]');
+
+		expect(dialog?.className).toContain("select-none");
+		expect(dialog?.className).toContain("reveal-no-callout");
+
+		view.unmount();
+	});
+
 	it("restores page scrolling when it closes", () => {
 		const view = render([VOLLEYBALL]);
 		expect(document.body.style.overflow).toBe("hidden");

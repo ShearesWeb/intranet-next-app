@@ -243,7 +243,6 @@ export function AllocationRevealOverlay({ reveal, onClose }: AllocationRevealOve
 		background: "linear-gradient(180deg,#fdf6ea,#f3e3cb)",
 		boxShadow: "0 30px 70px rgba(0,0,0,.45), inset 0 0 0 1px rgba(120,72,32,.16)",
 		touchAction: "none",
-		userSelect: "none",
 		animation: opening
 			? "reveal-envelope-open .95s cubic-bezier(.4,0,.6,1) .28s both"
 			: nudges > 0 && sealed
@@ -274,6 +273,16 @@ export function AllocationRevealOverlay({ reveal, onClose }: AllocationRevealOve
 			role="dialog"
 			aria-modal="true"
 			aria-label={`${reveal.periodLabel} allocation results`}
+			/*
+			 * The whole overlay is a presentation surface, and a long press on it
+			 * used to select the page instead of starting the drag. `select-none`
+			 * rather than an inline `userSelect`: WebKit implements only
+			 * `-webkit-user-select`, so React's unprefixed inline declaration is
+			 * dropped and never applied on iOS at all. Tailwind emits both forms,
+			 * and `user-select` inherits, so the root covers every child. This
+			 * matches `ordering-table.tsx`, the app's other drag surface.
+			 */
+			className="reveal-no-callout select-none"
 			style={{
 				position: "fixed",
 				inset: 0,

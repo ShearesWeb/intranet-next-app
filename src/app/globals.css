@@ -908,6 +908,15 @@ textarea {
 	transform: translateY(-1px);
 }
 
+/*
+ * iOS raises a selection callout and magnifier on a long press, which hijacked
+ * the envelope drag. Tailwind has no utility for it, and an inline React style
+ * is unreliable here — WebKit implements only the prefixed property.
+ */
+.reveal-no-callout {
+	-webkit-touch-callout: none;
+}
+
 /* CCA allocation reveal — scoped keyframes for the envelope overlay. */
 @keyframes reveal-fade-in {
 	from {
