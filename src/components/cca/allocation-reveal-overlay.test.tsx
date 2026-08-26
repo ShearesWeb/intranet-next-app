@@ -47,6 +47,44 @@ function openEnvelope() {
 	});
 }
 
+/**
+ * jsdom has no layout, so the envelope measures 0x0 unless we say otherwise.
+ * These are the real numbers off a 390px-wide phone: `min(520px, 86vw)` gives a
+ * 336px envelope inset 27px from each edge.
+ */
+const ENVELOPE_LEFT = 27;
+const ENVELOPE_WIDTH = 336;
+
+function stubEnvelopeBox() {
+	return vi
+		.spyOn(Element.prototype, "getBoundingClientRect")
+		.mockReturnValue({ left: ENVELOPE_LEFT, width: ENVELOPE_WIDTH } as DOMRect);
+}
+
+/**
+ * Drag across the envelope from one viewport x to another. jsdom ships no
+ * `PointerEvent`, and React only needs the native event name plus `clientX`.
+ */
+function drag(fromX: number, toX: number) {
+	const envelope = document.querySelector<HTMLElement>(
+		'[aria-label="Open your allocation envelope"]',
+	);
+	expect(envelope).not.toBeNull();
+
+	const fire = (type: string, clientX: number) =>
+		envelope!.dispatchEvent(new MouseEvent(type, { bubbles: true, clientX }));
+
+	act(() => {
+		fire("pointerdown", fromX);
+	});
+	act(() => {
+		fire("pointermove", toX);
+	});
+	act(() => {
+		fire("pointerup", toX);
+	});
+}
+
 describe("AllocationRevealOverlay", () => {
 	beforeEach(() => {
 		globalThis.IS_REACT_ACT_ENVIRONMENT = true;
@@ -55,7 +93,9 @@ describe("AllocationRevealOverlay", () => {
 
 	afterEach(() => {
 		vi.useRealTimers();
+		vi.restoreAllMocks();
 		document.body.innerHTML = "";
+		document.body.style.overflow = "";
 	});
 
 	it("holds the appointment back until the envelope is opened", () => {
@@ -110,6 +150,60 @@ describe("AllocationRevealOverlay", () => {
 		act(() => skip?.click());
 
 		expect(onClose).toHaveBeenCalledOnce();
+
+		view.unmount();
+	});
+
+	// The cut is a position on the envelope, not a distance travelled. Measuring
+	// travel meant the finish line sat ~189px right of the finger, so any grab
+	// past the envelope's midpoint on a phone put it off the edge of the screen
+	// and the envelope could not be opened at all.
+	it("opens on a swipe that starts in the right half of the envelope", () => {
+		stubEnvelopeBox();
+		const view = render([VOLLEYBALL]);
+
+		// Grab at 60% across, release at the envelope's right edge — 134px of
+		// travel, well inside what a 390px screen allows from that start point.
+		drag(ENVELOPE_LEFT + ENVELOPE_WIDTH * 0.6, ENVELOPE_LEFT + ENVELOPE_WIDTH);
+
+		act(() => vi.advanceTimersByTime(3000));
+		expect(view.text()).toContain("Sheares Volleyball");
+
+		view.unmount();
+	});
+
+	it("treats a grab past the finish line with no travel as a tap, not a cut", () => {
+		stubEnvelopeBox();
+		const view = render([VOLLEYBALL]);
+
+		// Already past CUT_DONE on contact, but only 10px of movement.
+		drag(ENVELOPE_LEFT + ENVELOPE_WIDTH * 0.9, ENVELOPE_LEFT + ENVELOPE_WIDTH * 0.9 + 10);
+
+		act(() => vi.advanceTimersByTime(3000));
+		expect(view.text()).toContain("Your allocations are ready.");
+		expect(view.text()).not.toContain("Training IC");
+
+		view.unmount();
+	});
+
+	// Re-applying an identical animation declaration does not restart it, so the
+	// nudge has to alternate between two names to fire on every failed swipe.
+	it("nudges again on a second failed swipe", () => {
+		stubEnvelopeBox();
+		const view = render([VOLLEYBALL]);
+		const envelope = document.querySelector<HTMLElement>(
+			'[aria-label="Open your allocation envelope"]',
+		)!;
+
+		drag(ENVELOPE_LEFT, ENVELOPE_LEFT + 60);
+		const first = envelope.style.animation;
+		drag(ENVELOPE_LEFT, ENVELOPE_LEFT + 60);
+		const second = envelope.style.animation;
+
+		expect(first).toContain("reveal-nudge");
+		expect(second).toContain("reveal-nudge");
+		expect(second).not.toBe(first);
+		expect(view.text()).toContain("Your allocations are ready.");
 
 		view.unmount();
 	});

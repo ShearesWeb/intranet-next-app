@@ -10,10 +10,19 @@ import type { AllocationReveal, RevealSlot } from "@/lib/cca/allocation-reveal";
 const FONT_DISPLAY = "var(--font-fredoka), sans-serif";
 const FONT_MONO = "var(--font-geist-mono), monospace";
 
-/** Fraction of the envelope width the swipe has to cover to count as a cut. */
+/**
+ * How far across the envelope the cut has to reach to count as opened. This is
+ * a position on the envelope, not a distance travelled: the finish line has to
+ * stay on screen no matter where the finger lands. Measuring travel from the
+ * grab point put it ~189px to the right of the finger, which on a 390px phone
+ * is off the edge of the display for any grab past the envelope's midpoint.
+ */
 const CUT_DONE = 0.72;
-/** Fraction of the envelope width that maps to a full cut, so the swipe ends early. */
-const CUT_TRAVEL = 0.78;
+/**
+ * Minimum movement before a cut counts, so grabbing past the finish line and
+ * letting go is a tap rather than an open.
+ */
+const MIN_CUT_DRAG = 48;
 const OPEN_DELAY = 1250;
 const SLOT_GAP = 2500;
 const RESOLVE_AT = 1600;
@@ -77,6 +86,7 @@ export function AllocationRevealOverlay({ reveal, onClose }: AllocationRevealOve
 
 	const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 	const dragOrigin = useRef(0);
+	const envelopeLeft = useRef(0);
 	const envelopeWidth = useRef(480);
 
 	const clearTimers = useCallback(() => {
@@ -138,26 +148,31 @@ export function AllocationRevealOverlay({ reveal, onClose }: AllocationRevealOve
 		setResolved(0);
 	}, [clearTimers]);
 
+	/** Where the pointer sits along the envelope, 0 at its left edge and 1 at its right. */
+	const cutAt = (clientX: number) =>
+		Math.max(0, Math.min(1, (clientX - envelopeLeft.current) / envelopeWidth.current));
+
 	const onCutStart = (event: React.PointerEvent<HTMLDivElement>) => {
 		if (stage !== "sealed") return;
+		const box = event.currentTarget.getBoundingClientRect();
 		dragOrigin.current = event.clientX;
-		envelopeWidth.current = event.currentTarget.getBoundingClientRect().width || 480;
+		envelopeLeft.current = box.left;
+		envelopeWidth.current = box.width || 480;
 		event.currentTarget.setPointerCapture?.(event.pointerId);
 		setDragging(true);
-		setCut(0);
+		setCut(cutAt(event.clientX));
 	};
 
 	const onCutMove = (event: React.PointerEvent<HTMLDivElement>) => {
 		if (!dragging || stage !== "sealed") return;
-		const travelled = (event.clientX - dragOrigin.current) / (envelopeWidth.current * CUT_TRAVEL);
-		const next = Math.max(0, Math.min(1, travelled));
+		const next = cutAt(event.clientX);
 		setCut(next);
-		if (next >= 1) beginOpen();
+		if (next >= 1 && event.clientX - dragOrigin.current >= MIN_CUT_DRAG) beginOpen();
 	};
 
-	const onCutEnd = () => {
+	const onCutEnd = (event: React.PointerEvent<HTMLDivElement>) => {
 		if (stage !== "sealed" || !dragging) return;
-		if (cut >= CUT_DONE) {
+		if (cut >= CUT_DONE && event.clientX - dragOrigin.current >= MIN_CUT_DRAG) {
 			beginOpen();
 			return;
 		}
@@ -191,7 +206,9 @@ export function AllocationRevealOverlay({ reveal, onClose }: AllocationRevealOve
 		animation: opening
 			? "reveal-envelope-open .95s cubic-bezier(.4,0,.6,1) .28s both"
 			: nudges > 0 && sealed
-				? "reveal-nudge .32s ease-in-out both"
+				? // Alternating names so a second failed swipe restarts the animation —
+					// re-applying an identical declaration would not.
+					`reveal-nudge${nudges % 2 === 0 ? "-alt" : ""} .32s ease-in-out both`
 				: "none",
 	};
 
@@ -216,18 +233,28 @@ export function AllocationRevealOverlay({ reveal, onClose }: AllocationRevealOve
 			role="dialog"
 			aria-modal="true"
 			aria-label={`${reveal.periodLabel} allocation results`}
-			style={{ position: "fixed", inset: 0, zIndex: 60, overflowX: "hidden", overflowY: "auto" }}
+			style={{
+				position: "fixed",
+				inset: 0,
+				zIndex: 60,
+				overflowX: "hidden",
+				overflowY: "auto",
+				background: "#110903",
+			}}
 		>
+			{/* The dialog is its own scroll container, so its backdrop and blobs are
+			    fixed rather than absolute — absolute children would scroll away with
+			    the content and let the page behind show through below them. */}
 			<div
 				style={{
-					position: "absolute",
+					position: "fixed",
 					inset: 0,
 					background: "radial-gradient(120% 90% at 50% 0%,#3a1c07 0%,#1d0f05 55%,#110903 100%)",
 				}}
 			/>
 			<div
 				style={{
-					position: "absolute",
+					position: "fixed",
 					top: -120,
 					right: -90,
 					width: 420,
@@ -240,7 +267,7 @@ export function AllocationRevealOverlay({ reveal, onClose }: AllocationRevealOve
 			/>
 			<div
 				style={{
-					position: "absolute",
+					position: "fixed",
 					bottom: -140,
 					left: -100,
 					width: 460,
@@ -255,7 +282,7 @@ export function AllocationRevealOverlay({ reveal, onClose }: AllocationRevealOve
 				<div
 					aria-hidden
 					style={{
-						position: "absolute",
+						position: "fixed",
 						inset: 0,
 						overflow: "hidden",
 						pointerEvents: "none",
@@ -272,16 +299,25 @@ export function AllocationRevealOverlay({ reveal, onClose }: AllocationRevealOve
 				type="button"
 				onClick={onClose}
 				style={{
-					position: "absolute",
+					position: "fixed",
 					top: 16,
 					right: 16,
 					zIndex: 6,
-					border: "1px solid rgba(255,255,255,.18)",
+					// 44px is the smallest comfortable tap target on a phone; at the
+					// old 6px padding this rendered 29px tall.
+					display: "inline-flex",
+					alignItems: "center",
+					minHeight: 44,
+					// Pinned to the viewport, so it passes over the white result cards
+					// as they scroll under it. A translucent white fill left it as white
+					// text on white; the tint has to be dark enough to carry the label
+					// over the cards as well as over the backdrop.
+					border: "1px solid rgba(255,255,255,.24)",
 					borderRadius: 9999,
-					padding: "6px 14px",
-					background: "rgba(255,255,255,.08)",
+					padding: "0 18px",
+					background: "rgba(24,12,4,.78)",
 					backdropFilter: "blur(6px)",
-					color: "rgba(255,255,255,.82)",
+					color: "rgba(255,255,255,.92)",
 					fontSize: 12,
 					fontWeight: 600,
 					cursor: "pointer",

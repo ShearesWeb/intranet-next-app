@@ -1091,6 +1091,23 @@ textarea {
 		transform: translateX(5px);
 	}
 }
+/*
+ * A twin of `reveal-nudge`. The overlay alternates between the two on repeated
+ * failed swipes: re-applying an identical animation declaration does not
+ * restart it, so without a second name only the first failure ever wiggles.
+ */
+@keyframes reveal-nudge-alt {
+	0%,
+	100% {
+		transform: none;
+	}
+	25% {
+		transform: translateX(-5px);
+	}
+	75% {
+		transform: translateX(5px);
+	}
+}
 
 /* Dashboard action cards — the idle "click me" loop on a highlighted card. */
 @keyframes action-pop {
