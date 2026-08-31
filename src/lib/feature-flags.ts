@@ -42,7 +42,7 @@ const CORE_SERVICE_FLAGS = {
  */
 export type AllocationRevealPeriod = "maincomm" | "subcomm";
 
-const ALLOCATION_REVEAL_PERIOD: AllocationRevealPeriod = "maincomm";
+const ALLOCATION_REVEAL_PERIOD: AllocationRevealPeriod = "subcomm";
 
 export function getAllocationRevealPeriod(): AllocationRevealPeriod {
 	return ALLOCATION_REVEAL_PERIOD;
