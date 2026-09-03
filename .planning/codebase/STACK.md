@@ -16,8 +16,8 @@
 - Node.js (via Cloudflare Workers runtime in production; local development via standard Node)
 
 **Package Manager:**
-- npm (configured in package.json, but Bun preferred per project CLAUDE.md)
-- Lockfile: Not present (using npm directly)
+- npm (repo CLAUDE.md documents `npm run` scripts; Makefile wraps the rest)
+- Lockfile: `package-lock.json` (committed)
 
 ## Frameworks
 
