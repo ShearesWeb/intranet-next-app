@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { Period, UserSearchResult } from "@/types/members";
-import { isLeadershipPositionType } from "@/lib/cca/cca-chair-access";
+import { isChairAssignablePositionType } from "@/lib/cca/cca-chair-access";
 
 interface AddMemberModalProps {
 	open: boolean;
@@ -48,7 +48,7 @@ export function AddMemberModal({
 	const [selectedPositionId, setSelectedPositionId] = useState<number | undefined>();
 	const [selectedCommitment, setSelectedCommitment] = useState<Period>("full-year");
 	const availablePositions = useMemo(
-		() => allPositions.filter((position) => !isLeadershipPositionType(position.position_type)),
+		() => allPositions.filter((position) => isChairAssignablePositionType(position.position_type)),
 		[allPositions],
 	);
 

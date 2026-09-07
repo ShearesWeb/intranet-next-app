@@ -4,6 +4,7 @@ import {
 	canManageCcaServerSide,
 	canManagePositionServerSide,
 	checkCcaAuthorization,
+	isChairAssignablePositionType,
 	isLeadershipPositionType,
 	isManagingAppointment,
 } from "./cca-chair-access";
@@ -258,5 +259,24 @@ describe("checkCcaAuthorization", () => {
 
 		expect(result.ok).toBe(true);
 		if (result.ok) expect(result.data.hasChairAccess).toBe(true);
+	});
+});
+
+describe("isChairAssignablePositionType", () => {
+	// Presentation only — it decides what the Add Member picker offers.
+	const UNASSIGNABLE = ["lead", "vice", "team-manager"] as const;
+	const ASSIGNABLE = ["blockcomm", "maincomm", "subcomm", "member", "resident"] as const;
+
+	it.each(UNASSIGNABLE)("a chair may not assign %s", (positionType) => {
+		expect(isChairAssignablePositionType(positionType)).toBe(false);
+	});
+
+	it.each(ASSIGNABLE)("a chair may assign %s", (positionType) => {
+		expect(isChairAssignablePositionType(positionType)).toBe(true);
+	});
+
+	it("is case-insensitive and trims whitespace", () => {
+		expect(isChairAssignablePositionType("  Team-Manager ")).toBe(false);
+		expect(isChairAssignablePositionType("MEMBER")).toBe(true);
 	});
 });
