@@ -40,6 +40,29 @@ export function isLeadershipPositionType(positionType?: string | null) {
 	return LEADERSHIP_POSITION_TYPES.has((positionType || "").toLowerCase().trim());
 }
 
+/**
+ * Position types a CCA's own management (chair, captain) must not hand out
+ * from the Add Member picker.
+ *
+ * `lead` / `vice` are leadership seats; `team-manager` sits outside the roster
+ * a captain controls, so the picker must not offer it either.
+ */
+const CHAIR_UNASSIGNABLE_POSITION_TYPES = new Set<string>([
+	...LEADERSHIP_POSITION_TYPES,
+	"team-manager",
+]);
+
+/**
+ * Whether a chair/captain may assign this position when adding a member.
+ *
+ * Presentation only — for filtering the Add Member picker down to the seats a
+ * CCA's own management fills. Never use it to decide what a caller may do;
+ * that is `isManagingAppointment` or the `can_manage_cca*` RPCs.
+ */
+export function isChairAssignablePositionType(positionType?: string | null) {
+	return !CHAIR_UNASSIGNABLE_POSITION_TYPES.has((positionType || "").toLowerCase().trim());
+}
+
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
 type ChairAccessData = {
