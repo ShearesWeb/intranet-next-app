@@ -1,9 +1,14 @@
 import { PageHeader } from "@/components/layout/page-header";
+import { isReboksBookingEnabled } from "@/lib/feature-flags";
+
+const STEP_1_BODY = isReboksBookingEnabled()
+	? "JCRC places facility bookings — one venue, one date, one hour. Reboks slots come from the Reboks bot; other venues are added by JCRC and can repeat weekly, with an optional start and end date."
+	: "JCRC places facility bookings — one venue, one date, one hour. Venues are added by JCRC and can repeat weekly, with an optional start and end date.";
 
 const STEPS: { title: string; body: string }[] = [
 	{
 		title: "1. Bookings are published",
-		body: "JCRC places facility bookings — one venue, one date, one hour. Reboks slots come from the Reboks bot; other venues are added by JCRC and can repeat weekly, with an optional start and end date.",
+		body: STEP_1_BODY,
 	},
 	{
 		title: "2. CCAs claim a slot",

@@ -13,6 +13,7 @@ import {
 	slotKey,
 } from "@/types/facilities";
 import { toast } from "sonner";
+import { isBookableFacilityType } from "@/lib/facilities/bookable-types";
 import { CalendarCheck, Inbox } from "lucide-react";
 
 interface ApprovalsPayload {
@@ -45,9 +46,18 @@ export function ManageApprovals() {
 		fetchApprovals();
 	}, [fetchApprovals]);
 
+	// Parked venue types stay out of the queue and the confirmed list, so JCRC
+	// never sees a REBOKS claim it can no longer act on through the intranet.
 	const pending = useMemo(
-		() => [...data.pending].sort((a, b) => a.days_until_booking - b.days_until_booking),
+		() =>
+			data.pending
+				.filter((a) => isBookableFacilityType(a.slot.type))
+				.sort((a, b) => a.days_until_booking - b.days_until_booking),
 		[data.pending],
+	);
+	const confirmed = useMemo(
+		() => data.confirmed.filter((c) => isBookableFacilityType(c.slot.type)),
+		[data.confirmed],
 	);
 
 	async function revoke(claimId: number) {
@@ -104,7 +114,7 @@ export function ManageApprovals() {
 
 			<section className="space-y-3">
 				<h3 className="text-sm font-semibold">Upcoming confirmed bookings</h3>
-				{data.confirmed.length === 0 ? (
+				{confirmed.length === 0 ? (
 					<EmptyState
 						icon={CalendarCheck}
 						title="No upcoming confirmed bookings"
@@ -122,7 +132,7 @@ export function ManageApprovals() {
 								</tr>
 							</thead>
 							<tbody>
-								{data.confirmed.map((row) => {
+								{confirmed.map((row) => {
 									const typeConfig = FACILITY_TYPE_CONFIG[row.slot.type];
 									return (
 										<tr

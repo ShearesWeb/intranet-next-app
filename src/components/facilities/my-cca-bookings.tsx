@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { Calendar, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDisplayDate } from "@/lib/date";
+import { isBookableFacilityType } from "@/lib/facilities/bookable-types";
 
 interface ClaimRow {
 	id: number;
@@ -71,7 +72,9 @@ export function MyCcaBookings() {
 						.then((j) => (j.data ?? []) as ClaimRow[]),
 				),
 			);
-			setClaims(results.flat());
+			// A booking a chair can no longer manage is more confusing shown than
+			// hidden, so parked venue types drop out of the list here too.
+			setClaims(results.flat().filter((c) => isBookableFacilityType(c.facility_type)));
 		} catch {
 			toast.error("Failed to load bookings");
 		} finally {

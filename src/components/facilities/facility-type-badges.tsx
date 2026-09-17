@@ -2,8 +2,7 @@
 
 import { FacilityType, FACILITY_TYPE_CONFIG } from "@/types/facilities";
 import { cn } from "@/lib/utils";
-
-const TYPES: FacilityType[] = ["sheares", "reboks", "nus", "external"];
+import { bookableFacilityTypes } from "@/lib/facilities/bookable-types";
 
 interface FacilityTypeBadgesProps {
 	value: FacilityType;
@@ -12,7 +11,11 @@ interface FacilityTypeBadgesProps {
 }
 
 /** Pill toggle to switch the active facility type context. */
-export function FacilityTypeBadges({ value, onChange, types = TYPES }: FacilityTypeBadgesProps) {
+export function FacilityTypeBadges({
+	value,
+	onChange,
+	types = bookableFacilityTypes(),
+}: FacilityTypeBadgesProps) {
 	return (
 		<div className="flex flex-wrap gap-1.5">
 			{types.map((t) => {
