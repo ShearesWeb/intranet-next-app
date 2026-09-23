@@ -4,8 +4,6 @@ import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { MonthGrid } from "@/components/facilities/month-grid";
 import { DayDetailPanel } from "@/components/facilities/day-detail-panel";
-import { VenueFilter } from "@/components/facilities/venue-filter";
-import { TypeFilter } from "@/components/facilities/type-filter";
 import { ClaimDialog } from "@/components/facilities/claim-dialog";
 import { MyCcaBookings } from "@/components/facilities/my-cca-bookings";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -13,7 +11,7 @@ import { useApiQuery } from "@/hooks/use-api-query";
 import { useCalendarMonth } from "@/hooks/use-calendar-month";
 import { useChairCcas } from "@/hooks/use-chair-ccas";
 import { useAuth } from "@/lib/auth/auth-context";
-import { SlotWithContext, FacilityType } from "@/types/facilities";
+import { SlotWithContext } from "@/types/facilities";
 import { isReboksBookingEnabled } from "@/lib/feature-flags";
 import { isBookableFacilityType } from "@/lib/facilities/bookable-types";
 import { toast } from "sonner";
@@ -21,8 +19,6 @@ import { toast } from "sonner";
 export default function FacilitiesPage() {
 	const { year, month, selectedDate, setSelectedDate, changeMonth, monthRange } =
 		useCalendarMonth();
-	const [venueFilter, setVenueFilter] = useState<string[]>([]);
-	const [typeFilter, setTypeFilter] = useState<FacilityType[]>([]);
 	const [claimBooking, setClaimBooking] = useState<SlotWithContext | null>(null);
 
 	const { chairCcas, isChair } = useChairCcas();
@@ -45,24 +41,10 @@ export default function FacilitiesPage() {
 		[data],
 	);
 
-	const allVenues = useMemo(() => {
-		const set = new Set<string>();
-		for (const b of bookings) set.add(b.sub_venue);
-		return [...set].sort();
-	}, [bookings]);
-
-	const filtered = useMemo(() => {
-		return bookings.filter((b) => {
-			if (venueFilter.length > 0 && !venueFilter.includes(b.sub_venue)) return false;
-			if (typeFilter.length > 0 && !typeFilter.includes(b.type)) return false;
-			return true;
-		});
-	}, [bookings, venueFilter, typeFilter]);
-
 	const dayBookings = useMemo(() => {
 		if (!selectedDate) return [];
-		return filtered.filter((b) => b.date === selectedDate);
-	}, [filtered, selectedDate]);
+		return bookings.filter((b) => b.date === selectedDate);
+	}, [bookings, selectedDate]);
 
 	async function handleWithdraw(claimId: number) {
 		try {
@@ -100,18 +82,13 @@ export default function FacilitiesPage() {
 				)}
 
 				<TabsContent value="book" className="space-y-6">
-					<div className="flex flex-wrap items-center gap-3">
-						<VenueFilter venues={allVenues} selected={venueFilter} onChange={setVenueFilter} />
-						<TypeFilter selected={typeFilter} onChange={setTypeFilter} />
-					</div>
-
 					<div className="flex flex-col gap-6 lg:flex-row">
 						<div className="w-full lg:w-[320px] shrink-0">
 							<MonthGrid
 								year={year}
 								month={month}
 								selectedDate={selectedDate}
-								bookings={filtered}
+								bookings={bookings}
 								onSelectDate={setSelectedDate}
 								onChangeMonth={changeMonth}
 							/>
