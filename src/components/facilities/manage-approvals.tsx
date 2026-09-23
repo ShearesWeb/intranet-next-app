@@ -46,8 +46,7 @@ export function ManageApprovals() {
 		fetchApprovals();
 	}, [fetchApprovals]);
 
-	// Parked venue types stay out of the queue and the confirmed list, so JCRC
-	// never sees a REBOKS claim it can no longer act on through the intranet.
+	// Historical non-Sheares claims stay out of the active management UI.
 	const pending = useMemo(
 		() =>
 			data.pending

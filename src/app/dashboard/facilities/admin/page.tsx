@@ -20,8 +20,8 @@ import { type Cluster, type ScheduleSlot } from "@/lib/facilities/schedule-grid"
 import { FacilitySchedule, Facility, FacilityType, FACILITY_TYPE_CONFIG } from "@/types/facilities";
 import { Shield, Plus, Building2 } from "lucide-react";
 
-// REBOKS venues are bot-owned — hidden from the facilities list and schedule editor.
-const MANAGED_TYPES: FacilityType[] = ["sheares", "nus", "external"];
+// Only Sheares facilities are managed through the intranet.
+const MANAGED_TYPES: FacilityType[] = ["sheares"];
 
 export default function AdminFacilitiesPage() {
 	const { user } = useAuth();
@@ -80,7 +80,7 @@ export default function AdminFacilitiesPage() {
 	}, [schedules, facilitiesById, type]);
 
 	const managedFacilities = useMemo(
-		() => facilities.filter((f) => f.type !== "reboks"),
+		() => facilities.filter((f) => f.type === "sheares"),
 		[facilities],
 	);
 

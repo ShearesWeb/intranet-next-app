@@ -1,6 +1,6 @@
 import { Facility, FacilityType, FACILITY_TYPE_CONFIG } from "@/types/facilities";
 
-const TYPE_ORDER: FacilityType[] = ["sheares", "reboks", "nus", "external"];
+const TYPE_ORDER: FacilityType[] = ["sheares"];
 
 export interface FacilityGroup {
 	type: FacilityType;

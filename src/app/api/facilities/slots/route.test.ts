@@ -19,69 +19,49 @@ vi.mock("@/lib/feature-flags", () => ({
 	getCoreServiceDisabledApiResponse: mocks.getCoreServiceDisabledApiResponse,
 }));
 
-/** First of the month after next, always past the horizon whatever day it is. */
-function beyondHorizon(): string {
-	const next = new Date(new Date().getFullYear(), new Date().getMonth() + 2, 1);
-	return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}-01`;
-}
-
-function todayKey(): string {
-	return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Singapore" }).format(new Date());
-}
-
 function slot(type: string, date: string) {
 	return { facility_id: 1, venue: "V", sub_venue: "S", type, date, hour: 19, claims: [] };
 }
 
-function get(start: string, end: string, type?: string) {
-	const q = new URLSearchParams({ start, end, ...(type ? { type } : {}) });
+function get(start: string, end: string) {
+	const q = new URLSearchParams({ start, end });
 	return new NextRequest(`http://localhost/api/facilities/slots?${q}`);
 }
 
-describe("GET /api/facilities/slots — REBOKS horizon", () => {
+describe("GET /api/facilities/slots — Sheares-only catalog", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mocks.getCoreServiceDisabledApiResponse.mockReturnValue(null);
 		mocks.getChairCcaIds.mockReturnValue([]);
-		// Identity, so assertions read the trimmed list the route hands over.
+		// Identity, so assertions read the filtered list the route hands over.
 		mocks.withUserCcaContext.mockImplementation((slots: unknown[]) => slots);
 	});
 
-	it("trims a chair's reboks slots past the current month, keeping hall venues", async () => {
+	it("returns only Sheares slots", async () => {
 		mocks.requireAuth.mockResolvedValue({ id: 1, is_jcrc: false });
 		mocks.getSlots.mockResolvedValue([
-			slot("reboks", todayKey()),
-			slot("reboks", beyondHorizon()),
-			slot("sheares", beyondHorizon()),
+			slot("reboks", "2026-09-01"),
+			slot("nus", "2026-09-01"),
+			slot("external", "2026-09-01"),
+			slot("sheares", "2026-09-01"),
 		]);
 
 		const { GET } = await import("./route");
-		const body = await (await GET(get(todayKey(), beyondHorizon()))).json();
-
-		expect(body.data).toHaveLength(2);
-		expect(body.data.map((s: { type: string }) => s.type)).toEqual(["reboks", "sheares"]);
-		expect(body.data.some((s: { date: string }) => s.date === beyondHorizon())).toBe(true);
-	});
-
-	it("leaves JCRC the full horizon", async () => {
-		mocks.requireAuth.mockResolvedValue({ id: 1, is_jcrc: true });
-		mocks.getSlots.mockResolvedValue([slot("reboks", todayKey()), slot("reboks", beyondHorizon())]);
-
-		const { GET } = await import("./route");
-		const body = await (await GET(get(todayKey(), beyondHorizon()))).json();
-
-		expect(body.data).toHaveLength(2);
-	});
-
-	it("applies the type filter on top of the trim, not instead of it", async () => {
-		mocks.requireAuth.mockResolvedValue({ id: 1, is_jcrc: false });
-		mocks.getSlots.mockResolvedValue([slot("reboks", todayKey()), slot("reboks", beyondHorizon())]);
-
-		const { GET } = await import("./route");
-		const body = await (await GET(get(todayKey(), beyondHorizon(), "reboks"))).json();
+		const body = await (await GET(get("2026-09-01", "2026-09-30"))).json();
 
 		expect(body.data).toHaveLength(1);
-		expect(body.data[0].date).toBe(todayKey());
+		expect(body.data[0].type).toBe("sheares");
+	});
+
+	it("applies the same restriction to JCRC", async () => {
+		mocks.requireAuth.mockResolvedValue({ id: 1, is_jcrc: true });
+		mocks.getSlots.mockResolvedValue([slot("reboks", "2026-09-01"), slot("sheares", "2026-09-01")]);
+
+		const { GET } = await import("./route");
+		const body = await (await GET(get("2026-09-01", "2026-09-30"))).json();
+
+		expect(body.data).toHaveLength(1);
+		expect(body.data[0].type).toBe("sheares");
 	});
 
 	it("400s without a window", async () => {

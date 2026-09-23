@@ -58,9 +58,9 @@ export function ScheduleSlotDialog({
 	const [endDate, setEndDate] = useState<string>("");
 	const [submitting, setSubmitting] = useState(false);
 
-	// REBOKS recipes are owned by the bot — not editable here.
+	// Only Sheares facilities can receive schedules through the intranet.
 	const selectableFacilities = useMemo(
-		() => facilities.filter((f) => f.type !== "reboks"),
+		() => facilities.filter((f) => f.type === "sheares"),
 		[facilities],
 	);
 

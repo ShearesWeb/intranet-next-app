@@ -48,23 +48,6 @@ export function getAllocationRevealPeriod(): AllocationRevealPeriod {
 	return ALLOCATION_REVEAL_PERIOD;
 }
 
-/**
- * REBOKS (NUS court) booking is parked, not retired, pending SHW-22's
- * decision on where REBOKS booking should live. While this is off, chairs
- * can only see and claim Sheares, NUS-direct and external venues — REBOKS
- * rows still exist in the catalog and calendar RPC, the app just filters
- * them out in `isBookableFacilityType()`.
- *
- * Flipping this back to `true` restores today's behaviour exactly: the
- * REBOKS booking horizon, its notice, and its guide copy all come back
- * without any further code change.
- */
-const REBOKS_BOOKING_ENABLED = false;
-
-export function isReboksBookingEnabled(): boolean {
-	return REBOKS_BOOKING_ENABLED;
-}
-
 export type CoreServiceKey = keyof typeof CORE_SERVICE_FLAGS;
 export type CoreServiceFlags = typeof CORE_SERVICE_FLAGS;
 

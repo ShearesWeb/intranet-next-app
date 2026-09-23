@@ -43,15 +43,34 @@ function futureDate(daysAhead: number): string {
 	return `${d.getFullYear()}-${m}-${day}`;
 }
 
+describe("GET /api/facilities/claims — Sheares-only history", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		mocks.getCoreServiceDisabledApiResponse.mockReturnValue(null);
+		mocks.requireAuth.mockResolvedValue({ id: 42 });
+		mocks.isChairOfCca.mockReturnValue(true);
+		mocks.getClaimsForCca.mockResolvedValue([
+			{ id: 1, facility_type: "sheares" },
+			{ id: 2, facility_type: "nus" },
+			{ id: 3, facility_type: "external" },
+		]);
+	});
+
+	it("returns only Sheares claims", async () => {
+		const { GET } = await import("./route");
+		const req = new NextRequest("http://localhost/api/facilities/claims?ccaId=3");
+		const res = await GET(req);
+		expect((await res.json()).data).toEqual([{ id: 1, facility_type: "sheares" }]);
+	});
+});
+
 describe("POST /api/facilities/claims — lead-time gate", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mocks.getCoreServiceDisabledApiResponse.mockReturnValue(null);
 		mocks.requireAuth.mockResolvedValue({ id: 42 });
 		mocks.isChairOfCca.mockReturnValue(true);
-		// A hall venue by default, so the REBOKS horizon never applies here. Left
-		// unset these tests would flip to 403 whenever the suite ran within five
-		// days of a month end.
+		// A Sheares venue by default so these tests exercise the lead-time rules.
 		mocks.getFacilityType.mockResolvedValue("sheares");
 	});
 
@@ -95,7 +114,7 @@ describe("POST /api/facilities/claims — lead-time gate", () => {
 	});
 });
 
-describe("POST /api/facilities/claims — REBOKS horizon gate", () => {
+describe("POST /api/facilities/claims — Sheares-only gate", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mocks.getCoreServiceDisabledApiResponse.mockReturnValue(null);
@@ -104,35 +123,27 @@ describe("POST /api/facilities/claims — REBOKS horizon gate", () => {
 		mocks.createClaim.mockResolvedValue({ id: 1 });
 	});
 
-	/** First of the month after next — always past the horizon, whatever day it is. */
-	function beyondHorizon(): string {
-		// Constructed via Date so December rolls the year instead of yielding month 14.
-		const next = new Date(new Date().getFullYear(), new Date().getMonth() + 2, 1);
-		return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}-01`;
-	}
-
-	it("403s a chair booking reboks past the current month", async () => {
-		mocks.getFacilityType.mockResolvedValue("reboks");
+	it("allows a Sheares facility", async () => {
+		mocks.getFacilityType.mockResolvedValue("sheares");
 		const { POST } = await import("./route");
-		const res = await POST(post({ facility_id: 7, date: beyondHorizon(), hour: 19, cca_id: 3 }));
+		const res = await POST(post({ facility_id: 8, date: futureDate(5), hour: 19, cca_id: 3 }));
+		expect(res.status).toBe(201);
+	});
+
+	it.each(["reboks", "nus", "external"])("rejects a %s facility", async (type) => {
+		mocks.getFacilityType.mockResolvedValue(type);
+		const { POST } = await import("./route");
+		const res = await POST(post({ facility_id: 7, date: futureDate(5), hour: 19, cca_id: 3 }));
 		expect(res.status).toBe(403);
 		expect(mocks.createClaim).not.toHaveBeenCalled();
 	});
 
-	it("lets a hall venue through in the same future month", async () => {
-		mocks.getFacilityType.mockResolvedValue("sheares");
-		const { POST } = await import("./route");
-		const res = await POST(post({ facility_id: 8, date: beyondHorizon(), hour: 19, cca_id: 3 }));
-		expect(res.status).toBe(201);
-	});
-
-	it("exempts JCRC, who book the next month's courts in advance", async () => {
+	it("does not exempt JCRC from the facility-type restriction", async () => {
 		mocks.requireAuth.mockResolvedValue({ id: 42, is_jcrc: true });
 		mocks.getFacilityType.mockResolvedValue("reboks");
 		const { POST } = await import("./route");
-		const res = await POST(post({ facility_id: 7, date: beyondHorizon(), hour: 19, cca_id: 3 }));
-		expect(res.status).toBe(201);
-		// JCRC skips the lookup entirely rather than querying and then ignoring it.
-		expect(mocks.getFacilityType).not.toHaveBeenCalled();
+		const res = await POST(post({ facility_id: 7, date: futureDate(5), hour: 19, cca_id: 3 }));
+		expect(res.status).toBe(403);
+		expect(mocks.getFacilityType).toHaveBeenCalledWith(7);
 	});
 });

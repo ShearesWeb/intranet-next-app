@@ -9,6 +9,8 @@ const mocks = vi.hoisted(() => ({
 	resolveSlot: vi.fn(),
 	rejectClaims: vi.fn(),
 	deleteClaim: vi.fn(),
+	getClaim: vi.fn(),
+	getFacilityType: vi.fn(),
 	getCoreServiceDisabledApiResponse: vi.fn(),
 }));
 
@@ -21,6 +23,10 @@ vi.mock("@/lib/facilities/facility-approvals", () => ({
 }));
 vi.mock("@/lib/facilities/facility-claims", () => ({
 	deleteClaim: mocks.deleteClaim,
+	getClaim: mocks.getClaim,
+}));
+vi.mock("@/lib/facilities/facility-catalog", () => ({
+	getFacilityType: mocks.getFacilityType,
 }));
 vi.mock("@/lib/feature-flags", () => ({
 	getCoreServiceDisabledApiResponse: mocks.getCoreServiceDisabledApiResponse,
@@ -39,11 +45,19 @@ describe("approvals route", () => {
 		vi.clearAllMocks();
 		mocks.getCoreServiceDisabledApiResponse.mockReturnValue(null);
 		mocks.requireJcrcAccess.mockResolvedValue({ id: 7, is_jcrc: true });
+		mocks.getClaim.mockImplementation(async (id: number) => ({ id, facility_id: 1 }));
+		mocks.getFacilityType.mockResolvedValue("sheares");
 	});
 
 	it("GET returns pending + confirmed lists", async () => {
-		mocks.listPendingApprovals.mockResolvedValue([{ slot: { facility_id: 1 } }]);
-		mocks.listUpcomingConfirmed.mockResolvedValue([{ slot: { facility_id: 2 }, claim_id: 9 }]);
+		mocks.listPendingApprovals.mockResolvedValue([
+			{ slot: { facility_id: 1, type: "sheares" } },
+			{ slot: { facility_id: 2, type: "nus" } },
+		]);
+		mocks.listUpcomingConfirmed.mockResolvedValue([
+			{ slot: { facility_id: 2, type: "sheares" }, claim_id: 9 },
+			{ slot: { facility_id: 3, type: "external" }, claim_id: 10 },
+		]);
 		const { GET } = await import("./route");
 		const res = await GET();
 		expect(res.status).toBe(200);
@@ -98,5 +112,13 @@ describe("approvals route", () => {
 		const { POST } = await import("./route");
 		const res = await POST(post({ action: "smite", claim_id: 1 }));
 		expect(res.status).toBe(400);
+	});
+
+	it("POST rejects management of a non-Sheares claim", async () => {
+		mocks.getFacilityType.mockResolvedValue("reboks");
+		const { POST } = await import("./route");
+		const res = await POST(post({ action: "revoke", claim_id: 9 }));
+		expect(res.status).toBe(403);
+		expect(mocks.deleteClaim).not.toHaveBeenCalled();
 	});
 });

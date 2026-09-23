@@ -6,9 +6,12 @@ const mocks = vi.hoisted(() => ({
 	requireAuth: vi.fn(),
 	requireJcrcAccess: vi.fn(),
 	listSchedules: vi.fn(),
+	getSchedule: vi.fn(),
 	createSchedule: vi.fn(),
 	updateSchedule: vi.fn(),
 	deleteSchedule: vi.fn(),
+	getFacilityType: vi.fn(),
+	listFacilities: vi.fn(),
 	getCoreServiceDisabledApiResponse: vi.fn(),
 }));
 
@@ -18,9 +21,14 @@ vi.mock("@/lib/api/auth", () => ({
 }));
 vi.mock("@/lib/facilities/facility-schedules", () => ({
 	listSchedules: mocks.listSchedules,
+	getSchedule: mocks.getSchedule,
 	createSchedule: mocks.createSchedule,
 	updateSchedule: mocks.updateSchedule,
 	deleteSchedule: mocks.deleteSchedule,
+}));
+vi.mock("@/lib/facilities/facility-catalog", () => ({
+	getFacilityType: mocks.getFacilityType,
+	listFacilities: mocks.listFacilities,
 }));
 vi.mock("@/lib/feature-flags", () => ({
 	getCoreServiceDisabledApiResponse: mocks.getCoreServiceDisabledApiResponse,
@@ -38,6 +46,20 @@ describe("schedules route writes", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mocks.getCoreServiceDisabledApiResponse.mockReturnValue(null);
+		mocks.getFacilityType.mockResolvedValue("sheares");
+		mocks.listFacilities.mockResolvedValue([{ id: 2, type: "sheares" }]);
+		mocks.getSchedule.mockResolvedValue({ id: 7, facility_id: 2 });
+	});
+
+	it("GET returns only schedules for Sheares facilities", async () => {
+		mocks.requireAuth.mockResolvedValue({ id: 1 });
+		mocks.listSchedules.mockResolvedValue([
+			{ id: 1, facility_id: 2 },
+			{ id: 2, facility_id: 9 },
+		]);
+		const { GET } = await import("./route");
+		const res = await GET(new NextRequest("http://localhost/api/facilities/schedules"));
+		expect((await res.json()).data).toEqual([{ id: 1, facility_id: 2 }]);
 	});
 
 	it("POST returns 403 for non-JCRC callers", async () => {
@@ -124,6 +146,15 @@ describe("schedules route writes", () => {
 		expect(mocks.createSchedule).toHaveBeenCalledWith(
 			expect.objectContaining({ startDate: "2026-08-01", endDate: "2026-09-30" }),
 		);
+	});
+
+	it("POST rejects a non-Sheares facility", async () => {
+		mocks.requireJcrcAccess.mockResolvedValue({ is_jcrc: true });
+		mocks.getFacilityType.mockResolvedValue("nus");
+		const { POST } = await import("./route");
+		const res = await POST(req("POST", { facility_id: 2, day_of_week: 1, hour: 19 }));
+		expect(res.status).toBe(403);
+		expect(mocks.createSchedule).not.toHaveBeenCalled();
 	});
 
 	it("PATCH returns 400 without an id", async () => {

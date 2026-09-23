@@ -10,9 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { useCalendarMonth } from "@/hooks/use-calendar-month";
 import { useChairCcas } from "@/hooks/use-chair-ccas";
-import { useAuth } from "@/lib/auth/auth-context";
 import { SlotWithContext } from "@/types/facilities";
-import { isReboksBookingEnabled } from "@/lib/feature-flags";
 import { isBookableFacilityType } from "@/lib/facilities/bookable-types";
 import { toast } from "sonner";
 
@@ -22,10 +20,6 @@ export default function FacilitiesPage() {
 	const [claimBooking, setClaimBooking] = useState<SlotWithContext | null>(null);
 
 	const { chairCcas, isChair } = useChairCcas();
-	const { user } = useAuth();
-	// JCRC sees every month's REBOKS slots, so the notice would only confuse them.
-	// While REBOKS booking is parked, there is nothing to warn anyone about.
-	const showHorizonNotice = isReboksBookingEnabled() && !user?.is_jcrc;
 
 	const {
 		data,
@@ -34,8 +28,8 @@ export default function FacilitiesPage() {
 	} = useApiQuery<SlotWithContext[]>(
 		`/api/facilities/slots?start=${monthRange.start}&end=${monthRange.end}`,
 	);
-	// The slots API still returns every venue type; while REBOKS booking is
-	// parked the calendar simply never shows those slots, so nobody can claim one.
+	// Keep the client-side boundary too, even though the API now returns only
+	// Sheares slots.
 	const bookings = useMemo(
 		() => (data ?? []).filter((b) => isBookableFacilityType(b.type)),
 		[data],
@@ -100,7 +94,6 @@ export default function FacilitiesPage() {
 									date={selectedDate}
 									bookings={dayBookings}
 									isChair={isChair}
-									showHorizonNotice={showHorizonNotice}
 									loading={loading}
 									onClaim={setClaimBooking}
 									onWithdraw={handleWithdraw}
