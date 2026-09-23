@@ -2,13 +2,14 @@
 
 import { cn } from "@/lib/utils";
 import { FacilityType, FACILITY_TYPE_CONFIG } from "@/types/facilities";
+import { bookableFacilityTypes } from "@/lib/facilities/bookable-types";
 
 interface TypeFilterProps {
 	selected: FacilityType[];
 	onChange: (selected: FacilityType[]) => void;
 }
 
-const TYPES = Object.keys(FACILITY_TYPE_CONFIG) as FacilityType[];
+const TYPES = bookableFacilityTypes();
 
 export function TypeFilter({ selected, onChange }: TypeFilterProps) {
 	const allSelected = selected.length === 0;

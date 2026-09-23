@@ -14,6 +14,8 @@ import { useCalendarMonth } from "@/hooks/use-calendar-month";
 import { useChairCcas } from "@/hooks/use-chair-ccas";
 import { useAuth } from "@/lib/auth/auth-context";
 import { SlotWithContext, FacilityType } from "@/types/facilities";
+import { isReboksBookingEnabled } from "@/lib/feature-flags";
+import { isBookableFacilityType } from "@/lib/facilities/bookable-types";
 import { toast } from "sonner";
 
 export default function FacilitiesPage() {
@@ -26,7 +28,8 @@ export default function FacilitiesPage() {
 	const { chairCcas, isChair } = useChairCcas();
 	const { user } = useAuth();
 	// JCRC sees every month's REBOKS slots, so the notice would only confuse them.
-	const showHorizonNotice = !user?.is_jcrc;
+	// While REBOKS booking is parked, there is nothing to warn anyone about.
+	const showHorizonNotice = isReboksBookingEnabled() && !user?.is_jcrc;
 
 	const {
 		data,
@@ -35,7 +38,12 @@ export default function FacilitiesPage() {
 	} = useApiQuery<SlotWithContext[]>(
 		`/api/facilities/slots?start=${monthRange.start}&end=${monthRange.end}`,
 	);
-	const bookings = useMemo(() => data ?? [], [data]);
+	// The slots API still returns every venue type; while REBOKS booking is
+	// parked the calendar simply never shows those slots, so nobody can claim one.
+	const bookings = useMemo(
+		() => (data ?? []).filter((b) => isBookableFacilityType(b.type)),
+		[data],
+	);
 
 	const allVenues = useMemo(() => {
 		const set = new Set<string>();
