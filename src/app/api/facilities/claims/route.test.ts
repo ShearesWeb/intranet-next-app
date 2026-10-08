@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
 	getChairCcaIds: vi.fn(),
 	getFacilityType: vi.fn(),
 	getCoreServiceDisabledApiResponse: vi.fn(),
+	getCurrentNusWeek: vi.fn(),
 }));
 
 vi.mock("@/lib/api/auth", () => ({ requireAuth: mocks.requireAuth }));
@@ -25,6 +26,9 @@ vi.mock("@/lib/facilities/facility-catalog", () => ({
 }));
 vi.mock("@/lib/feature-flags", () => ({
 	getCoreServiceDisabledApiResponse: mocks.getCoreServiceDisabledApiResponse,
+}));
+vi.mock("@/lib/nus-academic-calendar", () => ({
+	getCurrentNusWeek: mocks.getCurrentNusWeek,
 }));
 
 function post(body: unknown) {
@@ -70,6 +74,10 @@ describe("POST /api/facilities/claims — lead-time gate", () => {
 		mocks.getCoreServiceDisabledApiResponse.mockReturnValue(null);
 		mocks.requireAuth.mockResolvedValue({ id: 42 });
 		mocks.isChairOfCca.mockReturnValue(true);
+		mocks.getCurrentNusWeek.mockReturnValue({
+			start: futureDate(0),
+			end: futureDate(6),
+		});
 		// A Sheares venue by default so these tests exercise the lead-time rules.
 		mocks.getFacilityType.mockResolvedValue("sheares");
 	});
@@ -112,6 +120,14 @@ describe("POST /api/facilities/claims — lead-time gate", () => {
 		expect(res.status).toBe(201);
 		expect(mocks.createClaim).toHaveBeenCalledWith(2, futureDate(5), 18, 3, 42);
 	});
+
+	it("rejects a slot outside the current NUS teaching week", async () => {
+		const { POST } = await import("./route");
+		const res = await POST(post({ facility_id: 2, date: futureDate(7), hour: 18, cca_id: 3 }));
+
+		expect(res.status).toBe(403);
+		expect(mocks.createClaim).not.toHaveBeenCalled();
+	});
 });
 
 describe("POST /api/facilities/claims — Sheares-only gate", () => {
@@ -120,6 +136,10 @@ describe("POST /api/facilities/claims — Sheares-only gate", () => {
 		mocks.getCoreServiceDisabledApiResponse.mockReturnValue(null);
 		mocks.requireAuth.mockResolvedValue({ id: 42, is_jcrc: false });
 		mocks.isChairOfCca.mockReturnValue(true);
+		mocks.getCurrentNusWeek.mockReturnValue({
+			start: futureDate(0),
+			end: futureDate(6),
+		});
 		mocks.createClaim.mockResolvedValue({ id: 1 });
 	});
 
