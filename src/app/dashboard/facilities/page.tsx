@@ -13,6 +13,15 @@ import { isBookableFacilityType } from "@/lib/facilities/bookable-types";
 import { getCurrentNusWeek, getSingaporeDateKey } from "@/lib/nus-academic-calendar";
 import { Facility, SlotWithContext } from "@/types/facilities";
 
+// Product-level exclusions stay effective even when catalog data differs between environments.
+const HIDDEN_FACILITY_NAMES = new Set(["dance studio"]);
+
+function isHiddenFacility(facility: Facility): boolean {
+	return [facility.venue, facility.sub_venue].some((name) =>
+		HIDDEN_FACILITY_NAMES.has(name.trim().toLowerCase()),
+	);
+}
+
 export default function FacilitiesPage() {
 	const week = useMemo(() => getCurrentNusWeek(), []);
 	const [selectedDate, setSelectedDate] = useState(() => getSingaporeDateKey());
@@ -42,7 +51,10 @@ export default function FacilitiesPage() {
 		[data],
 	);
 	const facilities = useMemo(
-		() => (facilityData ?? []).filter((facility) => isBookableFacilityType(facility.type)),
+		() =>
+			(facilityData ?? []).filter(
+				(facility) => isBookableFacilityType(facility.type) && !isHiddenFacility(facility),
+			),
 		[facilityData],
 	);
 
