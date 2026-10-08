@@ -1,10 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
 import { CurrentWeekBar } from "@/components/facilities/current-week-bar";
-import { DayDetailPanel } from "@/components/facilities/day-detail-panel";
+import { VenueCardGrid } from "@/components/facilities/venue-card-grid";
 import { ClaimDialog } from "@/components/facilities/claim-dialog";
 import { MyCcaBookings } from "@/components/facilities/my-cca-bookings";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,7 +11,7 @@ import { useApiQuery } from "@/hooks/use-api-query";
 import { useChairCcas } from "@/hooks/use-chair-ccas";
 import { isBookableFacilityType } from "@/lib/facilities/bookable-types";
 import { getCurrentNusWeek, getSingaporeDateKey } from "@/lib/nus-academic-calendar";
-import { SlotWithContext } from "@/types/facilities";
+import { Facility, SlotWithContext } from "@/types/facilities";
 
 export default function FacilitiesPage() {
 	const week = useMemo(() => getCurrentNusWeek(), []);
@@ -33,35 +32,24 @@ export default function FacilitiesPage() {
 		enabled: Boolean(week),
 		initialData: [],
 	});
+	const { data: facilityData, loading: facilitiesLoading } = useApiQuery<Facility[]>(
+		"/api/facilities/catalog",
+		{ initialData: [] },
+	);
 
 	const bookings = useMemo(
 		() => (data ?? []).filter((booking) => isBookableFacilityType(booking.type)),
 		[data],
+	);
+	const facilities = useMemo(
+		() => (facilityData ?? []).filter((facility) => isBookableFacilityType(facility.type)),
+		[facilityData],
 	);
 
 	const dayBookings = useMemo(
 		() => bookings.filter((booking) => booking.date === selectedDate),
 		[bookings, selectedDate],
 	);
-
-	async function handleWithdraw(claimId: number) {
-		try {
-			const response = await fetch(`/api/facilities/claims/${claimId}`, {
-				method: "DELETE",
-			});
-
-			if (!response.ok) {
-				const json = await response.json();
-				toast.error(json.error ?? "Failed to withdraw");
-				return;
-			}
-
-			toast.success("Claim withdrawn");
-			await fetchBookings();
-		} catch {
-			toast.error("Network error");
-		}
-	}
 
 	return (
 		<div className="flex flex-col space-y-6 p-4 md:p-6">
@@ -92,13 +80,13 @@ export default function FacilitiesPage() {
 								onSelectDate={setSelectedDate}
 							/>
 
-							<DayDetailPanel
+							<VenueCardGrid
 								date={selectedDate}
-								bookings={dayBookings}
+								facilities={facilities}
+								slots={dayBookings}
 								isChair={isChair}
-								loading={loading}
+								loading={loading || facilitiesLoading}
 								onClaim={setClaimBooking}
-								onWithdraw={handleWithdraw}
 							/>
 						</>
 					) : (
