@@ -72,11 +72,29 @@ describe("DayDetailPanel", () => {
 		expect(container.textContent).toContain("Page 1 of 3");
 	});
 
-	it("does not render the removed date heading or venue search", () => {
-		render({ bookings: [booking({ sub_venue: "Band Room" })] });
+	it("renders a search input that filters rows by venue", () => {
+		const bookings = [
+			booking({ hour: 18, sub_venue: "Band Room", venue: "Sheares Hall" }),
+			booking({ hour: 19, sub_venue: "Tennis Court 1", venue: "REBOKS" }),
+			booking({ hour: 20, sub_venue: "Tennis Court 2", venue: "REBOKS" }),
+		];
+		render({ bookings });
 
-		expect(container.querySelector("input[placeholder*='venue' i]")).toBeNull();
-		expect(container.querySelector("h3")).toBeNull();
+		const input = container.querySelector("input[placeholder*='venue' i]") as HTMLInputElement;
+		expect(input).toBeTruthy();
+
+		act(() => {
+			const setter = Object.getOwnPropertyDescriptor(
+				window.HTMLInputElement.prototype,
+				"value",
+			)!.set!;
+			setter.call(input, "tennis");
+			input.dispatchEvent(new Event("input", { bubbles: true }));
+		});
+
+		const rows = [...container.querySelectorAll("tbody tr")];
+		expect(rows).toHaveLength(2);
+		expect(rows[0].textContent).toContain("Tennis Court 1");
 	});
 
 	it("renders the Available badge in green", () => {

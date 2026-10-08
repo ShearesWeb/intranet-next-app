@@ -49,8 +49,6 @@ interface DataTableProps<TData, TId = number | string> {
 	selectedIds?: Set<TId>;
 	onSelectionChange?: (id: TId) => void;
 	idField?: keyof TData;
-	/** Hide both search and column controls when a page needs a bare table. */
-	showToolbar?: boolean;
 	/** Render shimmer skeleton rows instead of data (e.g. during refetch/sort). */
 	isLoading?: boolean;
 }
@@ -71,7 +69,6 @@ export function DataTable<TData extends object, TId = number | string>({
 	selectedIds,
 	onSelectionChange,
 	idField = "id" as keyof TData,
-	showToolbar = true,
 	isLoading = false,
 }: DataTableProps<TData, TId>) {
 	const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -157,13 +154,11 @@ export function DataTable<TData extends object, TId = number | string>({
 
 	return (
 		<div className={cn("w-full flex flex-col gap-4", className)}>
-			{showToolbar && (
-				<DataTableToolbar
-					table={table}
-					searchColumn={searchColumn}
-					searchPlaceholder={searchPlaceholder}
-				/>
-			)}
+			<DataTableToolbar
+				table={table}
+				searchColumn={searchColumn}
+				searchPlaceholder={searchPlaceholder}
+			/>
 
 			<div className={cn("rounded-lg border overflow-x-auto shadow-sm", tableContainerClassName)}>
 				<Table className={cn(tablePadding, tableClassName)}>

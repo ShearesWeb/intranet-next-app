@@ -5,7 +5,6 @@ import { getClaimsForCca, createClaim } from "@/lib/facilities/facility-claims";
 import { isChairOfCca, getChairCcaIds } from "@/lib/facilities/facility-access";
 import { getFacilityType } from "@/lib/facilities/facility-catalog";
 import { MIN_BOOKING_LEAD_DAYS, isBookingLocked } from "@/types/facilities";
-import { getCurrentNusWeek } from "@/lib/nus-academic-calendar";
 import { NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -47,17 +46,9 @@ export async function POST(req: NextRequest) {
 		if (facility_id == null || !date || hour == null || cca_id == null) {
 			return apiError("facility_id, date, hour and cca_id are required", 400);
 		}
-		if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-			return apiError("date must use YYYY-MM-DD format", 400);
-		}
 		if (hour < 0 || hour > 23) return apiError("hour must be 0–23", 400);
 		if (!isChairOfCca(user, cca_id)) {
 			return apiError("Not authorized to claim for this CCA", 403);
-		}
-
-		const currentWeek = getCurrentNusWeek();
-		if (!currentWeek || date < currentWeek.start || date > currentWeek.end) {
-			return apiError("Facilities can only be booked for the current NUS teaching week", 403);
 		}
 
 		// The slot carries its own date now, so no booking lookup is needed. The

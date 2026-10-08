@@ -1,63 +1,55 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
-import { CurrentWeekBar } from "@/components/facilities/current-week-bar";
+import { MonthGrid } from "@/components/facilities/month-grid";
 import { DayDetailPanel } from "@/components/facilities/day-detail-panel";
 import { ClaimDialog } from "@/components/facilities/claim-dialog";
 import { MyCcaBookings } from "@/components/facilities/my-cca-bookings";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useApiQuery } from "@/hooks/use-api-query";
+import { useCalendarMonth } from "@/hooks/use-calendar-month";
 import { useChairCcas } from "@/hooks/use-chair-ccas";
-import { isBookableFacilityType } from "@/lib/facilities/bookable-types";
-import { getCurrentNusWeek, getSingaporeDateKey } from "@/lib/nus-academic-calendar";
 import { SlotWithContext } from "@/types/facilities";
+import { isBookableFacilityType } from "@/lib/facilities/bookable-types";
+import { toast } from "sonner";
 
 export default function FacilitiesPage() {
-	const week = useMemo(() => getCurrentNusWeek(), []);
-	const [selectedDate, setSelectedDate] = useState(() => getSingaporeDateKey());
+	const { year, month, selectedDate, setSelectedDate, changeMonth, monthRange } =
+		useCalendarMonth();
 	const [claimBooking, setClaimBooking] = useState<SlotWithContext | null>(null);
 
 	const { chairCcas, isChair } = useChairCcas();
-
-	const slotsUrl = week
-		? `/api/facilities/slots?start=${week.start}&end=${week.end}`
-		: "/api/facilities/slots";
 
 	const {
 		data,
 		loading,
 		refetch: fetchBookings,
-	} = useApiQuery<SlotWithContext[]>(slotsUrl, {
-		enabled: Boolean(week),
-		initialData: [],
-	});
-
+	} = useApiQuery<SlotWithContext[]>(
+		`/api/facilities/slots?start=${monthRange.start}&end=${monthRange.end}`,
+	);
+	// Keep the client-side boundary too, even though the API now returns only
+	// Sheares slots.
 	const bookings = useMemo(
-		() => (data ?? []).filter((booking) => isBookableFacilityType(booking.type)),
+		() => (data ?? []).filter((b) => isBookableFacilityType(b.type)),
 		[data],
 	);
 
-	const dayBookings = useMemo(
-		() => bookings.filter((booking) => booking.date === selectedDate),
-		[bookings, selectedDate],
-	);
+	const dayBookings = useMemo(() => {
+		if (!selectedDate) return [];
+		return bookings.filter((b) => b.date === selectedDate);
+	}, [bookings, selectedDate]);
 
 	async function handleWithdraw(claimId: number) {
 		try {
-			const response = await fetch(`/api/facilities/claims/${claimId}`, {
-				method: "DELETE",
-			});
-
-			if (!response.ok) {
-				const json = await response.json();
+			const res = await fetch(`/api/facilities/claims/${claimId}`, { method: "DELETE" });
+			if (!res.ok) {
+				const json = await res.json();
 				toast.error(json.error ?? "Failed to withdraw");
 				return;
 			}
-
 			toast.success("Claim withdrawn");
-			await fetchBookings();
+			fetchBookings();
 		} catch {
 			toast.error("Network error");
 		}
@@ -75,6 +67,7 @@ export default function FacilitiesPage() {
 			/>
 
 			<Tabs defaultValue="book">
+				{/* A lone tab reads as a dead control, so non-chairs get no tab bar. */}
 				{isChair && (
 					<TabsList>
 						<TabsTrigger value="book">Book Facilities</TabsTrigger>
@@ -82,30 +75,36 @@ export default function FacilitiesPage() {
 					</TabsList>
 				)}
 
-				<TabsContent value="book" className="space-y-4">
-					{week ? (
-						<>
-							<CurrentWeekBar
-								weekNumber={week.weekNumber}
-								dates={week.dates}
+				<TabsContent value="book" className="space-y-6">
+					<div className="flex flex-col gap-6 lg:flex-row">
+						<div className="w-full lg:w-[320px] shrink-0">
+							<MonthGrid
+								year={year}
+								month={month}
 								selectedDate={selectedDate}
+								bookings={bookings}
 								onSelectDate={setSelectedDate}
+								onChangeMonth={changeMonth}
 							/>
-
-							<DayDetailPanel
-								date={selectedDate}
-								bookings={dayBookings}
-								isChair={isChair}
-								loading={loading}
-								onClaim={setClaimBooking}
-								onWithdraw={handleWithdraw}
-							/>
-						</>
-					) : (
-						<div className="rounded-lg border p-6 text-sm text-muted-foreground">
-							Facility booking is unavailable outside NUS teaching weeks.
 						</div>
-					)}
+
+						<div className="flex-1 min-w-0">
+							{selectedDate ? (
+								<DayDetailPanel
+									date={selectedDate}
+									bookings={dayBookings}
+									isChair={isChair}
+									loading={loading}
+									onClaim={setClaimBooking}
+									onWithdraw={handleWithdraw}
+								/>
+							) : (
+								<p className="text-sm text-muted-foreground">
+									Select a day to view available slots.
+								</p>
+							)}
+						</div>
+					</div>
 				</TabsContent>
 
 				{isChair && (

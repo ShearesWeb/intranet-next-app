@@ -14,6 +14,7 @@ import { DataTable, type DataTableColumnDef } from "@/components/table/data-tabl
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/shared/status-pill";
 import { cn } from "@/lib/utils";
+import { formatDisplayDate } from "@/lib/date";
 
 interface DayDetailPanelProps {
 	date: string;
@@ -132,6 +133,7 @@ export function DayDetailPanel({
 
 	return (
 		<div className="flex-1 min-w-0">
+			<h3 className="mb-3 text-lg font-semibold">{formatDisplayDate(date)}</h3>
 			{locked && (
 				<p className="mb-3 inline-flex items-center gap-1.5 rounded-md bg-muted px-2.5 py-1.5 text-xs text-muted-foreground">
 					<Lock className="h-3.5 w-3.5" />
@@ -142,7 +144,8 @@ export function DayDetailPanel({
 			<DataTable
 				data={sorted}
 				columns={columns}
-				showToolbar={false}
+				searchColumn="venue"
+				searchPlaceholder="Search venues..."
 				pageSize={10}
 				emptyMessage="No bookings on this day."
 				isLoading={loading}
