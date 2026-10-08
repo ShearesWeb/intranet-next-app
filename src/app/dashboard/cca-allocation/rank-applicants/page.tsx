@@ -24,7 +24,7 @@ interface CcaRow {
 	cca_name: string;
 	positionCount: number;
 	applicantCount: number;
-	openSlots: number;
+	capacity: number;
 	status: CcaRankingStatus;
 }
 
@@ -46,7 +46,7 @@ export default function RankApplicants() {
 				cca_name: group.cca_name,
 				positionCount: group.positions.length,
 				applicantCount: group.positions.reduce((sum, p) => sum + p.applicants.length, 0),
-				openSlots: group.positions.reduce((sum, p) => sum + p.available_capacity, 0),
+				capacity: group.positions.reduce((sum, p) => sum + p.capacity, 0),
 				status: deriveCcaRankingStatus(group),
 			})),
 		[ccaGroups],
@@ -76,13 +76,13 @@ export default function RankApplicants() {
 				),
 			},
 			{
-				accessorKey: "openSlots",
+				accessorKey: "capacity",
 				header: "Coverage",
 				enableSorting: false,
 				cell: ({ row }) => (
 					<CoverageMeterMini
 						candidateCount={row.original.applicantCount}
-						openSlots={row.original.openSlots}
+						capacity={row.original.capacity}
 					/>
 				),
 			},
