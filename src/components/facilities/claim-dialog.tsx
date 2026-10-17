@@ -26,18 +26,19 @@ interface ClaimDialogProps {
 }
 
 export function ClaimDialog({ booking, chairCcas, onClose, onSuccess }: ClaimDialogProps) {
-	const [selectedCcaId, setSelectedCcaId] = useState<number | null>(
-		chairCcas.length === 1 ? chairCcas[0].id : null,
-	);
+	const [manuallySelectedCcaId, setManuallySelectedCcaId] = useState<number | null>(null);
 	const [submitting, setSubmitting] = useState(false);
 
 	if (!booking || chairCcas.length === 0) return null;
 
+	// Auth data can arrive after this component's first render. Deriving the only
+	// available CCA keeps it selected regardless of that loading timing.
+	const selectedCcaId = chairCcas.length === 1 ? chairCcas[0].id : manuallySelectedCcaId;
 	const typeConfig = FACILITY_TYPE_CONFIG[booking.type];
 	const selectedCca = chairCcas.find((c) => c.id === selectedCcaId);
 
 	async function handleSubmit() {
-		if (!selectedCcaId) {
+		if (selectedCcaId === null) {
 			toast.error("Please select a CCA");
 			return;
 		}
@@ -78,7 +79,7 @@ export function ClaimDialog({ booking, chairCcas, onClose, onSuccess }: ClaimDia
 
 	function handleOpenChange(isOpen: boolean) {
 		if (!isOpen) {
-			if (chairCcas.length > 1) setSelectedCcaId(null);
+			setManuallySelectedCcaId(null);
 			onClose();
 		}
 	}
@@ -116,7 +117,7 @@ export function ClaimDialog({ booking, chairCcas, onClose, onSuccess }: ClaimDia
 									<button
 										key={cca.id}
 										type="button"
-										onClick={() => setSelectedCcaId(cca.id)}
+										onClick={() => setManuallySelectedCcaId(cca.id)}
 										className={`rounded-md border px-3 py-2 text-left text-sm transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
 											selectedCcaId === cca.id
 												? "border-primary bg-primary/5 font-medium text-primary ring-1 ring-primary/40 shadow-sm"
@@ -139,7 +140,7 @@ export function ClaimDialog({ booking, chairCcas, onClose, onSuccess }: ClaimDia
 						onClick={handleSubmit}
 						isLoading={submitting}
 						loadingText="Submitting…"
-						disabled={!selectedCcaId}
+						disabled={selectedCcaId === null}
 					>
 						{selectedCca ? `Claim for ${selectedCca.name}` : "Claim Slot"}
 					</Button>
