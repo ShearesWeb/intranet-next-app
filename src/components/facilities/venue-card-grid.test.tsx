@@ -73,12 +73,26 @@ describe("compactHourRange", () => {
 });
 
 describe("VenueCardGrid", () => {
-	it("renders every facility and only its available slots", () => {
+	it("renders every facility with available and confirmed slots", () => {
 		render({
 			slots: [
 				slot({ facility_id: 1, hour: 19 }),
 				slot({ facility_id: 1, hour: 18 }),
-				slot({ facility_id: 2, hour: 20, status: "pending" }),
+				slot({
+					facility_id: 2,
+					hour: 20,
+					status: "confirmed",
+					claims: [
+						{
+							claim_id: 5,
+							cca_id: 3,
+							cca_name: "Volleyball",
+							status: "approved",
+							created_by: 42,
+						},
+					],
+				}),
+				slot({ facility_id: 2, hour: 21, status: "pending" }),
 			],
 		});
 
@@ -87,7 +101,9 @@ describe("VenueCardGrid", () => {
 		expect(container.textContent).toContain("Music Room");
 		expect(container.textContent).toContain("6–7 PM");
 		expect(container.textContent).toContain("7–8 PM");
-		expect(container.textContent).not.toContain("8–9 PM");
+		expect(container.textContent).toContain("8–9 PM");
+		expect(container.textContent).toContain("Volleyball");
+		expect(container.textContent).not.toContain("9–10 PM");
 		expect(container.textContent).not.toContain("Sheares Hall");
 	});
 
@@ -113,6 +129,33 @@ describe("VenueCardGrid", () => {
 		expect(button?.className).toContain("rounded-full");
 		expect(button?.className).toContain("bg-green-600");
 		expect(button?.className).toContain("text-white");
+	});
+
+	it("shows residents a confirmed slot as a red bubble with the approved CCA", () => {
+		render({
+			isChair: false,
+			slots: [
+				slot({
+					status: "confirmed",
+					claims: [
+						{
+							claim_id: 5,
+							cca_id: 3,
+							cca_name: "Volleyball",
+							status: "approved",
+							created_by: 42,
+						},
+					],
+				}),
+			],
+		});
+
+		const bookedSlot = container.querySelector('[aria-label="6–7 PM booked by Volleyball"]');
+		expect(bookedSlot).toBeTruthy();
+		expect(bookedSlot?.className).toContain("bg-red-600");
+		expect(bookedSlot?.className).toContain("text-white");
+		expect(bookedSlot?.textContent).toContain("6–7 PM");
+		expect(bookedSlot?.textContent).toContain("Volleyball");
 	});
 
 	it("allows a chair to claim a same-day slot", () => {

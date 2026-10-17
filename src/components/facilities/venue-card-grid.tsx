@@ -45,7 +45,7 @@ export function VenueCardGrid({
 		const grouped = new Map<number, SlotWithContext[]>();
 
 		for (const slot of slots) {
-			if (slot.status !== "available") continue;
+			if (slot.status !== "available" && slot.status !== "confirmed") continue;
 
 			const facilitySlots = grouped.get(slot.facility_id) ?? [];
 			facilitySlots.push(slot);
@@ -81,7 +81,7 @@ export function VenueCardGrid({
 	return (
 		<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
 			{facilities.map((facility) => {
-				const availableSlots = slotsByFacility.get(facility.id) ?? [];
+				const visibleSlots = slotsByFacility.get(facility.id) ?? [];
 				const facilityName = facility.sub_venue || facility.venue;
 
 				return (
@@ -96,30 +96,54 @@ export function VenueCardGrid({
 						<h2 className="mt-3 text-lg font-semibold">{facilityName}</h2>
 
 						<div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-							{availableSlots.map((slot) => (
-								<button
-									key={`${slot.facility_id}:${slot.date}:${slot.hour}`}
-									type="button"
-									disabled={!isChair || isPastDate}
-									onClick={() => onClaim(slot)}
-									title={
-										!isChair
-											? "Only CCA chairs can claim facility slots"
-											: isPastDate
-												? "Past dates cannot be booked"
-												: `Claim ${compactHourRange(slot.hour)}`
-									}
-									className={cn(
-										"min-h-10 rounded-full border border-green-600 bg-green-600 px-2 py-2",
-										"text-sm font-semibold tabular-nums text-white",
-										"transition-colors hover:border-green-700 hover:bg-green-700",
-										"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500/40",
-										"disabled:cursor-not-allowed disabled:opacity-50",
-									)}
-								>
-									{compactHourRange(slot.hour)}
-								</button>
-							))}
+							{visibleSlots.map((slot) => {
+								const time = compactHourRange(slot.hour);
+								if (slot.status === "confirmed") {
+									const ccaName =
+										slot.claims.find((claim) => claim.status === "approved")?.cca_name ?? "Booked";
+
+									return (
+										<div
+											key={`${slot.facility_id}:${slot.date}:${slot.hour}`}
+											aria-label={`${time} booked by ${ccaName}`}
+											title={`Booked by ${ccaName}`}
+											className="flex min-h-12 min-w-0 flex-col items-center justify-center rounded-full border border-red-600 bg-red-600 px-2 py-2 text-center text-white"
+										>
+											<span className="text-sm font-semibold leading-none tabular-nums">
+												{time}
+											</span>
+											<span className="mt-1 max-w-full truncate text-[10px] font-medium leading-none">
+												{ccaName}
+											</span>
+										</div>
+									);
+								}
+
+								return (
+									<button
+										key={`${slot.facility_id}:${slot.date}:${slot.hour}`}
+										type="button"
+										disabled={!isChair || isPastDate}
+										onClick={() => onClaim(slot)}
+										title={
+											!isChair
+												? "Only CCA chairs can claim facility slots"
+												: isPastDate
+													? "Past dates cannot be booked"
+													: `Claim ${time}`
+										}
+										className={cn(
+											"min-h-12 rounded-full border border-green-600 bg-green-600 px-2 py-2",
+											"text-sm font-semibold tabular-nums text-white",
+											"transition-colors hover:border-green-700 hover:bg-green-700",
+											"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500/40",
+											"disabled:cursor-not-allowed disabled:opacity-50",
+										)}
+									>
+										{time}
+									</button>
+								);
+							})}
 						</div>
 					</article>
 				);
