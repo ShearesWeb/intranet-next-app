@@ -165,20 +165,12 @@ export function weekdayOf(dateStr: string): number {
 	return new Date(dateStr + "T00:00:00").getDay();
 }
 
-/** Chairs must book at least this many days ahead; closer slots are locked. */
-export const MIN_BOOKING_LEAD_DAYS = 3;
-
 /** Whole days from `now` (defaults to today) until a YYYY-MM-DD date, local-safe. */
 export function daysUntilBooking(dateStr: string, now: Date = new Date()): number {
 	const target = new Date(dateStr + "T00:00:00");
 	const today = new Date(now);
 	today.setHours(0, 0, 0, 0);
 	return Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-}
-
-/** True when the slot is within the lead-time window — claims and withdrawals are locked. */
-export function isBookingLocked(dateStr: string, now: Date = new Date()): boolean {
-	return daysUntilBooking(dateStr, now) < MIN_BOOKING_LEAD_DAYS;
 }
 
 /**

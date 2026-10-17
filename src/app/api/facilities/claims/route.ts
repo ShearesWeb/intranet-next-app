@@ -4,8 +4,7 @@ import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 import { getClaimsForCca, createClaim } from "@/lib/facilities/facility-claims";
 import { isChairOfCca, getChairCcaIds } from "@/lib/facilities/facility-access";
 import { getFacilityType } from "@/lib/facilities/facility-catalog";
-import { MIN_BOOKING_LEAD_DAYS, isBookingLocked } from "@/types/facilities";
-import { getCurrentNusWeek } from "@/lib/nus-academic-calendar";
+import { getCurrentNusWeek, getSingaporeDateKey } from "@/lib/nus-academic-calendar";
 import { NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -54,6 +53,9 @@ export async function POST(req: NextRequest) {
 		if (!isChairOfCca(user, cca_id)) {
 			return apiError("Not authorized to claim for this CCA", 403);
 		}
+		if (date < getSingaporeDateKey()) {
+			return apiError("Past facility slots cannot be booked", 403);
+		}
 
 		const currentWeek = getCurrentNusWeek();
 		if (!currentWeek || date < currentWeek.start || date > currentWeek.end) {
@@ -62,10 +64,6 @@ export async function POST(req: NextRequest) {
 
 		// The slot carries its own date now, so no booking lookup is needed. The
 		// DB still checks that a schedule actually publishes it.
-		if (isBookingLocked(date)) {
-			return apiError(`Bookings lock ${MIN_BOOKING_LEAD_DAYS} days before the slot date`, 403);
-		}
-
 		// Read the type from the database so a hand-rolled request cannot bypass
 		// the Sheares-only booking boundary. This applies to JCRC callers too.
 		const type = await getFacilityType(facility_id);

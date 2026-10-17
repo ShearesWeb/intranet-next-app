@@ -104,6 +104,31 @@ describe("VenueCardGrid", () => {
 		expect(onClaim).toHaveBeenCalledWith(availableSlot);
 	});
 
+	it("allows a chair to claim a same-day slot", () => {
+		const onClaim = vi.fn();
+		const today = dateFromToday(0);
+		const sameDaySlot = slot({ date: today });
+		render({ date: today, slots: [sameDaySlot], onClaim });
+
+		const button = [...container.querySelectorAll("button")].find(
+			(candidate) => candidate.textContent === "6–7 PM",
+		);
+		expect(button?.disabled).toBe(false);
+		act(() => button?.click());
+		expect(onClaim).toHaveBeenCalledWith(sameDaySlot);
+	});
+
+	it("keeps past slots unbookable", () => {
+		const yesterday = dateFromToday(-1);
+		render({ date: yesterday, slots: [slot({ date: yesterday })] });
+
+		const button = [...container.querySelectorAll("button")].find(
+			(candidate) => candidate.textContent === "6–7 PM",
+		);
+		expect(button?.disabled).toBe(true);
+		expect(button?.title).toBe("Past dates cannot be booked");
+	});
+
 	it("disables claiming for residents", () => {
 		render({ slots: [slot()], isChair: false });
 

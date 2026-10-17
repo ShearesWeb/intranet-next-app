@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
 	getFacilityType: vi.fn(),
 	getCoreServiceDisabledApiResponse: vi.fn(),
 	getCurrentNusWeek: vi.fn(),
+	getSingaporeDateKey: vi.fn(),
 }));
 
 vi.mock("@/lib/api/auth", () => ({ requireAuth: mocks.requireAuth }));
@@ -29,6 +30,7 @@ vi.mock("@/lib/feature-flags", () => ({
 }));
 vi.mock("@/lib/nus-academic-calendar", () => ({
 	getCurrentNusWeek: mocks.getCurrentNusWeek,
+	getSingaporeDateKey: mocks.getSingaporeDateKey,
 }));
 
 function post(body: unknown) {
@@ -68,7 +70,7 @@ describe("GET /api/facilities/claims — Sheares-only history", () => {
 	});
 });
 
-describe("POST /api/facilities/claims — lead-time gate", () => {
+describe("POST /api/facilities/claims — validation", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mocks.getCoreServiceDisabledApiResponse.mockReturnValue(null);
@@ -78,15 +80,25 @@ describe("POST /api/facilities/claims — lead-time gate", () => {
 			start: futureDate(0),
 			end: futureDate(6),
 		});
-		// A Sheares venue by default so these tests exercise the lead-time rules.
+		mocks.getSingaporeDateKey.mockReturnValue(futureDate(0));
 		mocks.getFacilityType.mockResolvedValue("sheares");
 	});
 
-	// The claim carries its own slot now, so the route no longer looks a booking
-	// up first — the date it gates on arrives in the body.
-	it("403s when the slot is within the 3-day lock window", async () => {
+	it("creates a same-day claim", async () => {
+		mocks.createClaim.mockResolvedValue({ id: 1 });
 		const { POST } = await import("./route");
-		const res = await POST(post({ facility_id: 2, date: futureDate(1), hour: 18, cca_id: 3 }));
+		const res = await POST(post({ facility_id: 2, date: futureDate(0), hour: 18, cca_id: 3 }));
+		expect(res.status).toBe(201);
+		expect(mocks.createClaim).toHaveBeenCalledWith(2, futureDate(0), 18, 3, 42);
+	});
+
+	it("rejects a claim for a past slot", async () => {
+		mocks.getCurrentNusWeek.mockReturnValue({
+			start: futureDate(-2),
+			end: futureDate(4),
+		});
+		const { POST } = await import("./route");
+		const res = await POST(post({ facility_id: 2, date: futureDate(-1), hour: 18, cca_id: 3 }));
 		expect(res.status).toBe(403);
 		expect(mocks.createClaim).not.toHaveBeenCalled();
 	});
@@ -113,7 +125,7 @@ describe("POST /api/facilities/claims — lead-time gate", () => {
 		expect(mocks.createClaim).not.toHaveBeenCalled();
 	});
 
-	it("creates the claim when the slot is at least 3 days out", async () => {
+	it("creates a future claim within the current teaching week", async () => {
 		mocks.createClaim.mockResolvedValue({ id: 1 });
 		const { POST } = await import("./route");
 		const res = await POST(post({ facility_id: 2, date: futureDate(5), hour: 18, cca_id: 3 }));
@@ -140,6 +152,7 @@ describe("POST /api/facilities/claims — Sheares-only gate", () => {
 			start: futureDate(0),
 			end: futureDate(6),
 		});
+		mocks.getSingaporeDateKey.mockReturnValue(futureDate(0));
 		mocks.createClaim.mockResolvedValue({ id: 1 });
 	});
 

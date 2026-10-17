@@ -5,18 +5,14 @@ import {
 	SlotWithContext,
 	FACILITY_TYPE_CONFIG,
 	SLOT_STATUS_CONFIG,
-	MIN_BOOKING_LEAD_DAYS,
 	formatHourRange,
-	isBookingLocked,
 } from "@/types/facilities";
-import { Lock } from "lucide-react";
 import { DataTable, type DataTableColumnDef } from "@/components/table/data-table";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/shared/status-pill";
 import { cn } from "@/lib/utils";
 
 interface DayDetailPanelProps {
-	date: string;
 	bookings: SlotWithContext[];
 	isChair: boolean;
 	loading?: boolean;
@@ -25,7 +21,6 @@ interface DayDetailPanelProps {
 }
 
 export function DayDetailPanel({
-	date,
 	bookings,
 	isChair,
 	loading,
@@ -115,30 +110,16 @@ export function DayDetailPanel({
 				header: "",
 				enableHiding: false,
 				cell: ({ row }) => (
-					<BookingActions
-						booking={row.original}
-						locked={isBookingLocked(date)}
-						onClaim={onClaim}
-						onWithdraw={onWithdraw}
-					/>
+					<BookingActions booking={row.original} onClaim={onClaim} onWithdraw={onWithdraw} />
 				),
 			});
 		}
 
 		return cols;
-	}, [isChair, date, onClaim, onWithdraw]);
-
-	const locked = isBookingLocked(date);
+	}, [isChair, onClaim, onWithdraw]);
 
 	return (
 		<div className="flex-1 min-w-0">
-			{locked && (
-				<p className="mb-3 inline-flex items-center gap-1.5 rounded-md bg-muted px-2.5 py-1.5 text-xs text-muted-foreground">
-					<Lock className="h-3.5 w-3.5" />
-					Bookings lock {MIN_BOOKING_LEAD_DAYS} days before the date — new claims are closed for
-					this day.
-				</p>
-			)}
 			<DataTable
 				data={sorted}
 				columns={columns}
@@ -154,12 +135,10 @@ export function DayDetailPanel({
 
 function BookingActions({
 	booking,
-	locked,
 	onClaim,
 	onWithdraw,
 }: {
 	booking: SlotWithContext;
-	locked: boolean;
 	onClaim: (booking: SlotWithContext) => void;
 	onWithdraw?: (claimId: number) => Promise<void> | void;
 }) {
@@ -167,8 +146,7 @@ function BookingActions({
 
 	const myClaim = booking.user_cca_claim;
 	const myClaimActive = myClaim && (myClaim.status === "pending" || myClaim.status === "approved");
-	// New claims respect the lead-time lock; withdrawing an existing claim never does.
-	const canClaim = !myClaimActive && booking.status !== "confirmed" && !locked;
+	const canClaim = !myClaimActive && booking.status !== "confirmed";
 
 	async function handleWithdraw(claimId: number) {
 		if (!onWithdraw) return;

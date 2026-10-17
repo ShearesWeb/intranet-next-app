@@ -4,7 +4,8 @@ import { useMemo } from "react";
 import { ImageIcon } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { Facility, SlotWithContext, isBookingLocked } from "@/types/facilities";
+import { Facility, SlotWithContext } from "@/types/facilities";
+import { getSingaporeDateKey } from "@/lib/nus-academic-calendar";
 
 interface VenueCardGridProps {
 	date: string;
@@ -72,8 +73,7 @@ export function VenueCardGrid({
 			</div>
 		);
 	}
-
-	const locked = isBookingLocked(date);
+	const isPastDate = date < getSingaporeDateKey();
 
 	return (
 		<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -97,13 +97,13 @@ export function VenueCardGrid({
 								<button
 									key={`${slot.facility_id}:${slot.date}:${slot.hour}`}
 									type="button"
-									disabled={!isChair || locked}
+									disabled={!isChair || isPastDate}
 									onClick={() => onClaim(slot)}
 									title={
 										!isChair
 											? "Only CCA chairs can claim facility slots"
-											: locked
-												? "Bookings are closed for this date"
+											: isPastDate
+												? "Past dates cannot be booked"
 												: `Claim ${compactHourRange(slot.hour)}`
 									}
 									className={cn(

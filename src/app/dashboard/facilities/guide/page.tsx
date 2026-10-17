@@ -10,7 +10,7 @@ const STEPS: { title: string; body: string }[] = [
 	},
 	{
 		title: "2. CCAs claim a slot",
-		body: "Chairs claim an available booking for their CCA at least 3 days before the slot date — closer than that, the day is locked. One claim → the slot goes Pending. If two or more CCAs claim the same slot, it becomes a Conflict.",
+		body: "Chairs claim an available booking for their CCA during the current NUS teaching week. One claim → the slot goes Pending. If two or more CCAs claim the same slot, it becomes a Conflict.",
 	},
 	{
 		title: "3. JCRC approves every booking",
