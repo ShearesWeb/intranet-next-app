@@ -7,11 +7,9 @@ import {
 	SLOT_STATUS_CONFIG,
 	MIN_BOOKING_LEAD_DAYS,
 	formatHourRange,
-	horizonOpensOn,
-	isBeyondBookingHorizon,
 	isBookingLocked,
 } from "@/types/facilities";
-import { CalendarClock, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
 import { DataTable, type DataTableColumnDef } from "@/components/table/data-table";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/shared/status-pill";
@@ -22,8 +20,6 @@ interface DayDetailPanelProps {
 	date: string;
 	bookings: SlotWithContext[];
 	isChair: boolean;
-	/** Explain absent REBOKS rows on days past the horizon. False for JCRC, who see them. */
-	showHorizonNotice?: boolean;
 	loading?: boolean;
 	onClaim: (booking: SlotWithContext) => void;
 	onWithdraw?: (claimId: number) => Promise<void> | void;
@@ -33,7 +29,6 @@ export function DayDetailPanel({
 	date,
 	bookings,
 	isChair,
-	showHorizonNotice = false,
 	loading,
 	onClaim,
 	onWithdraw,
@@ -135,9 +130,6 @@ export function DayDetailPanel({
 	}, [isChair, date, onClaim, onWithdraw]);
 
 	const locked = isBookingLocked(date);
-	// Without this the day just renders short of its REBOKS rows and reads as a
-	// bug. The rule is stated where the absence is noticed.
-	const beyondHorizon = showHorizonNotice && isBeyondBookingHorizon(date);
 
 	return (
 		<div className="flex-1 min-w-0">
@@ -147,13 +139,6 @@ export function DayDetailPanel({
 					<Lock className="h-3.5 w-3.5" />
 					Bookings lock {MIN_BOOKING_LEAD_DAYS} days before the date — new claims are closed for
 					this day.
-				</p>
-			)}
-			{beyondHorizon && (
-				<p className="mb-3 inline-flex items-center gap-1.5 rounded-md bg-muted px-2.5 py-1.5 text-xs text-muted-foreground">
-					<CalendarClock className="h-3.5 w-3.5" />
-					REBOKS courts are secured a month at a time — they open for this day on{" "}
-					{formatDisplayDate(horizonOpensOn(date))}. Hall venues can still be booked.
 				</p>
 			)}
 			<DataTable

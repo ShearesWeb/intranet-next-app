@@ -4,12 +4,7 @@ import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 import { getClaimsForCca, createClaim } from "@/lib/facilities/facility-claims";
 import { isChairOfCca, getChairCcaIds } from "@/lib/facilities/facility-access";
 import { getFacilityType } from "@/lib/facilities/facility-catalog";
-import {
-	MIN_BOOKING_LEAD_DAYS,
-	bookingHorizonEnd,
-	isBookingLocked,
-	isHorizonRestricted,
-} from "@/types/facilities";
+import { MIN_BOOKING_LEAD_DAYS, isBookingLocked } from "@/types/facilities";
 import { NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +21,7 @@ export async function GET(req: NextRequest) {
 			const chairCcaIds = getChairCcaIds(user);
 			if (chairCcaIds.length === 0) return apiOk([]);
 			const claims = await getClaimsForCca(chairCcaIds[0]);
-			return apiOk(claims);
+			return apiOk(claims.filter((claim) => claim.facility_type === "sheares"));
 		}
 
 		const ccaId = Number(ccaParam);
@@ -34,7 +29,7 @@ export async function GET(req: NextRequest) {
 			return apiError("Not authorized to view this CCA's bookings", 403);
 		}
 		const claims = await getClaimsForCca(ccaId);
-		return apiOk(claims);
+		return apiOk(claims.filter((claim) => claim.facility_type === "sheares"));
 	} catch (e) {
 		return handleApiError(e);
 	}
@@ -62,16 +57,11 @@ export async function POST(req: NextRequest) {
 			return apiError(`Bookings lock ${MIN_BOOKING_LEAD_DAYS} days before the slot date`, 403);
 		}
 
-		// The far edge of the same window. The type comes from the DB, not the
-		// request, so a hand-rolled payload cannot claim to be a Sheares venue.
-		if (!user.is_jcrc) {
-			const type = await getFacilityType(facility_id);
-			if (type && isHorizonRestricted(type, date)) {
-				return apiError(
-					`REBOKS bookings open one month at a time — ${bookingHorizonEnd()} is the last date currently open`,
-					403,
-				);
-			}
+		// Read the type from the database so a hand-rolled request cannot bypass
+		// the Sheares-only booking boundary. This applies to JCRC callers too.
+		const type = await getFacilityType(facility_id);
+		if (type !== "sheares") {
+			return apiError("Only Sheares facilities can be booked", 403);
 		}
 
 		const claim = await createClaim(facility_id, date, hour, cca_id, user.id);

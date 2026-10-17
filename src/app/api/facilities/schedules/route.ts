@@ -3,13 +3,21 @@ import { apiOk, apiError, handleApiError } from "@/lib/api/response";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 import {
 	listSchedules,
+	getSchedule,
 	createSchedule,
 	updateSchedule,
 	deleteSchedule,
 } from "@/lib/facilities/facility-schedules";
+import { getFacilityType, listFacilities } from "@/lib/facilities/facility-catalog";
 import { NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";
+
+async function isShearesSchedule(id: number): Promise<boolean> {
+	const schedule = await getSchedule(id);
+	if (!schedule) return false;
+	return (await getFacilityType(schedule.facility_id)) === "sheares";
+}
 
 export async function GET(req: NextRequest) {
 	const disabledResponse = getCoreServiceDisabledApiResponse("facilities");
@@ -20,7 +28,10 @@ export async function GET(req: NextRequest) {
 		const facilityIdParam = req.nextUrl.searchParams.get("facility_id");
 		const facilityId = facilityIdParam ? Number(facilityIdParam) : undefined;
 		const schedules = await listSchedules(facilityId);
-		return apiOk(schedules);
+		const shearesFacilityIds = new Set(
+			(await listFacilities({ type: "sheares" })).map((facility) => facility.id),
+		);
+		return apiOk(schedules.filter((schedule) => shearesFacilityIds.has(schedule.facility_id)));
 	} catch (e) {
 		return handleApiError(e);
 	}
@@ -51,6 +62,9 @@ export async function POST(req: NextRequest) {
 		}
 		if (start_date && end_date && start_date > end_date) {
 			return apiError("start_date must be on or before end_date", 400);
+		}
+		if ((await getFacilityType(facility_id)) !== "sheares") {
+			return apiError("Only Sheares facility schedules can be managed", 403);
 		}
 
 		const schedule = await createSchedule({
@@ -83,6 +97,9 @@ export async function PATCH(req: NextRequest) {
 		if (end_date != null && !DATE_RE.test(end_date)) {
 			return apiError("end_date must be YYYY-MM-DD", 400);
 		}
+		if (!(await isShearesSchedule(id))) {
+			return apiError("Only Sheares facility schedules can be managed", 403);
+		}
 
 		// End-dating is how a slot stops being offered; it never touches a claim.
 		const patch: { start_date?: string | null; end_date?: string | null } = {};
@@ -104,7 +121,11 @@ export async function DELETE(req: NextRequest) {
 		await requireJcrcAccess();
 		const idParam = req.nextUrl.searchParams.get("id");
 		if (!idParam) return apiError("id is required", 400);
-		await deleteSchedule(Number(idParam));
+		const id = Number(idParam);
+		if (!(await isShearesSchedule(id))) {
+			return apiError("Only Sheares facility schedules can be managed", 403);
+		}
+		await deleteSchedule(id);
 		return apiOk({ success: true });
 	} catch (e) {
 		return handleApiError(e);

@@ -32,6 +32,23 @@ export async function listSchedules(facilityId?: number): Promise<FacilitySchedu
 	return (data ?? []) as FacilitySchedule[];
 }
 
+/** One schedule row, used to authorize type-scoped mutations. */
+export async function getSchedule(id: number): Promise<FacilitySchedule | null> {
+	const supabase = await createClient();
+	const { data, error } = await supabase
+		.from("facility_schedules")
+		.select("id, facility_id, day_of_week, hour, start_date, end_date")
+		.eq("id", id)
+		.maybeSingle();
+
+	if (error) {
+		console.error("Error loading facility schedule:", error);
+		throw new ApiError(500, "Failed to load schedule");
+	}
+
+	return (data as FacilitySchedule | null) ?? null;
+}
+
 export async function createSchedule(input: {
 	facilityId: number;
 	dayOfWeek: number;
