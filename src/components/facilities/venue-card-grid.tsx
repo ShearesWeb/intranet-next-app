@@ -26,6 +26,9 @@ export function compactHourRange(hour: number): string {
 	if (startPeriod === endPeriod) {
 		return `${startNumber}–${endNumber} ${endPeriod}`;
 	}
+	if (endHour === 12) {
+		return `${startNumber}–${endNumber} PM`;
+	}
 
 	return `${startNumber} ${startPeriod}–${endNumber} ${endPeriod}`;
 }
@@ -107,10 +110,10 @@ export function VenueCardGrid({
 												: `Claim ${compactHourRange(slot.hour)}`
 									}
 									className={cn(
-										"min-h-10 rounded-md border border-orange-500 px-2 py-2",
-										"text-sm font-semibold tabular-nums text-orange-600",
-										"transition-colors hover:bg-orange-50",
-										"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/40",
+										"min-h-10 rounded-full border border-green-600 bg-green-600 px-2 py-2",
+										"text-sm font-semibold tabular-nums text-white",
+										"transition-colors hover:border-green-700 hover:bg-green-700",
+										"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500/40",
 										"disabled:cursor-not-allowed disabled:opacity-50",
 									)}
 								>

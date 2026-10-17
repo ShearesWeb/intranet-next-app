@@ -67,7 +67,7 @@ function render(props: Partial<Parameters<typeof VenueCardGrid>[0]> = {}) {
 describe("compactHourRange", () => {
 	it("formats one-hour slots compactly", () => {
 		expect(compactHourRange(18)).toBe("6–7 PM");
-		expect(compactHourRange(11)).toBe("11 AM–12 PM");
+		expect(compactHourRange(11)).toBe("11–12 PM");
 		expect(compactHourRange(23)).toBe("11 PM–12 AM");
 	});
 });
@@ -102,6 +102,17 @@ describe("VenueCardGrid", () => {
 		act(() => button?.click());
 
 		expect(onClaim).toHaveBeenCalledWith(availableSlot);
+	});
+
+	it("renders available times as green bubbles with white text", () => {
+		render({ slots: [slot()] });
+		const button = [...container.querySelectorAll("button")].find(
+			(candidate) => candidate.textContent === "6–7 PM",
+		);
+
+		expect(button?.className).toContain("rounded-full");
+		expect(button?.className).toContain("bg-green-600");
+		expect(button?.className).toContain("text-white");
 	});
 
 	it("allows a chair to claim a same-day slot", () => {
