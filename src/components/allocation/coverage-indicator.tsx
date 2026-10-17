@@ -29,29 +29,29 @@ const MILESTONES: Array<{ pct: number; left: string }> = [
 	{ pct: 150, left: "75%" },
 ];
 
-function coverageTitle(candidateCount: number, openSlots: number): string {
-	const { percent, target } = getCandidateCoverage(candidateCount, openSlots);
-	if (percent === null) return "No open slots left on this position.";
-	return `${candidateCount} ranked of ${target} recommended (${COVERAGE_TARGET_MULTIPLIER * 100}% of ${openSlots} open slot${openSlots === 1 ? "" : "s"}).`;
+function coverageTitle(candidateCount: number, capacity: number): string {
+	const { percent, target } = getCandidateCoverage(candidateCount, capacity);
+	if (percent === null) return "No capacity target is configured for this position.";
+	return `${candidateCount} ranked of ${target} recommended (${COVERAGE_TARGET_MULTIPLIER * 100}% of ${capacity} total seat${capacity === 1 ? "" : "s"}).`;
 }
 
 interface CoverageMeterProps {
 	candidateCount: number;
-	openSlots: number;
+	capacity: number;
 	className?: string;
 }
 
 /**
- * Milestone progress meter toward the 200%-of-open-slots ranking goal.
+ * Milestone progress meter toward the 200%-of-total-capacity ranking goal.
  * Fill color steps through red → amber → green → purple as coverage grows.
  */
-export function CoverageMeter({ candidateCount, openSlots, className }: CoverageMeterProps) {
-	const { tier, percent, target } = getCandidateCoverage(candidateCount, openSlots);
+export function CoverageMeter({ candidateCount, capacity, className }: CoverageMeterProps) {
+	const { tier, percent, target } = getCandidateCoverage(candidateCount, capacity);
 
 	if (percent === null) {
 		return (
 			<p className={cn("text-xs text-muted-foreground", className)}>
-				No open slots left, ranking is optional for this position.
+				No capacity target is configured for this position.
 			</p>
 		);
 	}
@@ -62,17 +62,14 @@ export function CoverageMeter({ candidateCount, openSlots, className }: Coverage
 	const goalReached = tier === "target";
 
 	return (
-		<div
-			title={coverageTitle(candidateCount, openSlots)}
-			className={cn("flex flex-col", className)}
-		>
+		<div title={coverageTitle(candidateCount, capacity)} className={cn("flex flex-col", className)}>
 			<div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
 				<span className="text-sm">
 					<span className={cn("font-semibold tabular-nums", TIER_TEXT_STYLES[tier])}>
 						{percent}%
 					</span>{" "}
 					<span className="text-xs text-muted-foreground">
-						of open slots ranked · {candidateCount}/{target} candidates
+						of total capacity ranked · {candidateCount}/{target} candidates
 					</span>
 				</span>
 				{goalReached ? (
@@ -137,17 +134,17 @@ export function CoverageMeter({ candidateCount, openSlots, className }: Coverage
 }
 
 /** Compact bar + percent for table cells. */
-export function CoverageMeterMini({ candidateCount, openSlots, className }: CoverageMeterProps) {
-	const { tier, percent } = getCandidateCoverage(candidateCount, openSlots);
+export function CoverageMeterMini({ candidateCount, capacity, className }: CoverageMeterProps) {
+	const { tier, percent } = getCandidateCoverage(candidateCount, capacity);
 	const goalPercent = COVERAGE_TARGET_MULTIPLIER * 100;
 
 	if (percent === null) {
 		return (
 			<span
-				title={coverageTitle(candidateCount, openSlots)}
+				title={coverageTitle(candidateCount, capacity)}
 				className={cn("text-xs text-muted-foreground", className)}
 			>
-				Full
+				No target
 			</span>
 		);
 	}
@@ -155,7 +152,7 @@ export function CoverageMeterMini({ candidateCount, openSlots, className }: Cove
 	const fillWidth = Math.min(100, (percent / goalPercent) * 100);
 	return (
 		<span
-			title={coverageTitle(candidateCount, openSlots)}
+			title={coverageTitle(candidateCount, capacity)}
 			className={cn("flex items-center gap-2", className)}
 		>
 			<span className="h-1.5 w-20 shrink-0 overflow-hidden rounded-full bg-muted">
@@ -188,7 +185,7 @@ export function CoverageLegend({ className }: { className?: string }) {
 			)}
 		>
 			<span>
-				Aim to rank {COVERAGE_TARGET_MULTIPLIER * 100}% of each position&apos;s open slots:
+				Aim to rank {COVERAGE_TARGET_MULTIPLIER * 100}% of each position&apos;s total capacity:
 			</span>
 			{LEGEND_ITEMS.map(({ tier, label }) => (
 				<span key={tier} className="inline-flex items-center gap-1.5">
