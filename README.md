@@ -2,12 +2,7 @@
 
 ## Project Overview
 
-The **Intranet Next App** is a web application designed for Sheares Hall residents to manage and view their CCA (Co-Curricular Activities) information. The application allows users to:
-
-- View their CCA memberships and associated points
-- Rank their Committee CCA preferences  
-- Track their total activity points
-- Manage user authentication through Google OAuth
+The Intranet provides a centralized management platform for performing any core operational task in Sheares Hall, used by the JCRC, appointment holders and residents alike. Built with Next.js on Cloudflare Workers and Supabase, it achieved a 100 Lighthouse Accessibility score across the board.
 
 ## Tech Stack
 
