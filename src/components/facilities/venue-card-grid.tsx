@@ -29,8 +29,15 @@ export function compactHourRange(hour: number): string {
 	if (endHour === 12) {
 		return `${startNumber}–${endNumber} PM`;
 	}
+	if (endHour === 0) {
+		return `${startNumber}–${endNumber} AM`;
+	}
 
 	return `${startNumber} ${startPeriod}–${endNumber} ${endPeriod}`;
+}
+
+function operatingDayHour(hour: number): number {
+	return hour < 8 ? hour + 24 : hour;
 }
 
 export function VenueCardGrid({
@@ -53,7 +60,7 @@ export function VenueCardGrid({
 		}
 
 		for (const facilitySlots of grouped.values()) {
-			facilitySlots.sort((a, b) => a.hour - b.hour);
+			facilitySlots.sort((a, b) => operatingDayHour(a.hour) - operatingDayHour(b.hour));
 		}
 
 		return grouped;

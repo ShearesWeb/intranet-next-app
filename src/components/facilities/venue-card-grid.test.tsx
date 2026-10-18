@@ -68,7 +68,7 @@ describe("compactHourRange", () => {
 	it("formats one-hour slots compactly", () => {
 		expect(compactHourRange(18)).toBe("6–7 PM");
 		expect(compactHourRange(11)).toBe("11–12 PM");
-		expect(compactHourRange(23)).toBe("11 PM–12 AM");
+		expect(compactHourRange(23)).toBe("11–12 AM");
 	});
 });
 
@@ -112,6 +112,18 @@ describe("VenueCardGrid", () => {
 		expect(container.textContent).toContain("Volleyball");
 		expect(container.textContent).not.toContain("9–10 PM");
 		expect(container.textContent).not.toContain("Sheares Hall");
+	});
+
+	it("places midnight and early-morning slots after the evening slots", () => {
+		render({
+			facilities: [FACILITIES[0]],
+			slots: [slot({ hour: 1 }), slot({ hour: 0 }), slot({ hour: 23 }), slot({ hour: 8 })],
+		});
+
+		const labels = [...container.querySelectorAll("article button")].map((button) =>
+			button.textContent?.trim(),
+		);
+		expect(labels).toEqual(["8–9 AM", "11–12 AM", "12–1 AM", "1–2 AM"]);
 	});
 
 	it("opens the claim flow from an available time button", () => {

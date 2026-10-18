@@ -68,7 +68,7 @@ describe("FacilityScheduleCard", () => {
 		expect(container.textContent).not.toContain("Saved automatically");
 	});
 
-	it("offers timeslots from 8 AM through 2 AM in operating-day order", () => {
+	it("offers timeslots from 8 AM through 1 AM in operating-day order", () => {
 		render([]);
 
 		const hourLabels = [
@@ -96,7 +96,6 @@ describe("FacilityScheduleCard", () => {
 			"11PM",
 			"12AM",
 			"1AM",
-			"2AM",
 		]);
 	});
 

@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { Facility, FacilitySchedule } from "@/types/facilities";
 
 export const SCHEDULE_DAYS = [1, 2, 3, 4, 5, 6, 0] as const;
-export const SCHEDULE_HOURS = [...Array.from({ length: 16 }, (_, index) => index + 8), 0, 1, 2];
+export const SCHEDULE_HOURS = [...Array.from({ length: 16 }, (_, index) => index + 8), 0, 1];
 
 const DAY_LABELS: Record<number, string> = {
 	0: "Sun",
