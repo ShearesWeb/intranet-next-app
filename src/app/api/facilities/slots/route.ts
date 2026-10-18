@@ -3,12 +3,9 @@ import { apiOk, apiError, handleApiError } from "@/lib/api/response";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 import { getSlots, withUserCcaContext } from "@/lib/facilities/facility-slots";
 import { getChairCcaIds } from "@/lib/facilities/facility-access";
-import { FacilityType, isHorizonRestricted } from "@/types/facilities";
 import { NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";
-
-const VALID_TYPES: FacilityType[] = ["sheares", "reboks", "nus", "external"];
 
 /**
  * The facilities calendar.
@@ -27,26 +24,12 @@ export async function GET(req: NextRequest) {
 		const { searchParams } = req.nextUrl;
 		const start = searchParams.get("start");
 		const end = searchParams.get("end");
-		const typeParam = searchParams.get("type");
 
 		if (!start || !end) return apiError("start and end are required", 400);
 
-		const slots = await getSlots(start, end);
+		const slots = (await getSlots(start, end)).filter((slot) => slot.type === "sheares");
 
-		// REBOKS availability is secured a month at a time, so slots past the end
-		// of this month are offers the hall does not hold yet. Withheld from
-		// everyone but JCRC, who need the full horizon to plan against.
-		// Only reboks is trimmed — a September Comm Hall slot is still real.
-		const withinHorizon = user.is_jcrc
-			? slots
-			: slots.filter((slot) => !isHorizonRestricted(slot.type, slot.date));
-
-		const type = VALID_TYPES.includes(typeParam as FacilityType)
-			? (typeParam as FacilityType)
-			: undefined;
-		const filtered = type ? withinHorizon.filter((slot) => slot.type === type) : withinHorizon;
-
-		return apiOk(withUserCcaContext(filtered, getChairCcaIds(user)));
+		return apiOk(withUserCcaContext(slots, getChairCcaIds(user)));
 	} catch (e) {
 		return handleApiError(e);
 	}

@@ -9,17 +9,21 @@ const FACILITIES: Facility[] = [
 ];
 
 describe("groupFacilitiesByType", () => {
-	it("groups facilities by type in catalog order, dropping empty groups", () => {
+	it("groups only Sheares facilities", () => {
 		const groups = groupFacilitiesByType(FACILITIES, "");
-		expect(groups.map((g) => g.type)).toEqual(["sheares", "reboks"]);
-		expect(groups[1].facilities.map((f) => f.id)).toEqual([2, 3]);
+		expect(groups.map((g) => g.type)).toEqual(["sheares"]);
+		expect(groups[0].facilities.map((f) => f.id)).toEqual([1]);
 	});
 
 	it("filters by a case-insensitive substring of venue or sub_venue", () => {
-		const groups = groupFacilitiesByType(FACILITIES, "tennis");
+		const groups = groupFacilitiesByType(FACILITIES, "multi-purpose");
 		expect(groups).toHaveLength(1);
-		expect(groups[0].type).toBe("reboks");
-		expect(groups[0].facilities.map((f) => f.id)).toEqual([2]);
+		expect(groups[0].type).toBe("sheares");
+		expect(groups[0].facilities.map((f) => f.id)).toEqual([1]);
+	});
+
+	it("does not expose non-Sheares matches", () => {
+		expect(groupFacilitiesByType(FACILITIES, "tennis")).toEqual([]);
 	});
 
 	it("returns no groups when nothing matches", () => {

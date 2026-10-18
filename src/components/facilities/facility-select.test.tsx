@@ -46,8 +46,8 @@ describe("FacilitySelect", () => {
 		act(() => buttonWithText("Select facility")!.click());
 		expect(container.querySelector("input")).not.toBeNull();
 		expect(container.textContent).toContain("Sheares");
-		expect(container.textContent).toContain("Reboks");
-		expect(container.textContent).toContain("Tennis Court 1");
+		expect(container.textContent).not.toContain("Reboks");
+		expect(container.textContent).not.toContain("Tennis Court 1");
 	});
 
 	it("calls onChange with the picked id and closes", () => {
@@ -56,15 +56,15 @@ describe("FacilitySelect", () => {
 			root.render(<FacilitySelect facilities={FACILITIES} value={null} onChange={onChange} />),
 		);
 		act(() => buttonWithText("Select facility")!.click());
-		act(() => buttonWithText("Tennis Court 1")!.click());
-		expect(onChange).toHaveBeenCalledWith(2);
+		act(() => buttonWithText("Multi-Purpose Hall")!.click());
+		expect(onChange).toHaveBeenCalledWith(1);
 		expect(container.querySelector("input")).toBeNull(); // closed again
 	});
 
 	it("shows the selected facility's name on the trigger", () => {
 		act(() =>
-			root.render(<FacilitySelect facilities={FACILITIES} value={2} onChange={() => {}} />),
+			root.render(<FacilitySelect facilities={FACILITIES} value={1} onChange={() => {}} />),
 		);
-		expect(container.textContent).toContain("Tennis Court 1");
+		expect(container.textContent).toContain("Multi-Purpose Hall");
 	});
 });

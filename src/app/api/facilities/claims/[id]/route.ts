@@ -6,7 +6,6 @@ import { isChairOfCca, canManageFacilities } from "@/lib/facilities/facility-acc
 
 export const dynamic = "force-dynamic";
 
-// The lead-time gate applies only to CREATING claims — chairs can withdraw any time.
 async function authorizeClaim(claimId: number) {
 	const user = await requireAuth();
 	const claim = await getClaim(claimId);

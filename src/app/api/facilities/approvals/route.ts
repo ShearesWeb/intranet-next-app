@@ -7,7 +7,8 @@ import {
 	rejectClaims,
 	resolveSlot,
 } from "@/lib/facilities/facility-approvals";
-import { deleteClaim } from "@/lib/facilities/facility-claims";
+import { deleteClaim, getClaim } from "@/lib/facilities/facility-claims";
+import { getFacilityType } from "@/lib/facilities/facility-catalog";
 import { todayKey } from "@/lib/date";
 import { NextRequest } from "next/server";
 
@@ -28,6 +29,13 @@ function windowEnd(from: string, days: number): string {
 	return end.toISOString().slice(0, 10);
 }
 
+async function areShearesClaims(claimIds: number[]): Promise<boolean> {
+	const claims = await Promise.all(claimIds.map((id) => getClaim(id)));
+	if (claims.some((claim) => !claim)) return false;
+	const types = await Promise.all(claims.map((claim) => getFacilityType(claim!.facility_id)));
+	return types.every((type) => type === "sheares");
+}
+
 /** JCRC approvals queue: slots awaiting approval + upcoming confirmed (revocable). */
 export async function GET() {
 	const disabledResponse = getCoreServiceDisabledApiResponse("facilities");
@@ -42,7 +50,10 @@ export async function GET() {
 			listPendingApprovals(from, to),
 			listUpcomingConfirmed(from, to),
 		]);
-		return apiOk({ pending, confirmed });
+		return apiOk({
+			pending: pending.filter((item) => item.slot.type === "sheares"),
+			confirmed: confirmed.filter((item) => item.slot.type === "sheares"),
+		});
 	} catch (e) {
 		return handleApiError(e);
 	}
@@ -65,7 +76,11 @@ export async function POST(req: NextRequest) {
 
 		if (action === "approve") {
 			if (claim_id == null) return apiError("claim_id is required to approve", 400);
-			await resolveSlot(claim_id, Array.isArray(competing_claim_ids) ? competing_claim_ids : []);
+			const competitors = Array.isArray(competing_claim_ids) ? competing_claim_ids : [];
+			if (!(await areShearesClaims([claim_id, ...competitors]))) {
+				return apiError("Only Sheares facility claims can be managed", 403);
+			}
+			await resolveSlot(claim_id, competitors);
 		} else if (action === "reject") {
 			// Rejecting a contested slot has to clear every claim on it, not just one.
 			const targets: number[] = Array.isArray(claim_ids)
@@ -74,9 +89,15 @@ export async function POST(req: NextRequest) {
 					? [claim_id]
 					: [];
 			if (!targets.length) return apiError("claim_id or claim_ids is required to reject", 400);
+			if (!(await areShearesClaims(targets))) {
+				return apiError("Only Sheares facility claims can be managed", 403);
+			}
 			await rejectClaims(targets);
 		} else if (action === "revoke") {
 			if (claim_id == null) return apiError("claim_id is required to revoke", 400);
+			if (!(await areShearesClaims([claim_id]))) {
+				return apiError("Only Sheares facility claims can be managed", 403);
+			}
 			await deleteClaim(claim_id);
 		} else {
 			return apiError("action must be approve, reject or revoke", 400);

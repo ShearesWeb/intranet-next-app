@@ -4,7 +4,6 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { DayDetailPanel } from "@/components/facilities/day-detail-panel";
 import { SLOT_STATUS_CONFIG, type SlotWithContext } from "@/types/facilities";
 
-/** Local YYYY-MM-DD, n days from today — the panel's lock logic compares against real time. */
 function dateFromToday(n: number): string {
 	const d = new Date();
 	d.setDate(d.getDate() + n);
@@ -14,7 +13,7 @@ function dateFromToday(n: number): string {
 }
 
 const OPEN_DATE = dateFromToday(10);
-const LOCKED_DATE = dateFromToday(1);
+const NEAR_DATE = dateFromToday(1);
 
 function booking(p: Partial<SlotWithContext>): SlotWithContext {
 	return {
@@ -50,7 +49,6 @@ function render(props: Partial<Parameters<typeof DayDetailPanel>[0]> = {}) {
 	act(() =>
 		root.render(
 			<DayDetailPanel
-				date={props.date ?? OPEN_DATE}
 				bookings={props.bookings ?? []}
 				isChair={props.isChair ?? false}
 				onClaim={props.onClaim ?? (() => {})}
@@ -72,29 +70,11 @@ describe("DayDetailPanel", () => {
 		expect(container.textContent).toContain("Page 1 of 3");
 	});
 
-	it("renders a search input that filters rows by venue", () => {
-		const bookings = [
-			booking({ hour: 18, sub_venue: "Band Room", venue: "Sheares Hall" }),
-			booking({ hour: 19, sub_venue: "Tennis Court 1", venue: "REBOKS" }),
-			booking({ hour: 20, sub_venue: "Tennis Court 2", venue: "REBOKS" }),
-		];
-		render({ bookings });
+	it("does not render the removed date heading or venue search", () => {
+		render({ bookings: [booking({ sub_venue: "Band Room" })] });
 
-		const input = container.querySelector("input[placeholder*='venue' i]") as HTMLInputElement;
-		expect(input).toBeTruthy();
-
-		act(() => {
-			const setter = Object.getOwnPropertyDescriptor(
-				window.HTMLInputElement.prototype,
-				"value",
-			)!.set!;
-			setter.call(input, "tennis");
-			input.dispatchEvent(new Event("input", { bubbles: true }));
-		});
-
-		const rows = [...container.querySelectorAll("tbody tr")];
-		expect(rows).toHaveLength(2);
-		expect(rows[0].textContent).toContain("Tennis Court 1");
+		expect(container.querySelector("input[placeholder*='venue' i]")).toBeNull();
+		expect(container.querySelector("h3")).toBeNull();
 	});
 
 	it("renders the Available badge in green", () => {
@@ -118,24 +98,22 @@ describe("DayDetailPanel", () => {
 		expect(btn).toBeTruthy();
 	});
 
-	it("hides the Claim button and shows the lock note inside the 3-day window", () => {
+	it("allows chairs to claim inside the former 3-day lock window", () => {
 		render({
-			date: LOCKED_DATE,
-			bookings: [booking({ hour: 18, status: "available", date: LOCKED_DATE })],
+			bookings: [booking({ hour: 18, status: "available", date: NEAR_DATE })],
 			isChair: true,
 		});
 		const btn = [...container.querySelectorAll("button")].find((b) => b.textContent === "Claim");
-		expect(btn).toBeFalsy();
-		expect(container.textContent).toContain("Bookings lock");
+		expect(btn).toBeTruthy();
+		expect(container.textContent).not.toContain("Bookings lock");
 	});
 
-	it("still offers Withdraw on a locked day for the chair's own claim", () => {
+	it("offers Withdraw for the chair's own claim", () => {
 		render({
-			date: LOCKED_DATE,
 			bookings: [
 				booking({
 					status: "pending",
-					date: LOCKED_DATE,
+					date: NEAR_DATE,
 					user_cca_claim: {
 						claim_id: 9,
 						cca_id: 3,
