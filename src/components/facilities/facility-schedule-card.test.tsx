@@ -68,6 +68,38 @@ describe("FacilityScheduleCard", () => {
 		expect(container.textContent).not.toContain("Saved automatically");
 	});
 
+	it("offers timeslots from 8 AM through 2 AM in operating-day order", () => {
+		render([]);
+
+		const hourLabels = [
+			...container.querySelectorAll('[aria-labelledby="facility-4-hours"] button'),
+		]
+			.map((button) => button.textContent?.trim())
+			.filter((label) => label !== "Select all");
+
+		expect(hourLabels).toEqual([
+			"8AM",
+			"9AM",
+			"10AM",
+			"11AM",
+			"12PM",
+			"1PM",
+			"2PM",
+			"3PM",
+			"4PM",
+			"5PM",
+			"6PM",
+			"7PM",
+			"8PM",
+			"9PM",
+			"10PM",
+			"11PM",
+			"12AM",
+			"1AM",
+			"2AM",
+		]);
+	});
+
 	it("saves the shared day and hour grid when a day changes", async () => {
 		const onSave = render([schedule(1, 1, 18), schedule(2, 2, 18)]);
 
