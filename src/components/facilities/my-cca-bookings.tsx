@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth/auth-context";
 import { EmptyState } from "@/components/layout/empty-state";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
 	ClaimStatus,
@@ -30,12 +31,13 @@ interface ClaimRow {
 	facility_type: FacilityType;
 }
 
-/** A chair's claims in one chronological list, with status shown on each row. */
+/** A chair's claims in one newest-first list, with status shown on each row. */
 export function MyCcaBookings() {
 	const { user } = useAuth();
 	const [claims, setClaims] = useState<ClaimRow[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [ccaFilter, setCcaFilter] = useState<number | null>(null);
+	const [cancellingId, setCancellingId] = useState<number | null>(null);
 
 	const chairCcas = useMemo(() => {
 		if (!user) return [];
@@ -77,8 +79,27 @@ export function MyCcaBookings() {
 	const visibleClaims = useMemo(() => {
 		const filtered =
 			ccaFilter === null ? claims : claims.filter((claim) => claim.cca_id === ccaFilter);
-		return [...filtered].sort((a, b) => a.date.localeCompare(b.date) || a.hour - b.hour);
+		return [...filtered].sort((a, b) => b.date.localeCompare(a.date) || b.hour - a.hour);
 	}, [claims, ccaFilter]);
+
+	async function handleCancel(claimId: number) {
+		setCancellingId(claimId);
+		try {
+			const response = await fetch(`/api/facilities/claims/${claimId}`, { method: "DELETE" });
+			if (!response.ok) {
+				const json = await response.json();
+				toast.error(json.error ?? "Failed to cancel booking");
+				return;
+			}
+
+			toast.success("Booking cancelled");
+			await fetchClaims();
+		} catch {
+			toast.error("Network error — please try again");
+		} finally {
+			setCancellingId(null);
+		}
+	}
 
 	if (chairCcas.length === 0) return null;
 
@@ -131,15 +152,22 @@ export function MyCcaBookings() {
 				/>
 			) : (
 				<div className="overflow-hidden rounded-xl border bg-card shadow-sm">
-					<div className="hidden grid-cols-[1fr_1fr_1.5fr_auto] gap-4 border-b bg-muted/30 px-5 py-3 text-xs font-medium text-muted-foreground md:grid">
+					<div className="hidden grid-cols-[1fr_1fr_1.5fr_1.25fr_auto_auto] gap-4 border-b bg-muted/30 px-5 py-3 text-xs font-medium text-muted-foreground md:grid">
 						<span>Date</span>
 						<span>Time</span>
 						<span>Location</span>
+						<span>Booking CCA</span>
 						<span className="w-24">Status</span>
+						<span className="w-24">Actions</span>
 					</div>
 					<div className="divide-y">
 						{visibleClaims.map((claim) => (
-							<BookingRow key={claim.id} claim={claim} />
+							<BookingRow
+								key={claim.id}
+								claim={claim}
+								cancelling={cancellingId === claim.id}
+								onCancel={handleCancel}
+							/>
 						))}
 					</div>
 				</div>
@@ -148,11 +176,20 @@ export function MyCcaBookings() {
 	);
 }
 
-function BookingRow({ claim }: { claim: ClaimRow }) {
+function BookingRow({
+	claim,
+	cancelling,
+	onCancel,
+}: {
+	claim: ClaimRow;
+	cancelling: boolean;
+	onCancel: (claimId: number) => void;
+}) {
 	const statusConfig = CLAIM_STATUS_CONFIG[claim.status];
+	const canCancel = claim.status === "approved" || claim.status === "pending";
 
 	return (
-		<div className="grid gap-3 px-5 py-4 text-sm md:grid-cols-[1fr_1fr_1.5fr_auto] md:items-center md:gap-4">
+		<div className="grid gap-3 px-5 py-4 text-sm md:grid-cols-[1fr_1fr_1.5fr_1.25fr_auto_auto] md:items-center md:gap-4">
 			<div>
 				<span className="mb-1 block text-xs text-muted-foreground md:hidden">Date</span>
 				<span className="font-medium">
@@ -167,6 +204,10 @@ function BookingRow({ claim }: { claim: ClaimRow }) {
 				<span className="mb-1 block text-xs text-muted-foreground md:hidden">Location</span>
 				<span className="block truncate">{claim.sub_venue}</span>
 			</div>
+			<div className="min-w-0">
+				<span className="mb-1 block text-xs text-muted-foreground md:hidden">Booking CCA</span>
+				<span className="block truncate">{claim.cca_name}</span>
+			</div>
 			<div className="md:w-24">
 				<span className="mb-1 block text-xs text-muted-foreground md:hidden">Status</span>
 				<Badge
@@ -179,6 +220,22 @@ function BookingRow({ claim }: { claim: ClaimRow }) {
 				>
 					{statusConfig.label}
 				</Badge>
+			</div>
+			<div className="md:w-24">
+				<span className="mb-1 block text-xs text-muted-foreground md:hidden">Actions</span>
+				{canCancel && (
+					<Button
+						size="sm"
+						variant="destructive"
+						className="h-8 text-xs"
+						aria-label={`Cancel ${claim.sub_venue} booking`}
+						isLoading={cancelling}
+						loadingText="Cancelling…"
+						onClick={() => onCancel(claim.id)}
+					>
+						Cancel
+					</Button>
+				)}
 			</div>
 		</div>
 	);

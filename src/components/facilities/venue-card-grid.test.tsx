@@ -80,7 +80,7 @@ describe("VenueCardGrid", () => {
 		expect(container.textContent).toContain("no bookable facility timeslots");
 	});
 
-	it("renders every facility with available and confirmed slots", () => {
+	it("renders every facility with available, pending, and confirmed slots", () => {
 		render({
 			slots: [
 				slot({ facility_id: 1, hour: 19 }),
@@ -110,8 +110,59 @@ describe("VenueCardGrid", () => {
 		expect(container.textContent).toContain("7–8 PM");
 		expect(container.textContent).toContain("8–9 PM");
 		expect(container.textContent).toContain("Volleyball");
-		expect(container.textContent).not.toContain("9–10 PM");
+		expect(container.textContent).toContain("9–10 PM");
 		expect(container.textContent).not.toContain("Sheares Hall");
+	});
+
+	it("keeps another CCA's pending slot green and claimable", () => {
+		const onClaim = vi.fn();
+		const pendingSlot = slot({
+			status: "pending",
+			live_claims: 1,
+			claims: [
+				{
+					claim_id: 5,
+					cca_id: 3,
+					cca_name: "Volleyball",
+					status: "pending",
+					created_by: 42,
+				},
+			],
+		});
+		render({ facilities: [FACILITIES[0]], slots: [pendingSlot], onClaim });
+
+		const button = container.querySelector("article button") as HTMLButtonElement;
+		expect(button.disabled).toBe(false);
+		expect(button.className).toContain("bg-green-600");
+		act(() => button.click());
+		expect(onClaim).toHaveBeenCalledWith(pendingSlot);
+	});
+
+	it("keeps the user's pending slot visible but prevents a duplicate claim", () => {
+		const pendingClaim = {
+			claim_id: 5,
+			cca_id: 3,
+			cca_name: "Volleyball",
+			status: "pending" as const,
+			created_by: 42,
+		};
+		render({
+			facilities: [FACILITIES[0]],
+			slots: [
+				slot({
+					status: "pending",
+					live_claims: 1,
+					claims: [pendingClaim],
+					user_cca_claim: pendingClaim,
+				}),
+			],
+		});
+
+		const button = container.querySelector("article button") as HTMLButtonElement;
+		expect(button.disabled).toBe(true);
+		expect(button.textContent).toContain("6–7 PM");
+		expect(button.textContent).toContain("Pending");
+		expect(button.title).toBe("Your CCA already has a pending request for this slot");
 	});
 
 	it("places midnight and early-morning slots after the evening slots", () => {

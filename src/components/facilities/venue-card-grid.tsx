@@ -52,8 +52,6 @@ export function VenueCardGrid({
 		const grouped = new Map<number, SlotWithContext[]>();
 
 		for (const slot of slots) {
-			if (slot.status !== "available" && slot.status !== "confirmed") continue;
-
 			const facilitySlots = grouped.get(slot.facility_id) ?? [];
 			facilitySlots.push(slot);
 			grouped.set(slot.facility_id, facilitySlots);
@@ -115,6 +113,7 @@ export function VenueCardGrid({
 						<div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
 							{visibleSlots.map((slot) => {
 								const time = compactHourRange(slot.hour);
+								const hasPendingClaim = slot.user_cca_claim?.status === "pending";
 								if (slot.status === "confirmed") {
 									const ccaName =
 										slot.claims.find((claim) => claim.status === "approved")?.cca_name ?? "Booked";
@@ -140,14 +139,16 @@ export function VenueCardGrid({
 									<button
 										key={`${slot.facility_id}:${slot.date}:${slot.hour}`}
 										type="button"
-										disabled={!isChair || isPastDate}
+										disabled={!isChair || isPastDate || hasPendingClaim}
 										onClick={() => onClaim(slot)}
 										title={
 											!isChair
 												? "Only CCA chairs can claim facility slots"
 												: isPastDate
 													? "Past dates cannot be booked"
-													: `Claim ${time}`
+													: hasPendingClaim
+														? "Your CCA already has a pending request for this slot"
+														: `Claim ${time}`
 										}
 										className={cn(
 											"min-h-12 rounded-full border border-green-600 bg-green-600 px-2 py-2",
@@ -157,7 +158,12 @@ export function VenueCardGrid({
 											"disabled:cursor-not-allowed disabled:opacity-50",
 										)}
 									>
-										{time}
+										<span className="block leading-none">{time}</span>
+										{hasPendingClaim && (
+											<span className="mt-1 block text-[10px] font-medium leading-none">
+												Pending
+											</span>
+										)}
 									</button>
 								);
 							})}
