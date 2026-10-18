@@ -73,6 +73,13 @@ describe("compactHourRange", () => {
 });
 
 describe("VenueCardGrid", () => {
+	it("shows an empty state when the selected day has no scheduled facilities", () => {
+		render({ facilities: [] });
+
+		expect(container.textContent).toContain("No facilities available");
+		expect(container.textContent).toContain("no bookable facility timeslots");
+	});
+
 	it("renders every facility with available and confirmed slots", () => {
 		render({
 			slots: [

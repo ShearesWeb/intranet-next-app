@@ -5,34 +5,17 @@ import { useAuth } from "@/lib/auth/auth-context";
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/layout/empty-state";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FacilityTypeBadges } from "@/components/facilities/facility-type-badges";
-import { ScheduleWeek } from "@/components/facilities/schedule-week";
-import { ScheduleClusterPanel } from "@/components/facilities/schedule-cluster-panel";
-import {
-	ScheduleSlotDialog,
-	type SlotEditTarget,
-} from "@/components/facilities/schedule-slot-dialog";
+import { FacilityScheduleCard } from "@/components/facilities/facility-schedule-card";
 import { ManageApprovals } from "@/components/facilities/manage-approvals";
-import { type Cluster, type ScheduleSlot } from "@/lib/facilities/schedule-grid";
-import { FacilitySchedule, Facility, FacilityType, FACILITY_TYPE_CONFIG } from "@/types/facilities";
-import { Shield, Plus, Building2 } from "lucide-react";
-
-// Only Sheares facilities are managed through the intranet.
-const MANAGED_TYPES: FacilityType[] = ["sheares"];
+import { FacilitySchedule, Facility } from "@/types/facilities";
+import { Shield, Building2 } from "lucide-react";
 
 export default function AdminFacilitiesPage() {
 	const { user } = useAuth();
-	const [type, setType] = useState<FacilityType>("sheares");
 	const [facilities, setFacilities] = useState<Facility[]>([]);
 	const [schedules, setSchedules] = useState<FacilitySchedule[]>([]);
 	const [loading, setLoading] = useState(true);
-	const [facilityQuery, setFacilityQuery] = useState("");
-	const [slotOpen, setSlotOpen] = useState(false);
-	const [editing, setEditing] = useState<SlotEditTarget | null>(null);
-	const [selected, setSelected] = useState<{ day: number; cluster: Cluster } | null>(null);
 
 	const fetchAll = useCallback(async () => {
 		setLoading(true);
@@ -52,43 +35,26 @@ export default function AdminFacilitiesPage() {
 		fetchAll();
 	}, [fetchAll]);
 
-	const facilitiesById = useMemo(() => {
-		const m = new Map<number, Facility>();
-		for (const f of facilities) m.set(f.id, f);
-		return m;
-	}, [facilities]);
-
-	// Flatten schedules of the active type into ScheduleSlot[] for the week editor.
-	const slots: ScheduleSlot[] = useMemo(() => {
-		const out: ScheduleSlot[] = [];
-		for (const s of schedules) {
-			const f = facilitiesById.get(s.facility_id);
-			if (!f || f.type !== type) continue;
-			out.push({
-				id: s.id,
-				facility_id: s.facility_id,
-				venue: f.venue,
-				sub_venue: f.sub_venue,
-				type: f.type,
-				day_of_week: s.day_of_week,
-				hour: s.hour,
-				start_date: s.start_date,
-				end_date: s.end_date,
-			});
-		}
-		return out;
-	}, [schedules, facilitiesById, type]);
-
 	const managedFacilities = useMemo(
 		() => facilities.filter((f) => f.type === "sheares"),
 		[facilities],
 	);
 
-	const filteredFacilities = useMemo(() => {
-		const q = facilityQuery.trim().toLowerCase();
-		if (!q) return managedFacilities;
-		return managedFacilities.filter((f) => `${f.venue} ${f.sub_venue}`.toLowerCase().includes(q));
-	}, [managedFacilities, facilityQuery]);
+	async function saveScheduleGrid(facilityId: number, days: number[], hours: number[]) {
+		const response = await fetch("/api/facilities/schedules", {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ facility_id: facilityId, days, hours }),
+		});
+		const payload = await response.json();
+		if (!response.ok) throw new Error(payload.error ?? "Failed to update availability");
+
+		const updated = (payload.data ?? []) as FacilitySchedule[];
+		setSchedules((current) => [
+			...current.filter((schedule) => schedule.facility_id !== facilityId),
+			...updated,
+		]);
+	}
 
 	if (user && !user.is_jcrc) {
 		return (
@@ -107,128 +73,45 @@ export default function AdminFacilitiesPage() {
 		<div className="flex flex-col space-y-6 p-4 md:p-6">
 			<PageHeader
 				title="Manage Facilities"
-				description="Add facilities, define booking schedules, and approve bookings"
+				description="Control bookable facility availability and approve bookings"
 			/>
 
-			<Tabs defaultValue="schedules">
+			<Tabs defaultValue="scheduling">
 				<TabsList>
-					<TabsTrigger value="facilities">Facilities</TabsTrigger>
-					<TabsTrigger value="schedules">Schedules</TabsTrigger>
+					<TabsTrigger value="scheduling">Scheduling</TabsTrigger>
 					<TabsTrigger value="approvals">Approvals</TabsTrigger>
 				</TabsList>
 
-				{/* Facilities */}
-				<TabsContent value="facilities">
-					<div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-						<Input
-							value={facilityQuery}
-							onChange={(e) => setFacilityQuery(e.target.value)}
-							placeholder="Search facilities…"
-							className="h-9 max-w-xs"
-						/>
+				<TabsContent value="scheduling">
+					<div className="mb-5">
+						<h2 className="text-lg font-semibold">Facility availability</h2>
+						<p className="mt-1 text-sm text-muted-foreground">
+							Choose which facilities, days, and times residents can book. Changes are shared with
+							every facilities manager.
+						</p>
 					</div>
+
 					{loading ? (
-						<Skeleton className="h-40 w-full" />
+						<div className="space-y-4">
+							<Skeleton className="h-72 w-full rounded-2xl" />
+							<Skeleton className="h-72 w-full rounded-2xl" />
+						</div>
 					) : managedFacilities.length === 0 ? (
 						<EmptyState
 							icon={Building2}
 							title="No facilities"
-							description="The facility catalog is empty."
+							description="The Sheares facility catalog is empty."
 						/>
-					) : filteredFacilities.length === 0 ? (
-						<EmptyState
-							icon={Building2}
-							title="No matches"
-							description={`No facilities match "${facilityQuery}".`}
-						/>
-					) : (
-						<div className="space-y-6">
-							{MANAGED_TYPES.filter((t) => filteredFacilities.some((f) => f.type === t)).map(
-								(t) => {
-									const cfg = FACILITY_TYPE_CONFIG[t];
-									const list = filteredFacilities.filter((f) => f.type === t);
-									return (
-										<div key={t}>
-											<div className="mb-2 flex items-center gap-2">
-												<span
-													className="h-2.5 w-2.5 rounded-full"
-													style={{ backgroundColor: cfg.color }}
-												/>
-												<h4 className="text-sm font-semibold">{cfg.label}</h4>
-												<span className="text-xs text-muted-foreground">({list.length})</span>
-											</div>
-											<div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-												{list.map((f) => (
-													<div
-														key={f.id}
-														className="flex items-center justify-between gap-2 rounded-lg border px-3 py-2.5"
-													>
-														<div className="min-w-0">
-															<div className="truncate font-medium">{f.venue}</div>
-															<div className="truncate text-xs text-muted-foreground">
-																{f.sub_venue}
-															</div>
-														</div>
-													</div>
-												))}
-											</div>
-										</div>
-									);
-								},
-							)}
-						</div>
-					)}
-				</TabsContent>
-
-				{/* Schedules */}
-				<TabsContent value="schedules">
-					<div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-						<FacilityTypeBadges value={type} onChange={setType} types={MANAGED_TYPES} />
-						<Button
-							size="sm"
-							className="gap-1.5"
-							onClick={() => {
-								setSelected(null);
-								setEditing(null);
-								setSlotOpen(true);
-							}}
-						>
-							<Plus className="h-4 w-4" />
-							Add slot
-						</Button>
-					</div>
-
-					{loading ? (
-						<Skeleton className="h-48 w-full" />
 					) : (
 						<div className="space-y-4">
-							<ScheduleWeek
-								schedules={slots}
-								onSelectCluster={(day, cluster) => setSelected({ day, cluster })}
-							/>
-							{selected && (
-								<ScheduleClusterPanel
-									day={selected.day}
-									cluster={selected.cluster}
-									schedules={slots}
-									onChanged={fetchAll}
-									onAddSlot={() => {
-										setEditing(null);
-										setSlotOpen(true);
-									}}
-									onEditWindow={(day, w) => {
-										setEditing({
-											ids: w.ids,
-											facilityId: w.facility_id,
-											day,
-											hours: w.hours,
-											start_date: w.start_date,
-											end_date: w.end_date,
-										});
-										setSlotOpen(true);
-									}}
+							{managedFacilities.map((facility) => (
+								<FacilityScheduleCard
+									key={facility.id}
+									facility={facility}
+									schedules={schedules.filter((schedule) => schedule.facility_id === facility.id)}
+									onSave={saveScheduleGrid}
 								/>
-							)}
+							))}
 						</div>
 					)}
 				</TabsContent>
@@ -238,17 +121,6 @@ export default function AdminFacilitiesPage() {
 					<ManageApprovals />
 				</TabsContent>
 			</Tabs>
-
-			<ScheduleSlotDialog
-				open={slotOpen}
-				facilities={facilities}
-				defaultType={type}
-				defaultDay={selected?.day}
-				defaultHour={selected?.cluster.startHour}
-				editing={editing}
-				onClose={() => setSlotOpen(false)}
-				onSuccess={fetchAll}
-			/>
 		</div>
 	);
 }

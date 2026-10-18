@@ -77,6 +77,16 @@ export function VenueCardGrid({
 		);
 	}
 	const isPastDate = date < getSingaporeDateKey();
+	if (facilities.length === 0) {
+		return (
+			<div className="rounded-xl border border-dashed px-6 py-16 text-center">
+				<h2 className="font-semibold">No facilities available</h2>
+				<p className="mt-1 text-sm text-muted-foreground">
+					There are no bookable facility timeslots for this day.
+				</p>
+			</div>
+		);
+	}
 
 	return (
 		<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

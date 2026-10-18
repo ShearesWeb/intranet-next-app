@@ -7,6 +7,7 @@ import {
 	createSchedule,
 	updateSchedule,
 	deleteSchedule,
+	syncFacilityScheduleGrid,
 } from "@/lib/facilities/facility-schedules";
 import { getFacilityType, listFacilities } from "@/lib/facilities/facility-catalog";
 import { NextRequest } from "next/server";
@@ -75,6 +76,41 @@ export async function POST(req: NextRequest) {
 			endDate: end_date ?? null,
 		});
 		return apiOk(schedule, 201);
+	} catch (e) {
+		return handleApiError(e);
+	}
+}
+
+/** Replace one facility's recurring availability with a day × hour grid. */
+export async function PUT(req: NextRequest) {
+	const disabledResponse = getCoreServiceDisabledApiResponse("facilities");
+	if (disabledResponse) return disabledResponse;
+
+	try {
+		await requireJcrcAccess();
+		const { facility_id, days, hours } = await req.json();
+
+		if (facility_id == null || !Array.isArray(days) || !Array.isArray(hours)) {
+			return apiError("facility_id, days and hours are required", 400);
+		}
+		const uniqueDays = [...new Set<number>(days)];
+		const uniqueHours = [...new Set<number>(hours)];
+		if (uniqueDays.some((day) => !Number.isInteger(day) || day < 0 || day > 6)) {
+			return apiError("days must contain weekday numbers from 0–6", 400);
+		}
+		if (uniqueHours.some((hour) => !Number.isInteger(hour) || hour < 0 || hour > 23)) {
+			return apiError("hours must contain values from 0–23", 400);
+		}
+		if ((await getFacilityType(facility_id)) !== "sheares") {
+			return apiError("Only Sheares facility schedules can be managed", 403);
+		}
+
+		const schedules = await syncFacilityScheduleGrid(
+			facility_id,
+			uniqueDays.sort((a, b) => a - b),
+			uniqueHours.sort((a, b) => a - b),
+		);
+		return apiOk(schedules);
 	} catch (e) {
 		return handleApiError(e);
 	}

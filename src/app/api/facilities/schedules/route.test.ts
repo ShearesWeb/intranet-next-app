@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
 	createSchedule: vi.fn(),
 	updateSchedule: vi.fn(),
 	deleteSchedule: vi.fn(),
+	syncFacilityScheduleGrid: vi.fn(),
 	getFacilityType: vi.fn(),
 	listFacilities: vi.fn(),
 	getCoreServiceDisabledApiResponse: vi.fn(),
@@ -25,6 +26,7 @@ vi.mock("@/lib/facilities/facility-schedules", () => ({
 	createSchedule: mocks.createSchedule,
 	updateSchedule: mocks.updateSchedule,
 	deleteSchedule: mocks.deleteSchedule,
+	syncFacilityScheduleGrid: mocks.syncFacilityScheduleGrid,
 }));
 vi.mock("@/lib/facilities/facility-catalog", () => ({
 	getFacilityType: mocks.getFacilityType,
@@ -155,6 +157,27 @@ describe("schedules route writes", () => {
 		const res = await POST(req("POST", { facility_id: 2, day_of_week: 1, hour: 19 }));
 		expect(res.status).toBe(403);
 		expect(mocks.createSchedule).not.toHaveBeenCalled();
+	});
+
+	it("PUT replaces a facility schedule grid", async () => {
+		mocks.requireJcrcAccess.mockResolvedValue({ is_jcrc: true });
+		mocks.syncFacilityScheduleGrid.mockResolvedValue([
+			{ id: 8, facility_id: 2, day_of_week: 1, hour: 18 },
+		]);
+		const { PUT } = await import("./route");
+		const res = await PUT(req("PUT", { facility_id: 2, days: [3, 1, 1], hours: [19, 18, 18] }));
+
+		expect(res.status).toBe(200);
+		expect(mocks.syncFacilityScheduleGrid).toHaveBeenCalledWith(2, [1, 3], [18, 19]);
+	});
+
+	it("PUT rejects invalid days", async () => {
+		mocks.requireJcrcAccess.mockResolvedValue({ is_jcrc: true });
+		const { PUT } = await import("./route");
+		const res = await PUT(req("PUT", { facility_id: 2, days: [7], hours: [18] }));
+
+		expect(res.status).toBe(400);
+		expect(mocks.syncFacilityScheduleGrid).not.toHaveBeenCalled();
 	});
 
 	it("PATCH returns 400 without an id", async () => {

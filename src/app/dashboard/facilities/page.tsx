@@ -62,6 +62,14 @@ export default function FacilitiesPage() {
 		() => bookings.filter((booking) => booking.date === selectedDate),
 		[bookings, selectedDate],
 	);
+	const dayFacilityIds = useMemo(
+		() => new Set(dayBookings.map((booking) => booking.facility_id)),
+		[dayBookings],
+	);
+	const dayFacilities = useMemo(
+		() => facilities.filter((facility) => dayFacilityIds.has(facility.id)),
+		[facilities, dayFacilityIds],
+	);
 
 	return (
 		<div className="flex flex-col space-y-6 p-4 md:p-6">
@@ -94,7 +102,7 @@ export default function FacilitiesPage() {
 
 							<VenueCardGrid
 								date={selectedDate}
-								facilities={facilities}
+								facilities={dayFacilities}
 								slots={dayBookings}
 								isChair={isChair}
 								loading={loading || facilitiesLoading}

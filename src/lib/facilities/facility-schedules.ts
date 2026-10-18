@@ -117,3 +117,75 @@ export async function deleteSchedule(id: number): Promise<void> {
 		throw new ApiError(500, "Failed to delete schedule");
 	}
 }
+
+/**
+ * Replace one facility's recurring weekly grid with a day × hour selection.
+ *
+ * Existing matching rows are retained and made unbounded. Missing rows are
+ * inserted before obsolete rows are removed, so a failed insert cannot wipe
+ * the facility's current availability.
+ */
+export async function syncFacilityScheduleGrid(
+	facilityId: number,
+	days: number[],
+	hours: number[],
+): Promise<FacilitySchedule[]> {
+	const supabase = await createClient();
+	const current = await listSchedules(facilityId);
+	const desiredKeys = new Set(days.flatMap((day) => hours.map((hour) => `${day}:${hour}`)));
+	const retainedIds: number[] = [];
+	const obsoleteIds: number[] = [];
+	const retainedKeys = new Set<string>();
+
+	for (const schedule of current) {
+		const key = `${schedule.day_of_week}:${schedule.hour}`;
+		if (desiredKeys.has(key) && !retainedKeys.has(key)) {
+			retainedKeys.add(key);
+			retainedIds.push(schedule.id);
+		} else {
+			obsoleteIds.push(schedule.id);
+		}
+	}
+
+	const missing = [...desiredKeys]
+		.filter((key) => !retainedKeys.has(key))
+		.map((key) => {
+			const [day, hour] = key.split(":").map(Number);
+			return {
+				facility_id: facilityId,
+				day_of_week: day,
+				hour,
+				start_date: null,
+				end_date: null,
+			};
+		});
+
+	if (missing.length > 0) {
+		const { error } = await supabase.from("facility_schedules").insert(missing);
+		if (error) {
+			console.error("Error adding facility schedule grid rows:", error);
+			throw new ApiError(500, "Failed to update facility availability");
+		}
+	}
+
+	if (retainedIds.length > 0) {
+		const { error } = await supabase
+			.from("facility_schedules")
+			.update({ start_date: null, end_date: null })
+			.in("id", retainedIds);
+		if (error) {
+			console.error("Error normalizing facility schedule grid rows:", error);
+			throw new ApiError(500, "Failed to update facility availability");
+		}
+	}
+
+	if (obsoleteIds.length > 0) {
+		const { error } = await supabase.from("facility_schedules").delete().in("id", obsoleteIds);
+		if (error) {
+			console.error("Error removing facility schedule grid rows:", error);
+			throw new ApiError(500, "Failed to update facility availability");
+		}
+	}
+
+	return listSchedules(facilityId);
+}
