@@ -22,6 +22,7 @@
 		"@supabase/ssr": "^0.10.2",
 		"@supabase/supabase-js": "^2.103.0",
 		"@tanstack/react-table": "^8.21.3",
+		"aws4fetch": "^1.0.20",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
 		"lucide-react": "^0.545.0",

@@ -82,7 +82,7 @@ preview: ## Build + run locally (wrangler dev)
 deploy: ## Build + deploy to Cloudflare (ENV=prd default, or ENV=preprod)
 	opennextjs-cloudflare build $(ENVF)
 	rm -rf .open-next/cache
-	opennextjs-cloudflare deploy $(ENVF)
+	opennextjs-cloudflare deploy $(ENVF) -- --keep-vars
 
 cf-typegen: ## Generate cloudflare-env.d.ts
 	wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts
