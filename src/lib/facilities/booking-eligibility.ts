@@ -4,7 +4,12 @@ import { type AuthenticatedUser, type UserAppointment } from "@/types/user";
 /** JCRC's roles are separate CCAs, so they all book under this one. */
 export const SHEARES_HALL_CCA_NAME = "Sheares Hall";
 
-/** How many days past today a committee may book. JCRC is held only by the booking weeks. */
+/**
+ * How many days past today a committee may book. JCRC is held only by the booking weeks.
+ *
+ * The intranet schema's `validate_facility_claim` trigger enforces the same number,
+ * so change the two together.
+ */
 export const COMMITTEE_BOOKING_DAYS_AHEAD = 7;
 
 export interface BookingCca {
