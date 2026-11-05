@@ -66,7 +66,7 @@ export async function getClaimsForCcas(ccaIds: number[]): Promise<ClaimWithFacil
  *
  * The slot is identified by (facility_id, date, hour) — there is no
  * booking row to reference. `created_by` must be the caller, which the INSERT
- * policy checks alongside `can_manage_cca` or JCRC.
+ * policy checks alongside `can_book_for_cca`.
  */
 export async function createClaim(
 	facilityId: number,

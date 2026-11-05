@@ -25,9 +25,8 @@ type BookingAppointment = Pick<UserAppointment, "cca_kind" | "position_type">;
  * Hall positions, books under Sheares Hall. Production models those seats as `lead`
  * and the fixtures as `maincomm`; `blockcomm` is excluded.
  *
- * This is stricter than the `facility_claims` policies, which only require
- * `can_manage_cca` or `is_jcrc`, so the API is what enforces it. Those policies
- * also refuse a committee chair with nobody reporting to them.
+ * The `facility_claims` policies apply this same rule in the database through
+ * `internal.can_book_for_cca` (intranet schema), so change the two together.
  */
 export function isCommitteeBookingAppointment(appointment: BookingAppointment): boolean {
 	return (
