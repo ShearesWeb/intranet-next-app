@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Building2, Shield } from "lucide-react";
 import { useAuth } from "@/lib/auth/auth-context";
 import { EmptyState } from "@/components/layout/empty-state";
@@ -23,13 +23,13 @@ export default function AdminFacilitiesPage() {
 	const [tab, setTab] = useState<ManageTab>("requests");
 	const allowed = Boolean(user?.is_jcrc);
 
-	const { data: facilityData, loading: facilitiesLoading } = useApiQuery<Facility[]>(
+	const { data: facilityData, hasLoaded: facilitiesLoaded } = useApiQuery<Facility[]>(
 		"/api/facilities/catalog",
 		{ initialData: [], enabled: allowed },
 	);
 	const {
 		data: scheduleData,
-		loading: schedulesLoading,
+		hasLoaded: schedulesLoaded,
 		refetch: refetchSchedules,
 	} = useApiQuery<FacilitySchedule[]>("/api/facilities/schedules", {
 		initialData: [],
@@ -39,7 +39,7 @@ export default function AdminFacilitiesPage() {
 	});
 	const {
 		data: approvalData,
-		loading: approvalsLoading,
+		hasLoaded: approvalsLoaded,
 		refetch: refetchApprovals,
 	} = useApiQuery<ApprovalsPayload>("/api/facilities/approvals", {
 		initialData: NO_APPROVALS,
@@ -61,12 +61,6 @@ export default function AdminFacilitiesPage() {
 		() => Promise.all([refetchSchedules(), refetchApprovals()]),
 		[refetchSchedules, refetchApprovals],
 	);
-
-	// A refetch keeps the current view on screen. Only the first load gets a skeleton.
-	const hasLoaded = useRef(false);
-	if (allowed && !facilitiesLoading && !schedulesLoading && !approvalsLoading) {
-		hasLoaded.current = true;
-	}
 
 	if (user && !user.is_jcrc) {
 		return (
@@ -100,7 +94,7 @@ export default function AdminFacilitiesPage() {
 				onChange={setTab}
 			/>
 
-			{!hasLoaded.current ? (
+			{!facilitiesLoaded || !schedulesLoaded || !approvalsLoaded ? (
 				<Skeleton className="h-96 w-full rounded-xl" />
 			) : tab === "requests" ? (
 				<FacilityRequests approvals={approvals} onChanged={refetchApprovals} />

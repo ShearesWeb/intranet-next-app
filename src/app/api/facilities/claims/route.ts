@@ -2,7 +2,7 @@ import { requireAuth } from "@/lib/api/auth";
 import { apiOk, apiError, handleApiError } from "@/lib/api/response";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 import {
-	getClaimsForCca,
+	getClaimsForCcas,
 	createClaim,
 	createClaims,
 	deleteClaims,
@@ -16,26 +16,16 @@ import { NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(req: NextRequest) {
+/** Every claim of the CCAs the caller may book for. */
+export async function GET() {
 	const disabledResponse = getCoreServiceDisabledApiResponse("facilities");
 	if (disabledResponse) return disabledResponse;
 
 	try {
 		const user = await requireAuth();
-		const ccaParam = req.nextUrl.searchParams.get("ccaId");
-
-		if (!ccaParam) {
-			const bookingCcaIds = await getBookingCcaIds(user);
-			if (bookingCcaIds.length === 0) return apiOk([]);
-			const claims = await getClaimsForCca(bookingCcaIds[0]);
-			return apiOk(claims.filter((claim) => claim.facility_type === "sheares"));
-		}
-
-		const ccaId = Number(ccaParam);
-		if (!(await canBookForCca(user, ccaId))) {
-			return apiError("Not authorized to view this CCA's bookings", 403);
-		}
-		const claims = await getClaimsForCca(ccaId);
+		const bookingCcaIds = await getBookingCcaIds(user);
+		if (bookingCcaIds.length === 0) return apiOk([]);
+		const claims = await getClaimsForCcas(bookingCcaIds);
 		return apiOk(claims.filter((claim) => claim.facility_type === "sheares"));
 	} catch (e) {
 		return handleApiError(e);

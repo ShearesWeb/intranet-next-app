@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { BookCalendar } from "@/components/facilities/book-calendar";
 import { FacilityEmpty, FacilityTabs } from "@/components/facilities/facility-ui";
@@ -40,6 +40,7 @@ export default function FacilitiesPage() {
 	const {
 		data: slotData,
 		loading: slotsLoading,
+		hasLoaded: slotsLoaded,
 		refetch: refetchSlots,
 	} = useApiQuery<FacilitySlot[]>(slotsUrl, {
 		enabled: Boolean(week),
@@ -47,21 +48,16 @@ export default function FacilitiesPage() {
 		toastOnError: true,
 		errorMessage: "Failed to load the facilities calendar",
 	});
-	const { data: facilityData, loading: facilitiesLoading } = useApiQuery<Facility[]>(
+	const { data: facilityData, hasLoaded: facilitiesLoaded } = useApiQuery<Facility[]>(
 		"/api/facilities/catalog",
 		{ initialData: [] },
 	);
 
-	const bookingCcaIds = useMemo(() => bookingCcas.map((cca) => cca.id), [bookingCcas]);
 	const {
 		claims: myClaims,
 		loading: claimsLoading,
 		refetch: refetchClaims,
-	} = useMyFacilityClaims(bookingCcaIds);
-
-	// A refetch keeps the current grid on screen. Only the first load gets a skeleton.
-	const hasLoaded = useRef(false);
-	if (!slotsLoading && !facilitiesLoading) hasLoaded.current = true;
+	} = useMyFacilityClaims(canBook);
 
 	const slots = useMemo(
 		() => (slotData ?? []).filter((slot) => isBookableFacilityType(slot.type)),
@@ -134,7 +130,7 @@ export default function FacilitiesPage() {
 				/>
 			) : !week ? (
 				<FacilityEmpty>Facility booking is unavailable outside NUS teaching weeks.</FacilityEmpty>
-			) : !hasLoaded.current ? (
+			) : !slotsLoaded || !facilitiesLoaded ? (
 				<Skeleton className="h-[640px] w-full rounded-xl" />
 			) : columns.length === 0 && !slotsLoading ? (
 				<FacilityEmpty>No venues are open for booking this week.</FacilityEmpty>

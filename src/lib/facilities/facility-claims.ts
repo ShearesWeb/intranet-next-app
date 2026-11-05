@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { ApiError } from "@/lib/api/errors";
+import { unwrapRelation } from "@/lib/supabase/helpers";
 import { FacilityClaim, FacilityType } from "@/types/facilities";
 
 export interface ClaimWithFacility extends FacilityClaim {
@@ -17,13 +18,8 @@ type ClaimRow = FacilityClaim & {
 		| null;
 };
 
-function unwrap<T>(value: T | T[] | null): T | null {
-	if (!value) return null;
-	return Array.isArray(value) ? (value[0] ?? null) : value;
-}
-
 function toClaimWithFacility(row: ClaimRow): ClaimWithFacility {
-	const facility = unwrap(row.facilities);
+	const facility = unwrapRelation(row.facilities);
 
 	return {
 		id: row.id,
@@ -36,7 +32,7 @@ function toClaimWithFacility(row: ClaimRow): ClaimWithFacility {
 		created_at: row.created_at,
 		decided_at: row.decided_at,
 		decided_by: row.decided_by,
-		cca_name: unwrap(row.ccas)?.name ?? "Unknown CCA",
+		cca_name: unwrapRelation(row.ccas)?.name ?? "Unknown CCA",
 		venue: facility?.venue ?? "",
 		sub_venue: facility?.sub_venue ?? "",
 		facility_type: facility?.type ?? "external",
@@ -46,14 +42,14 @@ function toClaimWithFacility(row: ClaimRow): ClaimWithFacility {
 const CLAIM_SELECT =
 	"id, facility_id, date, hour, cca_id, status, created_by, created_at, decided_at, decided_by, ccas(name), facilities(venue, sub_venue, type)";
 
-/** All claims a CCA has made, soonest slot first, with the facility joined in. */
-export async function getClaimsForCca(ccaId: number): Promise<ClaimWithFacility[]> {
+/** All claims these CCAs have made, soonest slot first, with the facility joined in. */
+export async function getClaimsForCcas(ccaIds: number[]): Promise<ClaimWithFacility[]> {
 	const supabase = await createClient();
 
 	const { data, error } = await supabase
 		.from("facility_claims")
 		.select(CLAIM_SELECT)
-		.eq("cca_id", ccaId)
+		.in("cca_id", ccaIds)
 		.order("date", { ascending: true })
 		.order("hour", { ascending: true });
 
@@ -235,7 +231,7 @@ export async function getClaimOwners(
 		id: row.id,
 		cca_id: row.cca_id,
 		facility_id: row.facility_id,
-		facility_type: unwrap(row.facilities)?.type ?? null,
+		facility_type: unwrapRelation(row.facilities)?.type ?? null,
 	}));
 }
 

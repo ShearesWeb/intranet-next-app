@@ -59,7 +59,7 @@ describe("GET /api/facilities/claims", () => {
 		asPersona("layla");
 		const { GET } = await import("@/app/api/facilities/claims/route");
 		const { status, data } = await readJson<unknown[]>(
-			await GET(makeRequest("/api/facilities/claims")),
+			await GET(),
 		);
 		expect(status).toBe(200);
 		expect(Array.isArray(data)).toBe(true);
@@ -68,7 +68,7 @@ describe("GET /api/facilities/claims", () => {
 	it("401s for anonymous", async () => {
 		asPersona("anonymous");
 		const { GET } = await import("@/app/api/facilities/claims/route");
-		expect((await readJson(await GET(makeRequest("/api/facilities/claims")))).status).toBe(401);
+		expect((await readJson(await GET())).status).toBe(401);
 	});
 });
 

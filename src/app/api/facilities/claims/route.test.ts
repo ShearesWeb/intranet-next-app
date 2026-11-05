@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
 	deleteClaims: vi.fn(),
 	getClaimOwners: vi.fn(),
 	canManageFacilities: vi.fn(),
-	getClaimsForCca: vi.fn(),
+	getClaimsForCcas: vi.fn(),
 	canBookForCca: vi.fn(),
 	getBookingCcaIds: vi.fn(),
 	getFacilityType: vi.fn(),
@@ -23,7 +23,7 @@ vi.mock("@/lib/facilities/facility-claims", () => ({
 	createClaims: mocks.createClaims,
 	deleteClaims: mocks.deleteClaims,
 	getClaimOwners: mocks.getClaimOwners,
-	getClaimsForCca: mocks.getClaimsForCca,
+	getClaimsForCcas: mocks.getClaimsForCcas,
 }));
 vi.mock("@/lib/facilities/facility-access", () => ({
 	canManageFacilities: mocks.canManageFacilities,
@@ -59,24 +59,32 @@ function futureDate(daysAhead: number): string {
 	return `${d.getFullYear()}-${m}-${day}`;
 }
 
-describe("GET /api/facilities/claims — Sheares-only history", () => {
+describe("GET /api/facilities/claims", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mocks.getCoreServiceDisabledApiResponse.mockReturnValue(null);
 		mocks.requireAuth.mockResolvedValue({ id: 42 });
-		mocks.canBookForCca.mockReturnValue(true);
-		mocks.getClaimsForCca.mockResolvedValue([
+		mocks.getBookingCcaIds.mockResolvedValue([3, 8]);
+		mocks.getClaimsForCcas.mockResolvedValue([
 			{ id: 1, facility_type: "sheares" },
 			{ id: 2, facility_type: "nus" },
 			{ id: 3, facility_type: "external" },
 		]);
 	});
 
-	it("returns only Sheares claims", async () => {
+	it("returns only Sheares claims, across every CCA the caller books for", async () => {
 		const { GET } = await import("./route");
-		const req = new NextRequest("http://localhost/api/facilities/claims?ccaId=3");
-		const res = await GET(req);
+		const res = await GET();
 		expect((await res.json()).data).toEqual([{ id: 1, facility_type: "sheares" }]);
+		expect(mocks.getClaimsForCcas).toHaveBeenCalledWith([3, 8]);
+	});
+
+	it("returns nothing without querying when the caller cannot book", async () => {
+		mocks.getBookingCcaIds.mockResolvedValue([]);
+		const { GET } = await import("./route");
+		const res = await GET();
+		expect((await res.json()).data).toEqual([]);
+		expect(mocks.getClaimsForCcas).not.toHaveBeenCalled();
 	});
 });
 
