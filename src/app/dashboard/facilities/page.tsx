@@ -129,7 +129,7 @@ export default function FacilitiesPage() {
 					onChanged={onChanged}
 				/>
 			) : !week ? (
-				<FacilityEmpty>Facility booking is unavailable outside NUS teaching weeks.</FacilityEmpty>
+				<FacilityEmpty>Facility booking is closed during the NUS vacation.</FacilityEmpty>
 			) : !slotsLoaded || !facilitiesLoaded ? (
 				<Skeleton className="h-[640px] w-full rounded-xl" />
 			) : columns.length === 0 && !slotsLoading ? (

@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
 
 		if (!isWithinBookingWindow(date)) {
 			return apiError(
-				"Facilities can only be booked up to 4 weeks ahead, during NUS teaching weeks",
+				"Facilities can only be booked up to 4 weeks ahead, during the NUS semester",
 				403,
 			);
 		}

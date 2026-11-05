@@ -1,29 +1,40 @@
 const DAY_MS = 86_400_000;
 
-interface TeachingBlock {
+interface AcademicBlock {
+	/** The Monday this block starts on. */
 	start: string;
-	firstWeek: number;
 	weeks: number;
+	label: (weekIndex: number) => string;
 }
 
+const teachingWeeks = (firstWeek: number) => (weekIndex: number) => `Week ${firstWeek + weekIndex}`;
+const readingWeek = () => "Reading Week";
+const examWeeks = (weekIndex: number) => `Exam Week ${weekIndex + 1}`;
+
 /**
- * NUS AY2026/27 teaching periods.
+ * NUS AY2026/27, in Monday-to-Sunday weeks.
  *
- * Each semester has Weeks 1-6, a recess week, then Weeks 7-13. Add the next
- * academic year's dates here when its calendar is published.
+ * Each semester has Weeks 1-6, a recess week, Weeks 7-13, a reading week and two
+ * exam weeks. Recess weeks and the vacation are left out. Add the next academic
+ * year's dates here when its calendar is published.
  */
-const TEACHING_BLOCKS: TeachingBlock[] = [
+const ACADEMIC_BLOCKS: AcademicBlock[] = [
 	// Semester 1
-	{ start: "2026-08-10", firstWeek: 1, weeks: 6 },
-	{ start: "2026-09-28", firstWeek: 7, weeks: 7 },
+	{ start: "2026-08-10", weeks: 6, label: teachingWeeks(1) },
+	{ start: "2026-09-28", weeks: 7, label: teachingWeeks(7) },
+	{ start: "2026-11-16", weeks: 1, label: readingWeek },
+	{ start: "2026-11-23", weeks: 2, label: examWeeks },
 
 	// Semester 2
-	{ start: "2027-01-11", firstWeek: 1, weeks: 6 },
-	{ start: "2027-03-01", firstWeek: 7, weeks: 7 },
+	{ start: "2027-01-11", weeks: 6, label: teachingWeeks(1) },
+	{ start: "2027-03-01", weeks: 7, label: teachingWeeks(7) },
+	{ start: "2027-04-19", weeks: 1, label: readingWeek },
+	{ start: "2027-04-26", weeks: 2, label: examWeeks },
 ];
 
 export interface NusAcademicWeek {
-	weekNumber: number;
+	/** "Week 8", "Reading Week" or "Exam Week 1". */
+	label: string;
 	start: string;
 	end: string;
 	dates: string[];
@@ -63,7 +74,7 @@ export function getSingaporeDateKey(now: Date = new Date()): string {
 export function getNusWeekForDate(dateKey: string): NusAcademicWeek | null {
 	const targetDay = dateKeyToDayNumber(dateKey);
 
-	for (const block of TEACHING_BLOCKS) {
+	for (const block of ACADEMIC_BLOCKS) {
 		const blockStart = dateKeyToDayNumber(block.start);
 		const daysFromStart = targetDay - blockStart;
 		const weekOffset = Math.floor(daysFromStart / 7);
@@ -73,7 +84,7 @@ export function getNusWeekForDate(dateKey: string): NusAcademicWeek | null {
 		const start = addDays(block.start, weekOffset * 7);
 
 		return {
-			weekNumber: block.firstWeek + weekOffset,
+			label: block.label(weekOffset),
 			start,
 			end: addDays(start, 6),
 			dates: Array.from({ length: 7 }, (_, index) => addDays(start, index)),
@@ -97,9 +108,9 @@ export function getMondayOf(dateKey: string): string {
 }
 
 /**
- * The teaching weeks open for booking: whichever of the next four calendar
- * weeks are teaching weeks. Recess and exam weeks stay closed, so this can hold
- * fewer than four weeks, or none during the vacation.
+ * The weeks open for booking: whichever of the next four calendar weeks fall in
+ * the semester, through reading week and exams. Recess weeks stay closed, so this
+ * can hold fewer than four weeks, or none during the vacation.
  */
 export function getBookingWeeks(now: Date = new Date()): NusAcademicWeek[] {
 	const monday = getMondayOf(getSingaporeDateKey(now));

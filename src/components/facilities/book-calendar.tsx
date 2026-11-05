@@ -441,7 +441,7 @@ export function BookCalendar({
 					</div>
 					<div className="flex flex-wrap items-baseline gap-2">
 						<span className="text-[17px] font-bold">
-							Week {week.weekNumber}
+							{week.label}
 							{week.dates.includes(today) ? " · this week" : ""}
 						</span>
 						<span className="text-[13px] text-muted-foreground">
@@ -454,7 +454,7 @@ export function BookCalendar({
 							onClick={() => goToWeek(0)}
 							className="h-[30px] cursor-pointer rounded-full border bg-card px-3 text-[12.5px] font-semibold hover:bg-accent"
 						>
-							{currentWeekIsFirst ? "Back to this week" : `Back to Week ${weeks[0].weekNumber}`}
+							{currentWeekIsFirst ? "Back to this week" : `Back to ${weeks[0].label}`}
 						</button>
 					)}
 					<div className="ml-auto flex items-center gap-2">
@@ -466,8 +466,8 @@ export function BookCalendar({
 								<button
 									key={option.start}
 									type="button"
-									aria-label={`Week ${option.weekNumber} · ${formatWeekRange(option.start, option.end)}`}
-									title={`Week ${option.weekNumber} · ${formatWeekRange(option.start, option.end)}`}
+									aria-label={`${option.label} · ${formatWeekRange(option.start, option.end)}`}
+									title={`${option.label} · ${formatWeekRange(option.start, option.end)}`}
 									onClick={() => goToWeek(index)}
 									className={cn(
 										"h-1.5 cursor-pointer rounded-full transition-[width] duration-200",
