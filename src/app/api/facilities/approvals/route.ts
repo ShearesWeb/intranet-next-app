@@ -7,8 +7,7 @@ import {
 	rejectClaims,
 	resolveSlot,
 } from "@/lib/facilities/facility-approvals";
-import { deleteClaim, getClaim } from "@/lib/facilities/facility-claims";
-import { getFacilityType } from "@/lib/facilities/facility-catalog";
+import { deleteClaims, getClaimOwners } from "@/lib/facilities/facility-claims";
 import { todayKey } from "@/lib/date";
 import { NextRequest } from "next/server";
 
@@ -30,10 +29,15 @@ function windowEnd(from: string, days: number): string {
 }
 
 async function areShearesClaims(claimIds: number[]): Promise<boolean> {
-	const claims = await Promise.all(claimIds.map((id) => getClaim(id)));
-	if (claims.some((claim) => !claim)) return false;
-	const types = await Promise.all(claims.map((claim) => getFacilityType(claim!.facility_id)));
-	return types.every((type) => type === "sheares");
+	const distinct = new Set(claimIds);
+	const owners = await getClaimOwners([...distinct]);
+	return owners.length === distinct.size && owners.every((c) => c.facility_type === "sheares");
+}
+
+/** Multi-hour requests name several claims; a single-hour action names just one. */
+function targetClaims(claimId: unknown, claimIds: unknown): number[] {
+	if (Array.isArray(claimIds)) return claimIds as number[];
+	return claimId != null ? [claimId as number] : [];
 }
 
 /** JCRC approvals queue: slots awaiting approval + upcoming confirmed (revocable). */
@@ -60,8 +64,8 @@ export async function GET() {
 }
 
 /**
- * JCRC acts on a slot: approve one claim (rejecting its competitors), reject
- * every claim, or revoke a confirmed booking.
+ * JCRC acts on a request: approve its claims (rejecting their competitors),
+ * reject them, or revoke a confirmed booking.
  *
  * Actions are keyed by claim id rather than booking id — there is no booking
  * row to name. Revoking deletes the claim, since there is no cancelled status.
@@ -74,31 +78,28 @@ export async function POST(req: NextRequest) {
 		await requireJcrcAccess();
 		const { action, claim_id, claim_ids, competing_claim_ids } = await req.json();
 
+		const targets = targetClaims(claim_id, claim_ids);
+
 		if (action === "approve") {
-			if (claim_id == null) return apiError("claim_id is required to approve", 400);
+			if (!targets.length) return apiError("claim_id or claim_ids is required to approve", 400);
 			const competitors = Array.isArray(competing_claim_ids) ? competing_claim_ids : [];
-			if (!(await areShearesClaims([claim_id, ...competitors]))) {
+			if (!(await areShearesClaims([...targets, ...competitors]))) {
 				return apiError("Only Sheares facility claims can be managed", 403);
 			}
-			await resolveSlot(claim_id, competitors);
+			await resolveSlot(targets, competitors);
 		} else if (action === "reject") {
 			// Rejecting a contested slot has to clear every claim on it, not just one.
-			const targets: number[] = Array.isArray(claim_ids)
-				? claim_ids
-				: claim_id != null
-					? [claim_id]
-					: [];
 			if (!targets.length) return apiError("claim_id or claim_ids is required to reject", 400);
 			if (!(await areShearesClaims(targets))) {
 				return apiError("Only Sheares facility claims can be managed", 403);
 			}
 			await rejectClaims(targets);
 		} else if (action === "revoke") {
-			if (claim_id == null) return apiError("claim_id is required to revoke", 400);
-			if (!(await areShearesClaims([claim_id]))) {
+			if (!targets.length) return apiError("claim_id or claim_ids is required to revoke", 400);
+			if (!(await areShearesClaims(targets))) {
 				return apiError("Only Sheares facility claims can be managed", 403);
 			}
-			await deleteClaim(claim_id);
+			await deleteClaims(targets);
 		} else {
 			return apiError("action must be approve, reject or revoke", 400);
 		}

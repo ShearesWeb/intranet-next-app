@@ -9,16 +9,16 @@ const STEPS: { title: string; body: string }[] = [
 		body: STEP_1_BODY,
 	},
 	{
-		title: "2. CCAs claim a slot",
-		body: "Chairs claim an available booking for their CCA during the current NUS teaching week. One claim → the slot goes Pending. If two or more CCAs claim the same slot, it becomes a Conflict.",
+		title: "2. Committees claim a slot",
+		body: "Committee chairs and vice-chairs pick a time on the calendar and request it for their committee, up to 4 weeks ahead during NUS teaching weeks. JCRC books the same way, under Sheares Hall. One request → the time goes Pending. If two or more committees ask for overlapping hours, it becomes a Conflict.",
 	},
 	{
 		title: "3. JCRC approves every booking",
-		body: "Every claim needs JCRC approval on the Approvals page — including uncontested ones. For conflicts, JCRC picks the winning CCA. Approved slots become Confirmed; the others are released.",
+		body: "Every request needs JCRC approval on the Requests tab — including uncontested ones. For conflicts, JCRC picks the winning committee. Approved slots become Confirmed; the others are released.",
 	},
 	{
 		title: "4. Cancelling",
-		body: "Chairs can withdraw their own claim at any time, whatever its status. JCRC can revoke any confirmed booking, which reopens the slot.",
+		body: "Chairs and vice-chairs can withdraw their committee's claim at any time, whatever its status. JCRC can revoke any confirmed booking, which reopens the slot.",
 	},
 ];
 
@@ -29,7 +29,7 @@ export default function FacilitiesGuidePage() {
 				title="Facilities Booking Guide"
 				description="How venue booking works, claims, and conflict resolution."
 			/>
-			<div className="grid gap-4 sm:grid-cols-2">
+			<div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr))]">
 				{STEPS.map((s) => (
 					<div key={s.title} className="rounded-lg border p-4">
 						<h3 className="font-semibold">{s.title}</h3>

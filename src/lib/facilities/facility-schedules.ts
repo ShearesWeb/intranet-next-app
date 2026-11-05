@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { ApiError } from "@/lib/api/errors";
+import { addDays, getSingaporeDateKey } from "@/lib/nus-academic-calendar";
+import { isFacilityHidden, type ScheduleCell } from "@/lib/facilities/weekly-availability";
 import { FacilitySchedule } from "@/types/facilities";
 
 /**
@@ -119,20 +121,22 @@ export async function deleteSchedule(id: number): Promise<void> {
 }
 
 /**
- * Replace one facility's recurring weekly grid with a day × hour selection.
+ * Replace one facility's recurring weekly grid with a painted set of cells.
  *
- * Existing matching rows are retained and made unbounded. Missing rows are
- * inserted before obsolete rows are removed, so a failed insert cannot wipe
- * the facility's current availability.
+ * Existing matching rows are retained. Missing rows are inserted before obsolete
+ * rows are removed, so a failed insert cannot wipe the facility's current
+ * availability. A venue hidden from Book stays hidden: its rows keep a past end
+ * date, so saving hours does not reopen it by accident.
  */
-export async function syncFacilityScheduleGrid(
+export async function syncFacilityScheduleCells(
 	facilityId: number,
-	days: number[],
-	hours: number[],
+	cells: ScheduleCell[],
 ): Promise<FacilitySchedule[]> {
 	const supabase = await createClient();
 	const current = await listSchedules(facilityId);
-	const desiredKeys = new Set(days.flatMap((day) => hours.map((hour) => `${day}:${hour}`)));
+	const today = getSingaporeDateKey();
+	const endDate = isFacilityHidden(current, today) ? addDays(today, -1) : null;
+	const desiredKeys = new Set(cells.map((cell) => `${cell.day}:${cell.hour}`));
 	const retainedIds: number[] = [];
 	const obsoleteIds: number[] = [];
 	const retainedKeys = new Set<string>();
@@ -156,7 +160,7 @@ export async function syncFacilityScheduleGrid(
 				day_of_week: day,
 				hour,
 				start_date: null,
-				end_date: null,
+				end_date: endDate,
 			};
 		});
 
@@ -171,7 +175,7 @@ export async function syncFacilityScheduleGrid(
 	if (retainedIds.length > 0) {
 		const { error } = await supabase
 			.from("facility_schedules")
-			.update({ start_date: null, end_date: null })
+			.update({ start_date: null, end_date: endDate })
 			.in("id", retainedIds);
 		if (error) {
 			console.error("Error normalizing facility schedule grid rows:", error);
@@ -185,6 +189,33 @@ export async function syncFacilityScheduleGrid(
 			console.error("Error removing facility schedule grid rows:", error);
 			throw new ApiError(500, "Failed to update facility availability");
 		}
+	}
+
+	return listSchedules(facilityId);
+}
+
+/**
+ * Show or hide a venue on Book without losing its hours.
+ *
+ * There is no hidden column, so hiding end-dates every row in the past: the
+ * calendar stops offering them, and reopening clears the date. Existing claims
+ * are left alone, as with any other end-dating.
+ */
+export async function setFacilityVisibility(
+	facilityId: number,
+	visible: boolean,
+): Promise<FacilitySchedule[]> {
+	const supabase = await createClient();
+	const endDate = visible ? null : addDays(getSingaporeDateKey(), -1);
+
+	const { error } = await supabase
+		.from("facility_schedules")
+		.update({ start_date: null, end_date: endDate })
+		.eq("facility_id", facilityId);
+
+	if (error) {
+		console.error("Error updating facility visibility:", error);
+		throw new ApiError(500, "Failed to update facility availability");
 	}
 
 	return listSchedules(facilityId);

@@ -129,6 +129,8 @@ export interface ApprovalClaimant {
 	cca_name: string;
 	chair_name: string;
 	chair_telegram: string;
+	/** When the claim was made; null if it could not be read. */
+	requested_at: string | null;
 }
 
 /** A slot awaiting JCRC approval (one or more competing claims). */
@@ -142,6 +144,7 @@ export interface SlotApprovalView {
 export interface ConfirmedBookingView {
 	slot: FacilitySlot;
 	cca_name: string;
+	chair_name: string;
 	claim_id: number;
 	days_until_booking: number;
 }

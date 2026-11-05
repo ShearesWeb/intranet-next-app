@@ -113,6 +113,51 @@ export async function createClaim(
 }
 
 /**
+ * Book several hours of one slot day at once.
+ *
+ * A single multi-row INSERT, so a request either lands whole or not at all. A
+ * chair is never left holding half of the time they asked for.
+ */
+export async function createClaims(
+	facilityId: number,
+	slotDate: string,
+	hours: number[],
+	ccaId: number,
+	userId: number,
+): Promise<ClaimWithFacility[]> {
+	const supabase = await createClient();
+
+	const { data, error } = await supabase
+		.from("facility_claims")
+		.insert(
+			hours.map((hour) => ({
+				facility_id: facilityId,
+				date: slotDate,
+				hour,
+				cca_id: ccaId,
+				created_by: userId,
+			})),
+		)
+		.select(CLAIM_SELECT);
+
+	if (error) {
+		if (error.code === "23505") {
+			if (error.message.includes("uq_facility_claims_approved_slot")) {
+				throw new ApiError(409, "Part of that time is already confirmed for another CCA");
+			}
+			throw new ApiError(409, "Your CCA has already requested part of that time");
+		}
+		if (error.message.includes("No published schedule offers")) {
+			throw new ApiError(400, "Part of that time is not open for booking");
+		}
+		console.error("Error creating claims:", error);
+		throw new ApiError(403, "You are not allowed to book for this CCA");
+	}
+
+	return ((data ?? []) as unknown as ClaimRow[]).map(toClaimWithFacility);
+}
+
+/**
  * Withdraw = delete the claim row. There is no `cancelled` status, so this
  * leaves nothing behind and the slot frees up for that CCA to claim again.
  */
@@ -135,6 +180,63 @@ export async function deleteClaim(claimId: number): Promise<void> {
 	if (!data) {
 		throw new ApiError(403, "You are not allowed to withdraw this booking");
 	}
+}
+
+/**
+ * Delete several claims in one statement, so a multi-hour request is withdrawn
+ * or revoked whole. The DELETE policy filters rather than raises, so a short
+ * count means the caller could not delete all of them.
+ */
+export async function deleteClaims(claimIds: number[]): Promise<void> {
+	if (!claimIds.length) return;
+
+	const supabase = await createClient();
+	const { data, error } = await supabase
+		.from("facility_claims")
+		.delete()
+		.in("id", claimIds)
+		.select("id");
+
+	if (error) {
+		console.error("Error deleting claims:", error);
+		throw new ApiError(500, "Failed to withdraw claims");
+	}
+	if (!data || data.length < new Set(claimIds).size) {
+		throw new ApiError(403, "You are not allowed to withdraw this booking");
+	}
+}
+
+/** The CCA and venue type behind each claim, read in one query. */
+export async function getClaimOwners(
+	claimIds: number[],
+): Promise<
+	{ id: number; cca_id: number; facility_id: number; facility_type: FacilityType | null }[]
+> {
+	if (!claimIds.length) return [];
+
+	const supabase = await createClient();
+	const { data, error } = await supabase
+		.from("facility_claims")
+		.select("id, cca_id, facility_id, facilities(type)")
+		.in("id", claimIds);
+
+	if (error) {
+		console.error("Error loading claims:", error);
+		throw new ApiError(500, "Failed to load claims");
+	}
+
+	type OwnerRow = {
+		id: number;
+		cca_id: number;
+		facility_id: number;
+		facilities: { type: FacilityType } | { type: FacilityType }[] | null;
+	};
+	return ((data ?? []) as unknown as OwnerRow[]).map((row) => ({
+		id: row.id,
+		cca_id: row.cca_id,
+		facility_id: row.facility_id,
+		facility_type: unwrap(row.facilities)?.type ?? null,
+	}));
 }
 
 export async function getClaim(claimId: number): Promise<FacilityClaim | null> {

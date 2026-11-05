@@ -1,134 +1,159 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { PageHeader } from "@/components/layout/page-header";
-import { CurrentWeekBar } from "@/components/facilities/current-week-bar";
-import { VenueCardGrid } from "@/components/facilities/venue-card-grid";
-import { ClaimDialog } from "@/components/facilities/claim-dialog";
-import { MyCcaBookings } from "@/components/facilities/my-cca-bookings";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BookCalendar } from "@/components/facilities/book-calendar";
+import { FacilityEmpty, FacilityTabs } from "@/components/facilities/facility-ui";
+import { MyBookings } from "@/components/facilities/my-bookings";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useApiQuery } from "@/hooks/use-api-query";
-import { useChairCcas } from "@/hooks/use-chair-ccas";
-import { isBookableFacilityType } from "@/lib/facilities/bookable-types";
-import { getCurrentNusWeek, getSingaporeDateKey } from "@/lib/nus-academic-calendar";
+import { useFacilityBookingCcas } from "@/hooks/use-facility-booking-ccas";
+import { useMyFacilityClaims } from "@/hooks/use-my-facility-claims";
+import { useAuth } from "@/lib/auth/auth-context";
+import { isBookableFacilityType, isHiddenFacility } from "@/lib/facilities/bookable-types";
+import { groupClaimSegments } from "@/lib/facilities/booking-grid";
+import { getBookingWeeks, getMondayOf, getSingaporeDateKey } from "@/lib/nus-academic-calendar";
 import { Facility, SlotWithContext } from "@/types/facilities";
 
-// Product-level exclusions stay effective even when catalog data differs between environments.
-const HIDDEN_FACILITY_NAMES = new Set(["dance studio"]);
-
-function isHiddenFacility(facility: Facility): boolean {
-	return [facility.venue, facility.sub_venue].some((name) =>
-		HIDDEN_FACILITY_NAMES.has(name.trim().toLowerCase()),
-	);
-}
+type BookTab = "book" | "mine";
 
 export default function FacilitiesPage() {
-	const week = useMemo(() => getCurrentNusWeek(), []);
-	const [selectedDate, setSelectedDate] = useState(() => getSingaporeDateKey());
-	const [claimBooking, setClaimBooking] = useState<SlotWithContext | null>(null);
+	const { user } = useAuth();
+	const { bookingCcas, canBook, ready } = useFacilityBookingCcas();
+	const weeks = useMemo(() => getBookingWeeks(), []);
+	const [tab, setTab] = useState<BookTab>("book");
+	const [weekIndex, setWeekIndex] = useState(0);
+	const [day, setDay] = useState(() => {
+		const today = getSingaporeDateKey();
+		return weeks[0]?.dates.includes(today) ? today : (weeks[0]?.start ?? today);
+	});
 
-	const { chairCcas, isChair } = useChairCcas();
-
-	const slotsUrl = week
-		? `/api/facilities/slots?start=${week.start}&end=${week.end}`
-		: "/api/facilities/slots";
+	const week = weeks[weekIndex];
+	// The calendar needs one week at a time; My bookings' notes need the whole window.
+	const slotsUrl = useMemo(() => {
+		if (!week) return "/api/facilities/slots";
+		return tab === "mine"
+			? `/api/facilities/slots?start=${weeks[0].start}&end=${weeks[weeks.length - 1].end}`
+			: `/api/facilities/slots?start=${week.start}&end=${week.end}`;
+	}, [tab, week, weeks]);
 
 	const {
-		data,
-		loading,
-		refetch: fetchBookings,
+		data: slotData,
+		loading: slotsLoading,
+		refetch: refetchSlots,
 	} = useApiQuery<SlotWithContext[]>(slotsUrl, {
 		enabled: Boolean(week),
 		initialData: [],
+		toastOnError: true,
+		errorMessage: "Failed to load the facilities calendar",
 	});
 	const { data: facilityData, loading: facilitiesLoading } = useApiQuery<Facility[]>(
 		"/api/facilities/catalog",
 		{ initialData: [] },
 	);
 
-	const bookings = useMemo(
-		() => (data ?? []).filter((booking) => isBookableFacilityType(booking.type)),
-		[data],
+	const bookingCcaIds = useMemo(() => bookingCcas.map((cca) => cca.id), [bookingCcas]);
+	const {
+		claims: myClaims,
+		loading: claimsLoading,
+		refetch: refetchClaims,
+	} = useMyFacilityClaims(bookingCcaIds);
+
+	// A refetch keeps the current grid on screen. Only the first load gets a skeleton.
+	const hasLoaded = useRef(false);
+	if (!slotsLoading && !facilitiesLoading) hasLoaded.current = true;
+
+	const slots = useMemo(
+		() => (slotData ?? []).filter((slot) => isBookableFacilityType(slot.type)),
+		[slotData],
 	);
-	const facilities = useMemo(
-		() =>
-			(facilityData ?? []).filter(
-				(facility) => isBookableFacilityType(facility.type) && !isHiddenFacility(facility),
-			),
-		[facilityData],
+	// Venues hidden from Book offer no slots, so they drop out of the columns here.
+	const columns = useMemo(() => {
+		const offered = new Set(slots.map((slot) => slot.facility_id));
+		return (facilityData ?? []).filter(
+			(facility) =>
+				isBookableFacilityType(facility.type) &&
+				!isHiddenFacility(facility) &&
+				offered.has(facility.id),
+		);
+	}, [facilityData, slots]);
+
+	const onChanged = useCallback(
+		() => Promise.all([refetchSlots(), refetchClaims()]),
+		[refetchSlots, refetchClaims],
 	);
 
-	const dayBookings = useMemo(
-		() => bookings.filter((booking) => booking.date === selectedDate),
-		[bookings, selectedDate],
-	);
-	const dayFacilityIds = useMemo(
-		() => new Set(dayBookings.map((booking) => booking.facility_id)),
-		[dayBookings],
-	);
-	const dayFacilities = useMemo(
-		() => facilities.filter((facility) => dayFacilityIds.has(facility.id)),
-		[facilities, dayFacilityIds],
-	);
+	const pendingCount = useMemo(() => {
+		const from = getMondayOf(getSingaporeDateKey());
+		return groupClaimSegments(
+			myClaims.filter((claim) => claim.status === "pending" && claim.date >= from),
+		).length;
+	}, [myClaims]);
+
+	const gridDates = useMemo(() => new Set(weeks.flatMap((option) => option.dates)), [weeks]);
+
+	function viewOnGrid(date: string) {
+		const index = weeks.findIndex((option) => option.dates.includes(date));
+		if (index < 0) return;
+		setWeekIndex(index);
+		setDay(date);
+		setTab("book");
+	}
+
+	const description =
+		tab === "mine"
+			? "Every venue request you've sent for your committee over the next 4 weeks. Open one to withdraw it or find it on the grid."
+			: canBook
+				? "Pick a time on the grid to request a venue for your committee. JCRC approves every request."
+				: "See when Sheares venues are open. Only committee chairs and vice-chairs can request slots.";
 
 	return (
-		<div className="flex flex-col space-y-6 p-4 md:p-6">
-			<PageHeader
-				title="Facilities"
-				description={
-					isChair
-						? "Browse and claim venue slots for your CCA"
-						: "Browse venue availability. Only CCA chairs can claim slots."
-				}
-			/>
+		<div className="flex flex-col gap-5 p-4 md:p-6">
+			<PageHeader title="Book Facilities" description={description} />
 
-			<Tabs defaultValue="book">
-				{isChair && (
-					<TabsList>
-						<TabsTrigger value="book">Book Facilities</TabsTrigger>
-						<TabsTrigger value="my-bookings">My bookings</TabsTrigger>
-					</TabsList>
-				)}
+			{canBook && (
+				<FacilityTabs
+					tabs={[
+						{ key: "book", label: "Calendar" },
+						{ key: "mine", label: "My bookings", count: pendingCount },
+					]}
+					active={tab}
+					onChange={setTab}
+				/>
+			)}
 
-				<TabsContent value="book" className="space-y-4">
-					{week ? (
-						<>
-							<CurrentWeekBar
-								weekNumber={week.weekNumber}
-								dates={week.dates}
-								selectedDate={selectedDate}
-								onSelectDate={setSelectedDate}
-							/>
-
-							<VenueCardGrid
-								date={selectedDate}
-								facilities={dayFacilities}
-								slots={dayBookings}
-								isChair={isChair}
-								loading={loading || facilitiesLoading}
-								onClaim={setClaimBooking}
-							/>
-						</>
-					) : (
-						<div className="rounded-lg border p-6 text-sm text-muted-foreground">
-							Facility booking is unavailable outside NUS teaching weeks.
-						</div>
-					)}
-				</TabsContent>
-
-				{isChair && (
-					<TabsContent value="my-bookings">
-						<MyCcaBookings />
-					</TabsContent>
-				)}
-			</Tabs>
-
-			<ClaimDialog
-				booking={claimBooking}
-				chairCcas={chairCcas}
-				onClose={() => setClaimBooking(null)}
-				onSuccess={fetchBookings}
-			/>
+			{tab === "mine" && canBook ? (
+				<MyBookings
+					claims={myClaims}
+					slots={slots}
+					chairCcas={bookingCcas}
+					loading={claimsLoading}
+					gridDates={gridDates}
+					onViewOnGrid={viewOnGrid}
+					onChanged={onChanged}
+				/>
+			) : !week ? (
+				<FacilityEmpty>Facility booking is unavailable outside NUS teaching weeks.</FacilityEmpty>
+			) : !hasLoaded.current ? (
+				<Skeleton className="h-[640px] w-full rounded-xl" />
+			) : columns.length === 0 && !slotsLoading ? (
+				<FacilityEmpty>No venues are open for booking this week.</FacilityEmpty>
+			) : (
+				<BookCalendar
+					weeks={weeks}
+					weekIndex={weekIndex}
+					day={day}
+					onWeekChange={setWeekIndex}
+					onDayChange={setDay}
+					facilities={columns}
+					slots={slots}
+					myClaims={myClaims}
+					chairCcas={bookingCcas}
+					isJcrc={Boolean(user?.is_jcrc)}
+					userReady={ready}
+					onChanged={onChanged}
+				/>
+			)}
 		</div>
 	);
 }

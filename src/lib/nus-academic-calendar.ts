@@ -84,3 +84,38 @@ export function getNusWeekForDate(dateKey: string): NusAcademicWeek | null {
 export function getCurrentNusWeek(now: Date = new Date()): NusAcademicWeek | null {
 	return getNusWeekForDate(getSingaporeDateKey(now));
 }
+
+/** Calendar weeks chairs can browse and request, counting the current week. */
+export const BOOKING_WEEKS_AHEAD = 4;
+
+/** The Monday on or before a YYYY-MM-DD date. */
+export function getMondayOf(dateKey: string): string {
+	const weekday = new Date(`${dateKey}T00:00:00Z`).getUTCDay();
+	return addDays(dateKey, -((weekday + 6) % 7));
+}
+
+/**
+ * The teaching weeks open for booking: whichever of the next four calendar
+ * weeks are teaching weeks. Recess and exam weeks stay closed, so this can hold
+ * fewer than four weeks, or none during the vacation.
+ */
+export function getBookingWeeks(now: Date = new Date()): NusAcademicWeek[] {
+	const monday = getMondayOf(getSingaporeDateKey(now));
+	return Array.from({ length: BOOKING_WEEKS_AHEAD }, (_, index) =>
+		getNusWeekForDate(addDays(monday, index * 7)),
+	).filter((week): week is NusAcademicWeek => week !== null);
+}
+
+export function isWithinBookingWindow(dateKey: string, now: Date = new Date()): boolean {
+	return getBookingWeeks(now).some((week) => dateKey >= week.start && dateKey <= week.end);
+}
+
+/** The current hour (0–23) in Singapore, regardless of server timezone. */
+export function getSingaporeHour(now: Date = new Date()): number {
+	const hour = new Intl.DateTimeFormat("en-GB", {
+		timeZone: "Asia/Singapore",
+		hour: "2-digit",
+		hourCycle: "h23",
+	}).format(now);
+	return Number(hour);
+}

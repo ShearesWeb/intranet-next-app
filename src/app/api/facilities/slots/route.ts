@@ -2,7 +2,7 @@ import { requireAuth } from "@/lib/api/auth";
 import { apiOk, apiError, handleApiError } from "@/lib/api/response";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 import { getSlots, withUserCcaContext } from "@/lib/facilities/facility-slots";
-import { getChairCcaIds } from "@/lib/facilities/facility-access";
+import { getBookingCcaIds } from "@/lib/facilities/booking-ccas";
 import { NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
 
 		const slots = (await getSlots(start, end)).filter((slot) => slot.type === "sheares");
 
-		return apiOk(withUserCcaContext(slots, getChairCcaIds(user)));
+		return apiOk(withUserCcaContext(slots, await getBookingCcaIds(user)));
 	} catch (e) {
 		return handleApiError(e);
 	}

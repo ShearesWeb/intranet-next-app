@@ -8,9 +8,8 @@ const mocks = vi.hoisted(() => ({
 	listUpcomingConfirmed: vi.fn(),
 	resolveSlot: vi.fn(),
 	rejectClaims: vi.fn(),
-	deleteClaim: vi.fn(),
-	getClaim: vi.fn(),
-	getFacilityType: vi.fn(),
+	deleteClaims: vi.fn(),
+	getClaimOwners: vi.fn(),
 	getCoreServiceDisabledApiResponse: vi.fn(),
 }));
 
@@ -22,11 +21,8 @@ vi.mock("@/lib/facilities/facility-approvals", () => ({
 	rejectClaims: mocks.rejectClaims,
 }));
 vi.mock("@/lib/facilities/facility-claims", () => ({
-	deleteClaim: mocks.deleteClaim,
-	getClaim: mocks.getClaim,
-}));
-vi.mock("@/lib/facilities/facility-catalog", () => ({
-	getFacilityType: mocks.getFacilityType,
+	deleteClaims: mocks.deleteClaims,
+	getClaimOwners: mocks.getClaimOwners,
 }));
 vi.mock("@/lib/feature-flags", () => ({
 	getCoreServiceDisabledApiResponse: mocks.getCoreServiceDisabledApiResponse,
@@ -45,8 +41,9 @@ describe("approvals route", () => {
 		vi.clearAllMocks();
 		mocks.getCoreServiceDisabledApiResponse.mockReturnValue(null);
 		mocks.requireJcrcAccess.mockResolvedValue({ id: 7, is_jcrc: true });
-		mocks.getClaim.mockImplementation(async (id: number) => ({ id, facility_id: 1 }));
-		mocks.getFacilityType.mockResolvedValue("sheares");
+		mocks.getClaimOwners.mockImplementation(async (ids: number[]) =>
+			ids.map((id) => ({ id, cca_id: 3, facility_id: 1, facility_type: "sheares" })),
+		);
 	});
 
 	it("GET returns pending + confirmed lists", async () => {
@@ -84,7 +81,16 @@ describe("approvals route", () => {
 		const { POST } = await import("./route");
 		const res = await POST(post({ action: "approve", claim_id: 5, competing_claim_ids: [5, 6] }));
 		expect(res.status).toBe(200);
-		expect(mocks.resolveSlot).toHaveBeenCalledWith(5, [5, 6]);
+		expect(mocks.resolveSlot).toHaveBeenCalledWith([5], [5, 6]);
+	});
+
+	it("POST approve takes a whole multi-hour request", async () => {
+		const { POST } = await import("./route");
+		const res = await POST(
+			post({ action: "approve", claim_ids: [5, 6, 7], competing_claim_ids: [8] }),
+		);
+		expect(res.status).toBe(200);
+		expect(mocks.resolveSlot).toHaveBeenCalledWith([5, 6, 7], [8]);
 	});
 
 	it("POST reject clears every claim named", async () => {
@@ -105,7 +111,14 @@ describe("approvals route", () => {
 		const { POST } = await import("./route");
 		const res = await POST(post({ action: "revoke", claim_id: 9 }));
 		expect(res.status).toBe(200);
-		expect(mocks.deleteClaim).toHaveBeenCalledWith(9);
+		expect(mocks.deleteClaims).toHaveBeenCalledWith([9]);
+	});
+
+	it("POST revoke takes a whole multi-hour booking", async () => {
+		const { POST } = await import("./route");
+		const res = await POST(post({ action: "revoke", claim_ids: [9, 10] }));
+		expect(res.status).toBe(200);
+		expect(mocks.deleteClaims).toHaveBeenCalledWith([9, 10]);
 	});
 
 	it("POST rejects unknown actions", async () => {
@@ -115,10 +128,12 @@ describe("approvals route", () => {
 	});
 
 	it("POST rejects management of a non-Sheares claim", async () => {
-		mocks.getFacilityType.mockResolvedValue("reboks");
+		mocks.getClaimOwners.mockResolvedValue([
+			{ id: 9, cca_id: 3, facility_id: 1, facility_type: "reboks" },
+		]);
 		const { POST } = await import("./route");
 		const res = await POST(post({ action: "revoke", claim_id: 9 }));
 		expect(res.status).toBe(403);
-		expect(mocks.deleteClaim).not.toHaveBeenCalled();
+		expect(mocks.deleteClaims).not.toHaveBeenCalled();
 	});
 });

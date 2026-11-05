@@ -2,7 +2,8 @@ import { requireAuth } from "@/lib/api/auth";
 import { apiOk, apiError, handleApiError } from "@/lib/api/response";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 import { deleteClaim, getClaim } from "@/lib/facilities/facility-claims";
-import { isChairOfCca, canManageFacilities } from "@/lib/facilities/facility-access";
+import { canBookForCca } from "@/lib/facilities/booking-ccas";
+import { canManageFacilities } from "@/lib/facilities/facility-access";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +11,7 @@ async function authorizeClaim(claimId: number) {
 	const user = await requireAuth();
 	const claim = await getClaim(claimId);
 	if (!claim) throw { handled: apiError("Claim not found", 404) };
-	if (!isChairOfCca(user, claim.cca_id) && !canManageFacilities(user)) {
+	if (!canManageFacilities(user) && !(await canBookForCca(user, claim.cca_id))) {
 		throw { handled: apiError("Not authorized to modify this claim", 403) };
 	}
 	return user;
