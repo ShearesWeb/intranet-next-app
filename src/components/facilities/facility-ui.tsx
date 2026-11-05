@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export interface FacilityTab<K extends string> {
@@ -143,3 +144,64 @@ export const CLAIM_STATUS_STYLE = {
 	approved: { label: "Confirmed", className: "bg-fac-ok text-fac-ok-ink" },
 	rejected: { label: "Declined", className: "bg-fac-danger-chip text-fac-danger-ink" },
 } as const;
+
+/** One colour key under a calendar: a `className` or an inline `style` paints the swatch. */
+export function LegendItem({
+	label,
+	className,
+	style,
+}: {
+	label: string;
+	className?: string;
+	style?: React.CSSProperties;
+}) {
+	return (
+		<span className="flex items-center gap-1.5">
+			<span className={cn("size-3.5 rounded-[4px]", className)} style={style} />
+			{label}
+		</span>
+	);
+}
+
+/** The "are you sure?" step before withdrawing a request or cancelling a booking. */
+export function WithdrawConfirm({
+	approved,
+	prompt,
+	busy,
+	onConfirm,
+	onBack,
+	className,
+}: {
+	approved: boolean;
+	prompt: string;
+	busy: boolean;
+	onConfirm: () => void;
+	onBack: () => void;
+	className?: string;
+}) {
+	return (
+		<div className={cn("flex flex-col gap-2.5", className)}>
+			<span className="text-[13px] leading-[1.45]">{prompt}</span>
+			<div className="flex flex-wrap gap-2">
+				<Button
+					size="sm"
+					variant="destructive"
+					isLoading={busy}
+					onClick={onConfirm}
+					className="h-[34px] rounded-[10px] font-bold"
+				>
+					{approved ? "Yes, cancel booking" : "Yes, withdraw"}
+				</Button>
+				<Button
+					size="sm"
+					variant="outline"
+					disabled={busy}
+					onClick={onBack}
+					className="h-[34px] rounded-[10px] bg-card font-bold"
+				>
+					{approved ? "Keep booking" : "Keep request"}
+				</Button>
+			</div>
+		</div>
+	);
+}

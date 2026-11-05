@@ -122,7 +122,7 @@ export default function FacilitiesPage() {
 				<MyBookings
 					claims={myClaims}
 					slots={slots}
-					chairCcas={bookingCcas}
+					bookingCcas={bookingCcas}
 					loading={claimsLoading}
 					gridDates={gridDates}
 					onViewOnGrid={viewOnGrid}
@@ -144,7 +144,7 @@ export default function FacilitiesPage() {
 					facilities={columns}
 					slots={slots}
 					myClaims={myClaims}
-					chairCcas={bookingCcas}
+					bookingCcas={bookingCcas}
 					isJcrc={Boolean(user?.is_jcrc)}
 					userReady={ready}
 					onChanged={onChanged}

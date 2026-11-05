@@ -1,4 +1,10 @@
-import { GRID_HOURS, GRID_SLOT_COUNT, formatHourSpan } from "@/lib/facilities/booking-grid";
+import {
+	GRID_HOURS,
+	GRID_SLOT_COUNT,
+	columnOfHour,
+	columnRuns,
+	formatHourSpan,
+} from "@/lib/facilities/booking-grid";
 import { FacilitySchedule } from "@/types/facilities";
 
 /** One recurring hour: `day` is the DB weekday (0=Sun), `hour` is 0–23. */
@@ -42,7 +48,7 @@ export function weekGridFromSchedules(schedules: FacilitySchedule[], today: stri
 	for (const schedule of schedules) {
 		const expired = schedule.end_date !== null && schedule.end_date < today;
 		if (expired && !hidden) continue;
-		const column = GRID_HOURS.indexOf(schedule.hour);
+		const column = columnOfHour(schedule.hour);
 		if (column >= 0) grid[weekdayToRow(schedule.day_of_week)][column] = true;
 	}
 	return grid;
@@ -58,16 +64,10 @@ export function cellsFromWeekGrid(grid: WeekGrid): ScheduleCell[] {
 
 /** "4–10 PM, 11 PM – 2 AM" for one row; empty when the day is closed. */
 export function summarizeRow(row: boolean[]): string {
-	const spans: string[] = [];
-	let start = -1;
-	row.forEach((open, column) => {
-		if (open && start < 0) start = column;
-		if (start >= 0 && (!open || column === row.length - 1)) {
-			spans.push(formatHourSpan(start, open ? column + 1 : column));
-			start = -1;
-		}
-	});
-	return spans.join(", ");
+	const openColumns = row.flatMap((open, column) => (open ? [column] : []));
+	return columnRuns(openColumns)
+		.map(([start, end]) => formatHourSpan(start, end))
+		.join(", ");
 }
 
 /** "Mon–Fri 4–10 PM · Sat 8 AM – 2 PM", collapsing runs of identical days. */

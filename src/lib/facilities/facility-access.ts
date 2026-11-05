@@ -1,15 +1,4 @@
 import { AuthenticatedUser } from "@/types/user";
-import { isManagingAppointment } from "@/lib/cca/cca-chair-access";
-
-/**
- * CCAs the caller holds a managing position in.
- *
- * Not the booking rule, which is `canBookForCca` in `booking-ccas.ts`.
- * A hint for rendering, not an authority: `reporting_position_id` may cross CCAs.
- */
-export function getChairCcaIds(user: AuthenticatedUser): number[] {
-	return user.appointments.filter(isManagingAppointment).map((a) => a.cca_id);
-}
 
 /**
  * Only JCRC may publish schedules or resolve claims.

@@ -39,7 +39,7 @@ function render(claims: MyClaim[], slots: FacilitySlot[] = []) {
 			<MyBookings
 				claims={claims}
 				slots={slots}
-				chairCcas={[
+				bookingCcas={[
 					{ id: 7, name: "Netball" },
 					{ id: 8, name: "Web" },
 				]}

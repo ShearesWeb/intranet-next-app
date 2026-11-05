@@ -17,7 +17,7 @@ async function authorizeClaim(claimId: number) {
 	return user;
 }
 
-/** Withdraw a claim — delete the row; the booking reopens via trigger. */
+/** Withdraw a claim by deleting its row, which reopens the slot. */
 async function withdraw(claimId: number) {
 	await authorizeClaim(claimId);
 	await deleteClaim(claimId);

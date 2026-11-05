@@ -68,8 +68,7 @@ export async function POST(req: NextRequest) {
 			);
 		}
 
-		// The slot carries its own date now, so no booking lookup is needed. The
-		// DB still checks that a schedule actually publishes it.
+		// The DB checks that a schedule actually publishes the slot.
 		// Read the type from the database so a hand-rolled request cannot bypass
 		// the Sheares-only booking boundary. This applies to JCRC callers too.
 		const type = await getFacilityType(facility_id);

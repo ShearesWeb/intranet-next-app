@@ -8,7 +8,7 @@ import { ClaimStatus, Facility } from "@/types/facilities";
 export const GRID_HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 0, 1];
 export const GRID_SLOT_COUNT = GRID_HOURS.length;
 /** First column that falls on the next calendar day (12 AM). */
-export const NEXT_DAY_COLUMN = 16;
+export const NEXT_DAY_COLUMN = GRID_HOURS.indexOf(0);
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -29,6 +29,11 @@ export function formatClock(hour: number): string {
 /** "8a", "12p": the availability editor's narrow column headers. */
 export function formatShortHour(hour: number): string {
 	return `${twelveHour(hour)}${hour >= 12 ? "p" : "a"}`;
+}
+
+/** Identity of one grid cell, for sets and maps of a week's slots. */
+export function cellKey(facilityId: number, date: string, column: number): string {
+	return `${facilityId}|${date}|${column}`;
 }
 
 /** The grid column for a stored hour, or -1 outside the booking day. */

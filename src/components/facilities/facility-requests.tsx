@@ -22,6 +22,7 @@ import {
 	formatRequestedAgo,
 	groupClaimSegments,
 	relativeDayLabel,
+	weekdayLabel,
 } from "@/lib/facilities/booking-grid";
 import { decideClaims, errorMessage } from "@/lib/facilities/facility-client";
 import {
@@ -98,7 +99,7 @@ export function FacilityRequests({ approvals, onChanged }: FacilityRequestsProps
 	}
 
 	function describe(segment: Segment): string {
-		return `${venueNames.get(segment.facility_id)} · ${formatDayLabel(segment.date).split(" ")[0]} ${formatHourSpan(segment.start, segment.end)}`;
+		return `${venueNames.get(segment.facility_id)} · ${weekdayLabel(segment.date)} ${formatHourSpan(segment.start, segment.end)}`;
 	}
 
 	const isReview = view === "review";

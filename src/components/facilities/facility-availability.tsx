@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { FACILITY_CARD_CLASS, VenueSwitch } from "@/components/facilities/facility-ui";
+import { FACILITY_CARD_CLASS, LegendItem, VenueSwitch } from "@/components/facilities/facility-ui";
 import {
 	GRID_HOURS,
 	NEXT_DAY_COLUMN,
@@ -115,7 +115,6 @@ export function FacilityAvailability({
 		[selectedSchedules, today],
 	);
 	const grid = draft ?? saved;
-	const dirty = draft !== null && JSON.stringify(draft) !== JSON.stringify(saved);
 
 	let added = 0;
 	let removed = 0;
@@ -125,6 +124,7 @@ export function FacilityAvailability({
 			if (!open && saved[rowIndex][column]) removed++;
 		}),
 	);
+	const dirty = added + removed > 0;
 
 	const bookings = useMemo(() => {
 		if (!selected) return [];
@@ -501,14 +501,5 @@ export function FacilityAvailability({
 				)}
 			</section>
 		</div>
-	);
-}
-
-function LegendItem({ style, label }: { style: React.CSSProperties; label: string }) {
-	return (
-		<span className="flex items-center gap-1.5">
-			<span className="size-3.5 rounded-[4px]" style={style} />
-			{label}
-		</span>
 	);
 }

@@ -5,7 +5,12 @@ import Link from "next/link";
 import { Lock, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { CLAIM_STATUS_STYLE, FACILITY_CARD_CLASS } from "@/components/facilities/facility-ui";
+import {
+	CLAIM_STATUS_STYLE,
+	FACILITY_CARD_CLASS,
+	LegendItem,
+	WithdrawConfirm,
+} from "@/components/facilities/facility-ui";
 import { type MyClaim } from "@/hooks/use-my-facility-claims";
 import {
 	ClaimSegment,
@@ -24,8 +29,10 @@ import {
 	groupClaimSegments,
 	isSlotPast,
 	weekdayLabel,
+	cellKey,
 } from "@/lib/facilities/booking-grid";
-import { errorMessage, requestVenue, withdrawClaims } from "@/lib/facilities/facility-client";
+import { type BookingCca } from "@/lib/facilities/booking-eligibility";
+import { errorMessage, requestVenue, withdrawBooking } from "@/lib/facilities/facility-client";
 import {
 	BOOKING_WEEKS_AHEAD,
 	getSingaporeDateKey,
@@ -54,15 +61,20 @@ interface BookCalendarProps {
 	facilities: Facility[];
 	slots: FacilitySlot[];
 	myClaims: MyClaim[];
-	chairCcas: { id: number; name: string }[];
+	bookingCcas: BookingCca[];
 	isJcrc: boolean;
-	/** False until auth resolves, so a chair never sees the resident rail flash. */
+	/** False until booking access resolves, so a booker never sees the resident rail flash. */
 	userReady: boolean;
 	onChanged: () => Promise<unknown>;
 }
 
-function cellKey(facilityId: number, date: string, column: number): string {
-	return `${facilityId}|${date}|${column}`;
+/** How many different CCAs hold a claim across columns [start, end). */
+function countCcas(start: number, end: number, claimsAt: (column: number) => GridClaim[]): number {
+	const ccas = new Set<number>();
+	for (let column = start; column < end; column++) {
+		for (const claim of claimsAt(column)) ccas.add(claim.cca_id);
+	}
+	return ccas.size;
 }
 
 const MINE_CHIP_CLASS = {
@@ -80,15 +92,15 @@ export function BookCalendar({
 	facilities,
 	slots,
 	myClaims,
-	chairCcas,
+	bookingCcas,
 	isJcrc,
 	userReady,
 	onChanged,
 }: BookCalendarProps) {
-	const isChair = chairCcas.length > 0;
+	const canRequest = bookingCcas.length > 0;
 	const week = weeks[weekIndex];
 	const today = getSingaporeDateKey();
-	const currentHour = useMemo(() => getSingaporeHour(), [slots]); // eslint-disable-line react-hooks/exhaustive-deps
+	const currentHour = getSingaporeHour();
 
 	const [selection, setSelection] = useState<Selection | null>(null);
 	const [pickedClaimId, setPickedClaimId] = useState<number | null>(null);
@@ -105,10 +117,10 @@ export function BookCalendar({
 	const pressedWithMouse = useRef(false);
 	const asideRef = useRef<HTMLElement>(null);
 
-	const myCcaIds = useMemo(() => new Set(chairCcas.map((cca) => cca.id)), [chairCcas]);
+	const myCcaIds = useMemo(() => new Set(bookingCcas.map((cca) => cca.id)), [bookingCcas]);
 
 	// One view of the week: who is on what. The slots know about every CCA and the
-	// claims endpoint adds this chair's declined requests.
+	// claims endpoint adds this user's declined requests.
 	const { openCells, liveByCell, weekClaims } = useMemo(() => {
 		const open = new Set<string>();
 		const live = new Map<string, GridClaim[]>();
@@ -175,14 +187,14 @@ export function BookCalendar({
 
 	const canBook = useCallback(
 		(facilityId: number, column: number) =>
-			isChair &&
+			canRequest &&
 			column >= 0 &&
 			column < GRID_SLOT_COUNT &&
 			openCells.has(cellKey(facilityId, day, column)) &&
 			!isSlotPast(day, column, today, currentHour) &&
 			!isBooked(facilityId, day, column) &&
 			!claimsAt(facilityId, day, column).some((claim) => myCcaIds.has(claim.cca_id)),
-		[isChair, openCells, day, today, currentHour, isBooked, claimsAt, myCcaIds],
+		[canRequest, openCells, day, today, currentHour, isBooked, claimsAt, myCcaIds],
 	);
 
 	const mySegments = useMemo(
@@ -284,9 +296,18 @@ export function BookCalendar({
 		const from = anchor.current;
 		const offset = grabOffset.current;
 
-		setSelection((current) => {
-			if (!current) return current;
+		/** The furthest bookable column from `start` towards `target`. */
+		function reach(start: number, target: number): number {
+			const step = target >= start ? 1 : -1;
+			let last = start;
+			for (let index = start + step; (index - target) * step <= 0; index += step) {
+				if (!canBook(facilityId, index)) break;
+				last = index;
+			}
+			return last;
+		}
 
+		function nextSelection(current: Selection): Selection {
 			if (mode === "move") {
 				const length = current.end - current.start;
 				const start = Math.max(0, Math.min(GRID_SLOT_COUNT - length, column - offset));
@@ -299,45 +320,38 @@ export function BookCalendar({
 
 			if (mode === "create") {
 				if (!from || from.facilityId !== facilityId) return current;
-				let start = from.column;
-				let end = from.column + 1;
-				if (column >= from.column) {
-					for (
-						let index = from.column + 1;
-						index <= column && canBook(facilityId, index);
-						index++
-					) {
-						end = index + 1;
-					}
-				} else {
-					for (
-						let index = from.column - 1;
-						index >= column && canBook(facilityId, index);
-						index--
-					) {
-						start = index;
-					}
-				}
-				return { facilityId, start, end };
+				const edge = reach(from.column, column);
+				return {
+					facilityId,
+					start: Math.min(from.column, edge),
+					end: Math.max(from.column, edge) + 1,
+				};
 			}
 
-			let { start, end } = current;
+			const { start, end } = current;
 			if (mode === "start") {
-				if (column < start) {
-					for (let index = start - 1; index >= column && canBook(facilityId, index); index--) {
-						start = index;
-					}
-				} else {
-					start = Math.min(column, end - 1);
-				}
-			} else if (column >= end) {
-				for (let index = end; index <= column && canBook(facilityId, index); index++) {
-					end = index + 1;
-				}
-			} else {
-				end = Math.max(column + 1, start + 1);
+				return {
+					facilityId,
+					start: column < start ? reach(start, column) : Math.min(column, end - 1),
+					end,
+				};
 			}
-			return { facilityId, start, end };
+			return {
+				facilityId,
+				start,
+				end: column >= end ? reach(end - 1, column) + 1 : Math.max(column + 1, start + 1),
+			};
+		}
+
+		// Returning `current` lets React skip the render while the pointer stays in a cell.
+		setSelection((current) => {
+			if (!current) return current;
+			const next = nextSelection(current);
+			return next.facilityId === current.facilityId &&
+				next.start === current.start &&
+				next.end === current.end
+				? current
+				: next;
 		});
 	}
 
@@ -355,7 +369,7 @@ export function BookCalendar({
 	}
 
 	const chosenCca =
-		chairCcas.find((cca) => cca.id === chosenCcaId) ?? (isChair ? chairCcas[0] : undefined);
+		bookingCcas.find((cca) => cca.id === chosenCcaId) ?? (canRequest ? bookingCcas[0] : undefined);
 
 	async function submitRequest() {
 		if (!selection || !chosenCca) return;
@@ -384,10 +398,7 @@ export function BookCalendar({
 		if (!picked) return;
 		setBusy(true);
 		try {
-			await withdrawClaims(picked.claim_ids);
-			toast.success(
-				picked.status === "approved" ? "Booking cancelled · slot reopened" : "Request withdrawn",
-			);
+			await withdrawBooking(picked);
 			setPickedClaimId(null);
 			setConfirming(false);
 			await onChanged();
@@ -398,8 +409,8 @@ export function BookCalendar({
 		}
 	}
 
-	const showAside = panelOpen || (userReady && !isChair);
-	const hint = !isChair
+	const showAside = panelOpen || (userReady && !canRequest);
+	const hint = !canRequest
 		? ""
 		: selection
 			? "Drag the handles to resize, or drag the block to another time or venue · Esc to clear"
@@ -515,15 +526,15 @@ export function BookCalendar({
 				</div>
 
 				<div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
-					<LegendItem swatch="border bg-card" label="Open" />
-					<LegendItem swatch="border bg-fac-closed" label="Not open" />
-					<LegendItem swatch="border border-fac-booked-line bg-fac-booked" label="Booked" />
-					<LegendItem swatch="bg-primary" label="Your CCA" />
+					<LegendItem className="border bg-card" label="Open" />
+					<LegendItem className="border bg-fac-closed" label="Not open" />
+					<LegendItem className="border border-fac-booked-line bg-fac-booked" label="Booked" />
+					<LegendItem className="bg-primary" label="Your CCA" />
 					<LegendItem
-						swatch="border-[1.5px] border-dashed border-fac-dash bg-fac-tint"
+						className="border-[1.5px] border-dashed border-fac-dash bg-fac-tint"
 						label="Your pending"
 					/>
-					<LegendItem swatch="border border-fac-danger-line bg-fac-danger" label="Declined" />
+					<LegendItem className="border border-fac-danger-line bg-fac-danger" label="Declined" />
 					<span className="flex items-center gap-1.5">
 						<span className="rounded-full bg-fac-warn px-1.5 py-px text-[10px] font-bold text-fac-warn-ink">
 							1 request
@@ -615,18 +626,11 @@ export function BookCalendar({
 										setSelection(null);
 									}}
 									grabHandle={grabHandle}
-									competingLabel={(segment) => {
-										const competing = new Set<number>();
-										for (let column = segment.start; column < segment.end; column++) {
-											othersPending(
-												segment.facility_id,
-												segment.date,
-												column,
-												segment.cca_id,
-											).forEach((claim) => competing.add(claim.cca_id));
-										}
-										return competing.size;
-									}}
+									competingLabel={(segment) =>
+										countCcas(segment.start, segment.end, (column) =>
+											othersPending(segment.facility_id, segment.date, column, segment.cca_id),
+										)
+									}
 								/>
 							))}
 						</div>
@@ -645,17 +649,13 @@ export function BookCalendar({
 							venue={facilityName(picked.facility_id)}
 							today={today}
 							currentHour={currentHour}
-							competing={(() => {
-								const competing = new Set<number>();
-								if (picked.status !== "approved") {
-									for (let column = picked.start; column < picked.end; column++) {
-										othersPending(picked.facility_id, picked.date, column, picked.cca_id).forEach(
-											(claim) => competing.add(claim.cca_id),
-										);
-									}
-								}
-								return competing.size;
-							})()}
+							competing={
+								picked.status === "approved"
+									? 0
+									: countCcas(picked.start, picked.end, (column) =>
+											othersPending(picked.facility_id, picked.date, column, picked.cca_id),
+										)
+							}
 							confirming={confirming}
 							busy={busy}
 							onAsk={() => setConfirming(true)}
@@ -673,7 +673,7 @@ export function BookCalendar({
 							day={day}
 							today={today}
 							venue={facilityName(selection.facilityId)}
-							chairCcas={chairCcas}
+							bookingCcas={bookingCcas}
 							chosenCca={chosenCca}
 							busy={busy}
 							canBook={canBook}
@@ -684,7 +684,7 @@ export function BookCalendar({
 							onClear={() => setSelection(null)}
 						/>
 					)}
-					{userReady && !isChair && isJcrc && (
+					{userReady && !canRequest && isJcrc && (
 						<div className={cn(FACILITY_CARD_CLASS, "flex flex-col gap-2.5 p-4")}>
 							<span className="text-[15px] font-bold">Reviewing as JCRC</span>
 							<span className="text-[13px] leading-[1.45] text-muted-foreground">
@@ -696,7 +696,7 @@ export function BookCalendar({
 							</Button>
 						</div>
 					)}
-					{userReady && !isChair && !isJcrc && (
+					{userReady && !canRequest && !isJcrc && (
 						<div className={cn(FACILITY_CARD_CLASS, "flex flex-col gap-1.5 p-4")}>
 							<span className="text-[15px] font-bold">Need a venue?</span>
 							<span className="text-[13px] leading-[1.45] text-muted-foreground">
@@ -732,15 +732,6 @@ function WeekArrow({
 		>
 			{children}
 		</button>
-	);
-}
-
-function LegendItem({ swatch, label }: { swatch: string; label: string }) {
-	return (
-		<span className="flex items-center gap-1.5">
-			<span className={cn("size-3.5 rounded-[4px]", swatch)} />
-			{label}
-		</span>
 	);
 }
 
@@ -788,11 +779,9 @@ function VenueColumn({
 	const name = facilityLabel(facility);
 	const overlapCount = useMemo(() => {
 		if (!selection) return 0;
-		const ccas = new Set<number>();
-		for (let column = selection.start; column < selection.end; column++) {
-			othersPending(facility.id, day, column).forEach((claim) => ccas.add(claim.cca_id));
-		}
-		return ccas.size;
+		return countCcas(selection.start, selection.end, (column) =>
+			othersPending(facility.id, day, column),
+		);
 	}, [selection, othersPending, facility.id, day]);
 
 	return (
@@ -1004,7 +993,7 @@ function NewRequestPanel({
 	day,
 	today,
 	venue,
-	chairCcas,
+	bookingCcas,
 	chosenCca,
 	busy,
 	canBook,
@@ -1018,8 +1007,8 @@ function NewRequestPanel({
 	day: string;
 	today: string;
 	venue: string;
-	chairCcas: { id: number; name: string }[];
-	chosenCca: { id: number; name: string };
+	bookingCcas: BookingCca[];
+	chosenCca: BookingCca;
 	busy: boolean;
 	canBook: (facilityId: number, column: number) => boolean;
 	othersPending: (
@@ -1087,11 +1076,11 @@ function NewRequestPanel({
 			<span className="-mt-1.5 text-[13px] text-muted-foreground">
 				{formatDuration(end - start)}
 			</span>
-			{chairCcas.length > 1 && (
+			{bookingCcas.length > 1 && (
 				<div className="flex flex-col gap-1.5">
 					<span className="text-xs font-semibold text-muted-foreground">Booking for</span>
 					<div className="flex flex-wrap gap-1.5">
-						{chairCcas.map((cca) => (
+						{bookingCcas.map((cca) => (
 							<button
 								key={cca.id}
 								type="button"
@@ -1220,33 +1209,18 @@ function BookingPanel({
 				</button>
 			)}
 			{!past && !rejected && confirming && (
-				<div className="flex flex-col gap-2.5 rounded-[10px] border border-fac-danger-line bg-fac-danger p-3">
-					<span className="text-[13px] leading-[1.45]">
-						{approved
+				<WithdrawConfirm
+					approved={approved}
+					prompt={
+						approved
 							? `Cancel ${segment.cca_name}'s booking? The slot reopens for other CCAs.`
-							: "Withdraw this request? JCRC won't see it any more."}
-					</span>
-					<div className="flex flex-wrap gap-2">
-						<Button
-							size="sm"
-							variant="destructive"
-							isLoading={busy}
-							onClick={onConfirm}
-							className="h-[34px] rounded-[10px] font-bold"
-						>
-							{approved ? "Yes, cancel booking" : "Yes, withdraw"}
-						</Button>
-						<Button
-							size="sm"
-							variant="outline"
-							disabled={busy}
-							onClick={onBack}
-							className="h-[34px] rounded-[10px] bg-card font-bold"
-						>
-							{approved ? "Keep booking" : "Keep request"}
-						</Button>
-					</div>
-				</div>
+							: "Withdraw this request? JCRC won't see it any more."
+					}
+					busy={busy}
+					onConfirm={onConfirm}
+					onBack={onBack}
+					className="rounded-[10px] border border-fac-danger-line bg-fac-danger p-3"
+				/>
 			)}
 			{past && (
 				<span className="text-[12.5px] text-muted-foreground">This slot has already passed.</span>

@@ -8,10 +8,12 @@ import {
 	CLAIM_STATUS_STYLE,
 	FACILITY_CARD_CLASS,
 	FacilityEmpty,
+	WithdrawConfirm,
 } from "@/components/facilities/facility-ui";
 import { type MyClaim } from "@/hooks/use-my-facility-claims";
 import {
 	ClaimSegment,
+	cellKey,
 	columnOfHour,
 	dayOfMonth,
 	facilityLabel,
@@ -21,7 +23,8 @@ import {
 	isSlotPast,
 	weekdayLabel,
 } from "@/lib/facilities/booking-grid";
-import { errorMessage, withdrawClaims } from "@/lib/facilities/facility-client";
+import { type BookingCca } from "@/lib/facilities/booking-eligibility";
+import { errorMessage, withdrawBooking } from "@/lib/facilities/facility-client";
 import { getSingaporeDateKey, getSingaporeHour, getMondayOf } from "@/lib/nus-academic-calendar";
 import { cn } from "@/lib/utils";
 import { FacilitySlot } from "@/types/facilities";
@@ -37,7 +40,7 @@ const STATS: { key: Exclude<StatusFilter, "all">; label: string; dot: string }[]
 interface MyBookingsProps {
 	claims: MyClaim[];
 	slots: FacilitySlot[];
-	chairCcas: { id: number; name: string }[];
+	bookingCcas: BookingCca[];
 	loading: boolean;
 	/** Dates the calendar can show; "View on grid" is hidden for anything else. */
 	gridDates: Set<string>;
@@ -45,11 +48,11 @@ interface MyBookingsProps {
 	onChanged: () => Promise<unknown>;
 }
 
-/** Every request a chair has sent, merged into time ranges, with a status overview. */
+/** Every request sent for the user's CCAs, merged into time ranges, with a status overview. */
 export function MyBookings({
 	claims,
 	slots,
-	chairCcas,
+	bookingCcas,
 	loading,
 	gridDates,
 	onViewOnGrid,
@@ -63,14 +66,14 @@ export function MyBookings({
 
 	const today = getSingaporeDateKey();
 	const currentHour = getSingaporeHour();
-	const myCcaIds = useMemo(() => new Set(chairCcas.map((cca) => cca.id)), [chairCcas]);
+	const myCcaIds = useMemo(() => new Set(bookingCcas.map((cca) => cca.id)), [bookingCcas]);
 
 	// What the rest of the hall is doing on each hour, for the notes on each row.
 	const { bookedCells, competitorsByCell } = useMemo(() => {
 		const booked = new Set<string>();
 		const competitors = new Map<string, { cca_id: number }[]>();
 		for (const slot of slots) {
-			const key = `${slot.facility_id}|${slot.date}|${columnOfHour(slot.hour)}`;
+			const key = cellKey(slot.facility_id, slot.date, columnOfHour(slot.hour));
 			for (const claim of slot.claims) {
 				if (claim.status === "approved") booked.add(key);
 				if (claim.status === "pending" && !myCcaIds.has(claim.cca_id)) {
@@ -102,9 +105,8 @@ export function MyBookings({
 			: segments.filter((segment) => statusOf(segment) === statusFilter);
 
 	function noteFor(segment: ClaimSegment<MyClaim>): string {
-		const cells = Array.from(
-			{ length: segment.end - segment.start },
-			(_, index) => `${segment.facility_id}|${segment.date}|${segment.start + index}`,
+		const cells = Array.from({ length: segment.end - segment.start }, (_, index) =>
+			cellKey(segment.facility_id, segment.date, segment.start + index),
 		);
 		if (segment.status === "rejected") {
 			return cells.some((cell) => bookedCells.has(cell))
@@ -123,10 +125,7 @@ export function MyBookings({
 	async function cancel(segment: ClaimSegment<MyClaim>) {
 		setBusy(true);
 		try {
-			await withdrawClaims(segment.claim_ids);
-			toast.success(
-				segment.status === "approved" ? "Booking cancelled · slot reopened" : "Request withdrawn",
-			);
+			await withdrawBooking(segment);
 			setOpenKey(null);
 			setConfirmKey(null);
 			await onChanged();
@@ -150,9 +149,9 @@ export function MyBookings({
 		<div className="flex flex-wrap items-start gap-5">
 			<div className="min-w-0 max-w-[820px] flex-[1_1_520px]">
 				<div className={cn(FACILITY_CARD_CLASS, "flex flex-col gap-3 p-4")}>
-					{chairCcas.length > 1 && (
+					{bookingCcas.length > 1 && (
 						<div className="flex flex-wrap gap-1.5">
-							{[{ id: null, name: "All CCAs" }, ...chairCcas].map((cca) => (
+							{[{ id: null, name: "All CCAs" }, ...bookingCcas].map((cca) => (
 								<button
 									key={cca.id ?? "all"}
 									type="button"
@@ -238,33 +237,17 @@ export function MyBookings({
 									{open && (
 										<div className="flex flex-col gap-2.5 border-t bg-background p-3">
 											{confirming ? (
-												<div className="flex flex-col gap-2.5">
-													<span className="text-[13px] leading-[1.45]">
-														{approved
+												<WithdrawConfirm
+													approved={approved}
+													prompt={
+														approved
 															? `Cancel ${segment.cca_name}'s booking at ${venue} on ${formatDayLabel(segment.date)}, ${span}? The slot reopens for other CCAs.`
-															: "Withdraw this request? JCRC won't see it any more."}
-													</span>
-													<div className="flex flex-wrap gap-2">
-														<Button
-															size="sm"
-															variant="destructive"
-															isLoading={busy}
-															onClick={() => cancel(segment)}
-															className="h-[34px] rounded-[10px] font-bold"
-														>
-															{approved ? "Yes, cancel booking" : "Yes, withdraw"}
-														</Button>
-														<Button
-															size="sm"
-															variant="outline"
-															disabled={busy}
-															onClick={() => setConfirmKey(null)}
-															className="h-[34px] rounded-[10px] bg-card font-bold"
-														>
-															{approved ? "Keep booking" : "Keep request"}
-														</Button>
-													</div>
-												</div>
+															: "Withdraw this request? JCRC won't see it any more."
+													}
+													busy={busy}
+													onConfirm={() => cancel(segment)}
+													onBack={() => setConfirmKey(null)}
+												/>
 											) : (
 												<div className="flex flex-wrap gap-2">
 													{gridDates.has(segment.date) && (

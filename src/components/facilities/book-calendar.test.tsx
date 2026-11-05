@@ -54,7 +54,7 @@ function render(props: Partial<React.ComponentProps<typeof BookCalendar>> = {}) 
 				facilities={[COURT]}
 				slots={[slot(18), slot(19), slot(20)]}
 				myClaims={[]}
-				chairCcas={[NETBALL]}
+				bookingCcas={[NETBALL]}
 				isJcrc={false}
 				userReady
 				onChanged={onChanged}
@@ -153,7 +153,7 @@ describe("BookCalendar", () => {
 	});
 
 	it("asks which CCA only when the chair has several", async () => {
-		render({ chairCcas: [NETBALL, { id: 8, name: "Web" }] });
+		render({ bookingCcas: [NETBALL, { id: 8, name: "Web" }] });
 		await click(button("Request MPSH Court 1, 6–7 PM"));
 		await click(button("Web"));
 		await click(button("Send request"));
@@ -222,13 +222,13 @@ describe("BookCalendar", () => {
 	});
 
 	it("gives residents a read-only grid and tells them who can book", () => {
-		render({ chairCcas: [] });
+		render({ bookingCcas: [] });
 		expect(container!.textContent).toContain("Need a venue?");
 		expect(button("MPSH Court 1, 6–7 PM, unavailable").disabled).toBe(true);
 	});
 
 	it("points JCRC-only members to the review queue", () => {
-		render({ chairCcas: [], isJcrc: true });
+		render({ bookingCcas: [], isJcrc: true });
 		expect(container!.textContent).toContain("Reviewing as JCRC");
 		expect(container!.querySelector('a[href="/dashboard/facilities/admin"]')).not.toBeNull();
 	});
