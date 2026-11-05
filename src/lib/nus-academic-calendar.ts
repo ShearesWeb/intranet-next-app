@@ -8,6 +8,7 @@ interface AcademicBlock {
 }
 
 const teachingWeeks = (firstWeek: number) => (weekIndex: number) => `Week ${firstWeek + weekIndex}`;
+const recessWeek = () => "Recess Week";
 const readingWeek = () => "Reading Week";
 const examWeeks = (weekIndex: number) => `Exam Week ${weekIndex + 1}`;
 
@@ -15,25 +16,27 @@ const examWeeks = (weekIndex: number) => `Exam Week ${weekIndex + 1}`;
  * NUS AY2026/27, in Monday-to-Sunday weeks.
  *
  * Each semester has Weeks 1-6, a recess week, Weeks 7-13, a reading week and two
- * exam weeks. Recess weeks and the vacation are left out. Add the next academic
- * year's dates here when its calendar is published.
+ * exam weeks. Only the vacation is left out. Add the next academic year's dates
+ * here when its calendar is published.
  */
 const ACADEMIC_BLOCKS: AcademicBlock[] = [
 	// Semester 1
 	{ start: "2026-08-10", weeks: 6, label: teachingWeeks(1) },
+	{ start: "2026-09-21", weeks: 1, label: recessWeek },
 	{ start: "2026-09-28", weeks: 7, label: teachingWeeks(7) },
 	{ start: "2026-11-16", weeks: 1, label: readingWeek },
 	{ start: "2026-11-23", weeks: 2, label: examWeeks },
 
 	// Semester 2
 	{ start: "2027-01-11", weeks: 6, label: teachingWeeks(1) },
+	{ start: "2027-02-22", weeks: 1, label: recessWeek },
 	{ start: "2027-03-01", weeks: 7, label: teachingWeeks(7) },
 	{ start: "2027-04-19", weeks: 1, label: readingWeek },
 	{ start: "2027-04-26", weeks: 2, label: examWeeks },
 ];
 
 export interface NusAcademicWeek {
-	/** "Week 8", "Reading Week" or "Exam Week 1". */
+	/** "Week 8", "Recess Week", "Reading Week" or "Exam Week 1". */
 	label: string;
 	start: string;
 	end: string;
@@ -109,8 +112,8 @@ export function getMondayOf(dateKey: string): string {
 
 /**
  * The weeks open for booking: whichever of the next four calendar weeks fall in
- * the semester, through reading week and exams. Recess weeks stay closed, so this
- * can hold fewer than four weeks, or none during the vacation.
+ * the semester, from Week 1 through exams. This can hold fewer than four weeks
+ * near the vacation, or none during it.
  */
 export function getBookingWeeks(now: Date = new Date()): NusAcademicWeek[] {
 	const monday = getMondayOf(getSingaporeDateKey(now));

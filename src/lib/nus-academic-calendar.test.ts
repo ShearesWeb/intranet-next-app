@@ -35,12 +35,19 @@ describe("booking window", () => {
 		expect(weekLabels("2026-12-21T04:00:00Z")).toEqual(["Week 1"]);
 	});
 
-	it("skips recess week but keeps the teaching weeks after it", () => {
-		expect(weekLabels("2026-09-16T04:00:00Z")).toEqual(["Week 6", "Week 7", "Week 8"]);
-	});
-
-	it("opens next week's bookings during recess", () => {
-		expect(weekLabels("2026-09-23T04:00:00Z")).toEqual(["Week 7", "Week 8", "Week 9"]);
+	it("includes recess week", () => {
+		expect(weekLabels("2026-09-16T04:00:00Z")).toEqual([
+			"Week 6",
+			"Recess Week",
+			"Week 7",
+			"Week 8",
+		]);
+		expect(weekLabels("2026-09-23T04:00:00Z")).toEqual([
+			"Recess Week",
+			"Week 7",
+			"Week 8",
+			"Week 9",
+		]);
 	});
 
 	it("is empty in the vacation", () => {
@@ -57,7 +64,8 @@ describe("booking window", () => {
 		expect(isWithinBookingWindow("2026-10-05", now)).toBe(true);
 		expect(isWithinBookingWindow("2026-11-01", now)).toBe(true);
 		expect(isWithinBookingWindow("2026-11-02", now)).toBe(false);
-		expect(isWithinBookingWindow("2026-09-23", new Date("2026-09-16T04:00:00Z"))).toBe(false);
+		expect(isWithinBookingWindow("2026-09-23", new Date("2026-09-16T04:00:00Z"))).toBe(true);
+		expect(isWithinBookingWindow("2026-12-15", new Date("2026-12-01T04:00:00Z"))).toBe(false);
 	});
 
 	it("finds the Monday of a week", () => {
@@ -90,13 +98,13 @@ describe("NUS academic calendar", () => {
 		});
 	});
 
-	it("skips the Semester 1 recess week", () => {
-		expect(getNusWeekForDate("2026-09-23")).toBeNull();
+	it("includes the Semester 1 recess week", () => {
+		expect(getNusWeekForDate("2026-09-23")?.label).toBe("Recess Week");
 		expect(getNusWeekForDate("2026-09-28")?.label).toBe("Week 7");
 	});
 
-	it("skips the Semester 2 recess week", () => {
-		expect(getNusWeekForDate("2027-02-24")).toBeNull();
+	it("includes the Semester 2 recess week", () => {
+		expect(getNusWeekForDate("2027-02-24")?.label).toBe("Recess Week");
 		expect(getNusWeekForDate("2027-03-01")?.label).toBe("Week 7");
 	});
 

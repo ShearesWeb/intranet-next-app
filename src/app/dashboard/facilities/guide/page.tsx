@@ -10,7 +10,7 @@ const STEPS: { title: string; body: string }[] = [
 	},
 	{
 		title: "2. Committees claim a slot",
-		body: "Committee chairs and vice-chairs pick a time on the calendar and request it for their committee, up to 4 weeks ahead during the NUS semester, including reading week and exams but not recess weeks. JCRC books the same way, under Sheares Hall. One request → the time goes Pending. If two or more committees ask for overlapping hours, it becomes a Conflict.",
+		body: "Committee chairs and vice-chairs pick a time on the calendar and request it for their committee, up to 4 weeks ahead during the NUS semester, including recess week, reading week and exams. JCRC books the same way, under Sheares Hall. One request → the time goes Pending. If two or more committees ask for overlapping hours, it becomes a Conflict.",
 	},
 	{
 		title: "3. JCRC approves every booking",
