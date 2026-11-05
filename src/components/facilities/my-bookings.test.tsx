@@ -3,7 +3,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MyBookings } from "@/components/facilities/my-bookings";
 import { type MyClaim } from "@/hooks/use-my-facility-claims";
-import { SlotWithContext } from "@/types/facilities";
+import { FacilitySlot } from "@/types/facilities";
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
@@ -30,7 +30,7 @@ const fetchMock = vi.fn();
 const onChanged = vi.fn();
 const onViewOnGrid = vi.fn();
 
-function render(claims: MyClaim[], slots: SlotWithContext[] = []) {
+function render(claims: MyClaim[], slots: FacilitySlot[] = []) {
 	container = document.createElement("div");
 	document.body.appendChild(container);
 	root = createRoot(container);
@@ -140,7 +140,7 @@ describe("MyBookings", () => {
 				hour: 10,
 				claims: [{ claim_id: 10, cca_id: 9, cca_name: "Floorball", status: "approved" }],
 			},
-		] as unknown as SlotWithContext[];
+		] as unknown as FacilitySlot[];
 		render([claim(1, 18), claim(2, 10, { status: "rejected" })], slots);
 		expect(container!.textContent).toContain("1 other CCA also asked for this time");
 		expect(container!.textContent).toContain("JCRC gave this slot to another CCA");

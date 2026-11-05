@@ -3,7 +3,7 @@ import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { BookCalendar } from "@/components/facilities/book-calendar";
 import { getBookingWeeks } from "@/lib/nus-academic-calendar";
-import { SlotClaim, SlotWithContext } from "@/types/facilities";
+import { SlotClaim, FacilitySlot } from "@/types/facilities";
 
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 vi.mock("sonner", () => ({ toast }));
@@ -13,7 +13,7 @@ const TOMORROW = "2026-11-05";
 const COURT = { id: 1, venue: "MPSH", sub_venue: "Court 1", type: "sheares" as const };
 const NETBALL = { id: 7, name: "Netball" };
 
-function slot(hour: number, claims: Partial<SlotClaim>[] = []): SlotWithContext {
+function slot(hour: number, claims: Partial<SlotClaim>[] = []): FacilitySlot {
 	return {
 		facility_id: 1,
 		venue: "MPSH",
@@ -31,7 +31,6 @@ function slot(hour: number, claims: Partial<SlotClaim>[] = []): SlotWithContext 
 			created_by: 1,
 			...claim,
 		})),
-		user_cca_claim: null,
 	};
 }
 

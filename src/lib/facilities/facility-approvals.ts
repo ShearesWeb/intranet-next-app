@@ -1,12 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { ApiError } from "@/lib/api/errors";
 import { getSlots } from "@/lib/facilities/facility-slots";
-import {
-	ApprovalClaimant,
-	ConfirmedBookingView,
-	SlotApprovalView,
-	daysUntilBooking,
-} from "@/types/facilities";
+import { ApprovalClaimant, ConfirmedBookingView, SlotApprovalView } from "@/types/facilities";
 
 /**
  * The approvals queue is derived from the computed calendar rather than from a
@@ -93,7 +88,6 @@ export async function listPendingApprovals(from: string, to: string): Promise<Sl
 		return {
 			slot,
 			claimants,
-			days_until_booking: daysUntilBooking(slot.date),
 		};
 	});
 }
@@ -125,7 +119,6 @@ export async function listUpcomingConfirmed(
 				cca_name: approved?.cca_name ?? "Unknown CCA",
 				chair_name: contact?.name ?? "",
 				claim_id: approved?.claim_id ?? 0,
-				days_until_booking: daysUntilBooking(slot.date),
 			};
 		})
 		.filter((view) => view.claim_id !== 0);

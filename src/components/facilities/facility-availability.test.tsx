@@ -49,7 +49,6 @@ const BOOKED: ApprovalsPayload = {
 			cca_name: "Netball",
 			chair_name: "Rachel",
 			claim_id: 70,
-			days_until_booking: 5,
 		},
 	],
 };

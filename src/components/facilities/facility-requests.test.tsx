@@ -31,7 +31,6 @@ function pending(
 ): SlotApprovalView {
 	return {
 		slot: slotFields(hour, "2026-11-05", facilityId),
-		days_until_booking: 1,
 		claimants: [
 			{
 				claim: {
@@ -56,7 +55,6 @@ function confirmed(hour: number, claimId: number): ConfirmedBookingView {
 		cca_name: "Band",
 		chair_name: "Clara",
 		claim_id: claimId,
-		days_until_booking: 1,
 	};
 }
 

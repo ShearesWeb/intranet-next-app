@@ -1,12 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { ApiError } from "@/lib/api/errors";
-import {
-	FacilitySlot,
-	MAX_SLOT_WINDOW_DAYS,
-	SlotClaim,
-	SlotWithContext,
-	daysUntilBooking,
-} from "@/types/facilities";
+import { FacilitySlot, MAX_SLOT_WINDOW_DAYS, daysUntilBooking } from "@/types/facilities";
 
 /**
  * Expand published schedules into dated slots across a window.
@@ -42,23 +36,4 @@ export async function getSlots(from: string, to: string): Promise<FacilitySlot[]
 		// An unclaimed slot returns [], never null, but be defensive about it.
 		claims: slot.claims ?? [],
 	}));
-}
-
-/**
- * Annotate each slot with the caller's own CCAs' claim, so the calendar can
- * show "yours" without a second round trip.
- */
-export function withUserCcaContext(slots: FacilitySlot[], userCcaIds: number[]): SlotWithContext[] {
-	const mine = new Set(userCcaIds);
-
-	return slots.map((slot) => {
-		let userClaim: SlotClaim | null = null;
-		for (const claim of slot.claims) {
-			if (mine.has(claim.cca_id)) {
-				userClaim = claim;
-				break;
-			}
-		}
-		return { ...slot, user_cca_claim: userClaim };
-	});
 }

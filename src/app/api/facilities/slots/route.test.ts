@@ -4,18 +4,12 @@ import { NextRequest } from "next/server";
 const mocks = vi.hoisted(() => ({
 	requireAuth: vi.fn(),
 	getSlots: vi.fn(),
-	withUserCcaContext: vi.fn(),
-	getBookingCcaIds: vi.fn(),
 	getCoreServiceDisabledApiResponse: vi.fn(),
 }));
 
 vi.mock("@/lib/api/auth", () => ({ requireAuth: mocks.requireAuth }));
 vi.mock("@/lib/facilities/facility-slots", () => ({
 	getSlots: mocks.getSlots,
-	withUserCcaContext: mocks.withUserCcaContext,
-}));
-vi.mock("@/lib/facilities/booking-ccas", () => ({
-	getBookingCcaIds: mocks.getBookingCcaIds,
 }));
 vi.mock("@/lib/feature-flags", () => ({
 	getCoreServiceDisabledApiResponse: mocks.getCoreServiceDisabledApiResponse,
@@ -34,9 +28,6 @@ describe("GET /api/facilities/slots — Sheares-only catalog", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mocks.getCoreServiceDisabledApiResponse.mockReturnValue(null);
-		mocks.getBookingCcaIds.mockReturnValue([]);
-		// Identity, so assertions read the filtered list the route hands over.
-		mocks.withUserCcaContext.mockImplementation((slots: unknown[]) => slots);
 	});
 
 	it("returns only Sheares slots", async () => {

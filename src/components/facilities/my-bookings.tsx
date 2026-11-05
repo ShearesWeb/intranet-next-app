@@ -24,7 +24,7 @@ import {
 import { errorMessage, withdrawClaims } from "@/lib/facilities/facility-client";
 import { getSingaporeDateKey, getSingaporeHour, getMondayOf } from "@/lib/nus-academic-calendar";
 import { cn } from "@/lib/utils";
-import { SlotWithContext } from "@/types/facilities";
+import { FacilitySlot } from "@/types/facilities";
 
 type StatusFilter = "all" | "approved" | "pending" | "rejected";
 
@@ -36,7 +36,7 @@ const STATS: { key: Exclude<StatusFilter, "all">; label: string; dot: string }[]
 
 interface MyBookingsProps {
 	claims: MyClaim[];
-	slots: SlotWithContext[];
+	slots: FacilitySlot[];
 	chairCcas: { id: number; name: string }[];
 	loading: boolean;
 	/** Dates the calendar can show; "View on grid" is hidden for anything else. */

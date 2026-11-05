@@ -10,11 +10,6 @@ export function isBookableFacilityType(type: FacilityType): boolean {
 	return type === "sheares";
 }
 
-/** The venue types chairs may book, in catalog display order. */
-export function bookableFacilityTypes(): FacilityType[] {
-	return ["sheares"];
-}
-
 // Product-level exclusions stay effective even when catalog data differs between environments.
 const HIDDEN_FACILITY_NAMES = new Set(["dance studio"]);
 

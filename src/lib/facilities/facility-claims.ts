@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { ApiError } from "@/lib/api/errors";
-import { ClaimStatus, FacilityClaim, FacilityType } from "@/types/facilities";
+import { FacilityClaim, FacilityType } from "@/types/facilities";
 
 export interface ClaimWithFacility extends FacilityClaim {
 	cca_name: string;
@@ -251,38 +251,4 @@ export async function getClaim(claimId: number): Promise<FacilityClaim | null> {
 		.maybeSingle();
 
 	return (data as FacilityClaim | null) ?? null;
-}
-
-/**
- * Approve or reject a claim. JCRC only.
- *
- * A non-JCRC caller is not refused: the UPDATE policy's USING clause filters
- * the row out, so PostgREST returns an empty array. Check the response length
- * rather than looking for an error.
- */
-export async function decideClaim(claimId: number, status: ClaimStatus): Promise<FacilityClaim> {
-	const supabase = await createClient();
-
-	const { data, error } = await supabase
-		.from("facility_claims")
-		.update({ status })
-		.eq("id", claimId)
-		.select(
-			"id, facility_id, date, hour, cca_id, status, created_by, created_at, decided_at, decided_by",
-		)
-		.maybeSingle();
-
-	if (error) {
-		if (error.code === "23505") {
-			throw new ApiError(409, "That slot is already confirmed for another CCA");
-		}
-		console.error("Error deciding claim:", error);
-		throw new ApiError(500, "Failed to update claim");
-	}
-
-	if (!data) {
-		throw new ApiError(403, "Only JCRC may resolve or reopen a facility claim");
-	}
-
-	return data as FacilityClaim;
 }

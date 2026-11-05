@@ -33,7 +33,7 @@ import {
 	type NusAcademicWeek,
 } from "@/lib/nus-academic-calendar";
 import { cn } from "@/lib/utils";
-import { Facility, SlotWithContext } from "@/types/facilities";
+import { Facility, FacilitySlot } from "@/types/facilities";
 
 const ROW_HEIGHT = 34;
 
@@ -52,7 +52,7 @@ interface BookCalendarProps {
 	onWeekChange: (index: number) => void;
 	onDayChange: (day: string) => void;
 	facilities: Facility[];
-	slots: SlotWithContext[];
+	slots: FacilitySlot[];
 	myClaims: MyClaim[];
 	chairCcas: { id: number; name: string }[];
 	isJcrc: boolean;

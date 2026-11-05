@@ -13,7 +13,7 @@ import { useAuth } from "@/lib/auth/auth-context";
 import { isBookableFacilityType, isHiddenFacility } from "@/lib/facilities/bookable-types";
 import { groupClaimSegments } from "@/lib/facilities/booking-grid";
 import { getBookingWeeks, getMondayOf, getSingaporeDateKey } from "@/lib/nus-academic-calendar";
-import { Facility, SlotWithContext } from "@/types/facilities";
+import { Facility, FacilitySlot } from "@/types/facilities";
 
 type BookTab = "book" | "mine";
 
@@ -41,7 +41,7 @@ export default function FacilitiesPage() {
 		data: slotData,
 		loading: slotsLoading,
 		refetch: refetchSlots,
-	} = useApiQuery<SlotWithContext[]>(slotsUrl, {
+	} = useApiQuery<FacilitySlot[]>(slotsUrl, {
 		enabled: Boolean(week),
 		initialData: [],
 		toastOnError: true,

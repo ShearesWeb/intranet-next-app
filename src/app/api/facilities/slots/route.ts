@@ -1,8 +1,7 @@
 import { requireAuth } from "@/lib/api/auth";
 import { apiOk, apiError, handleApiError } from "@/lib/api/response";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
-import { getSlots, withUserCcaContext } from "@/lib/facilities/facility-slots";
-import { getBookingCcaIds } from "@/lib/facilities/booking-ccas";
+import { getSlots } from "@/lib/facilities/facility-slots";
 import { NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -20,16 +19,14 @@ export async function GET(req: NextRequest) {
 	if (disabledResponse) return disabledResponse;
 
 	try {
-		const user = await requireAuth();
+		await requireAuth();
 		const { searchParams } = req.nextUrl;
 		const start = searchParams.get("start");
 		const end = searchParams.get("end");
 
 		if (!start || !end) return apiError("start and end are required", 400);
 
-		const slots = (await getSlots(start, end)).filter((slot) => slot.type === "sheares");
-
-		return apiOk(withUserCcaContext(slots, await getBookingCcaIds(user)));
+		return apiOk((await getSlots(start, end)).filter((slot) => slot.type === "sheares"));
 	} catch (e) {
 		return handleApiError(e);
 	}
