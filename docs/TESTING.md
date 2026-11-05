@@ -120,11 +120,11 @@ project, or a local `supabase start`).
 | `harper` | SHWEB / Subcomm | — | — | — |
 | `ezra` | SHWEB / Maincomm | ✓ | — | — |
 | `layla` | SHWEB / President | ✓ | — | — |
-| `jasper` | JCRC / Blockcomm | — | ✓ | — |
-| `brielle` | JCRC / Maincomm | ✓ | ✓ | — |
+| `jasper` | Sheares Hall / Blockcomm | — | ✓ | — |
+| `brielle` | Sheares Hall / Maincomm | ✓ | ✓ | — |
 | `nova` | Basketball / Captain; SECC / Subcomm | ✓ | — | ✓ |
 | `willow` | Dance / Captain | ✓ | — | ✓ |
-| `sage` | Drama / Director; JCRC / Maincomm | ✓ | ✓ | ✓ |
+| `sage` | Drama / Director; Sheares Hall / Maincomm | ✓ | ✓ | ✓ |
 
 Quick picks: a **plain resident** → `aria`; a **chair with no JCRC** → `declan`
 (sports) or `layla` (committee); **JCRC-only** → `jasper`; **all three flags** → `sage`; **multi-CCA** → `nova`.

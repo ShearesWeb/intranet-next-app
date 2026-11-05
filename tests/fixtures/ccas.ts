@@ -53,7 +53,7 @@ export const CCAS: readonly Cca[] = [
 	},
 	{
 		key: "jcrc",
-		name: "JCRC",
+		name: "Sheares Hall",
 		kind: "jcrc",
 		tier: "none",
 		description: "Hall executive committee — no lead position; top is maincomm.",

@@ -7,9 +7,9 @@ BEGIN;
 -- Block Committee + Sheares Hall data that triggers depend on, so we
 -- never TRUNCATE — we only remove rows we own. ON DELETE CASCADE on the
 -- FK chain wipes dependent positions and appointments.
-DELETE FROM facility_claims WHERE created_by IN (SELECT id FROM users WHERE email IN ('aria.tan.sg@gmail.com', 'mason.lim.99@gmail.com', 'chloe.ng.j@gmail.com', 'declanho.sg@gmail.com', 'alexis.goh.99@gmail.com', 'sienna.lee.j@gmail.com', 'kai.koh.96@gmail.com', 'harper.tan.2k@gmail.com', 'ezrasim.nus@gmail.com', 'layla.ng.97@gmail.com', 'jasper.chua.sg@gmail.com', 'brielle.koh.j@gmail.com', 'nova.tay.sg@gmail.com', 'willow.rahman.gg@gmail.com', 'sage.lim.97@gmail.com')) OR cca_id IN (SELECT id FROM ccas WHERE name IN ('Volleyball', 'Basketball', 'Choir', 'Dance', 'Drama', 'SHWEB', 'SECC', 'JCRC'));
+DELETE FROM facility_claims WHERE created_by IN (SELECT id FROM users WHERE email IN ('aria.tan.sg@gmail.com', 'mason.lim.99@gmail.com', 'chloe.ng.j@gmail.com', 'declanho.sg@gmail.com', 'alexis.goh.99@gmail.com', 'sienna.lee.j@gmail.com', 'kai.koh.96@gmail.com', 'harper.tan.2k@gmail.com', 'ezrasim.nus@gmail.com', 'layla.ng.97@gmail.com', 'jasper.chua.sg@gmail.com', 'brielle.koh.j@gmail.com', 'nova.tay.sg@gmail.com', 'willow.rahman.gg@gmail.com', 'sage.lim.97@gmail.com')) OR cca_id IN (SELECT id FROM ccas WHERE name IN ('Volleyball', 'Basketball', 'Choir', 'Dance', 'Drama', 'SHWEB', 'SECC', 'Sheares Hall'));
 DELETE FROM users WHERE email IN ('aria.tan.sg@gmail.com', 'mason.lim.99@gmail.com', 'chloe.ng.j@gmail.com', 'declanho.sg@gmail.com', 'alexis.goh.99@gmail.com', 'sienna.lee.j@gmail.com', 'kai.koh.96@gmail.com', 'harper.tan.2k@gmail.com', 'ezrasim.nus@gmail.com', 'layla.ng.97@gmail.com', 'jasper.chua.sg@gmail.com', 'brielle.koh.j@gmail.com', 'nova.tay.sg@gmail.com', 'willow.rahman.gg@gmail.com', 'sage.lim.97@gmail.com');
-DELETE FROM ccas WHERE name IN ('Volleyball', 'Basketball', 'Choir', 'Dance', 'Drama', 'SHWEB', 'SECC', 'JCRC');
+DELETE FROM ccas WHERE name IN ('Volleyball', 'Basketball', 'Choir', 'Dance', 'Drama', 'SHWEB', 'SECC', 'Sheares Hall');
 -- Timed ranking-period flags are inserted by tests; reseed clears them.
 DELETE FROM feature_flags WHERE name IN ('maincomm-ranking-period', 'subcomm-ranking-period');
 
@@ -21,7 +21,7 @@ INSERT INTO ccas (name, kind, tier, description) VALUES ('Dance', 'culture', 'ti
 INSERT INTO ccas (name, kind, tier, description) VALUES ('Drama', 'culture', 'tier-1', 'Sage''s CCA — supports the triple-flag persona.');
 INSERT INTO ccas (name, kind, tier, description) VALUES ('SHWEB', 'committee', 'none', 'Primary committee with lead / maincomm / subcomm roster.');
 INSERT INTO ccas (name, kind, tier, description) VALUES ('SECC', 'committee', 'none', 'Committee foil for cross-committee scoping.');
-INSERT INTO ccas (name, kind, tier, description) VALUES ('JCRC', 'jcrc', 'none', 'Hall executive committee — no lead position; top is maincomm.');
+INSERT INTO ccas (name, kind, tier, description) VALUES ('Sheares Hall', 'jcrc', 'none', 'Hall executive committee — no lead position; top is maincomm.');
 
 -- CCA positions: insert all rows first, then patch reporting_position_id via UPDATE.
 INSERT INTO cca_positions (cca_id, position_type, name, capacity) VALUES ((SELECT id FROM ccas WHERE name = 'Volleyball'), 'lead', 'Captain', 1);
@@ -47,8 +47,8 @@ INSERT INTO cca_positions (cca_id, position_type, name, capacity) VALUES ((SELEC
 INSERT INTO cca_positions (cca_id, position_type, name, capacity) VALUES ((SELECT id FROM ccas WHERE name = 'SECC'), 'lead', 'President', 1);
 INSERT INTO cca_positions (cca_id, position_type, name, capacity) VALUES ((SELECT id FROM ccas WHERE name = 'SECC'), 'maincomm', 'Maincomm', 5);
 INSERT INTO cca_positions (cca_id, position_type, name, capacity) VALUES ((SELECT id FROM ccas WHERE name = 'SECC'), 'subcomm', 'Subcomm', 15);
-INSERT INTO cca_positions (cca_id, position_type, name, capacity) VALUES ((SELECT id FROM ccas WHERE name = 'JCRC'), 'maincomm', 'Maincomm', 5);
-INSERT INTO cca_positions (cca_id, position_type, name, capacity) VALUES ((SELECT id FROM ccas WHERE name = 'JCRC'), 'blockcomm', 'Blockcomm', 10);
+INSERT INTO cca_positions (cca_id, position_type, name, capacity) VALUES ((SELECT id FROM ccas WHERE name = 'Sheares Hall'), 'maincomm', 'Maincomm', 5);
+INSERT INTO cca_positions (cca_id, position_type, name, capacity) VALUES ((SELECT id FROM ccas WHERE name = 'Sheares Hall'), 'blockcomm', 'Blockcomm', 10);
 
 -- Patch self-FKs (reporting_position_id).
 UPDATE cca_positions SET reporting_position_id = (SELECT id FROM cca_positions WHERE cca_id = (SELECT id FROM ccas WHERE name = 'Volleyball') AND name = 'Captain') WHERE cca_id = (SELECT id FROM ccas WHERE name = 'Volleyball') AND name = 'Vice Captain';
@@ -67,7 +67,7 @@ UPDATE cca_positions SET reporting_position_id = (SELECT id FROM cca_positions W
 UPDATE cca_positions SET reporting_position_id = (SELECT id FROM cca_positions WHERE cca_id = (SELECT id FROM ccas WHERE name = 'SHWEB') AND name = 'Maincomm') WHERE cca_id = (SELECT id FROM ccas WHERE name = 'SHWEB') AND name = 'Subcomm';
 UPDATE cca_positions SET reporting_position_id = (SELECT id FROM cca_positions WHERE cca_id = (SELECT id FROM ccas WHERE name = 'SECC') AND name = 'President') WHERE cca_id = (SELECT id FROM ccas WHERE name = 'SECC') AND name = 'Maincomm';
 UPDATE cca_positions SET reporting_position_id = (SELECT id FROM cca_positions WHERE cca_id = (SELECT id FROM ccas WHERE name = 'SECC') AND name = 'Maincomm') WHERE cca_id = (SELECT id FROM ccas WHERE name = 'SECC') AND name = 'Subcomm';
-UPDATE cca_positions SET reporting_position_id = (SELECT id FROM cca_positions WHERE cca_id = (SELECT id FROM ccas WHERE name = 'JCRC') AND name = 'Maincomm') WHERE cca_id = (SELECT id FROM ccas WHERE name = 'JCRC') AND name = 'Blockcomm';
+UPDATE cca_positions SET reporting_position_id = (SELECT id FROM cca_positions WHERE cca_id = (SELECT id FROM ccas WHERE name = 'Sheares Hall') AND name = 'Maincomm') WHERE cca_id = (SELECT id FROM ccas WHERE name = 'Sheares Hall') AND name = 'Blockcomm';
 
 -- Users (spec § 5.2). The anonymous persona has no row.
 INSERT INTO users (email, name, room, stay_period, matric) VALUES ('aria.tan.sg@gmail.com', 'Aria Tan', 'SH/A/2/203', 'full-year', 'A0250001A');
@@ -96,12 +96,12 @@ INSERT INTO cca_appointments (user_id, position_id, points) VALUES ((SELECT id F
 INSERT INTO cca_appointments (user_id, position_id, points) VALUES ((SELECT id FROM users WHERE email = 'harper.tan.2k@gmail.com'), (SELECT id FROM cca_positions WHERE cca_id = (SELECT id FROM ccas WHERE name = 'SHWEB') AND name = 'Subcomm'), 0);
 INSERT INTO cca_appointments (user_id, position_id, points) VALUES ((SELECT id FROM users WHERE email = 'ezrasim.nus@gmail.com'), (SELECT id FROM cca_positions WHERE cca_id = (SELECT id FROM ccas WHERE name = 'SHWEB') AND name = 'Maincomm'), 0);
 INSERT INTO cca_appointments (user_id, position_id, points) VALUES ((SELECT id FROM users WHERE email = 'layla.ng.97@gmail.com'), (SELECT id FROM cca_positions WHERE cca_id = (SELECT id FROM ccas WHERE name = 'SHWEB') AND name = 'President'), 0);
-INSERT INTO cca_appointments (user_id, position_id, points) VALUES ((SELECT id FROM users WHERE email = 'jasper.chua.sg@gmail.com'), (SELECT id FROM cca_positions WHERE cca_id = (SELECT id FROM ccas WHERE name = 'JCRC') AND name = 'Blockcomm'), 0);
-INSERT INTO cca_appointments (user_id, position_id, points) VALUES ((SELECT id FROM users WHERE email = 'brielle.koh.j@gmail.com'), (SELECT id FROM cca_positions WHERE cca_id = (SELECT id FROM ccas WHERE name = 'JCRC') AND name = 'Maincomm'), 0);
+INSERT INTO cca_appointments (user_id, position_id, points) VALUES ((SELECT id FROM users WHERE email = 'jasper.chua.sg@gmail.com'), (SELECT id FROM cca_positions WHERE cca_id = (SELECT id FROM ccas WHERE name = 'Sheares Hall') AND name = 'Blockcomm'), 0);
+INSERT INTO cca_appointments (user_id, position_id, points) VALUES ((SELECT id FROM users WHERE email = 'brielle.koh.j@gmail.com'), (SELECT id FROM cca_positions WHERE cca_id = (SELECT id FROM ccas WHERE name = 'Sheares Hall') AND name = 'Maincomm'), 0);
 INSERT INTO cca_appointments (user_id, position_id, points) VALUES ((SELECT id FROM users WHERE email = 'nova.tay.sg@gmail.com'), (SELECT id FROM cca_positions WHERE cca_id = (SELECT id FROM ccas WHERE name = 'Basketball') AND name = 'Captain'), 0);
 INSERT INTO cca_appointments (user_id, position_id, points) VALUES ((SELECT id FROM users WHERE email = 'nova.tay.sg@gmail.com'), (SELECT id FROM cca_positions WHERE cca_id = (SELECT id FROM ccas WHERE name = 'SECC') AND name = 'Subcomm'), 0);
 INSERT INTO cca_appointments (user_id, position_id, points) VALUES ((SELECT id FROM users WHERE email = 'willow.rahman.gg@gmail.com'), (SELECT id FROM cca_positions WHERE cca_id = (SELECT id FROM ccas WHERE name = 'Dance') AND name = 'Captain'), 0);
 INSERT INTO cca_appointments (user_id, position_id, points) VALUES ((SELECT id FROM users WHERE email = 'sage.lim.97@gmail.com'), (SELECT id FROM cca_positions WHERE cca_id = (SELECT id FROM ccas WHERE name = 'Drama') AND name = 'Director'), 0);
-INSERT INTO cca_appointments (user_id, position_id, points) VALUES ((SELECT id FROM users WHERE email = 'sage.lim.97@gmail.com'), (SELECT id FROM cca_positions WHERE cca_id = (SELECT id FROM ccas WHERE name = 'JCRC') AND name = 'Maincomm'), 0);
+INSERT INTO cca_appointments (user_id, position_id, points) VALUES ((SELECT id FROM users WHERE email = 'sage.lim.97@gmail.com'), (SELECT id FROM cca_positions WHERE cca_id = (SELECT id FROM ccas WHERE name = 'Sheares Hall') AND name = 'Maincomm'), 0);
 
 COMMIT;

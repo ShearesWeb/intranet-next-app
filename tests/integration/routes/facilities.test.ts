@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { asPersona, ccaIdByName, jsonRequest, makeRequest, readJson } from "../helpers";
 import { pgPool } from "../setup";
+import type { PersonaKey } from "../../fixtures/types";
 
 function dateFromToday(days: number): string {
 	const d = new Date();
@@ -55,7 +56,7 @@ async function slotStatus(facilityId: number, slotDate: string, hour = 18): Prom
 
 describe("GET /api/facilities/claims", () => {
 	it("returns claims (empty baseline) for a chair", async () => {
-		asPersona("declan");
+		asPersona("layla");
 		const { GET } = await import("@/app/api/facilities/claims/route");
 		const { status, data } = await readJson<unknown[]>(
 			await GET(makeRequest("/api/facilities/claims")),
@@ -73,7 +74,7 @@ describe("GET /api/facilities/claims", () => {
 
 describe("GET /api/facilities/slots", () => {
 	it("400s when start/end are omitted", async () => {
-		asPersona("declan");
+		asPersona("layla");
 		const { GET } = await import("@/app/api/facilities/slots/route");
 		expect((await readJson(await GET(makeRequest("/api/facilities/slots")))).status).toBe(400);
 	});
@@ -83,7 +84,7 @@ describe("GET /api/facilities/slots", () => {
 		const slotDate = dateFromToday(10);
 		await publishSlot(facilityId, slotDate);
 
-		asPersona("declan");
+		asPersona("layla");
 		const { GET } = await import("@/app/api/facilities/slots/route");
 		const { status, data } = await readJson<Array<{ facility_id: number; status: string }>>(
 			await GET(makeRequest(`/api/facilities/slots?start=${slotDate}&end=${slotDate}`)),
@@ -93,7 +94,7 @@ describe("GET /api/facilities/slots", () => {
 	});
 
 	it("rejects a window wider than the 366-day cap", async () => {
-		asPersona("declan");
+		asPersona("layla");
 		const { GET } = await import("@/app/api/facilities/slots/route");
 		const res = await readJson(
 			await GET(
@@ -115,11 +116,9 @@ describe("GET /api/facilities/slots", () => {
 
 describe("GET /api/facilities/catalog", () => {
 	it("returns the facility catalog for an authenticated user", async () => {
-		asPersona("declan");
+		asPersona("layla");
 		const { GET } = await import("@/app/api/facilities/catalog/route");
-		const { status, data } = await readJson<unknown[]>(
-			await GET(makeRequest("/api/facilities/catalog")),
-		);
+		const { status, data } = await readJson<unknown[]>(await GET());
 		expect(status).toBe(200);
 		expect(Array.isArray(data)).toBe(true);
 	});
@@ -131,9 +130,9 @@ describe("facilities approval flow", () => {
 		const facilityId = await createFacility();
 		const slotDate = dateFromToday(10);
 		await publishSlot(facilityId, slotDate);
-		const ccaId = await ccaIdByName("Volleyball");
+		const ccaId = await ccaIdByName("SHWEB");
 
-		asPersona("declan");
+		asPersona("layla");
 		const claims = await import("@/app/api/facilities/claims/route");
 		const claimRes = await readJson<{ id: number }>(
 			await claims.POST(
@@ -198,9 +197,9 @@ describe("facilities approval flow", () => {
 		const facilityId = await createFacility();
 		const slotDate = dateFromToday(10);
 		await publishSlot(facilityId, slotDate);
-		const ccaId = await ccaIdByName("Volleyball");
+		const ccaId = await ccaIdByName("SHWEB");
 
-		asPersona("declan");
+		asPersona("layla");
 		const claims = await import("@/app/api/facilities/claims/route");
 		const created = await readJson<{ id: number }>(
 			await claims.POST(
@@ -230,9 +229,58 @@ describe("facilities approval flow", () => {
 	});
 
 	it("403s the approvals queue for non-JCRC users", async () => {
-		asPersona("declan");
+		asPersona("layla");
 		const approvals = await import("@/app/api/facilities/approvals/route");
 		expect((await readJson(await approvals.GET())).status).toBe(403);
+	});
+});
+
+describe("GET /api/facilities/booking-ccas", () => {
+	it.each<[PersonaKey, string[]]>([
+		["layla", ["SHWEB"]],
+		["brielle", ["Sheares Hall"]],
+		["sage", ["Sheares Hall"]],
+		["declan", []],
+		["kai", []],
+		["ezra", []],
+		["jasper", []],
+		["aria", []],
+	])("lists what %s may book under", async (persona, names) => {
+		asPersona(persona);
+		const { GET } = await import("@/app/api/facilities/booking-ccas/route");
+		const { status, data } = await readJson<Array<{ name: string }>>(await GET());
+		expect(status).toBe(200);
+		expect(data.map((cca) => cca.name)).toEqual(names);
+	});
+});
+
+describe("facilities booking eligibility", () => {
+	it.each<[PersonaKey, string]>([
+		["declan", "Volleyball"],
+		["alexis", "Volleyball"],
+		["kai", "Choir"],
+		["sage", "Drama"],
+		["ezra", "SHWEB"],
+		["jasper", "Sheares Hall"],
+		["brielle", "Volleyball"],
+		["aria", "SHWEB"],
+	])("403s %s booking for %s", async (persona, ccaName) => {
+		const ccaId = await ccaIdByName(ccaName);
+
+		asPersona(persona);
+		const claims = await import("@/app/api/facilities/claims/route");
+		const res = await readJson(
+			await claims.POST(
+				jsonRequest("/api/facilities/claims", "POST", {
+					facility_id: await createFacility(),
+					date: dateFromToday(10),
+					hour: 18,
+					cca_id: ccaId,
+				}),
+			),
+		);
+		expect(res.status).toBe(403);
+		expect(res.error).toBe("Not authorized to claim for this CCA");
 	});
 });
 
@@ -241,9 +289,9 @@ describe("facilities booking lead-time gate", () => {
 		const facilityId = await createFacility();
 		const slotDate = dateFromToday(1);
 		await publishSlot(facilityId, slotDate);
-		const ccaId = await ccaIdByName("Volleyball");
+		const ccaId = await ccaIdByName("SHWEB");
 
-		asPersona("declan");
+		asPersona("layla");
 		const claims = await import("@/app/api/facilities/claims/route");
 		const res = await readJson(
 			await claims.POST(
@@ -263,9 +311,9 @@ describe("facilities booking lead-time gate", () => {
 		const facilityId = await createFacility();
 		const slotDate = dateFromToday(3);
 		await publishSlot(facilityId, slotDate);
-		const ccaId = await ccaIdByName("Volleyball");
+		const ccaId = await ccaIdByName("SHWEB");
 
-		asPersona("declan");
+		asPersona("layla");
 		const claims = await import("@/app/api/facilities/claims/route");
 		const res = await readJson(
 			await claims.POST(
@@ -319,9 +367,9 @@ describe("facilities claim withdrawal", () => {
 		const facilityId = await createFacility();
 		const slotDate = dateFromToday(10);
 		await publishSlot(facilityId, slotDate);
-		const ccaId = await ccaIdByName("Volleyball");
+		const ccaId = await ccaIdByName("SHWEB");
 
-		asPersona("declan");
+		asPersona("layla");
 		const claims = await import("@/app/api/facilities/claims/route");
 		const created = await readJson<{ id: number }>(
 			await claims.POST(
