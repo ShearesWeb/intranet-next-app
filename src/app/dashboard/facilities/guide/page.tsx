@@ -1,4 +1,6 @@
 import { PageHeader } from "@/components/layout/page-header";
+import { COMMITTEE_BOOKING_DAYS_AHEAD, formatDayReach } from "@/lib/facilities/booking-eligibility";
+import { BOOKING_WEEKS_AHEAD } from "@/lib/nus-academic-calendar";
 
 const STEP_1_BODY =
 	"JCRC places facility bookings — one venue, one date, one hour. Venues are added by JCRC and can repeat weekly, with an optional start and end date.";
@@ -10,7 +12,7 @@ const STEPS: { title: string; body: string }[] = [
 	},
 	{
 		title: "2. Committees claim a slot",
-		body: "Committee chairs and vice-chairs pick a time on the calendar and request it for their committee, up to 4 weeks ahead during the NUS semester, including recess week, reading week and exams. JCRC books the same way, under Sheares Hall. One request → the time goes Pending. If two or more committees ask for overlapping hours, it becomes a Conflict.",
+		body: `Committee chairs and vice-chairs pick a time on the calendar and request it for their committee, up to ${formatDayReach(COMMITTEE_BOOKING_DAYS_AHEAD)} ahead during the NUS semester, including recess week, reading week and exams. JCRC books the same way under Sheares Hall, up to ${BOOKING_WEEKS_AHEAD} weeks ahead. One request → the time goes Pending. If two or more committees ask for overlapping hours, it becomes a Conflict.`,
 	},
 	{
 		title: "3. JCRC approves every booking",

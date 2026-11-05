@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
 	getClaimOwners: vi.fn(),
 	canManageFacilities: vi.fn(),
 	getClaimsForCcas: vi.fn(),
-	canBookForCca: vi.fn(),
+	getBookingCcas: vi.fn(),
 	getBookingCcaIds: vi.fn(),
 	getFacilityType: vi.fn(),
 	getCoreServiceDisabledApiResponse: vi.fn(),
@@ -29,7 +29,7 @@ vi.mock("@/lib/facilities/facility-access", () => ({
 	canManageFacilities: mocks.canManageFacilities,
 }));
 vi.mock("@/lib/facilities/booking-ccas", () => ({
-	canBookForCca: mocks.canBookForCca,
+	getBookingCcas: mocks.getBookingCcas,
 	getBookingCcaIds: mocks.getBookingCcaIds,
 }));
 vi.mock("@/lib/facilities/facility-catalog", () => ({
@@ -38,10 +38,14 @@ vi.mock("@/lib/facilities/facility-catalog", () => ({
 vi.mock("@/lib/feature-flags", () => ({
 	getCoreServiceDisabledApiResponse: mocks.getCoreServiceDisabledApiResponse,
 }));
-vi.mock("@/lib/nus-academic-calendar", () => ({
+vi.mock("@/lib/nus-academic-calendar", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@/lib/nus-academic-calendar")>()),
 	isWithinBookingWindow: mocks.isWithinBookingWindow,
 	getSingaporeDateKey: mocks.getSingaporeDateKey,
 }));
+
+const SHWEB = { id: 3, name: "SHWEB", kind: "committee" };
+const SHEARES_HALL = { id: 6, name: "Sheares Hall", kind: "jcrc" };
 
 function post(body: unknown) {
 	return new NextRequest("http://localhost/api/facilities/claims", {
@@ -93,7 +97,7 @@ describe("POST /api/facilities/claims — validation", () => {
 		vi.clearAllMocks();
 		mocks.getCoreServiceDisabledApiResponse.mockReturnValue(null);
 		mocks.requireAuth.mockResolvedValue({ id: 42 });
-		mocks.canBookForCca.mockReturnValue(true);
+		mocks.getBookingCcas.mockResolvedValue([SHWEB]);
 		mocks.isWithinBookingWindow.mockReturnValue(true);
 		mocks.getSingaporeDateKey.mockReturnValue(futureDate(0));
 		mocks.getFacilityType.mockResolvedValue("sheares");
@@ -130,7 +134,7 @@ describe("POST /api/facilities/claims — validation", () => {
 	});
 
 	it("403s when the caller may not book for the CCA", async () => {
-		mocks.canBookForCca.mockReturnValue(false);
+		mocks.getBookingCcas.mockResolvedValue([SHEARES_HALL]);
 		const { POST } = await import("./route");
 		const res = await POST(post({ facility_id: 2, date: futureDate(5), hour: 18, cca_id: 3 }));
 		expect(res.status).toBe(403);
@@ -165,6 +169,30 @@ describe("POST /api/facilities/claims — validation", () => {
 		expect(mocks.createClaims).not.toHaveBeenCalled();
 	});
 
+	it("refuses a committee request more than a week ahead", async () => {
+		const { POST } = await import("./route");
+		const res = await POST(post({ facility_id: 2, date: futureDate(8), hour: 18, cca_id: 3 }));
+		expect(res.status).toBe(403);
+		expect((await res.json()).error).toBe("Committees can only book up to 1 week ahead");
+		expect(mocks.createClaim).not.toHaveBeenCalled();
+	});
+
+	it("accepts a committee request exactly a week ahead", async () => {
+		mocks.createClaim.mockResolvedValue({ id: 1 });
+		const { POST } = await import("./route");
+		const res = await POST(post({ facility_id: 2, date: futureDate(7), hour: 18, cca_id: 3 }));
+		expect(res.status).toBe(201);
+	});
+
+	it("lets Sheares Hall book further than a week ahead", async () => {
+		mocks.getBookingCcas.mockResolvedValue([SHWEB, SHEARES_HALL]);
+		mocks.createClaim.mockResolvedValue({ id: 1 });
+		const { POST } = await import("./route");
+		const res = await POST(post({ facility_id: 2, date: futureDate(20), hour: 18, cca_id: 6 }));
+		expect(res.status).toBe(201);
+		expect(mocks.createClaim).toHaveBeenCalledWith(2, futureDate(20), 18, 6, 42);
+	});
+
 	it("rejects a slot outside the booking window", async () => {
 		mocks.isWithinBookingWindow.mockReturnValue(false);
 		const { POST } = await import("./route");
@@ -180,7 +208,7 @@ describe("POST /api/facilities/claims — Sheares-only gate", () => {
 		vi.clearAllMocks();
 		mocks.getCoreServiceDisabledApiResponse.mockReturnValue(null);
 		mocks.requireAuth.mockResolvedValue({ id: 42, is_jcrc: false });
-		mocks.canBookForCca.mockReturnValue(true);
+		mocks.getBookingCcas.mockResolvedValue([SHWEB]);
 		mocks.isWithinBookingWindow.mockReturnValue(true);
 		mocks.getSingaporeDateKey.mockReturnValue(futureDate(0));
 		mocks.createClaim.mockResolvedValue({ id: 1 });

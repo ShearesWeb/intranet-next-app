@@ -40,8 +40,8 @@ function render(claims: MyClaim[], slots: FacilitySlot[] = []) {
 				claims={claims}
 				slots={slots}
 				bookingCcas={[
-					{ id: 7, name: "Netball" },
-					{ id: 8, name: "Web" },
+					{ id: 7, name: "Netball", kind: "committee" },
+					{ id: 8, name: "Web", kind: "committee" },
 				]}
 				loading={false}
 				gridDates={new Set(["2026-11-05", "2026-11-03"])}

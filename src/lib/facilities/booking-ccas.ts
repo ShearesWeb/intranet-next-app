@@ -29,7 +29,7 @@ async function getShearesHallCca(): Promise<BookingCca> {
 		throw new ApiError(500, "Failed to load the CCAs you can book for");
 	}
 
-	return data as BookingCca;
+	return { id: data.id, name: data.name, kind: "jcrc" };
 }
 
 /** The CCAs the user may request facilities under. */
