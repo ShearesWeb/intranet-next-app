@@ -1,14 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { ApiError } from "@/lib/api/errors";
-import { getSlots } from "@/lib/facilities/facility-slots";
-import { ApprovalClaimant, ConfirmedBookingView, SlotApprovalView } from "@/types/facilities";
+import {
+	ApprovalClaimant,
+	ConfirmedBookingView,
+	FacilitySlot,
+	SlotApprovalView,
+} from "@/types/facilities";
 
-/**
- * The approvals queue is derived from the computed calendar rather than from a
- * bookings table, because no bookings table exists. `facility_slots()` already
- * returns each slot's status and its live claims as JSON, so one call gives
- * both the queue and the claimant list.
- */
 async function contactsFor(userIds: number[]) {
 	const contacts = new Map<number, { name: string; telegram: string }>();
 	if (!userIds.length) return contacts;
@@ -42,9 +40,14 @@ async function requestTimesFor(claimIds: number[]) {
 	return times;
 }
 
-/** Every slot with outstanding claims (single or competing), with chair contacts. */
-export async function listPendingApprovals(from: string, to: string): Promise<SlotApprovalView[]> {
-	const slots = await getSlots(from, to);
+/**
+ * Every slot with outstanding claims (single or competing), with requester contacts.
+ *
+ * The approvals queue is derived from the computed calendar rather than from a
+ * bookings table, because no bookings table exists. `facility_slots()` already
+ * returns each slot's status and its live claims, so one call feeds both lists.
+ */
+export async function listPendingApprovals(slots: FacilitySlot[]): Promise<SlotApprovalView[]> {
 	const awaiting = slots.filter(
 		(slot) => slot.status === "pending" || slot.status === "conflicted",
 	);
@@ -94,13 +97,12 @@ export async function listPendingApprovals(from: string, to: string): Promise<Sl
 
 /** Upcoming confirmed bookings with the holding CCA — JCRC can revoke these. */
 export async function listUpcomingConfirmed(
-	from: string,
-	to: string,
+	slots: FacilitySlot[],
 ): Promise<ConfirmedBookingView[]> {
-	const slots = (await getSlots(from, to)).filter((slot) => slot.status === "confirmed");
+	const confirmed = slots.filter((slot) => slot.status === "confirmed");
 	const contacts = await contactsFor([
 		...new Set(
-			slots
+			confirmed
 				.flatMap((slot) => slot.claims)
 				.filter((claim) => claim.status === "approved")
 				.map((claim) => claim.created_by)
@@ -108,20 +110,21 @@ export async function listUpcomingConfirmed(
 		),
 	]);
 
-	return slots
-		.map((slot) => {
-			// At most one claim per slot is ever approved, which is what makes
-			// `confirmed` unambiguous.
-			const approved = slot.claims.find((claim) => claim.status === "approved");
-			const contact = approved?.created_by ? contacts.get(approved.created_by) : undefined;
-			return {
+	return confirmed.flatMap((slot) => {
+		// At most one claim per slot is ever approved, which is what makes
+		// `confirmed` unambiguous.
+		const approved = slot.claims.find((claim) => claim.status === "approved");
+		if (!approved) return [];
+		const contact = approved.created_by ? contacts.get(approved.created_by) : undefined;
+		return [
+			{
 				slot,
-				cca_name: approved?.cca_name ?? "Unknown CCA",
+				cca_name: approved.cca_name,
 				chair_name: contact?.name ?? "",
-				claim_id: approved?.claim_id ?? 0,
-			};
-		})
-		.filter((view) => view.claim_id !== 0);
+				claim_id: approved.claim_id,
+			},
+		];
+	});
 }
 
 /** Reject every named claim, freeing the slot for those CCAs to claim again. */

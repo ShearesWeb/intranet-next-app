@@ -9,6 +9,7 @@ import {
 } from "@/lib/facilities/facility-approvals";
 import { deleteClaims, getClaimOwners } from "@/lib/facilities/facility-claims";
 import { todayKey } from "@/lib/date";
+import { getSlots } from "@/lib/facilities/facility-slots";
 import { NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -50,14 +51,12 @@ export async function GET() {
 		const from = todayKey();
 		const to = windowEnd(from, APPROVAL_WINDOW_DAYS);
 
+		const slots = (await getSlots(from, to)).filter((slot) => slot.type === "sheares");
 		const [pending, confirmed] = await Promise.all([
-			listPendingApprovals(from, to),
-			listUpcomingConfirmed(from, to),
+			listPendingApprovals(slots),
+			listUpcomingConfirmed(slots),
 		]);
-		return apiOk({
-			pending: pending.filter((item) => item.slot.type === "sheares"),
-			confirmed: confirmed.filter((item) => item.slot.type === "sheares"),
-		});
+		return apiOk({ pending, confirmed });
 	} catch (e) {
 		return handleApiError(e);
 	}

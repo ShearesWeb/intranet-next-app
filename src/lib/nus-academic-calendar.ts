@@ -45,14 +45,16 @@ export function addDays(dateKey: string, amount: number): string {
 	].join("-");
 }
 
+const SINGAPORE_DATE_FORMAT = new Intl.DateTimeFormat("en-GB", {
+	timeZone: "Asia/Singapore",
+	year: "numeric",
+	month: "2-digit",
+	day: "2-digit",
+});
+
 /** Today's YYYY-MM-DD date in Singapore, regardless of server timezone. */
 export function getSingaporeDateKey(now: Date = new Date()): string {
-	const parts = new Intl.DateTimeFormat("en-GB", {
-		timeZone: "Asia/Singapore",
-		year: "numeric",
-		month: "2-digit",
-		day: "2-digit",
-	}).formatToParts(now);
+	const parts = SINGAPORE_DATE_FORMAT.formatToParts(now);
 
 	const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
 	return `${values.year}-${values.month}-${values.day}`;
@@ -110,12 +112,13 @@ export function isWithinBookingWindow(dateKey: string, now: Date = new Date()): 
 	return getBookingWeeks(now).some((week) => dateKey >= week.start && dateKey <= week.end);
 }
 
+const SINGAPORE_HOUR_FORMAT = new Intl.DateTimeFormat("en-GB", {
+	timeZone: "Asia/Singapore",
+	hour: "2-digit",
+	hourCycle: "h23",
+});
+
 /** The current hour (0–23) in Singapore, regardless of server timezone. */
 export function getSingaporeHour(now: Date = new Date()): number {
-	const hour = new Intl.DateTimeFormat("en-GB", {
-		timeZone: "Asia/Singapore",
-		hour: "2-digit",
-		hourCycle: "h23",
-	}).format(now);
-	return Number(hour);
+	return Number(SINGAPORE_HOUR_FORMAT.format(now));
 }

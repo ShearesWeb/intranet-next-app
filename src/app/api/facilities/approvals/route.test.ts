@@ -4,6 +4,7 @@ import { ApiError } from "@/lib/api/errors";
 
 const mocks = vi.hoisted(() => ({
 	requireJcrcAccess: vi.fn(),
+	getSlots: vi.fn(),
 	listPendingApprovals: vi.fn(),
 	listUpcomingConfirmed: vi.fn(),
 	resolveSlot: vi.fn(),
@@ -14,6 +15,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/api/auth", () => ({ requireJcrcAccess: mocks.requireJcrcAccess }));
+vi.mock("@/lib/facilities/facility-slots", () => ({ getSlots: mocks.getSlots }));
 vi.mock("@/lib/facilities/facility-approvals", () => ({
 	listPendingApprovals: mocks.listPendingApprovals,
 	listUpcomingConfirmed: mocks.listUpcomingConfirmed,
@@ -46,21 +48,20 @@ describe("approvals route", () => {
 		);
 	});
 
-	it("GET returns pending + confirmed lists", async () => {
-		mocks.listPendingApprovals.mockResolvedValue([
-			{ slot: { facility_id: 1, type: "sheares" } },
-			{ slot: { facility_id: 2, type: "nus" } },
-		]);
-		mocks.listUpcomingConfirmed.mockResolvedValue([
-			{ slot: { facility_id: 2, type: "sheares" }, claim_id: 9 },
-			{ slot: { facility_id: 3, type: "external" }, claim_id: 10 },
-		]);
+	it("GET builds both lists from one fetch of Sheares slots", async () => {
+		const sheares = { facility_id: 1, type: "sheares" };
+		mocks.getSlots.mockResolvedValue([sheares, { facility_id: 2, type: "nus" }]);
+		mocks.listPendingApprovals.mockResolvedValue([{ slot: sheares }]);
+		mocks.listUpcomingConfirmed.mockResolvedValue([{ slot: sheares, claim_id: 9 }]);
 		const { GET } = await import("./route");
 		const res = await GET();
 		expect(res.status).toBe(200);
 		const json = await res.json();
 		expect(json.data.pending).toHaveLength(1);
 		expect(json.data.confirmed).toHaveLength(1);
+		expect(mocks.getSlots).toHaveBeenCalledTimes(1);
+		expect(mocks.listPendingApprovals).toHaveBeenCalledWith([sheares]);
+		expect(mocks.listUpcomingConfirmed).toHaveBeenCalledWith([sheares]);
 	});
 
 	it("GET 403s for non-JCRC callers", async () => {
