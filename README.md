@@ -341,7 +341,7 @@ All environment variables must be configured as GitHub Repository Secrets for CI
 
 ### Prerequisites
 
-1. **Node.js** 20.9 or later (the minimum for Next.js 16)
+1. **Node.js** 22.12 or later (wrangler needs 22, Vite 22.12; CI uses 22.22)
 2. **Firebase project** with Google OAuth provider enabled
 3. **Supabase project** with required tables set up
 4. **AWS account** with appropriate permissions for infrastructure deployment
