@@ -91,7 +91,7 @@ export function PositionCard({
 
 			<CoverageMeter
 				candidateCount={position.applicants.length}
-				openSlots={position.available_capacity}
+				capacity={position.capacity}
 				className="max-w-xl"
 			/>
 
