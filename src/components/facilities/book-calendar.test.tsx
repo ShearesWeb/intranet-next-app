@@ -11,7 +11,11 @@ vi.mock("sonner", () => ({ toast }));
 const NOW = new Date("2026-11-04T06:00:00Z"); // Wed 4 Nov, 2 PM in Singapore
 const TOMORROW = "2026-11-05";
 const COURT = { id: 1, venue: "MPSH", sub_venue: "Court 1", type: "sheares" as const };
-const NETBALL = { id: 7, name: "Netball" };
+const NETBALL = { id: 7, name: "Netball", kind: "committee" as const };
+const SHEARES_HALL = { id: 6, name: "Sheares Hall", kind: "jcrc" as const };
+// A week after NOW is Wed 11 Nov; Thu 12 Nov is the first day past it. Both sit in week index 1.
+const WEEK_AHEAD = "2026-11-11";
+const PAST_WEEK_AHEAD = "2026-11-12";
 
 function slot(hour: number, claims: Partial<SlotClaim>[] = []): FacilitySlot {
 	return {
@@ -153,11 +157,53 @@ describe("BookCalendar", () => {
 	});
 
 	it("asks which CCA only when the chair has several", async () => {
-		render({ bookingCcas: [NETBALL, { id: 8, name: "Web" }] });
+		render({ bookingCcas: [NETBALL, { id: 8, name: "Web", kind: "committee" }] });
 		await click(button("Request MPSH Court 1, 6–7 PM"));
 		await click(button("Web"));
 		await click(button("Send request"));
 		expect(JSON.parse(fetchMock.mock.calls[0][1].body).cca_id).toBe(8);
+	});
+
+	it("lets a committee chair request a slot a week ahead", () => {
+		render({ weekIndex: 1, day: WEEK_AHEAD, slots: [{ ...slot(18), date: WEEK_AHEAD }] });
+		expect(container!.textContent).toContain("Up to 1 week ahead");
+		expect(button("Request MPSH Court 1, 6–7 PM").disabled).toBe(false);
+	});
+
+	it("does not let a committee chair request past a week ahead", () => {
+		render({
+			weekIndex: 1,
+			day: PAST_WEEK_AHEAD,
+			slots: [{ ...slot(18), date: PAST_WEEK_AHEAD }],
+		});
+		expect(button("MPSH Court 1, 6–7 PM, unavailable").disabled).toBe(true);
+		expect(container!.textContent).toContain("Committees can book up to 1 week ahead");
+	});
+
+	it("lets JCRC request past a week ahead under Sheares Hall", () => {
+		render({
+			bookingCcas: [SHEARES_HALL],
+			isJcrc: true,
+			weekIndex: 1,
+			day: PAST_WEEK_AHEAD,
+			slots: [{ ...slot(18), date: PAST_WEEK_AHEAD }],
+		});
+		expect(container!.textContent).toContain("Up to 4 weeks ahead");
+		expect(button("Request MPSH Court 1, 6–7 PM").disabled).toBe(false);
+	});
+
+	it("books past a week ahead only under Sheares Hall for a chair who is also JCRC", async () => {
+		render({
+			bookingCcas: [NETBALL, SHEARES_HALL],
+			isJcrc: true,
+			weekIndex: 1,
+			day: PAST_WEEK_AHEAD,
+			slots: [{ ...slot(18), date: PAST_WEEK_AHEAD }],
+		});
+		await click(button("Request MPSH Court 1, 6–7 PM"));
+		expect(button("Netball").disabled).toBe(true);
+		await click(button("Send request"));
+		expect(JSON.parse(fetchMock.mock.calls[0][1].body).cca_id).toBe(SHEARES_HALL.id);
 	});
 
 	it("blocks hours another CCA has confirmed, shown as locked", () => {

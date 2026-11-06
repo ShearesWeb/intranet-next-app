@@ -139,7 +139,7 @@ describe("GET /api/facilities/catalog", () => {
 describe("facilities approval flow", () => {
 	it("routes every claim through JCRC approval and supports revocation", async () => {
 		const facilityId = await createFacility();
-		const slotDate = dateFromToday(10);
+		const slotDate = dateFromToday(5);
 		await publishSlot(facilityId, slotDate);
 		const ccaId = await ccaIdByName("SHWEB");
 
@@ -206,7 +206,7 @@ describe("facilities approval flow", () => {
 
 	it("reject clears the claim and reopens the slot", async () => {
 		const facilityId = await createFacility();
-		const slotDate = dateFromToday(10);
+		const slotDate = dateFromToday(5);
 		await publishSlot(facilityId, slotDate);
 		const ccaId = await ccaIdByName("SHWEB");
 
@@ -343,13 +343,39 @@ describe("facilities booking rules", () => {
 		expect(res.error).toContain("up to 4 weeks ahead");
 	});
 
+	it("accepts a committee claim a week ahead", async () => {
+		const facilityId = await createFacility();
+		const slotDate = dateFromToday(7);
+		await publishSlot(facilityId, slotDate);
+		const ccaId = await ccaIdByName("SHWEB");
+
+		asPersona("layla");
+		const claims = await import("@/app/api/facilities/claims/route");
+		const res = await readJson(await claims.POST(request(facilityId, slotDate, ccaId)));
+		expect(res.status).toBe(201);
+	});
+
+	it("refuses a committee claim more than a week ahead", async () => {
+		const facilityId = await createFacility();
+		const slotDate = dateFromToday(8);
+		await publishSlot(facilityId, slotDate);
+		const ccaId = await ccaIdByName("SHWEB");
+
+		asPersona("layla");
+		const claims = await import("@/app/api/facilities/claims/route");
+		const res = await readJson(await claims.POST(request(facilityId, slotDate, ccaId)));
+		expect(res.status).toBe(403);
+		expect(res.error).toBe("Committees can only book up to 1 week ahead");
+		expect(await slotStatus(facilityId, slotDate)).toBe("available");
+	});
+
 	it("refuses a non-Sheares venue", async () => {
 		const ccaId = await ccaIdByName("SHWEB");
 
 		asPersona("layla");
 		const claims = await import("@/app/api/facilities/claims/route");
 		const res = await readJson(
-			await claims.POST(request(await createFacility("nus"), dateFromToday(10), ccaId)),
+			await claims.POST(request(await createFacility("nus"), dateFromToday(5), ccaId)),
 		);
 		expect(res.status).toBe(403);
 		expect(res.error).toBe("Only Sheares facilities can be booked");
@@ -428,7 +454,7 @@ describe("facility_schedules date bounds", () => {
 describe("facilities claim withdrawal", () => {
 	it("requests and withdraws a multi-hour booking as a whole", async () => {
 		const facilityId = await createFacility();
-		const slotDate = dateFromToday(10);
+		const slotDate = dateFromToday(5);
 		await publishSlot(facilityId, slotDate, 18);
 		await publishSlot(facilityId, slotDate, 19);
 		const ccaId = await ccaIdByName("SHWEB");
@@ -464,7 +490,7 @@ describe("facilities claim withdrawal", () => {
 
 	it("removes the claim, reopens the slot, and allows a fresh claim", async () => {
 		const facilityId = await createFacility();
-		const slotDate = dateFromToday(10);
+		const slotDate = dateFromToday(5);
 		await publishSlot(facilityId, slotDate);
 		const ccaId = await ccaIdByName("SHWEB");
 

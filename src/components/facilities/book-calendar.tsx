@@ -31,7 +31,12 @@ import {
 	weekdayLabel,
 	cellKey,
 } from "@/lib/facilities/booking-grid";
-import { type BookingCca } from "@/lib/facilities/booking-eligibility";
+import {
+	type BookingCca,
+	COMMITTEE_BOOKING_DAYS_AHEAD,
+	formatDayReach,
+	isWithinCcaBookingLimit,
+} from "@/lib/facilities/booking-eligibility";
 import { errorMessage, requestVenue, withdrawBooking } from "@/lib/facilities/facility-client";
 import {
 	BOOKING_WEEKS_AHEAD,
@@ -119,6 +124,19 @@ export function BookCalendar({
 
 	const myCcaIds = useMemo(() => new Set(bookingCcas.map((cca) => cca.id)), [bookingCcas]);
 
+	// Committees cannot book as far ahead as JCRC, so a later day may have no CCA left to book it.
+	const ccasFor = useCallback(
+		(date: string) => bookingCcas.filter((cca) => isWithinCcaBookingLimit(cca, date, today)),
+		[bookingCcas, today],
+	);
+	const dayCcas = useMemo(() => ccasFor(day), [ccasFor, day]);
+	const outOfReach = (date: string) => canRequest && ccasFor(date).length === 0;
+	const committeeReach = formatDayReach(COMMITTEE_BOOKING_DAYS_AHEAD);
+	const reach =
+		canRequest && bookingCcas.every((cca) => cca.kind === "committee")
+			? committeeReach
+			: `${BOOKING_WEEKS_AHEAD} weeks`;
+
 	// One view of the week: who is on what. The slots know about every CCA and the
 	// claims endpoint adds this user's declined requests.
 	const { openCells, liveByCell, weekClaims } = useMemo(() => {
@@ -187,14 +205,14 @@ export function BookCalendar({
 
 	const canBook = useCallback(
 		(facilityId: number, column: number) =>
-			canRequest &&
+			dayCcas.length > 0 &&
 			column >= 0 &&
 			column < GRID_SLOT_COUNT &&
 			openCells.has(cellKey(facilityId, day, column)) &&
 			!isSlotPast(day, column, today, currentHour) &&
 			!isBooked(facilityId, day, column) &&
 			!claimsAt(facilityId, day, column).some((claim) => myCcaIds.has(claim.cca_id)),
-		[canRequest, openCells, day, today, currentHour, isBooked, claimsAt, myCcaIds],
+		[dayCcas, openCells, day, today, currentHour, isBooked, claimsAt, myCcaIds],
 	);
 
 	const mySegments = useMemo(
@@ -368,8 +386,7 @@ export function BookCalendar({
 		};
 	}
 
-	const chosenCca =
-		bookingCcas.find((cca) => cca.id === chosenCcaId) ?? (canRequest ? bookingCcas[0] : undefined);
+	const chosenCca = dayCcas.find((cca) => cca.id === chosenCcaId) ?? dayCcas[0];
 
 	async function submitRequest() {
 		if (!selection || !chosenCca) return;
@@ -412,9 +429,11 @@ export function BookCalendar({
 	const showAside = panelOpen || (userReady && !canRequest);
 	const hint = !canRequest
 		? ""
-		: selection
-			? "Drag the handles to resize, or drag the block to another time or venue · Esc to clear"
-			: "Click a time, or drag down a column · Click your booking to manage it";
+		: outOfReach(day)
+			? `Committees can book up to ${committeeReach} ahead`
+			: selection
+				? "Drag the handles to resize, or drag the block to another time or venue · Esc to clear"
+				: "Click a time, or drag down a column · Click your booking to manage it";
 	const currentWeekIsFirst = weeks[0].dates.includes(today);
 
 	return (
@@ -458,9 +477,7 @@ export function BookCalendar({
 						</button>
 					)}
 					<div className="ml-auto flex items-center gap-2">
-						<span className="text-xs text-muted-foreground">
-							Up to {BOOKING_WEEKS_AHEAD} weeks ahead
-						</span>
+						<span className="text-xs text-muted-foreground">Up to {reach} ahead</span>
 						<div className="flex gap-1">
 							{weeks.map((option, index) => (
 								<button
@@ -494,7 +511,7 @@ export function BookCalendar({
 								className={cn(
 									"relative -ml-px flex min-w-0 cursor-pointer flex-col items-center gap-[3px] border-l px-1 pb-3 pt-2.5",
 									selected ? "bg-fac-tint text-fac-title" : "bg-card text-foreground",
-									date < today && "opacity-55",
+									(date < today || outOfReach(date)) && "opacity-55",
 								)}
 							>
 								<span className="text-[11px] font-bold tracking-[0.04em]">
@@ -597,6 +614,7 @@ export function BookCalendar({
 									).filter((segment) => !(segment.status === "rejected" && givenAway(segment)))}
 									myCcaIds={myCcaIds}
 									openCells={openCells}
+									outOfReach={outOfReach(day)}
 									selection={selection?.facilityId === facility.id ? selection : null}
 									pickedClaimIds={picked?.claim_ids ?? null}
 									isBooked={isBooked}
@@ -674,6 +692,8 @@ export function BookCalendar({
 							today={today}
 							venue={facilityName(selection.facilityId)}
 							bookingCcas={bookingCcas}
+							dayCcas={dayCcas}
+							committeeReach={committeeReach}
 							chosenCca={chosenCca}
 							busy={busy}
 							canBook={canBook}
@@ -743,6 +763,7 @@ function VenueColumn({
 	segments,
 	myCcaIds,
 	openCells,
+	outOfReach,
 	selection,
 	pickedClaimIds,
 	isBooked,
@@ -763,6 +784,8 @@ function VenueColumn({
 	segments: ClaimSegment[];
 	myCcaIds: Set<number>;
 	openCells: Set<string>;
+	/** The day is past how far ahead this user's CCAs may book; shown like a past day. */
+	outOfReach: boolean;
 	selection: Selection | null;
 	pickedClaimIds: number[] | null;
 	isBooked: (facilityId: number, date: string, column: number) => boolean;
@@ -792,7 +815,7 @@ function VenueColumn({
 		>
 			{GRID_HOURS.map((hour, column) => {
 				const open = openCells.has(cellKey(facility.id, day, column));
-				const past = isSlotPast(day, column, today, currentHour);
+				const past = outOfReach || isSlotPast(day, column, today, currentHour);
 				const bookable = canBook(facility.id, column);
 				const requests =
 					open && !past && !isBooked(facility.id, day, column) && !hasMine(column)
@@ -994,6 +1017,8 @@ function NewRequestPanel({
 	today,
 	venue,
 	bookingCcas,
+	dayCcas,
+	committeeReach,
 	chosenCca,
 	busy,
 	canBook,
@@ -1008,6 +1033,9 @@ function NewRequestPanel({
 	today: string;
 	venue: string;
 	bookingCcas: BookingCca[];
+	/** The CCAs that may book this day; a committee past its booking limit is not one. */
+	dayCcas: BookingCca[];
+	committeeReach: string;
 	chosenCca: BookingCca;
 	busy: boolean;
 	canBook: (facilityId: number, column: number) => boolean;
@@ -1085,9 +1113,10 @@ function NewRequestPanel({
 								key={cca.id}
 								type="button"
 								aria-pressed={cca.id === chosenCca.id}
+								disabled={!dayCcas.includes(cca)}
 								onClick={() => onChooseCca(cca.id)}
 								className={cn(
-									"h-8 cursor-pointer rounded-full border px-3.5 text-[13px] font-semibold",
+									"h-8 cursor-pointer rounded-full border px-3.5 text-[13px] font-semibold disabled:cursor-not-allowed disabled:opacity-45",
 									cca.id === chosenCca.id
 										? "border-primary bg-primary text-white"
 										: "bg-card text-foreground",
@@ -1097,6 +1126,11 @@ function NewRequestPanel({
 							</button>
 						))}
 					</div>
+					{dayCcas.length < bookingCcas.length && (
+						<span className="text-xs text-muted-foreground">
+							Committees can book up to {committeeReach} ahead.
+						</span>
+					)}
 				</div>
 			)}
 			{competitionText && (

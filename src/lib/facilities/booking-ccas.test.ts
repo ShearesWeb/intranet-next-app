@@ -20,7 +20,9 @@ function appointment(
 	return { cca_id, cca_name, cca_kind, position_type } as UserAppointment;
 }
 
-const SHEARES_HALL = { id: 6, name: "Sheares Hall" };
+// What the `ccas` lookup returns; getBookingCcas adds the kind it filtered on.
+const SHEARES_HALL_ROW = { id: 6, name: "Sheares Hall" };
+const SHEARES_HALL = { id: 6, name: "Sheares Hall", kind: "jcrc" };
 const SHWEB_LEAD = appointment(1, "SHWEB", "committee", "lead");
 const WELFARE_LEAD = appointment(58, "Director of Welfare", "jcrc", "lead");
 const CAPTAIN = appointment(3, "Volleyball", "sports", "lead");
@@ -31,13 +33,13 @@ describe("booking CCAs", () => {
 		const query = { select: () => query, eq: mocks.eq, maybeSingle: mocks.maybeSingle };
 		mocks.eq.mockReturnValue(query);
 		mocks.from.mockReturnValue(query);
-		mocks.maybeSingle.mockResolvedValue({ data: SHEARES_HALL, error: null });
+		mocks.maybeSingle.mockResolvedValue({ data: SHEARES_HALL_ROW, error: null });
 	});
 
 	it("books a committee chair under the committee without a lookup", async () => {
 		const { getBookingCcas } = await import("./booking-ccas");
 		await expect(getBookingCcas({ appointments: [SHWEB_LEAD, CAPTAIN] })).resolves.toEqual([
-			{ id: 1, name: "SHWEB" },
+			{ id: 1, name: "SHWEB", kind: "committee" },
 		]);
 		expect(mocks.from).not.toHaveBeenCalled();
 	});
@@ -53,7 +55,7 @@ describe("booking CCAs", () => {
 	it("offers both when the user chairs a committee and holds a JCRC role", async () => {
 		const { getBookingCcas } = await import("./booking-ccas");
 		await expect(getBookingCcas({ appointments: [SHWEB_LEAD, WELFARE_LEAD] })).resolves.toEqual([
-			{ id: 1, name: "SHWEB" },
+			{ id: 1, name: "SHWEB", kind: "committee" },
 			SHEARES_HALL,
 		]);
 	});

@@ -8,7 +8,12 @@ import {
 	deleteClaims,
 	getClaimOwners,
 } from "@/lib/facilities/facility-claims";
-import { canBookForCca, getBookingCcaIds } from "@/lib/facilities/booking-ccas";
+import { getBookingCcaIds, getBookingCcas } from "@/lib/facilities/booking-ccas";
+import {
+	COMMITTEE_BOOKING_DAYS_AHEAD,
+	formatDayReach,
+	isWithinCcaBookingLimit,
+} from "@/lib/facilities/booking-eligibility";
 import { canManageFacilities } from "@/lib/facilities/facility-access";
 import { getFacilityType } from "@/lib/facilities/facility-catalog";
 import { getSingaporeDateKey, isWithinBookingWindow } from "@/lib/nus-academic-calendar";
@@ -54,16 +59,24 @@ export async function POST(req: NextRequest) {
 		if (requestedHours.some((value) => !Number.isInteger(value) || value < 0 || value > 23)) {
 			return apiError("hour must be 0–23", 400);
 		}
-		if (!(await canBookForCca(user, cca_id))) {
+		const bookingCca = (await getBookingCcas(user)).find((cca) => cca.id === cca_id);
+		if (!bookingCca) {
 			return apiError("Not authorized to claim for this CCA", 403);
 		}
-		if (date < getSingaporeDateKey()) {
+		const today = getSingaporeDateKey();
+		if (date < today) {
 			return apiError("Past facility slots cannot be booked", 403);
 		}
 
 		if (!isWithinBookingWindow(date)) {
 			return apiError(
 				"Facilities can only be booked up to 4 weeks ahead, during the NUS semester",
+				403,
+			);
+		}
+		if (!isWithinCcaBookingLimit(bookingCca, date, today)) {
+			return apiError(
+				`Committees can only book up to ${formatDayReach(COMMITTEE_BOOKING_DAYS_AHEAD)} ahead`,
 				403,
 			);
 		}

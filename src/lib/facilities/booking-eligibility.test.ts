@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { type CcaKind, type PositionType, type UserAppointment } from "@/types/user";
 import {
+	formatDayReach,
 	getCommitteeBookingCcas,
 	holdsJcrcBookingSeat,
 	isCommitteeBookingAppointment,
 	isJcrcBookingAppointment,
+	isWithinCcaBookingLimit,
 } from "./booking-eligibility";
 
 function appointment(
@@ -69,7 +71,7 @@ describe("getCommitteeBookingCcas", () => {
 				appointment(3, "Volleyball", "sports", "lead"),
 			],
 		};
-		expect(getCommitteeBookingCcas(user)).toEqual([{ id: 1, name: "SHWEB" }]);
+		expect(getCommitteeBookingCcas(user)).toEqual([{ id: 1, name: "SHWEB", kind: "committee" }]);
 	});
 });
 
@@ -84,5 +86,40 @@ describe("holdsJcrcBookingSeat", () => {
 		expect(
 			holdsJcrcBookingSeat({ appointments: [appointment(2, "JCRC", "jcrc", "blockcomm")] }),
 		).toBe(false);
+	});
+});
+
+describe("isWithinCcaBookingLimit", () => {
+	const TODAY = "2026-11-05"; // a Thursday
+	const SHWEB = { id: 1, name: "SHWEB", kind: "committee" as const };
+	const SHEARES_HALL = { id: 6, name: "Sheares Hall", kind: "jcrc" as const };
+
+	it.each([
+		["2026-11-05", true], // today
+		["2026-11-12", true], // the same weekday next week
+		["2026-11-13", false], // a day past that
+		["2026-12-03", false],
+	])("lets a committee book %s: %s", (date, allowed) => {
+		expect(isWithinCcaBookingLimit(SHWEB, date, TODAY)).toBe(allowed);
+	});
+
+	it("counts the week across a month end", () => {
+		expect(isWithinCcaBookingLimit(SHWEB, "2026-12-05", "2026-11-28")).toBe(true);
+		expect(isWithinCcaBookingLimit(SHWEB, "2026-12-06", "2026-11-28")).toBe(false);
+	});
+
+	it("leaves Sheares Hall bookings to the booking weeks alone", () => {
+		expect(isWithinCcaBookingLimit(SHEARES_HALL, "2026-12-03", TODAY)).toBe(true);
+	});
+});
+
+describe("formatDayReach", () => {
+	it.each([
+		[1, "1 day"],
+		[7, "1 week"],
+		[10, "10 days"],
+		[14, "2 weeks"],
+	])("%i days reads as %s", (days, text) => {
+		expect(formatDayReach(days)).toBe(text);
 	});
 });
