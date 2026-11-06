@@ -3,7 +3,7 @@ import { requireAuth } from "@/lib/api/auth";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
 import { ApiError } from "@/lib/api/errors";
 import { getCalendarDeclarations } from "@/lib/holiday-subsidy/calendar-service";
-import { getChairCcaIds } from "@/lib/facilities/facility-access";
+import { getChairCcaIds } from "@/lib/cca/cca-chair-access";
 
 export async function GET(request: Request) {
 	const disabledResponse = getCoreServiceDisabledApiResponse("holidaySubsidy");

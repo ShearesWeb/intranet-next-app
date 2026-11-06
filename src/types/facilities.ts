@@ -12,26 +12,6 @@ export type SlotStatus = "available" | "pending" | "conflicted" | "confirmed";
  */
 export type ClaimStatus = "pending" | "approved" | "rejected";
 
-export const FACILITY_TYPE_CONFIG: Record<FacilityType, { label: string; color: string }> = {
-	sheares: { label: "Sheares", color: "#e97316" },
-	reboks: { label: "Reboks", color: "#3b82f6" },
-	nus: { label: "NUS", color: "#8b5cf6" },
-	external: { label: "External", color: "#10b981" },
-};
-
-export const SLOT_STATUS_CONFIG: Record<SlotStatus, { label: string; color: string }> = {
-	available: { label: "Available", color: "#10b981" },
-	pending: { label: "Pending", color: "#f59e0b" },
-	conflicted: { label: "Conflict", color: "#ef4444" },
-	confirmed: { label: "Confirmed", color: "#3b82f6" },
-};
-
-export const CLAIM_STATUS_CONFIG: Record<ClaimStatus, { label: string; color: string }> = {
-	pending: { label: "Pending", color: "#f59e0b" },
-	approved: { label: "Approved", color: "#10b981" },
-	rejected: { label: "Rejected", color: "#ef4444" },
-};
-
 /** Venue catalog row. */
 export interface Facility {
 	id: number;
@@ -44,8 +24,6 @@ export interface Facility {
  * Recurring weekly availability JCRC publishes. One row per
  * (facility_id, day_of_week, hour); a single row covers every matching date in
  * its window.
- *
- * The old `priority` and `reboks_activity` columns did not survive the rebuild.
  */
 export interface FacilitySchedule {
 	id: number;
@@ -54,22 +32,6 @@ export interface FacilitySchedule {
 	hour: number; // 0–23
 	start_date: string | null; // YYYY-MM-DD; null = unbounded
 	end_date: string | null; // YYYY-MM-DD; null = unbounded
-}
-
-/**
- * Availability published for one date rather than a weekday — the sibling of
- * `FacilitySchedule`, differing only in recurrence. One row per
- * (facility_id, date, hour).
- *
- * Read-only here: the REBOKS booking bot is the only writer, and the app has no
- * write grant. `facility_slots()` unions these with the recurring rows, so the
- * calendar picks them up without a second query.
- */
-export interface FacilitySingleSchedule {
-	id: number;
-	facility_id: number;
-	date: string; // YYYY-MM-DD
-	hour: number; // 0–23
 }
 
 /**
@@ -114,50 +76,27 @@ export interface FacilitySlot {
 	claims: SlotClaim[];
 }
 
-export interface SlotWithContext extends FacilitySlot {
-	/** The caller's own CCAs' claim on this slot, if any. */
-	user_cca_claim: SlotClaim | null;
-}
-
-/** Stable client-side identity for a computed slot. */
-export function slotKey(facilityId: number, slotDate: string, hour: number): string {
-	return `${facilityId}:${slotDate}:${hour}`;
-}
-
 export interface ApprovalClaimant {
 	claim: SlotClaim;
 	cca_name: string;
 	chair_name: string;
 	chair_telegram: string;
+	/** When the claim was made; null if it could not be read. */
+	requested_at: string | null;
 }
 
 /** A slot awaiting JCRC approval (one or more competing claims). */
 export interface SlotApprovalView {
 	slot: FacilitySlot;
 	claimants: ApprovalClaimant[];
-	days_until_booking: number;
 }
 
 /** An upcoming confirmed booking JCRC can revoke. */
 export interface ConfirmedBookingView {
 	slot: FacilitySlot;
 	cca_name: string;
+	chair_name: string;
 	claim_id: number;
-	days_until_booking: number;
-}
-
-export const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-/** "18" → "6:00 PM" */
-export function formatHour(hour: number): string {
-	const ampm = hour >= 12 ? "PM" : "AM";
-	const display = hour % 12 || 12;
-	return `${display}:00 ${ampm}`;
-}
-
-/** "18" → "6:00 PM – 7:00 PM" (slots are one hour). */
-export function formatHourRange(hour: number): string {
-	return `${formatHour(hour)} – ${formatHour((hour + 1) % 24)}`;
 }
 
 /** weekday index (0=Sun) for a YYYY-MM-DD date string, local-safe. */
@@ -165,81 +104,12 @@ export function weekdayOf(dateStr: string): number {
 	return new Date(dateStr + "T00:00:00").getDay();
 }
 
-/** Chairs must book at least this many days ahead; closer slots are locked. */
-export const MIN_BOOKING_LEAD_DAYS = 3;
-
 /** Whole days from `now` (defaults to today) until a YYYY-MM-DD date, local-safe. */
 export function daysUntilBooking(dateStr: string, now: Date = new Date()): number {
 	const target = new Date(dateStr + "T00:00:00");
 	const today = new Date(now);
 	today.setHours(0, 0, 0, 0);
 	return Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-}
-
-/** True when the slot is within the lead-time window — claims and withdrawals are locked. */
-export function isBookingLocked(dateStr: string, now: Date = new Date()): boolean {
-	return daysUntilBooking(dateStr, now) < MIN_BOOKING_LEAD_DAYS;
-}
-
-/**
- * The hall's timezone.
- *
- * Anything deciding "which month is it" must say this explicitly: route
- * handlers run on Cloudflare Workers in UTC, components run in the viewer's
- * zone. Left implicit, the two disagree for the first eight hours of every
- * month — exactly when a new month's REBOKS slots are meant to open.
- */
-export const HALL_TIME_ZONE = "Asia/Singapore";
-
-/**
- * The last date open for REBOKS booking: the end of the current calendar month
- * in Singapore, as `YYYY-MM-DD`.
- *
- * REBOKS courts are secured from NUS a month at a time, so a slot past this is
- * an offer the hall does not hold yet. This is the far edge of the window whose
- * near edge `MIN_BOOKING_LEAD_DAYS` closes.
- */
-export function bookingHorizonEnd(now: Date = new Date()): string {
-	// en-CA renders as YYYY-MM-DD, and timeZone is what makes a Worker and a
-	// browser agree on the answer.
-	const today = new Intl.DateTimeFormat("en-CA", { timeZone: HALL_TIME_ZONE }).format(now);
-	const [year, month] = today.split("-").map(Number);
-	// Day 0 of the next month is the last day of this one, leap years included.
-	const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
-	return `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
-}
-
-/**
- * True when a date falls past the bookable horizon.
- *
- * `YYYY-MM-DD` strings compare lexicographically, so this needs no parsing.
- * JCRC's exemption is applied by callers, which keeps this a pure question
- * about the date.
- */
-export function isBeyondBookingHorizon(dateStr: string, now: Date = new Date()): boolean {
-	return dateStr > bookingHorizonEnd(now);
-}
-
-/**
- * True when this slot is withheld from chairs by the REBOKS horizon.
- *
- * Only `reboks` is windowed. Sheares, NUS and external venues are the hall's
- * own to publish as far ahead as it likes, so they stay bookable in any month.
- */
-export function isHorizonRestricted(
-	type: FacilityType,
-	dateStr: string,
-	now: Date = new Date(),
-): boolean {
-	return type === "reboks" && isBeyondBookingHorizon(dateStr, now);
-}
-
-/**
- * The date a withheld day's REBOKS slots become bookable: the first of that
- * day's own month, since the horizon moves a whole month at a time.
- */
-export function horizonOpensOn(dateStr: string): string {
-	return `${dateStr.slice(0, 7)}-01`;
 }
 
 /**

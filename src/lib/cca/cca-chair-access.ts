@@ -27,6 +27,15 @@ export function isManagingAppointment(appointment: Pick<UserAppointment, "has_re
 	return appointment.has_reports === true;
 }
 
+/**
+ * CCAs the caller holds a managing position in.
+ *
+ * A hint for rendering, not an authority: `reporting_position_id` may cross CCAs.
+ */
+export function getChairCcaIds(user: Pick<AuthenticatedUser, "appointments">): number[] {
+	return user.appointments.filter(isManagingAppointment).map((a) => a.cca_id);
+}
+
 const LEADERSHIP_POSITION_TYPES = new Set<string>(["lead", "vice"]);
 
 /**

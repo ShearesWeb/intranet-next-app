@@ -1,26 +1,18 @@
 import { requireAuth, requireJcrcAccess } from "@/lib/api/auth";
 import { apiOk, apiError, handleApiError } from "@/lib/api/response";
 import { getCoreServiceDisabledApiResponse } from "@/lib/feature-flags";
-import { listFacilities, updateFacility } from "@/lib/facilities/facility-catalog";
-import { FacilityType } from "@/types/facilities";
+import { getFacilityType, listFacilities, updateFacility } from "@/lib/facilities/facility-catalog";
 import { NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-const VALID_TYPES: FacilityType[] = ["sheares", "reboks", "nus", "external"];
-
-export async function GET(req: NextRequest) {
+export async function GET() {
 	const disabledResponse = getCoreServiceDisabledApiResponse("facilities");
 	if (disabledResponse) return disabledResponse;
 
 	try {
 		await requireAuth();
-		const typeParam = req.nextUrl.searchParams.get("type");
-		const type = VALID_TYPES.includes(typeParam as FacilityType)
-			? (typeParam as FacilityType)
-			: undefined;
-
-		const facilities = await listFacilities({ type });
+		const facilities = await listFacilities({ type: "sheares" });
 		return apiOk(facilities);
 	} catch (e) {
 		return handleApiError(e);
@@ -36,6 +28,9 @@ export async function PATCH(req: NextRequest) {
 		const { id, active, venue, sub_venue } = await req.json();
 
 		if (id == null) return apiError("id is required", 400);
+		if ((await getFacilityType(id)) !== "sheares") {
+			return apiError("Only Sheares facilities can be managed", 403);
+		}
 
 		const patch: { active?: boolean; venue?: string; sub_venue?: string } = {};
 		if (active !== undefined) patch.active = active;

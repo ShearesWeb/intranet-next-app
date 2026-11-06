@@ -5,7 +5,7 @@ const mocks = vi.hoisted(() => ({
 	requireAuth: vi.fn(),
 	deleteClaim: vi.fn(),
 	getClaim: vi.fn(),
-	isChairOfCca: vi.fn(),
+	canBookForCca: vi.fn(),
 	canManageFacilities: vi.fn(),
 	getCoreServiceDisabledApiResponse: vi.fn(),
 }));
@@ -15,8 +15,10 @@ vi.mock("@/lib/facilities/facility-claims", () => ({
 	deleteClaim: mocks.deleteClaim,
 	getClaim: mocks.getClaim,
 }));
+vi.mock("@/lib/facilities/booking-ccas", () => ({
+	canBookForCca: mocks.canBookForCca,
+}));
 vi.mock("@/lib/facilities/facility-access", () => ({
-	isChairOfCca: mocks.isChairOfCca,
 	canManageFacilities: mocks.canManageFacilities,
 }));
 vi.mock("@/lib/feature-flags", () => ({
@@ -44,7 +46,7 @@ describe("DELETE /api/facilities/claims/[id] — withdrawal is never time-locked
 		vi.clearAllMocks();
 		mocks.getCoreServiceDisabledApiResponse.mockReturnValue(null);
 		mocks.requireAuth.mockResolvedValue({ id: 42 });
-		mocks.isChairOfCca.mockReturnValue(true);
+		mocks.canBookForCca.mockReturnValue(true);
 	});
 
 	it("lets a chair withdraw inside the 3-day window", async () => {
@@ -62,7 +64,7 @@ describe("DELETE /api/facilities/claims/[id] — withdrawal is never time-locked
 	});
 
 	it("lets JCRC cancel a claim inside the window", async () => {
-		mocks.isChairOfCca.mockReturnValue(false);
+		mocks.canBookForCca.mockReturnValue(false);
 		mocks.canManageFacilities.mockReturnValue(true);
 		mocks.getClaim.mockResolvedValue({
 			id: 5,

@@ -1,155 +1,155 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { PageHeader } from "@/components/layout/page-header";
-import { MonthGrid } from "@/components/facilities/month-grid";
-import { DayDetailPanel } from "@/components/facilities/day-detail-panel";
-import { VenueFilter } from "@/components/facilities/venue-filter";
-import { TypeFilter } from "@/components/facilities/type-filter";
-import { ClaimDialog } from "@/components/facilities/claim-dialog";
-import { MyCcaBookings } from "@/components/facilities/my-cca-bookings";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { BookCalendar } from "@/components/facilities/book-calendar";
+import { FacilityEmpty, FacilityTabs } from "@/components/facilities/facility-ui";
+import { MyBookings } from "@/components/facilities/my-bookings";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useApiQuery } from "@/hooks/use-api-query";
-import { useCalendarMonth } from "@/hooks/use-calendar-month";
-import { useChairCcas } from "@/hooks/use-chair-ccas";
+import { useFacilityBookingCcas } from "@/hooks/use-facility-booking-ccas";
+import { useMyFacilityClaims } from "@/hooks/use-my-facility-claims";
 import { useAuth } from "@/lib/auth/auth-context";
-import { SlotWithContext, FacilityType } from "@/types/facilities";
-import { isReboksBookingEnabled } from "@/lib/feature-flags";
-import { isBookableFacilityType } from "@/lib/facilities/bookable-types";
-import { toast } from "sonner";
+import { isBookableFacilityType, isHiddenFacility } from "@/lib/facilities/bookable-types";
+import { groupClaimSegments } from "@/lib/facilities/booking-grid";
+import { getBookingWeeks, getMondayOf, getSingaporeDateKey } from "@/lib/nus-academic-calendar";
+import { Facility, FacilitySlot } from "@/types/facilities";
+
+type BookTab = "book" | "mine";
 
 export default function FacilitiesPage() {
-	const { year, month, selectedDate, setSelectedDate, changeMonth, monthRange } =
-		useCalendarMonth();
-	const [venueFilter, setVenueFilter] = useState<string[]>([]);
-	const [typeFilter, setTypeFilter] = useState<FacilityType[]>([]);
-	const [claimBooking, setClaimBooking] = useState<SlotWithContext | null>(null);
-
-	const { chairCcas, isChair } = useChairCcas();
 	const { user } = useAuth();
-	// JCRC sees every month's REBOKS slots, so the notice would only confuse them.
-	// While REBOKS booking is parked, there is nothing to warn anyone about.
-	const showHorizonNotice = isReboksBookingEnabled() && !user?.is_jcrc;
+	const { bookingCcas, canBook, ready } = useFacilityBookingCcas();
+	const weeks = useMemo(() => getBookingWeeks(), []);
+	const [tab, setTab] = useState<BookTab>("book");
+	const [weekIndex, setWeekIndex] = useState(0);
+	const [day, setDay] = useState(() => {
+		const today = getSingaporeDateKey();
+		return weeks[0]?.dates.includes(today) ? today : (weeks[0]?.start ?? today);
+	});
+
+	const week = weeks[weekIndex];
+	// The calendar needs one week at a time; My bookings' notes need the whole window.
+	const slotsUrl = useMemo(() => {
+		if (!week) return "/api/facilities/slots";
+		return tab === "mine"
+			? `/api/facilities/slots?start=${weeks[0].start}&end=${weeks[weeks.length - 1].end}`
+			: `/api/facilities/slots?start=${week.start}&end=${week.end}`;
+	}, [tab, week, weeks]);
 
 	const {
-		data,
-		loading,
-		refetch: fetchBookings,
-	} = useApiQuery<SlotWithContext[]>(
-		`/api/facilities/slots?start=${monthRange.start}&end=${monthRange.end}`,
+		data: slotData,
+		loading: slotsLoading,
+		hasLoaded: slotsLoaded,
+		refetch: refetchSlots,
+	} = useApiQuery<FacilitySlot[]>(slotsUrl, {
+		enabled: Boolean(week),
+		initialData: [],
+		toastOnError: true,
+		errorMessage: "Failed to load the facilities calendar",
+	});
+	const { data: facilityData, hasLoaded: facilitiesLoaded } = useApiQuery<Facility[]>(
+		"/api/facilities/catalog",
+		{ initialData: [] },
 	);
-	// The slots API still returns every venue type; while REBOKS booking is
-	// parked the calendar simply never shows those slots, so nobody can claim one.
-	const bookings = useMemo(
-		() => (data ?? []).filter((b) => isBookableFacilityType(b.type)),
-		[data],
+
+	const {
+		claims: myClaims,
+		loading: claimsLoading,
+		refetch: refetchClaims,
+	} = useMyFacilityClaims(canBook);
+
+	const slots = useMemo(
+		() => (slotData ?? []).filter((slot) => isBookableFacilityType(slot.type)),
+		[slotData],
+	);
+	// Venues hidden from Book offer no slots, so they drop out of the columns here.
+	const columns = useMemo(() => {
+		const offered = new Set(slots.map((slot) => slot.facility_id));
+		return (facilityData ?? []).filter(
+			(facility) =>
+				isBookableFacilityType(facility.type) &&
+				!isHiddenFacility(facility) &&
+				offered.has(facility.id),
+		);
+	}, [facilityData, slots]);
+
+	const onChanged = useCallback(
+		() => Promise.all([refetchSlots(), refetchClaims()]),
+		[refetchSlots, refetchClaims],
 	);
 
-	const allVenues = useMemo(() => {
-		const set = new Set<string>();
-		for (const b of bookings) set.add(b.sub_venue);
-		return [...set].sort();
-	}, [bookings]);
+	const pendingCount = useMemo(() => {
+		const from = getMondayOf(getSingaporeDateKey());
+		return groupClaimSegments(
+			myClaims.filter((claim) => claim.status === "pending" && claim.date >= from),
+		).length;
+	}, [myClaims]);
 
-	const filtered = useMemo(() => {
-		return bookings.filter((b) => {
-			if (venueFilter.length > 0 && !venueFilter.includes(b.sub_venue)) return false;
-			if (typeFilter.length > 0 && !typeFilter.includes(b.type)) return false;
-			return true;
-		});
-	}, [bookings, venueFilter, typeFilter]);
+	const gridDates = useMemo(() => new Set(weeks.flatMap((option) => option.dates)), [weeks]);
 
-	const dayBookings = useMemo(() => {
-		if (!selectedDate) return [];
-		return filtered.filter((b) => b.date === selectedDate);
-	}, [filtered, selectedDate]);
-
-	async function handleWithdraw(claimId: number) {
-		try {
-			const res = await fetch(`/api/facilities/claims/${claimId}`, { method: "DELETE" });
-			if (!res.ok) {
-				const json = await res.json();
-				toast.error(json.error ?? "Failed to withdraw");
-				return;
-			}
-			toast.success("Claim withdrawn");
-			fetchBookings();
-		} catch {
-			toast.error("Network error");
-		}
+	function viewOnGrid(date: string) {
+		const index = weeks.findIndex((option) => option.dates.includes(date));
+		if (index < 0) return;
+		setWeekIndex(index);
+		setDay(date);
+		setTab("book");
 	}
 
+	const description =
+		tab === "mine"
+			? "Every venue request you've sent for your committee over the next 4 weeks. Open one to withdraw it or find it on the grid."
+			: canBook
+				? "Pick a time on the grid to request a venue for your committee. JCRC approves every request."
+				: "See when Sheares venues are open. Only committee chairs and vice-chairs can request slots.";
+
 	return (
-		<div className="flex flex-col space-y-6 p-4 md:p-6">
-			<PageHeader
-				title="Facilities"
-				description={
-					isChair
-						? "Browse and claim venue slots for your CCA"
-						: "Browse venue availability. Only CCA chairs can claim slots."
-				}
-			/>
+		<div className="flex flex-col gap-5 p-4 md:p-6">
+			<PageHeader title="Book Facilities" description={description} />
 
-			<Tabs defaultValue="book">
-				{/* A lone tab reads as a dead control, so non-chairs get no tab bar. */}
-				{isChair && (
-					<TabsList>
-						<TabsTrigger value="book">Book Facilities</TabsTrigger>
-						<TabsTrigger value="my-bookings">My bookings</TabsTrigger>
-					</TabsList>
-				)}
+			{canBook && (
+				<FacilityTabs
+					tabs={[
+						{ key: "book", label: "Calendar" },
+						{ key: "mine", label: "My bookings", count: pendingCount },
+					]}
+					active={tab}
+					onChange={setTab}
+				/>
+			)}
 
-				<TabsContent value="book" className="space-y-6">
-					<div className="flex flex-wrap items-center gap-3">
-						<VenueFilter venues={allVenues} selected={venueFilter} onChange={setVenueFilter} />
-						<TypeFilter selected={typeFilter} onChange={setTypeFilter} />
-					</div>
-
-					<div className="flex flex-col gap-6 lg:flex-row">
-						<div className="w-full lg:w-[320px] shrink-0">
-							<MonthGrid
-								year={year}
-								month={month}
-								selectedDate={selectedDate}
-								bookings={filtered}
-								onSelectDate={setSelectedDate}
-								onChangeMonth={changeMonth}
-							/>
-						</div>
-
-						<div className="flex-1 min-w-0">
-							{selectedDate ? (
-								<DayDetailPanel
-									date={selectedDate}
-									bookings={dayBookings}
-									isChair={isChair}
-									showHorizonNotice={showHorizonNotice}
-									loading={loading}
-									onClaim={setClaimBooking}
-									onWithdraw={handleWithdraw}
-								/>
-							) : (
-								<p className="text-sm text-muted-foreground">
-									Select a day to view available slots.
-								</p>
-							)}
-						</div>
-					</div>
-				</TabsContent>
-
-				{isChair && (
-					<TabsContent value="my-bookings">
-						<MyCcaBookings />
-					</TabsContent>
-				)}
-			</Tabs>
-
-			<ClaimDialog
-				booking={claimBooking}
-				chairCcas={chairCcas}
-				onClose={() => setClaimBooking(null)}
-				onSuccess={fetchBookings}
-			/>
+			{tab === "mine" && canBook ? (
+				<MyBookings
+					claims={myClaims}
+					slots={slots}
+					bookingCcas={bookingCcas}
+					loading={claimsLoading}
+					gridDates={gridDates}
+					onViewOnGrid={viewOnGrid}
+					onChanged={onChanged}
+				/>
+			) : !week ? (
+				<FacilityEmpty>Facility booking is closed during the NUS vacation.</FacilityEmpty>
+			) : !slotsLoaded || !facilitiesLoaded ? (
+				<Skeleton className="h-[640px] w-full rounded-xl" />
+			) : columns.length === 0 && !slotsLoading ? (
+				<FacilityEmpty>No venues are open for booking this week.</FacilityEmpty>
+			) : (
+				<BookCalendar
+					weeks={weeks}
+					weekIndex={weekIndex}
+					day={day}
+					onWeekChange={setWeekIndex}
+					onDayChange={setDay}
+					facilities={columns}
+					slots={slots}
+					myClaims={myClaims}
+					bookingCcas={bookingCcas}
+					isJcrc={Boolean(user?.is_jcrc)}
+					userReady={ready}
+					onChanged={onChanged}
+				/>
+			)}
 		</div>
 	);
 }

@@ -1,94 +1,66 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { Building2, Shield } from "lucide-react";
 import { useAuth } from "@/lib/auth/auth-context";
-import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/layout/empty-state";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { PageHeader } from "@/components/layout/page-header";
+import { FacilityAvailability } from "@/components/facilities/facility-availability";
+import { FacilityRequests } from "@/components/facilities/facility-requests";
+import { FacilityTabs } from "@/components/facilities/facility-ui";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FacilityTypeBadges } from "@/components/facilities/facility-type-badges";
-import { ScheduleWeek } from "@/components/facilities/schedule-week";
-import { ScheduleClusterPanel } from "@/components/facilities/schedule-cluster-panel";
-import {
-	ScheduleSlotDialog,
-	type SlotEditTarget,
-} from "@/components/facilities/schedule-slot-dialog";
-import { ManageApprovals } from "@/components/facilities/manage-approvals";
-import { type Cluster, type ScheduleSlot } from "@/lib/facilities/schedule-grid";
-import { FacilitySchedule, Facility, FacilityType, FACILITY_TYPE_CONFIG } from "@/types/facilities";
-import { Shield, Plus, Building2 } from "lucide-react";
+import { useApiQuery } from "@/hooks/use-api-query";
+import { isHiddenFacility } from "@/lib/facilities/bookable-types";
+import { ApprovalsPayload, pendingRequestCount } from "@/lib/facilities/request-view";
+import { Facility, FacilitySchedule } from "@/types/facilities";
 
-// REBOKS venues are bot-owned — hidden from the facilities list and schedule editor.
-const MANAGED_TYPES: FacilityType[] = ["sheares", "nus", "external"];
+type ManageTab = "requests" | "availability";
+
+const NO_APPROVALS: ApprovalsPayload = { pending: [], confirmed: [] };
 
 export default function AdminFacilitiesPage() {
 	const { user } = useAuth();
-	const [type, setType] = useState<FacilityType>("sheares");
-	const [facilities, setFacilities] = useState<Facility[]>([]);
-	const [schedules, setSchedules] = useState<FacilitySchedule[]>([]);
-	const [loading, setLoading] = useState(true);
-	const [facilityQuery, setFacilityQuery] = useState("");
-	const [slotOpen, setSlotOpen] = useState(false);
-	const [editing, setEditing] = useState<SlotEditTarget | null>(null);
-	const [selected, setSelected] = useState<{ day: number; cluster: Cluster } | null>(null);
+	const [tab, setTab] = useState<ManageTab>("requests");
+	const allowed = Boolean(user?.is_jcrc);
 
-	const fetchAll = useCallback(async () => {
-		setLoading(true);
-		try {
-			const [fRes, sRes] = await Promise.all([
-				fetch("/api/facilities/catalog"),
-				fetch("/api/facilities/schedules"),
-			]);
-			if (fRes.ok) setFacilities((await fRes.json()).data ?? []);
-			if (sRes.ok) setSchedules((await sRes.json()).data ?? []);
-		} finally {
-			setLoading(false);
-		}
-	}, []);
+	const { data: facilityData, hasLoaded: facilitiesLoaded } = useApiQuery<Facility[]>(
+		"/api/facilities/catalog",
+		{ initialData: [], enabled: allowed },
+	);
+	const {
+		data: scheduleData,
+		hasLoaded: schedulesLoaded,
+		refetch: refetchSchedules,
+	} = useApiQuery<FacilitySchedule[]>("/api/facilities/schedules", {
+		initialData: [],
+		enabled: allowed,
+		toastOnError: true,
+		errorMessage: "Failed to load availability",
+	});
+	const {
+		data: approvalData,
+		hasLoaded: approvalsLoaded,
+		refetch: refetchApprovals,
+	} = useApiQuery<ApprovalsPayload>("/api/facilities/approvals", {
+		initialData: NO_APPROVALS,
+		enabled: allowed,
+		toastOnError: true,
+		errorMessage: "Failed to load requests",
+	});
 
-	useEffect(() => {
-		fetchAll();
-	}, [fetchAll]);
-
-	const facilitiesById = useMemo(() => {
-		const m = new Map<number, Facility>();
-		for (const f of facilities) m.set(f.id, f);
-		return m;
-	}, [facilities]);
-
-	// Flatten schedules of the active type into ScheduleSlot[] for the week editor.
-	const slots: ScheduleSlot[] = useMemo(() => {
-		const out: ScheduleSlot[] = [];
-		for (const s of schedules) {
-			const f = facilitiesById.get(s.facility_id);
-			if (!f || f.type !== type) continue;
-			out.push({
-				id: s.id,
-				facility_id: s.facility_id,
-				venue: f.venue,
-				sub_venue: f.sub_venue,
-				type: f.type,
-				day_of_week: s.day_of_week,
-				hour: s.hour,
-				start_date: s.start_date,
-				end_date: s.end_date,
-			});
-		}
-		return out;
-	}, [schedules, facilitiesById, type]);
-
+	const approvals = approvalData ?? NO_APPROVALS;
 	const managedFacilities = useMemo(
-		() => facilities.filter((f) => f.type !== "reboks"),
-		[facilities],
+		() =>
+			(facilityData ?? []).filter(
+				(facility) => facility.type === "sheares" && !isHiddenFacility(facility),
+			),
+		[facilityData],
 	);
 
-	const filteredFacilities = useMemo(() => {
-		const q = facilityQuery.trim().toLowerCase();
-		if (!q) return managedFacilities;
-		return managedFacilities.filter((f) => `${f.venue} ${f.sub_venue}`.toLowerCase().includes(q));
-	}, [managedFacilities, facilityQuery]);
+	const refreshAll = useCallback(
+		() => Promise.all([refetchSchedules(), refetchApprovals()]),
+		[refetchSchedules, refetchApprovals],
+	);
 
 	if (user && !user.is_jcrc) {
 		return (
@@ -104,151 +76,42 @@ export default function AdminFacilitiesPage() {
 	}
 
 	return (
-		<div className="flex flex-col space-y-6 p-4 md:p-6">
+		<div className="flex flex-col gap-5 p-4 md:p-6">
 			<PageHeader
 				title="Manage Facilities"
-				description="Add facilities, define booking schedules, and approve bookings"
+				description={
+					tab === "requests"
+						? "Approve, decline or revoke CCA bookings for the next 4 weeks."
+						: "Set which hours each Sheares venue is open for CCA requests. Shared with every JCRC facilities manager."
+				}
+			/>
+			<FacilityTabs
+				tabs={[
+					{ key: "requests", label: "Requests", count: pendingRequestCount(approvals) },
+					{ key: "availability", label: "Availability" },
+				]}
+				active={tab}
+				onChange={setTab}
 			/>
 
-			<Tabs defaultValue="schedules">
-				<TabsList>
-					<TabsTrigger value="facilities">Facilities</TabsTrigger>
-					<TabsTrigger value="schedules">Schedules</TabsTrigger>
-					<TabsTrigger value="approvals">Approvals</TabsTrigger>
-				</TabsList>
-
-				{/* Facilities */}
-				<TabsContent value="facilities">
-					<div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-						<Input
-							value={facilityQuery}
-							onChange={(e) => setFacilityQuery(e.target.value)}
-							placeholder="Search facilities…"
-							className="h-9 max-w-xs"
-						/>
-					</div>
-					{loading ? (
-						<Skeleton className="h-40 w-full" />
-					) : managedFacilities.length === 0 ? (
-						<EmptyState
-							icon={Building2}
-							title="No facilities"
-							description="The facility catalog is empty."
-						/>
-					) : filteredFacilities.length === 0 ? (
-						<EmptyState
-							icon={Building2}
-							title="No matches"
-							description={`No facilities match "${facilityQuery}".`}
-						/>
-					) : (
-						<div className="space-y-6">
-							{MANAGED_TYPES.filter((t) => filteredFacilities.some((f) => f.type === t)).map(
-								(t) => {
-									const cfg = FACILITY_TYPE_CONFIG[t];
-									const list = filteredFacilities.filter((f) => f.type === t);
-									return (
-										<div key={t}>
-											<div className="mb-2 flex items-center gap-2">
-												<span
-													className="h-2.5 w-2.5 rounded-full"
-													style={{ backgroundColor: cfg.color }}
-												/>
-												<h4 className="text-sm font-semibold">{cfg.label}</h4>
-												<span className="text-xs text-muted-foreground">({list.length})</span>
-											</div>
-											<div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-												{list.map((f) => (
-													<div
-														key={f.id}
-														className="flex items-center justify-between gap-2 rounded-lg border px-3 py-2.5"
-													>
-														<div className="min-w-0">
-															<div className="truncate font-medium">{f.venue}</div>
-															<div className="truncate text-xs text-muted-foreground">
-																{f.sub_venue}
-															</div>
-														</div>
-													</div>
-												))}
-											</div>
-										</div>
-									);
-								},
-							)}
-						</div>
-					)}
-				</TabsContent>
-
-				{/* Schedules */}
-				<TabsContent value="schedules">
-					<div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-						<FacilityTypeBadges value={type} onChange={setType} types={MANAGED_TYPES} />
-						<Button
-							size="sm"
-							className="gap-1.5"
-							onClick={() => {
-								setSelected(null);
-								setEditing(null);
-								setSlotOpen(true);
-							}}
-						>
-							<Plus className="h-4 w-4" />
-							Add slot
-						</Button>
-					</div>
-
-					{loading ? (
-						<Skeleton className="h-48 w-full" />
-					) : (
-						<div className="space-y-4">
-							<ScheduleWeek
-								schedules={slots}
-								onSelectCluster={(day, cluster) => setSelected({ day, cluster })}
-							/>
-							{selected && (
-								<ScheduleClusterPanel
-									day={selected.day}
-									cluster={selected.cluster}
-									schedules={slots}
-									onChanged={fetchAll}
-									onAddSlot={() => {
-										setEditing(null);
-										setSlotOpen(true);
-									}}
-									onEditWindow={(day, w) => {
-										setEditing({
-											ids: w.ids,
-											facilityId: w.facility_id,
-											day,
-											hours: w.hours,
-											start_date: w.start_date,
-											end_date: w.end_date,
-										});
-										setSlotOpen(true);
-									}}
-								/>
-							)}
-						</div>
-					)}
-				</TabsContent>
-
-				{/* Approvals */}
-				<TabsContent value="approvals">
-					<ManageApprovals />
-				</TabsContent>
-			</Tabs>
-
-			<ScheduleSlotDialog
-				open={slotOpen}
-				facilities={facilities}
-				defaultType={type}
-				defaultDay={selected?.day}
-				defaultHour={selected?.cluster.startHour}
-				editing={editing}
-				onClose={() => setSlotOpen(false)}
-				onSuccess={fetchAll}
-			/>
+			{!facilitiesLoaded || !schedulesLoaded || !approvalsLoaded ? (
+				<Skeleton className="h-96 w-full rounded-xl" />
+			) : tab === "requests" ? (
+				<FacilityRequests approvals={approvals} onChanged={refetchApprovals} />
+			) : managedFacilities.length === 0 ? (
+				<EmptyState
+					icon={Building2}
+					title="No facilities"
+					description="The Sheares facility catalog is empty."
+				/>
+			) : (
+				<FacilityAvailability
+					facilities={managedFacilities}
+					schedules={scheduleData ?? []}
+					approvals={approvals}
+					onChanged={refreshAll}
+				/>
+			)}
 		</div>
 	);
 }

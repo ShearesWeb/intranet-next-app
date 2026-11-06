@@ -4,21 +4,33 @@ import { NextRequest } from "next/server";
 const mocks = vi.hoisted(() => ({
 	requireAuth: vi.fn(),
 	createClaim: vi.fn(),
-	getClaimsForCca: vi.fn(),
-	isChairOfCca: vi.fn(),
-	getChairCcaIds: vi.fn(),
+	createClaims: vi.fn(),
+	deleteClaims: vi.fn(),
+	getClaimOwners: vi.fn(),
+	canManageFacilities: vi.fn(),
+	getClaimsForCcas: vi.fn(),
+	getBookingCcas: vi.fn(),
+	getBookingCcaIds: vi.fn(),
 	getFacilityType: vi.fn(),
 	getCoreServiceDisabledApiResponse: vi.fn(),
+	isWithinBookingWindow: vi.fn(),
+	getSingaporeDateKey: vi.fn(),
 }));
 
 vi.mock("@/lib/api/auth", () => ({ requireAuth: mocks.requireAuth }));
 vi.mock("@/lib/facilities/facility-claims", () => ({
 	createClaim: mocks.createClaim,
-	getClaimsForCca: mocks.getClaimsForCca,
+	createClaims: mocks.createClaims,
+	deleteClaims: mocks.deleteClaims,
+	getClaimOwners: mocks.getClaimOwners,
+	getClaimsForCcas: mocks.getClaimsForCcas,
 }));
 vi.mock("@/lib/facilities/facility-access", () => ({
-	isChairOfCca: mocks.isChairOfCca,
-	getChairCcaIds: mocks.getChairCcaIds,
+	canManageFacilities: mocks.canManageFacilities,
+}));
+vi.mock("@/lib/facilities/booking-ccas", () => ({
+	getBookingCcas: mocks.getBookingCcas,
+	getBookingCcaIds: mocks.getBookingCcaIds,
 }));
 vi.mock("@/lib/facilities/facility-catalog", () => ({
 	getFacilityType: mocks.getFacilityType,
@@ -26,6 +38,14 @@ vi.mock("@/lib/facilities/facility-catalog", () => ({
 vi.mock("@/lib/feature-flags", () => ({
 	getCoreServiceDisabledApiResponse: mocks.getCoreServiceDisabledApiResponse,
 }));
+vi.mock("@/lib/nus-academic-calendar", async (importOriginal) => ({
+	...(await importOriginal<typeof import("@/lib/nus-academic-calendar")>()),
+	isWithinBookingWindow: mocks.isWithinBookingWindow,
+	getSingaporeDateKey: mocks.getSingaporeDateKey,
+}));
+
+const SHWEB = { id: 3, name: "SHWEB", kind: "committee" };
+const SHEARES_HALL = { id: 6, name: "Sheares Hall", kind: "jcrc" };
 
 function post(body: unknown) {
 	return new NextRequest("http://localhost/api/facilities/claims", {
@@ -43,23 +63,58 @@ function futureDate(daysAhead: number): string {
 	return `${d.getFullYear()}-${m}-${day}`;
 }
 
-describe("POST /api/facilities/claims — lead-time gate", () => {
+describe("GET /api/facilities/claims", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mocks.getCoreServiceDisabledApiResponse.mockReturnValue(null);
 		mocks.requireAuth.mockResolvedValue({ id: 42 });
-		mocks.isChairOfCca.mockReturnValue(true);
-		// A hall venue by default, so the REBOKS horizon never applies here. Left
-		// unset these tests would flip to 403 whenever the suite ran within five
-		// days of a month end.
+		mocks.getBookingCcaIds.mockResolvedValue([3, 8]);
+		mocks.getClaimsForCcas.mockResolvedValue([
+			{ id: 1, facility_type: "sheares" },
+			{ id: 2, facility_type: "nus" },
+			{ id: 3, facility_type: "external" },
+		]);
+	});
+
+	it("returns only Sheares claims, across every CCA the caller books for", async () => {
+		const { GET } = await import("./route");
+		const res = await GET();
+		expect((await res.json()).data).toEqual([{ id: 1, facility_type: "sheares" }]);
+		expect(mocks.getClaimsForCcas).toHaveBeenCalledWith([3, 8]);
+	});
+
+	it("returns nothing without querying when the caller cannot book", async () => {
+		mocks.getBookingCcaIds.mockResolvedValue([]);
+		const { GET } = await import("./route");
+		const res = await GET();
+		expect((await res.json()).data).toEqual([]);
+		expect(mocks.getClaimsForCcas).not.toHaveBeenCalled();
+	});
+});
+
+describe("POST /api/facilities/claims — validation", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		mocks.getCoreServiceDisabledApiResponse.mockReturnValue(null);
+		mocks.requireAuth.mockResolvedValue({ id: 42 });
+		mocks.getBookingCcas.mockResolvedValue([SHWEB]);
+		mocks.isWithinBookingWindow.mockReturnValue(true);
+		mocks.getSingaporeDateKey.mockReturnValue(futureDate(0));
 		mocks.getFacilityType.mockResolvedValue("sheares");
 	});
 
-	// The claim carries its own slot now, so the route no longer looks a booking
-	// up first — the date it gates on arrives in the body.
-	it("403s when the slot is within the 3-day lock window", async () => {
+	it("creates a same-day claim", async () => {
+		mocks.createClaim.mockResolvedValue({ id: 1 });
 		const { POST } = await import("./route");
-		const res = await POST(post({ facility_id: 2, date: futureDate(1), hour: 18, cca_id: 3 }));
+		const res = await POST(post({ facility_id: 2, date: futureDate(0), hour: 18, cca_id: 3 }));
+		expect(res.status).toBe(201);
+		expect(mocks.createClaim).toHaveBeenCalledWith(2, futureDate(0), 18, 3, 42);
+	});
+
+	it("rejects a claim for a past slot", async () => {
+		mocks.isWithinBookingWindow.mockReturnValue(true);
+		const { POST } = await import("./route");
+		const res = await POST(post({ facility_id: 2, date: futureDate(-1), hour: 18, cca_id: 3 }));
 		expect(res.status).toBe(403);
 		expect(mocks.createClaim).not.toHaveBeenCalled();
 	});
@@ -78,61 +133,162 @@ describe("POST /api/facilities/claims — lead-time gate", () => {
 		expect(mocks.createClaim).not.toHaveBeenCalled();
 	});
 
-	it("403s when the caller does not manage the CCA", async () => {
-		mocks.isChairOfCca.mockReturnValue(false);
+	it("403s when the caller may not book for the CCA", async () => {
+		mocks.getBookingCcas.mockResolvedValue([SHEARES_HALL]);
 		const { POST } = await import("./route");
 		const res = await POST(post({ facility_id: 2, date: futureDate(5), hour: 18, cca_id: 3 }));
 		expect(res.status).toBe(403);
 		expect(mocks.createClaim).not.toHaveBeenCalled();
 	});
 
-	it("creates the claim when the slot is at least 3 days out", async () => {
+	it("creates a future claim within the booking window", async () => {
 		mocks.createClaim.mockResolvedValue({ id: 1 });
 		const { POST } = await import("./route");
 		const res = await POST(post({ facility_id: 2, date: futureDate(5), hour: 18, cca_id: 3 }));
 		expect(res.status).toBe(201);
 		expect(mocks.createClaim).toHaveBeenCalledWith(2, futureDate(5), 18, 3, 42);
 	});
+
+	it("creates every hour of a multi-hour request in one call", async () => {
+		mocks.createClaims.mockResolvedValue([{ id: 1 }, { id: 2 }]);
+		const { POST } = await import("./route");
+		const res = await POST(
+			post({ facility_id: 2, date: futureDate(5), hours: [18, 19, 19], cca_id: 3 }),
+		);
+		expect(res.status).toBe(201);
+		expect(mocks.createClaims).toHaveBeenCalledWith(2, futureDate(5), [18, 19], 3, 42);
+		expect(mocks.createClaim).not.toHaveBeenCalled();
+	});
+
+	it("400s when any hour of a request is out of range", async () => {
+		const { POST } = await import("./route");
+		const res = await POST(
+			post({ facility_id: 2, date: futureDate(5), hours: [18, 24], cca_id: 3 }),
+		);
+		expect(res.status).toBe(400);
+		expect(mocks.createClaims).not.toHaveBeenCalled();
+	});
+
+	it("refuses a committee request more than a week ahead", async () => {
+		const { POST } = await import("./route");
+		const res = await POST(post({ facility_id: 2, date: futureDate(8), hour: 18, cca_id: 3 }));
+		expect(res.status).toBe(403);
+		expect((await res.json()).error).toBe("Committees can only book up to 1 week ahead");
+		expect(mocks.createClaim).not.toHaveBeenCalled();
+	});
+
+	it("accepts a committee request exactly a week ahead", async () => {
+		mocks.createClaim.mockResolvedValue({ id: 1 });
+		const { POST } = await import("./route");
+		const res = await POST(post({ facility_id: 2, date: futureDate(7), hour: 18, cca_id: 3 }));
+		expect(res.status).toBe(201);
+	});
+
+	it("lets Sheares Hall book further than a week ahead", async () => {
+		mocks.getBookingCcas.mockResolvedValue([SHWEB, SHEARES_HALL]);
+		mocks.createClaim.mockResolvedValue({ id: 1 });
+		const { POST } = await import("./route");
+		const res = await POST(post({ facility_id: 2, date: futureDate(20), hour: 18, cca_id: 6 }));
+		expect(res.status).toBe(201);
+		expect(mocks.createClaim).toHaveBeenCalledWith(2, futureDate(20), 18, 6, 42);
+	});
+
+	it("rejects a slot outside the booking window", async () => {
+		mocks.isWithinBookingWindow.mockReturnValue(false);
+		const { POST } = await import("./route");
+		const res = await POST(post({ facility_id: 2, date: futureDate(7), hour: 18, cca_id: 3 }));
+
+		expect(res.status).toBe(403);
+		expect(mocks.createClaim).not.toHaveBeenCalled();
+	});
 });
 
-describe("POST /api/facilities/claims — REBOKS horizon gate", () => {
+describe("POST /api/facilities/claims — Sheares-only gate", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mocks.getCoreServiceDisabledApiResponse.mockReturnValue(null);
 		mocks.requireAuth.mockResolvedValue({ id: 42, is_jcrc: false });
-		mocks.isChairOfCca.mockReturnValue(true);
+		mocks.getBookingCcas.mockResolvedValue([SHWEB]);
+		mocks.isWithinBookingWindow.mockReturnValue(true);
+		mocks.getSingaporeDateKey.mockReturnValue(futureDate(0));
 		mocks.createClaim.mockResolvedValue({ id: 1 });
 	});
 
-	/** First of the month after next — always past the horizon, whatever day it is. */
-	function beyondHorizon(): string {
-		// Constructed via Date so December rolls the year instead of yielding month 14.
-		const next = new Date(new Date().getFullYear(), new Date().getMonth() + 2, 1);
-		return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}-01`;
-	}
-
-	it("403s a chair booking reboks past the current month", async () => {
-		mocks.getFacilityType.mockResolvedValue("reboks");
+	it("allows a Sheares facility", async () => {
+		mocks.getFacilityType.mockResolvedValue("sheares");
 		const { POST } = await import("./route");
-		const res = await POST(post({ facility_id: 7, date: beyondHorizon(), hour: 19, cca_id: 3 }));
+		const res = await POST(post({ facility_id: 8, date: futureDate(5), hour: 19, cca_id: 3 }));
+		expect(res.status).toBe(201);
+	});
+
+	it.each(["reboks", "nus", "external"])("rejects a %s facility", async (type) => {
+		mocks.getFacilityType.mockResolvedValue(type);
+		const { POST } = await import("./route");
+		const res = await POST(post({ facility_id: 7, date: futureDate(5), hour: 19, cca_id: 3 }));
 		expect(res.status).toBe(403);
 		expect(mocks.createClaim).not.toHaveBeenCalled();
 	});
 
-	it("lets a hall venue through in the same future month", async () => {
-		mocks.getFacilityType.mockResolvedValue("sheares");
-		const { POST } = await import("./route");
-		const res = await POST(post({ facility_id: 8, date: beyondHorizon(), hour: 19, cca_id: 3 }));
-		expect(res.status).toBe(201);
-	});
-
-	it("exempts JCRC, who book the next month's courts in advance", async () => {
+	it("does not exempt JCRC from the facility-type restriction", async () => {
 		mocks.requireAuth.mockResolvedValue({ id: 42, is_jcrc: true });
 		mocks.getFacilityType.mockResolvedValue("reboks");
 		const { POST } = await import("./route");
-		const res = await POST(post({ facility_id: 7, date: beyondHorizon(), hour: 19, cca_id: 3 }));
-		expect(res.status).toBe(201);
-		// JCRC skips the lookup entirely rather than querying and then ignoring it.
-		expect(mocks.getFacilityType).not.toHaveBeenCalled();
+		const res = await POST(post({ facility_id: 7, date: futureDate(5), hour: 19, cca_id: 3 }));
+		expect(res.status).toBe(403);
+		expect(mocks.getFacilityType).toHaveBeenCalledWith(7);
+	});
+});
+
+describe("DELETE /api/facilities/claims — withdraw a whole request", () => {
+	function del(body: unknown) {
+		return new NextRequest("http://localhost/api/facilities/claims", {
+			method: "DELETE",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(body),
+		});
+	}
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		mocks.getCoreServiceDisabledApiResponse.mockReturnValue(null);
+		mocks.requireAuth.mockResolvedValue({ id: 42 });
+		mocks.canManageFacilities.mockReturnValue(false);
+		mocks.getBookingCcaIds.mockResolvedValue([3]);
+		mocks.getClaimOwners.mockResolvedValue([
+			{ id: 1, cca_id: 3, facility_id: 2 },
+			{ id: 2, cca_id: 3, facility_id: 2 },
+		]);
+	});
+
+	it("deletes every named claim the chair owns", async () => {
+		const { DELETE } = await import("./route");
+		const res = await DELETE(del({ claim_ids: [1, 2] }));
+		expect(res.status).toBe(200);
+		expect(mocks.deleteClaims).toHaveBeenCalledWith([1, 2]);
+	});
+
+	it("403s if any claim belongs to a CCA the caller may not book for", async () => {
+		mocks.getClaimOwners.mockResolvedValue([
+			{ id: 1, cca_id: 3, facility_id: 2 },
+			{ id: 2, cca_id: 9, facility_id: 2 },
+		]);
+		const { DELETE } = await import("./route");
+		const res = await DELETE(del({ claim_ids: [1, 2] }));
+		expect(res.status).toBe(403);
+		expect(mocks.deleteClaims).not.toHaveBeenCalled();
+	});
+
+	it("404s when a claim no longer exists", async () => {
+		mocks.getClaimOwners.mockResolvedValue([{ id: 1, cca_id: 3, facility_id: 2 }]);
+		const { DELETE } = await import("./route");
+		const res = await DELETE(del({ claim_ids: [1, 2] }));
+		expect(res.status).toBe(404);
+		expect(mocks.deleteClaims).not.toHaveBeenCalled();
+	});
+
+	it("400s without claim_ids", async () => {
+		const { DELETE } = await import("./route");
+		const res = await DELETE(del({}));
+		expect(res.status).toBe(400);
 	});
 });

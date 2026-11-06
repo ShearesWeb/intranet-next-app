@@ -15,7 +15,7 @@ These personas are the single source of truth for test data. The TS source is `t
 | `drama` | Drama | culture | tier-1 |
 | `shweb` | SHWEB | committee | none |
 | `secc` | SECC | committee | none |
-| `jcrc` | JCRC | jcrc | none |
+| `jcrc` | Sheares Hall | jcrc | none |
 
 ## Personas
 
@@ -32,11 +32,11 @@ These personas are the single source of truth for test data. The TS source is `t
 | `harper` | harper.tan.2k@gmail.com | Harper Tan | SH/E/1/115 | SHWEB / Subcomm | — | — | — |
 | `ezra` | ezrasim.nus@gmail.com | Ezra Sim | SH/A/3/301 | SHWEB / Maincomm | ✓ | — | — |
 | `layla` | layla.ng.97@gmail.com | Layla Ng | SH/D/4/405 | SHWEB / President | ✓ | — | — |
-| `jasper` | jasper.chua.sg@gmail.com | Jasper Chua | SH/B/4/406 | JCRC / Blockcomm | — | ✓ | — |
-| `brielle` | brielle.koh.j@gmail.com | Brielle Koh | SH/C/3/312 | JCRC / Maincomm | ✓ | ✓ | — |
+| `jasper` | jasper.chua.sg@gmail.com | Jasper Chua | SH/B/4/406 | Sheares Hall / Blockcomm | — | ✓ | — |
+| `brielle` | brielle.koh.j@gmail.com | Brielle Koh | SH/C/3/312 | Sheares Hall / Maincomm | ✓ | ✓ | — |
 | `nova` | nova.tay.sg@gmail.com | Nova Tay | SH/A/1/105 | Basketball / Captain; SECC / Subcomm | ✓ | — | ✓ |
 | `willow` | willow.rahman.gg@gmail.com | Willow Rahman | SH/D/1/108 | Dance / Captain | ✓ | — | ✓ |
-| `sage` | sage.lim.97@gmail.com | Sage Lim | SH/E/3/305 | Drama / Director; JCRC / Maincomm | ✓ | ✓ | ✓ |
+| `sage` | sage.lim.97@gmail.com | Sage Lim | SH/E/3/305 | Drama / Director; Sheares Hall / Maincomm | ✓ | ✓ | ✓ |
 
 ## Position graph
 

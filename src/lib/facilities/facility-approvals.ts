@@ -1,19 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { ApiError } from "@/lib/api/errors";
-import { getSlots } from "@/lib/facilities/facility-slots";
 import {
 	ApprovalClaimant,
 	ConfirmedBookingView,
+	FacilitySlot,
 	SlotApprovalView,
-	daysUntilBooking,
 } from "@/types/facilities";
 
-/**
- * The approvals queue is derived from the computed calendar rather than from a
- * bookings table, because no bookings table exists. `facility_slots()` already
- * returns each slot's status and its live claims as JSON, so one call gives
- * both the queue and the claimant list.
- */
 async function contactsFor(userIds: number[]) {
 	const contacts = new Map<number, { name: string; telegram: string }>();
 	if (!userIds.length) return contacts;
@@ -30,9 +23,31 @@ async function contactsFor(userIds: number[]) {
 	return contacts;
 }
 
-/** Every slot with outstanding claims (single or competing), with chair contacts. */
-export async function listPendingApprovals(from: string, to: string): Promise<SlotApprovalView[]> {
-	const slots = await getSlots(from, to);
+/** When each claim was made. `facility_slots()` does not carry this. */
+async function requestTimesFor(claimIds: number[]) {
+	const times = new Map<number, string>();
+	if (!claimIds.length) return times;
+
+	const supabase = await createClient();
+	const { data } = await supabase
+		.from("facility_claims")
+		.select("id, created_at")
+		.in("id", claimIds);
+
+	for (const row of data ?? []) {
+		times.set(row.id, row.created_at);
+	}
+	return times;
+}
+
+/**
+ * Every slot with outstanding claims (single or competing), with requester contacts.
+ *
+ * The approvals queue is derived from the computed calendar rather than from a
+ * bookings table, because no bookings table exists. `facility_slots()` already
+ * returns each slot's status and its live claims, so one call feeds both lists.
+ */
+export async function listPendingApprovals(slots: FacilitySlot[]): Promise<SlotApprovalView[]> {
 	const awaiting = slots.filter(
 		(slot) => slot.status === "pending" || slot.status === "conflicted",
 	);
@@ -50,7 +65,14 @@ export async function listPendingApprovals(from: string, to: string): Promise<Sl
 		),
 	];
 
-	const contacts = await contactsFor(claimerIds);
+	const [contacts, requestTimes] = await Promise.all([
+		contactsFor(claimerIds),
+		requestTimesFor(
+			awaiting.flatMap((slot) =>
+				slot.claims.filter((claim) => claim.status === "pending").map((claim) => claim.claim_id),
+			),
+		),
+	]);
 
 	return awaiting.map((slot) => {
 		const claimants: ApprovalClaimant[] = slot.claims
@@ -62,38 +84,47 @@ export async function listPendingApprovals(from: string, to: string): Promise<Sl
 					cca_name: claim.cca_name,
 					chair_name: contact?.name ?? "",
 					chair_telegram: contact?.telegram ?? "",
+					requested_at: requestTimes.get(claim.claim_id) ?? null,
 				};
 			});
 
 		return {
 			slot,
 			claimants,
-			days_until_booking: daysUntilBooking(slot.date),
 		};
 	});
 }
 
 /** Upcoming confirmed bookings with the holding CCA — JCRC can revoke these. */
 export async function listUpcomingConfirmed(
-	from: string,
-	to: string,
+	slots: FacilitySlot[],
 ): Promise<ConfirmedBookingView[]> {
-	const slots = await getSlots(from, to);
+	const confirmed = slots.filter((slot) => slot.status === "confirmed");
+	const contacts = await contactsFor([
+		...new Set(
+			confirmed
+				.flatMap((slot) => slot.claims)
+				.filter((claim) => claim.status === "approved")
+				.map((claim) => claim.created_by)
+				.filter((id): id is number => typeof id === "number"),
+		),
+	]);
 
-	return slots
-		.filter((slot) => slot.status === "confirmed")
-		.map((slot) => {
-			// At most one claim per slot is ever approved, which is what makes
-			// `confirmed` unambiguous.
-			const approved = slot.claims.find((claim) => claim.status === "approved");
-			return {
+	return confirmed.flatMap((slot) => {
+		// At most one claim per slot is ever approved, which is what makes
+		// `confirmed` unambiguous.
+		const approved = slot.claims.find((claim) => claim.status === "approved");
+		if (!approved) return [];
+		const contact = approved.created_by ? contacts.get(approved.created_by) : undefined;
+		return [
+			{
 				slot,
-				cca_name: approved?.cca_name ?? "Unknown CCA",
-				claim_id: approved?.claim_id ?? 0,
-				days_until_booking: daysUntilBooking(slot.date),
-			};
-		})
-		.filter((view) => view.claim_id !== 0);
+				cca_name: approved.cca_name,
+				chair_name: contact?.name ?? "",
+				claim_id: approved.claim_id,
+			},
+		];
+	});
 }
 
 /** Reject every named claim, freeing the slot for those CCAs to claim again. */
@@ -119,16 +150,17 @@ export async function rejectClaims(claimIds: number[]): Promise<void> {
 }
 
 /**
- * Approve one claim on a slot and reject the rest.
+ * Approve a request (one or more hourly claims) and reject its competitors.
  *
  * Ordering matters: `uq_facility_claims_approved_slot` allows only one approved
  * claim per slot, so the losers are rejected first. Both statements go through
  * the JCRC-only UPDATE policy.
  */
-export async function resolveSlot(claimId: number, competingClaimIds: number[]): Promise<void> {
+export async function resolveSlot(claimIds: number[], competingClaimIds: number[]): Promise<void> {
 	const supabase = await createClient();
 
-	const losers = competingClaimIds.filter((id) => id !== claimId);
+	const winners = new Set(claimIds);
+	const losers = competingClaimIds.filter((id) => !winners.has(id));
 
 	if (losers.length) {
 		const { error: rejectError } = await supabase
@@ -145,9 +177,8 @@ export async function resolveSlot(claimId: number, competingClaimIds: number[]):
 	const { data, error } = await supabase
 		.from("facility_claims")
 		.update({ status: "approved" })
-		.eq("id", claimId)
-		.select("id")
-		.maybeSingle();
+		.in("id", claimIds)
+		.select("id");
 
 	if (error) {
 		if (error.code === "23505") {
@@ -158,7 +189,7 @@ export async function resolveSlot(claimId: number, competingClaimIds: number[]):
 	}
 
 	// A filtered UPDATE matches no rows rather than raising.
-	if (!data) {
+	if (!data || data.length === 0) {
 		throw new ApiError(403, "Only JCRC may resolve or reopen a facility claim");
 	}
 }

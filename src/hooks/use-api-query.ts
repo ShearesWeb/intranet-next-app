@@ -15,7 +15,10 @@ interface UseApiQueryOptions<T> {
 
 interface UseApiQueryReturn<T> {
 	data: T | undefined;
+	/** True during every fetch, including refetches. */
 	loading: boolean;
+	/** True once the first fetch settles, so a refetch can keep the current view on screen. */
+	hasLoaded: boolean;
 	error: string | null;
 	refetch: () => Promise<void>;
 }
@@ -35,12 +38,14 @@ export function useApiQuery<T>(
 
 	const [data, setData] = useState<T | undefined>(initialDataRef.current);
 	const [loading, setLoading] = useState(true);
+	const [hasLoaded, setHasLoaded] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
 	const refetch = useCallback(async () => {
 		if (!enabled) {
 			setData(initialDataRef.current);
 			setLoading(false);
+			setHasLoaded(false);
 			return;
 		}
 
@@ -61,6 +66,7 @@ export function useApiQuery<T>(
 			setError(errorMessage);
 		} finally {
 			setLoading(false);
+			setHasLoaded(true);
 		}
 	}, [url, enabled, errorMessage, toastOnError]);
 
@@ -68,5 +74,5 @@ export function useApiQuery<T>(
 		void refetch();
 	}, [refetch]);
 
-	return { data, loading, error, refetch };
+	return { data, loading, hasLoaded, error, refetch };
 }
