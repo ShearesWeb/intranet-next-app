@@ -51,7 +51,7 @@ export function jsonRequest(pathname: string, method: string, body?: unknown): N
 	});
 }
 
-// Next.js 15 passes route params as a Promise.
+// Next.js passes route params as a Promise (since 15).
 export function routeParams<T extends Record<string, string>>(p: T): { params: Promise<T> } {
 	return { params: Promise.resolve(p) };
 }

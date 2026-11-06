@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-A Next.js 15 intranet app for Sheares Hall residents to manage CCAs (Co-Curricular Activities), member rankings, CCA allocation, holiday subsidies, and facilities — backed by Supabase, deployed on Cloudflare Workers via OpenNext.
+A Next.js 16 intranet app for Sheares Hall residents to manage CCAs (Co-Curricular Activities), member rankings, CCA allocation, holiday subsidies, and facilities — backed by Supabase, deployed on Cloudflare Workers via OpenNext.
 
 **Core constraint**: No user data may leak between sessions (session isolation is the main correctness invariant).
 
 ## Commands
 
-**`package.json` scripts are strictly the Next.js CLI commands.** Everything else
+**`package.json` scripts are strictly the Next.js CLI commands**, plus `lint` (ESLint, since Next.js 16 dropped `next lint`). Everything else
 lives in the **Makefile** — `make help` lists targets.
 
 ```bash
@@ -18,7 +18,7 @@ lives in the **Makefile** — `make help` lists targets.
 npm run dev                    # Next.js dev server
 npm run build                  # Next.js build
 npm run start                  # Next.js production server
-npm run lint                   # next lint
+npm run lint                   # ESLint over src/ (eslint.config.mjs)
 
 # Quality + tests (Makefile)
 make check                     # format-check + typecheck + test

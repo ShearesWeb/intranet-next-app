@@ -8,8 +8,8 @@ The Intranet provides a centralized management platform for performing any core 
 
 ### Frontend
 
-- **Next.js 15.3.4** - React framework with App Router
-- **React 18** - UI library
+- **Next.js 16** - React framework with App Router
+- **React 19** - UI library
 - **TypeScript** - Type safety
 - **Tailwind CSS 3.4.1** - Utility-first CSS framework
 - **Framer Motion 12.4.10** - Animation library
@@ -341,7 +341,7 @@ All environment variables must be configured as GitHub Repository Secrets for CI
 
 ### Prerequisites
 
-1. **Node.js** (version compatible with Next.js 15)
+1. **Node.js** 20.9 or later (the minimum for Next.js 16)
 2. **Firebase project** with Google OAuth provider enabled
 3. **Supabase project** with required tables set up
 4. **AWS account** with appropriate permissions for infrastructure deployment
