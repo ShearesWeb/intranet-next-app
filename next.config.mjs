@@ -9,14 +9,6 @@ const nextConfig = {
 	outputFileTracingRoot: __dirname,
 	// output: 'export',
 	/* config options here */
-	images: {
-		remotePatterns: [
-			{
-				protocol: "https",
-				hostname: "deifkwefumgah.cloudfront.net",
-			},
-		],
-	},
 	async redirects() {
 		return [
 			{
