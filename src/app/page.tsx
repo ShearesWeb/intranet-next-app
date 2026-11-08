@@ -16,16 +16,7 @@ const Page = async () => {
 
 	return (
 		<section className="flex min-h-screen flex-col items-center lg:justify-center text-center p-24">
-			<div className="hidden lg:block absolute inset-x-0 top-0 flex h-full w-full items-center justify-center opacity-100">
-				<Image
-					alt="background"
-					src="https://deifkwefumgah.cloudfront.net/shadcnblocks/block/patterns/square-alt-grid.svg"
-					fill
-					sizes="100vw"
-					className="[mask-image:radial-gradient(75%_75%_at_center,white,transparent)] opacity-90"
-				/>
-			</div>
-			<div className="relative z-10 container">
+			<div className="container">
 				<div className="mx-auto flex max-w-5xl flex-col items-center">
 					<div className="flex flex-col items-center gap-6 text-center">
 						<div
