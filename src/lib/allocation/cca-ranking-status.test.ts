@@ -6,14 +6,14 @@ function applicant(id: number, ranking: number): Applicant {
 	return { id, name: `A${id}`, email: `a${id}@x.io`, room: "01-1", ranking };
 }
 
-function position(id: number, applicants: Applicant[], openSlots: number): Position {
+function position(id: number, applicants: Applicant[], capacity: number): Position {
 	return {
 		id,
 		cca_id: 1,
 		name: `P${id}`,
 		cca_name: "CCA",
-		capacity: 10,
-		available_capacity: openSlots,
+		capacity,
+		available_capacity: capacity,
 		position_type: "member",
 		applicants,
 	};
@@ -57,8 +57,18 @@ describe("deriveCcaRankingStatus", () => {
 		expect(deriveCcaRankingStatus(g)).toBe("ranked");
 	});
 
-	it("returns ranked when no slots are open", () => {
+	it("returns ranked when no capacity is configured", () => {
 		const g = group([position(1, [applicant(1, 1), applicant(2, 2)], 0)]);
 		expect(deriveCcaRankingStatus(g)).toBe("ranked");
+	});
+
+	it.each([20, 4, 0])("keeps coverage status when remaining seats drop to %i", (available) => {
+		const p = position(
+			1,
+			Array.from({ length: 20 }, (_, i) => applicant(i + 1, i + 1)),
+			20,
+		);
+		p.available_capacity = available;
+		expect(deriveCcaRankingStatus(group([p]))).toBe("below-goal");
 	});
 });

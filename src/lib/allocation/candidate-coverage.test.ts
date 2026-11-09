@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import { getCandidateCoverage } from "./candidate-coverage";
 
 describe("getCandidateCoverage", () => {
-	it("returns full tier with null percent when no open slots", () => {
+	it("returns full tier with null percent when no capacity is configured", () => {
 		expect(getCandidateCoverage(5, 0)).toEqual({ tier: "full", percent: null, target: 0 });
 	});
 
-	it("returns critical tier below 100% of open slots", () => {
+	it("returns critical tier below 100% of total capacity", () => {
 		expect(getCandidateCoverage(2, 3)).toEqual({ tier: "critical", percent: 66, target: 6 });
 	});
 
